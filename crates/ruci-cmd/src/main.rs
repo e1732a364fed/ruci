@@ -278,26 +278,14 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     use rucimp::strum::IntoEnumIterator;
 
-    let all_possible_in_maps: Vec<String> = rucimp::modes::chain::config::InMapConfig::iter()
-        .map(|x| {
-            format!("{:?}", x)
-                .split(['{', '(', ' ']) // 分割所有可能的结构体开始标记
-                .next()
-                .unwrap_or_default()
-                .to_string()
-        })
+    let all_possible_in_maps: Vec<_> = rucimp::modes::chain::config::InMapConfig::iter()
+        .map(|x| ruci::utils::get_debug_head(&x))
         .collect();
 
     debug!("possible in maps: {}", all_possible_in_maps.join(", "));
 
-    let all_possible_out_maps: Vec<String> = rucimp::modes::chain::config::OutMapConfig::iter()
-        .map(|x| {
-            format!("{:?}", x)
-                .split(['{', '(', ' ']) // 分割所有可能的结构体开始标记
-                .next()
-                .unwrap_or_default()
-                .to_string()
-        })
+    let all_possible_out_maps: Vec<_> = rucimp::modes::chain::config::OutMapConfig::iter()
+        .map(|x| ruci::utils::get_debug_head(&x))
         .collect();
 
     debug!("possible out maps: {}", all_possible_out_maps.join(", "));

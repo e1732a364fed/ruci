@@ -5,7 +5,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 
 use tracing::info;
 
-use super::Recorder;
+use super::data::Recorder;
 
 /// takes ownership of base Conn
 pub(super) struct RecorderConn {

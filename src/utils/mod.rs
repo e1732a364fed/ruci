@@ -117,3 +117,14 @@ pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+pub fn get_debug_head(item: &impl std::fmt::Debug) -> String {
+    get_debug_head_from_str(&format!("{:?}", item))
+}
+
+pub fn get_debug_head_from_str(s: &str) -> String {
+    s.split(['{', '(', ' ']) // 分割所有可能的结构体开始标记
+        .next()
+        .unwrap_or_default()
+        .to_string()
+}

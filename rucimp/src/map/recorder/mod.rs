@@ -20,60 +20,6 @@ use serde::{Deserialize, Serialize};
 
 use macro_map::{map_ext_fields, MapExt};
 
-#[derive(Clone)]
-struct Recorder {
-    start: time::Instant,
-    data: data::RecordData,
-}
-impl Recorder {
-    fn since(&self) -> u128 {
-        time::Instant::now().duration_since(self.start).as_nanos()
-    }
-
-    fn record_d(&mut self, data: &[u8]) {
-        if data.is_empty() {
-            return;
-        }
-        let d = self.since();
-        let d = data::DataPiece {
-            nanos_since_start: d,
-            data: data::PayloadData::Pure(data.to_vec()),
-        };
-        self.data.download_data.push(d)
-    }
-    fn r_d_ad(&mut self, data: &[u8], ad: &Addr) {
-        if data.is_empty() {
-            return;
-        }
-        let d = self.since();
-        self.data.download_data.push(data::DataPiece {
-            nanos_since_start: d,
-            data: data::PayloadData::Addr((ad.clone(), data.to_vec())),
-        });
-    }
-    fn record_u(&mut self, data: &[u8]) {
-        if data.is_empty() {
-            return;
-        }
-        let d = self.since();
-        self.data.upload_data.push(data::DataPiece {
-            nanos_since_start: d,
-            data: data::PayloadData::Pure(data.to_vec()),
-        })
-    }
-
-    fn r_u_ad(&mut self, data: &[u8], ad: &Addr) {
-        if data.is_empty() {
-            return;
-        }
-        let d = self.since();
-        self.data.upload_data.push(data::DataPiece {
-            nanos_since_start: d,
-            data: data::PayloadData::Addr((ad.clone(), data.to_vec())),
-        })
-    }
-}
-
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct Config {
     pub label: Option<String>,
@@ -117,9 +63,9 @@ impl Map for RecorderMap {
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let sgd = params.g.as_ref().map(data::SerializableGlobalData::from);
 
-        let r = Recorder {
+        let r = data::Recorder {
             start: time::Instant::now(),
-            data: data::RecordData {
+            data: data::Record {
                 cid: cid.to_string(),
                 behavior,
                 // global_data: params.g.clone(),

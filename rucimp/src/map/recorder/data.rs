@@ -6,6 +6,61 @@ use ruci::map::*;
 use ruci::net::*;
 use serde::{Deserialize, Serialize};
 
+/// 调用 Recorder 的方法 将 数据写入其中
+#[derive(Clone)]
+pub struct Recorder {
+    pub start: time::Instant,
+    pub data: Record,
+}
+impl Recorder {
+    pub fn since(&self) -> u128 {
+        time::Instant::now().duration_since(self.start).as_nanos()
+    }
+
+    pub fn record_d(&mut self, data: &[u8]) {
+        if data.is_empty() {
+            return;
+        }
+        let d = self.since();
+        let d = DataPiece {
+            nanos_since_start: d,
+            data: PayloadData::Pure(data.to_vec()),
+        };
+        self.data.download_data.push(d)
+    }
+    pub fn r_d_ad(&mut self, data: &[u8], ad: &Addr) {
+        if data.is_empty() {
+            return;
+        }
+        let d = self.since();
+        self.data.download_data.push(DataPiece {
+            nanos_since_start: d,
+            data: PayloadData::Addr((ad.clone(), data.to_vec())),
+        });
+    }
+    pub fn record_u(&mut self, data: &[u8]) {
+        if data.is_empty() {
+            return;
+        }
+        let d = self.since();
+        self.data.upload_data.push(DataPiece {
+            nanos_since_start: d,
+            data: PayloadData::Pure(data.to_vec()),
+        })
+    }
+
+    pub fn r_u_ad(&mut self, data: &[u8], ad: &Addr) {
+        if data.is_empty() {
+            return;
+        }
+        let d = self.since();
+        self.data.upload_data.push(DataPiece {
+            nanos_since_start: d,
+            data: PayloadData::Addr((ad.clone(), data.to_vec())),
+        })
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct SerializableGlobalData {
     pub run_instance_id: u32,
@@ -55,13 +110,13 @@ pub struct SimplifiedRecordData {
     pub data: Vec<(i8, Vec<u8>)>, // 1:upload, -1: download
 }
 
-impl From<&mut RecordData> for SimplifiedRecordData {
+impl From<&mut Record> for SimplifiedRecordData {
     /// 本转换会 拿走 RecordData 中 download_data 和 upload_data
     ///
     /// 且将截断每段条目的1500字节以上的部分(但不做padding 以最小化文件大小)
     ///
     /// 且总数据量不超过3000
-    fn from(d: &mut RecordData) -> Self {
+    fn from(d: &mut Record) -> Self {
         let piece_truncate = d.piece_truncate.unwrap_or(1500);
         let session_truncate = d.session_truncate.unwrap_or(3000);
         let truncate = !d.no_truncate.unwrap_or(false);
@@ -118,7 +173,7 @@ impl From<&mut RecordData> for SimplifiedRecordData {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
-pub struct RecordData {
+pub struct Record {
     pub cid: String,
     pub behavior: ProxyBehavior,
 
@@ -168,7 +223,7 @@ impl Default for PayloadData {
     }
 }
 
-impl RecordData {
+impl Record {
     /// log/name.log
     pub fn save_name(&self) -> String {
         let tail = format!(
