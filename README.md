@@ -28,7 +28,7 @@ verysimple可以说是一个初级项目，而ruci最终将成为一个中级项
 ## 整体结构
 整个项目分成三部分。
 
-ruci 是基础框架, 其中定义一些trait 和基本结构与方法，建立了链式架构，实现了一些基本流映射函数, 提供转发方法
+ruci 是基础框架, 其中定义一些trait 和基本结构与方法，实现链式架构，实现了一些基本流映射函数, 提供转发方法
 
 rucimp 中提供若干流映射函数, 定义多种配置文件格式, 并提供一些 example 程序
 
@@ -67,17 +67,11 @@ cp target/release/examples/chain .
 详见 [exmaples](rucimp/examples/readme.md)
 
 
-# 开发
+# Dev
 
-采用TDD开发模式。具体见 [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md)
+TDD。See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md)
 
-## 异步架构
-
-为了避免有人说笔者抄袭，在项目初期笔者选用了 async_std。
-后来才创建的 tokio 分支，可查看commit历史 求证。
-不过难以维护两套异步架构，现在async_std分支只能作为参考了。
-
-## 链式结构
+## Chain Mode Explained
 
 ruci对代理的原理加以更高的抽象化，认为任何协议都可被认定为一个"函数"
 
@@ -154,12 +148,13 @@ o2node-.->collector
 ## Roadmap
 
 ### ruci
+
 - [x] 链式架构 
 - [x] tcp, udp, unix domain socket, ip (tun)([tun example](rucimp/examples/readme.md#tun))
 - [x] 流量记录 (两种实现，分别用于记录原始流量(TrafficRecorder)与实际流量(Counter))
 - [x] Direct, Blackhole, Listener, Dialer, Stdio, Fileio
-- [x] Tls, Socks5(including UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
-- [x] Adder (按字节加法器), Counter (层流量计), Echo
+- [x] Tls, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
+- [x] Adder (按字节加法器), Counter, Echo
 - [x] 路由 (tag_route)
 - [ ] 回落
 - [ ] DNS
@@ -170,26 +165,24 @@ o2node-.->collector
 - [x] chain配置格式 (新增, lua格式)
 - [x] 示例代理程序 (rucimp/examples: suit 或 chain)
 - [x] 路由 (rule_route)
-- [ ] tproxy
+- [x] tproxy
 - [ ] http header，websocket
 - [ ] grpc
 - [ ] tcp/ip netstack (lwip/smoltcp)
 - [ ] quic
 
+#### 项目的实际目的？
 
-上面只是写了下一阶段要实现的。
-
-
-#### 为什么要自行实现协议？
-
-因为我们要了解协议的细节，以进行数据处理、转换到统一格式和“标注”.
+我们要了解协议的细节，以进行数据处理、转换到统一格式和“标注”.
 
 详见 [终极目标]( doc/GOAL_zh.md)
 
-最终一定要实现所有现有的主流的代理协议，实现之后，我们的墙才能就检测它们，
-实现的越多，墙越高级。详见 [终极目标]( doc/GOAL_zh.md)
-而且，最好是多实现一些变体，或奇葩协议。
 
+## 异步架构
+
+为了避免有人说笔者抄袭，在项目初期笔者选用了 async_std。
+后来才创建的 tokio 分支，可查看commit历史 求证。
+不过难以维护两套异步架构，现在async_std分支只能作为参考了。
 
 # 开源协议
 
