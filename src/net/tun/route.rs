@@ -67,9 +67,10 @@ pub fn out_auto_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
 
         // ip_forward is NECESSARY
 
+        let _r = utils::run_command("ip", "route del default");
+
         let list = format!(
             r#"sysctl -w net.ipv4.ip_forward=1
-ip route del default
 ip route add default via {router_ip} dev {original_dev_name}
 iptables -I FORWARD -i {tun_dev_name} -o {original_dev_name} -m conntrack --ctstate NEW -j ACCEPT
 iptables -I FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT

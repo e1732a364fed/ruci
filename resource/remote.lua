@@ -186,7 +186,7 @@ Config = {
 
                     out_auto_route = {
                         tun_dev_name = "utun321",
-                        original_dev_name = "enp0s1",
+                        original_dev_name = "enp0s1", --wlp3s0
                         router_ip = "192.168.0.1",
                     }
                 }
