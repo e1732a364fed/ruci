@@ -1,9 +1,9 @@
 /*!
-Provides facilities for folding dynamic chains, which is the core process of proxy.
+Provides facilities for folding Map chains, which is the core process of proxy.
 
 Process provided by mod [`mod@fold`] won't store dynamic data during folding.
 
-几个关键部分: [`MIter`],  [`DynIterator`],  [`DMIterBox`], [`FoldParams`], [`FoldResult`], [`fn@fold`], [`fold_from_start`],
+Important parts: [`MIter`],  [`DynIterator`],  [`DMIterBox`], [`FoldParams`], [`FoldResult`], [`fn@fold`], [`fold_from_start`],
 
 */
 
@@ -11,7 +11,7 @@ use tracing::{debug, info, warn, Level};
 
 use super::*;
 
-/// static Iterator for [`MapBox`]
+/// static Iterator for [`MapBox`].
 pub trait MIter: Iterator<Item = Arc<MapBox>> + DynClone + Send + Sync + Debug {}
 impl<T: Iterator<Item = Arc<MapBox>> + DynClone + Send + Sync + Debug> MIter for T {}
 dyn_clone::clone_trait_object!(MIter);
@@ -19,12 +19,12 @@ dyn_clone::clone_trait_object!(MIter);
 pub type MIterBox = Box<dyn MIter>;
 
 /// dynamic Iterator for [`MapBox`], can get different next item if the
-/// input data is different
+/// input data is different.
 ///
 /// DynIterator is uncountable, because it's input is dynamic, it's
-/// output is also dynamic
+/// output is also dynamic.
 ///
-/// if you want to count it, you might use get_miter to try to get MIterBox first
+/// if you want to count it, you might use get_miter to try to get MIterBox first.
 ///
 pub trait DynIterator {
     fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapBox>>;
@@ -51,7 +51,7 @@ pub type DMIterBox = Box<dyn DMIter>;
 
 pub type OVOD = Option<Vec<Option<Box<dyn Data>>>>;
 
-/// 包装 [`MIterBox`] 以使其支持 [`DynIterator`]
+/// Wrap [`MIterBox`] to impl [`DynIterator`]
 #[derive(Debug, Clone)]
 pub struct DynMIterWrapper(pub MIterBox);
 
@@ -73,7 +73,7 @@ impl DynIterator for DynMIterWrapper {
     }
 }
 
-/// 包装 [`std::vec::IntoIter<Arc<MapBox>>`] 以使其支持 [`DynIterator`]
+/// Wrap [`std::vec::IntoIter<Arc<MapBox>>`] to impl [`DynIterator`]
 ///
 /// 比 [`DynMIterWrapper`] 少一层装箱
 #[derive(Debug, Clone)]
@@ -97,7 +97,7 @@ impl DynIterator for DynVecIterWrapper {
     }
 }
 
-/// FoldResult won't store dynamic data
+/// The result of folding. It won't store dynamic data
 pub struct FoldResult {
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
@@ -135,6 +135,7 @@ impl Debug for FoldResult {
     }
 }
 
+/// The parameters of folding.
 /// cid 为 跟踪 该连接的 标识
 pub struct FoldParams {
     pub cid: CID,
@@ -148,7 +149,7 @@ pub struct FoldParams {
     pub trace: Vec<String>,
 }
 
-///  fold 是一个作用很强的函数,是 maps 的累加器
+/// a powerful function that accumulates the `Map`s in `params.maps`.
 ///
 /// 它的做法类似 Iterator 的 fold
 ///

@@ -1,7 +1,7 @@
 /*!
 Defines a [`Map`] that counts the traffic bytes of the base connection.
 
-* 使用 [`Counter`] 与 [`Arc<GlobalTrafficRecorder>`] 的区别是, [`Arc<GlobalTrafficRecorder>`] 是全局解密流量的统计,
+使用 [`Counter`] 与 [`Arc<GlobalTrafficRecorder>`] 的区别是, [`Arc<GlobalTrafficRecorder>`] 是全局解密流量的统计,
 而 [`Counter`] 是针对自己持有的 Conn的流量的统计
 */
 
@@ -108,10 +108,8 @@ impl Name for Counter {
 
 #[async_trait]
 impl Map for Counter {
-    /// ignores behavior
-    ///
-    /// returns dynamic_data with upload and download
-    /// [`Arc<Atomic64>`]`
+    /// returns `dynamic_data` with upload and download bytes
+    /// in [`Arc<Atomic64>`]`
     ///
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
