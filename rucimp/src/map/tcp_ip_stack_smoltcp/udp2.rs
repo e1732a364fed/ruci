@@ -1,5 +1,6 @@
 use std::{
-    io::{self},
+    cmp::min,
+    io,
     net::{SocketAddr, SocketAddrV4, SocketAddrV6},
     pin::Pin,
     task::{ready, Context, Poll},
@@ -21,6 +22,8 @@ use tokio_util::sync::PollSender;
 pub struct W {
     tx: PollSender<(SocketHandle, IpEndpoint, BytesMut)>,
     h: SocketHandle,
+    // default_from: Addr,
+    local: Addr,
 }
 pub struct R {
     rx: Receiver<(IpEndpoint, BytesMut)>,
@@ -39,6 +42,8 @@ impl<'a> ruci::Name for W {
 }
 
 pub fn new(
+    // default_from: Addr,
+    local: Addr,
     h: SocketHandle,
     rx: Receiver<(IpEndpoint, BytesMut)>,
     tx: Sender<(SocketHandle, IpEndpoint, BytesMut)>,
@@ -47,8 +52,12 @@ pub fn new(
     let c2 = W {
         tx: PollSender::new(tx),
         h,
+        // default_from,
+        local,
     };
-    AddrConn::new(Box::new(c1), Box::new(c2))
+    let mut ac = AddrConn::new(Box::new(c1), Box::new(c2));
+    ac.cached_name = "smoltcp_udp".to_string();
+    ac
 }
 
 fn addr2_ip_end_point(a: &Addr) -> IpEndpoint {
@@ -94,19 +103,21 @@ impl<'a> AsyncWriteAddr for W {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-        addr: &Addr,
+        _addr: &Addr,
     ) -> Poll<io::Result<usize>> {
+        let ipe = addr2_ip_end_point(&self.local);
         let me = self.get_mut();
 
-        let ipe = addr2_ip_end_point(addr);
         if ready!(me.tx.poll_reserve(cx)).is_ok() {
             if let Err(err) = me.tx.send_item((me.h, ipe, buf.into())) {
                 tracing::warn!("tcp send response failed: {}", err);
+                Poll::Ready(Err(io::Error::other(err)))
             } else {
-                return Poll::Ready(Ok(buf.len()));
+                Poll::Ready(Ok(buf.len()))
             }
+        } else {
+            Poll::Pending
         }
-        Poll::Ready(Ok(0))
     }
 
     fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -126,7 +137,8 @@ impl<'a> AsyncReadAddr for R {
     ) -> Poll<io::Result<(usize, Addr)>> {
         let me = self.get_mut();
         if let Some((src, mut data)) = ready!(me.rx.poll_recv(cx)) {
-            data.copy_to_slice(buf);
+            let bl = buf.len();
+            data.copy_to_slice(&mut buf[..min(data.len(), bl)]);
             Poll::Ready(Ok((data.len(), ip_end_point_to_addr(&src))))
         } else {
             Poll::Pending

@@ -354,18 +354,22 @@ impl  SmoltcpDevice {
                 }
             }
             IpProtocol::Udp => {
+              
                 debug!("is udp, {n} {}",ip_packet.payload().len());
+
                 let packet = UdpPacket::new_checked(ip_packet.payload()).unwrap();
                 let src_port = packet.src_port();
                 let dst_port = packet.dst_port();
                 let src_addr = SocketAddr::new(src_ip_addr, src_port);
                 let dst_addr = SocketAddr::new(dst_ip_addr, dst_port);
 
-                let ta = Addr{addr: NetAddr::Socket(dst_addr),network: Network::TCP};
+                let sa = Addr{addr: NetAddr::Socket(src_addr),network: Network::UDP};
+                let ta = Addr{addr: NetAddr::Socket(dst_addr),network: Network::UDP};
 
-                let ipe = src_addr.into();
+                let dst_ipe:IpEndpoint = dst_addr.into();
+                let src_ipe = src_addr.into();
 
-                if !self.udp_src_handle_map.lock().contains_key(&ipe){
+                if !self.udp_src_handle_map.lock().contains_key(&src_ipe){
                     use smoltcp::socket::udp::PacketBuffer;
                     use smoltcp::socket::udp::PacketMetadata;
 
@@ -381,17 +385,19 @@ impl  SmoltcpDevice {
                     );
                     socket.bind(dst_addr).unwrap();
                     let sh = self.sockets.add(socket);
-                    self.udp_src_handle_map.lock().insert(ipe, sh);
+                    self.udp_src_handle_map.lock().insert(src_ipe, sh);
 
                     let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
-                    self.udp_read_data_tx_map.lock().insert(ipe, read_tx);
+                    self.udp_read_data_tx_map.lock().insert(src_ipe, read_tx);
 
-                    let ac = super::udp2::new(sh, read_rx,self.udp_write_data_tx.clone());
+                    let ac = super::udp2::new(sa, sh, read_rx,self.udp_write_data_tx.clone());
 
-                    debug!("smoltcp got new udp connection {ipe} {ta}");
+                    debug!("smoltcp got new udp connection {dst_ipe} {src_ipe}");
+
+                    let early_data = BytesMut::from(packet.payload());
 
 
-                    let _ = self.new_stream_tx.try_send(MapResult::new_u(ac).a(Some(ta)).build());
+                    let _ = self.new_stream_tx.try_send(MapResult::new_u(ac).a(Some(ta)).b(Some(early_data)).build());
 
                 }
             }
@@ -407,7 +413,7 @@ impl  SmoltcpDevice {
     pub fn process_ingress(&mut self) {
         let mut handles_to_remove = Vec::new();
         let mut tcp_src_to_remove = Vec::new();
-        let mut udp_src_to_remove = Vec::new();
+        let mut udp_dst_to_remove = Vec::new();
 
         debug!("process_ingress...");
         
@@ -416,37 +422,60 @@ impl  SmoltcpDevice {
             match so {
                 smoltcp::socket::Socket::Icmp(_) => {},
                 smoltcp::socket::Socket::Udp(socket) => {
+                    /*
+                    smoltcp 中, udp 的逻辑是反的，它在建立udp socket 时，只存储目标的ip+port,
+                    对 该 socket 进行 recv_slice 时, 得到的地址是 源的ip+port (本地地址)
+                     */
 
                     if !socket.can_recv() {
                         return;
                     }
-                    let src = socket.endpoint();
-                    let src:IpEndpoint = IpEndpoint{addr: src.addr.unwrap(), port: src.port};
+                    let dst = socket.endpoint();
+                    let dst_ipe:IpEndpoint = IpEndpoint{addr: dst.addr.unwrap(), port: dst.port};
 
 
-                    let m = self.udp_read_data_tx_map.lock();
-                    let udp_read_data_sender = m.get(&src).unwrap();
-
-                    while socket.can_recv() && udp_read_data_sender.capacity() > 0 {
+                  
+                    while socket.can_recv() {
                         let mut buffer = BytesMut::with_capacity(MTU);
                         unsafe {
                             buffer.set_len(MTU);
                         }
-                        if let Ok((n, dst)) = socket.recv_slice(buffer.as_mut()) {
-                            unsafe {
-                                buffer.set_len(n);
-                            }
-                            if udp_read_data_sender.try_send((dst.endpoint, buffer)).is_err() {
-                                udp_src_to_remove.push(src);
+                        let r1 = socket.recv_slice(buffer.as_mut());
+                        match r1 {
+                            Ok((n, src)) => {
+                                unsafe {
+                                    buffer.set_len(n);
+                                }
+
+                                let m = self.udp_read_data_tx_map.lock();
+                                let udp_read_data_sender = match m.get(&src.endpoint){
+                                    Some(s) => s,
+                                    None => {
+                                        debug!("udp recv from {dst_ipe} but not in map");
+                                        return;
+                                    },
+                                };
+
+                                
+                                let r2 = udp_read_data_sender.try_send((dst_ipe, buffer));
+                                if r2.is_err() {
+                                    debug!("udp e2 {:?}",r2);
+                                    udp_dst_to_remove.push(dst_ipe);
+                                    break;
+                                }
+                            },
+                            Err(e) => {
+                                debug!("udp e1 {e}");
+
+                                udp_dst_to_remove.push(dst_ipe);
                                 break;
-                            }
-                        } else {
-                            udp_src_to_remove.push(src);
-                            break;
+                            },
                         }
+                        
                     }
                     if !socket.is_open() {
-                        udp_src_to_remove.push(src);
+                        debug!("udp not open");
+                        udp_dst_to_remove.push(dst_ipe);
                     }
 
                 },
@@ -510,7 +539,7 @@ impl  SmoltcpDevice {
         for endpoint in tcp_src_to_remove {
             self.remove_tcp(endpoint);
         }
-        for endpoint in udp_src_to_remove {
+        for endpoint in udp_dst_to_remove {
            self.remove_udp(endpoint);
         }
         for handle in handles_to_remove {
@@ -531,7 +560,7 @@ impl  SmoltcpDevice {
     /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 base_conn(tun)
     pub fn process_tcp_egress(&mut self, sh: SocketHandle, mut data: BytesMut) {
         
-            debug!("process_egress for {sh}, {}",data.len());
+            debug!("process_egress tcp for {sh}, {}",data.len());
 
             let socket: &mut smoltcp::socket::tcp::Socket = self.sockets.get_mut(sh);
 
@@ -555,9 +584,9 @@ impl  SmoltcpDevice {
              }
     }
 
-    pub fn process_udp_egress(&mut self, sh: SocketHandle,dst: IpEndpoint, data: BytesMut) {
+    pub fn process_udp_egress(&mut self, sh: SocketHandle,src: IpEndpoint, data: BytesMut) {
         
-        debug!("process_egress for {sh}, {}",data.len());
+        debug!("process_egress udp for {sh}, {src}, {}, {}",data.len(),String::from_utf8_lossy(&data));
 
         let socket: &mut smoltcp::socket::udp::Socket = self.sockets.get_mut(sh);
 
@@ -566,14 +595,14 @@ impl  SmoltcpDevice {
             return;
         }
         
-        let r = socket.send_slice(&data,dst);
+        let r = socket.send_slice(&data,src);
 
         match r {
             Ok(_) => {
                 
             },
             Err(e) => {
-                debug!("smoltcp send udp failed, {e}");
+                debug!("smoltcp send udp failed, dst:{src}, l:{}, e:{e}", data.len());
                 socket.close()
             },
         }

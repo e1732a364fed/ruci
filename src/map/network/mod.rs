@@ -55,7 +55,7 @@ impl Name for Direct {
 impl Map for Direct {
     /// dial params.a.
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        let a = match params.a {
+        let dial_a = match params.a {
             Some(a) => a,
             None => {
                 return MapResult::err_str(&format!("{}, direct need params.a, got empty", cid))
@@ -66,7 +66,7 @@ impl Map for Direct {
             let buf = params.b.as_ref().map(|b| b.len());
             debug!(
                 cid = %cid,
-                addr = %a,
+                addr = %dial_a,
                 behavior = ?behavior,
                 buf = ?buf,
                 "direct dial",
@@ -75,11 +75,11 @@ impl Map for Direct {
         }
 
         let dial_r = match behavior {
-            ProxyBehavior::ENCODE => match a.network {
-                Network::UDP => a.try_dial_udp().await,
-                _ => a.try_dial().await,
+            ProxyBehavior::ENCODE => match dial_a.network {
+                Network::UDP => dial_a.try_dial_udp().await,
+                _ => dial_a.try_dial().await,
             },
-            _ => a.try_dial().await,
+            _ => dial_a.try_dial().await,
         };
         match dial_r {
             Ok(mut stream) => {
@@ -99,7 +99,9 @@ impl Map for Direct {
                 }
                 return MapResult::builder().c(stream).b(params.b).build();
             }
-            Err(e) => return MapResult::from_e(e.context(format!("Direct dial {} failed", a))),
+            Err(e) => {
+                return MapResult::from_e(e.context(format!("Direct dial {} failed", dial_a)))
+            }
         }
     }
 }
