@@ -111,7 +111,7 @@ impl RuleSet {
 /// 一种使用 Vec<RuleSet> 的 OutSelector 的实现
 ///
 /// 仅用于 RuleSet很少 且每个 RuleSet 中的 HashSet<Rule> 中的 Rule
-/// 都很少的情况
+/// 都很少的情况, 即 适用于精确匹配
 ///
 #[derive(Debug)]
 pub struct RuleSetOutSelector {

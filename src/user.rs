@@ -105,7 +105,7 @@ impl PartialEq for UserBox {
 
 impl Eq for UserBox {}
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserVec(pub Vec<UserBox>);
 
 impl UserVec {

@@ -18,18 +18,23 @@ dyn-clone = "1"
 toml = "0.8.1"
 serde = { version = "1", features = ["derive"] }
 
-ipnet = "2.9.0"
-iprange = "0.6.7"
-regex = "1.10.3"
+ipnet = { version = "2.9.0" , optional = true }
+iprange = {version = "0.6.7" , optional = true }
+regex = {version = "1.10.3" , optional = true }
+maxminddb = { version = "0.24", optional = true }
 
 mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lot","luau","macros"] , optional = true }
 
+
+
 [features]
-default = ["lua"]
+default = ["lua", "route"]
 lua = ["mlua"]
+
+route = ["maxminddb" ,"ipnet" ,"iprange" ,"regex" ,]
 
 [[example]]
 name = "chain"
-required-features = ["lua"]
+required-features = ["lua", "route"]
 
 

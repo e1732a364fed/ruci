@@ -4,7 +4,9 @@
 
 */
 pub mod chain;
-pub mod route;
 pub mod suit;
+
+#[cfg(feature = "route")]
+pub mod route;
 
 pub const VERSION: &str = "0.0.1";
