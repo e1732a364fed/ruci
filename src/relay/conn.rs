@@ -164,6 +164,54 @@ pub async fn handle_conn<'a>(
     Ok(())
 }
 
+/// mock of  handle_conn, utilize handle_in_accumulate_result and  FixedOutSelector
+pub async fn handle_conn_clonable(
+    in_conn: net::Conn,
+
+    ins_iterator: impl Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
+    outc_iterator: impl Iterator<Item = &'static MapperBox> + Clone + 'static,
+    outc_addr: Option<net::Addr>,
+    ti: Option<Arc<net::TransmissionInfo>>,
+) -> io::Result<()> {
+    let cid = match ti.as_ref() {
+        Some(ti) => CID::new_ordered(&ti.alive_connection_count),
+        None => CID::new(),
+    };
+
+    type ExtraDataIterType = std::vec::IntoIter<OptData>;
+
+    let cidc = cid.clone();
+    let listen_result =
+        tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
+            map::accumulate::<_, ExtraDataIterType>(
+                cidc,
+                ProxyBehavior::DECODE,
+                MapResult::c(in_conn),
+                ins_iterator,
+                None,
+            )
+            .await
+        })
+        .await;
+
+    let listen_result = match listen_result {
+        Ok(lr) => lr,
+        Err(e) => {
+            warn!("{cid}, handshake in server failed with io::Error, {e}");
+
+            return Err(e.into());
+        }
+    };
+
+    let f = FixedOutSelector {
+        mappers: outc_iterator,
+        addr: outc_addr,
+    };
+    let f = Box::new(f);
+
+    handle_in_accumulate_result(listen_result, f, ti).await
+}
+
 pub async fn cp_stream(
     cid: CID,
     s1: Stream,
