@@ -10,7 +10,7 @@ use tracing::debug;
 mod shared;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    shared::print_env_version("example: chain");
+    shared::print_env_version_and_init_log("example: chain");
 
     let default_fn = "local.lua".to_string();
 

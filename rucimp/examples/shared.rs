@@ -10,7 +10,7 @@ fn init_log() {
         .try_init();
 }
 
-pub fn print_env_version(name: &str) {
+pub fn print_env_version_and_init_log(name: &str) {
     println!("rucimp~ {}\n", name);
     let c_dir = std::env::current_dir().expect("has current directory");
     println!("working dir: {:?} \n", c_dir);

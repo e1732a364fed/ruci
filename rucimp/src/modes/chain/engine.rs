@@ -72,7 +72,7 @@ impl Engine {
             ..Default::default()
         }
     }
-    /// 清空配置. reset 后 可以 接着调用 init
+    /// 清空配置. reset 后 可以 接着调用 init_*
     pub async fn reset(&mut self) {
         debug!("Engine reset called");
         let running = self.running.lock();

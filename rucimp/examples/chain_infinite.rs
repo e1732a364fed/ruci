@@ -10,7 +10,7 @@ mod shared;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    shared::print_env_version("example: chain_infinite");
+    shared::print_env_version_and_init_log("example: chain_infinite");
 
     let default_fn = "local.lua".to_string();
 

@@ -63,7 +63,7 @@ chain engine shutted down gracefully
 ## ruci
 先读 net模块，再读 map 模块，然后读 relay 模块
 
-读的时候，先读文件顶部的文档
+读的时候，先读mod.rs 或每个包的代表文件 的顶部的文档
 也可以 用 `cargo doc --no-deps --open` 生成html 文档 后阅读
 
 读完文档后，利用您的代码编辑器纵览文档中指出的关键部分.

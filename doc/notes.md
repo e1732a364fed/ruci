@@ -54,7 +54,7 @@ Protocol names we support, most preferred first. If empty we don't do ALPN at al
 client:
 Which ALPN protocols we include in our client hello. If empty, no ALPN extension is sent
 
-如果任意一方的alpn 没给出, 则连接都通过；如果两方 alph 都给出, 则只有匹配了才通过
+如果任意一方的alpn 没给出, 则连接都通过；如果两方 alpn 都给出, 则只有匹配了才通过
 
 native-tls 的 server 不支持手动设置 alpn
 
@@ -106,7 +106,7 @@ Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是�
 
 而完全动态链有最大的灵活性, 能实现所有一般情况下无法实现的效果. 它是图灵完备的
 
-比如 分支, 多路复用, 负载均衡, 都可以用 完全动态链实现
+比如 分支(分流与过滤), 多路复用, 负载均衡, 都可以用 完全动态链实现
 
 
 ## 常见配置问题
@@ -175,11 +175,11 @@ Listener 在 监听 udp, 且 有 udp 的 fixed_target_addr 时, 会对每一个 
 
 
 注意几乎所有的 outbound 都要先有一个 "流发生器", 如 BindDialer, 如果直接是 socks5/trojan 的话, 
-没有流发生器, 是无法建立任何连接的
+没有流发生器, 是无法建立任何连接的。也就是说, 要有一个拨号环节。
 
-也就是说, 要有一个拨号环节
+因此，如遇到此问题，检查配置文件，在需要之处加上 相应的 "Map"
 
-## chain 模式 与 verysimple 配置 (即 ruci中的 suit 模式, toml 格式配置文件) 的对比
+## chain 模式 与 verysimple 配置 (即 最初ruci版本中的 suit 模式, toml 格式配置文件) 的对比
 
 verysimple 有几个不清不楚的地方: 
 1. trojan 的 password 写在了 uuid 里
@@ -219,9 +219,7 @@ windows 上需要 wintun.dll. 可用ruci-cmd `ruci-cmd utils wintun` 来自动�
 在windows上, 可以在控制面板中找到所建立的虚拟网卡
 
 
-实测, 在 windows 上, 就算不配置任何路由, 系统也会识别到它建立的虚拟网卡, 并向其发送一些信息
-
-在 linux 和 macos 上, 也会收到少量信息
+实测, 在 windows 上, 就算不配置任何路由, 系统也会识别到它建立的虚拟网卡, 并向其发送一些信息；在 linux 和 macos 上, 也会收到少量信息（即会在log中显示一些输出）
 
 
 # lib note
@@ -348,7 +346,7 @@ trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来, 这
  
 截至 24.3.21
 
-s2n-quic:
+s2n-quic (代码在 rucimp/src/map/quic):
 
 ruci 自己连自己，没问题
 ruci 作 客户端， verysimple 作 服务端，能通，能过trojan 得 target_addr, 但之后 relay 阶段卡住
@@ -357,7 +355,7 @@ ruci 作 服务端， vs 作客户端，连不上，就像没运行ruci 一样.
 
 这个行为 在 s2n-quic 中使用 rustls 与 使用 s2n-tls 的效果是一样的
 
-quinn: 全没问题
+quinn (代码在 rucimp/src/map/quinn):全没问题
 
 故 ruci 默认使用 quinn 作为 quic实现。
 
@@ -370,7 +368,8 @@ quinn: 全没问题
 tproxy,tun 要使用 管理员权限 运行
 
 ### 1
-`panic = "abort"` 不能在 windows release 版中正常运行
+Cargo.toml 中的 profile 中 
+如果加了`panic = "abort"` ，则编译出的程序不能在 windows release 版中正常运行
 
 ### 2
 windows上运行 gnu 版会报 应用程序无法正常启动, 0xc00007b

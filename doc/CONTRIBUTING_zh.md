@@ -38,17 +38,19 @@ ruci-cmd 在 git commit 中 简称 rcc
 
 ## 开发-发布流程
 
-coding, test in local host, test in linux, cargo clippy,
+coding, test on local host and linux,
 commit (to see test on github action, and test every feature on github action),
 fix bug,
 bump version to alpha,
-test build with gihub action, Makefile and cross,
+test on some platforms,
 fix issues,
-bump version to beta,
+cargo clippy,
+bump version to beta, 
+test on real machine on all platforms,
 fix issues,
-bump version to formal
+bump version to formal.
 
-### test 流程
+### proxy test 流程
 
 cargo test for basic usage, with unit testing and integration testing
 
@@ -65,4 +67,5 @@ test basic web page load, test video web page, test 4k video web page
 
 在项目初期选用了 async_std. 
 后来才创建的 tokio 分支, 可查看commit历史 求证. 
-不过难以维护两套异步架构, 现在async_std分支只能作为参考了. 
+不过难以维护两套异步架构, 且 async_std 的第三包支持还是不如tokio丰富。因此后面还是停止了 async_std 分支的开发。
+现在async_std分支只能作为参考了. 

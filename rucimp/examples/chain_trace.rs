@@ -17,7 +17,7 @@ mod shared;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    shared::print_env_version("example: chain_trace_and_record_new_conn");
+    shared::print_env_version_and_init_log("example: chain_trace_and_record_new_conn");
 
     let default_fn = "local.lua".to_string();
 
@@ -72,8 +72,8 @@ async fn main() -> anyhow::Result<()> {
 
         tokio::spawn(async move {
             loop {
-                let x = ub_rx.recv().await;
-                match x {
+                let o = ub_rx.recv().await;
+                match o {
                     Some(nc) => {
                         println!("ub: {} {}", nc.0, nc.1)
                     }
@@ -87,8 +87,8 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::spawn(async move {
         loop {
-            let x = nci_rx.recv().await;
-            match x {
+            let o = nci_rx.recv().await;
+            match o {
                 Some(nc) => {
                     if !fr.record(nc).await {
                         break;

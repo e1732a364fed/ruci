@@ -217,6 +217,8 @@ local sock5http = { Socks5Http = {} }
 
 ```
 
+（local 的用法不在此解释，照抄就行）
+
 如此，整个 配置就变成了
 
 ```lua
