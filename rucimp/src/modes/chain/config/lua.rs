@@ -177,11 +177,7 @@ impl LuaNextSelector {
 }
 
 impl NextSelector for LuaNextSelector {
-    fn next_index(
-        &self,
-        this_index: i64,
-        data: Option<Vec<Option<Box<dyn ruci::map::Data>>>>,
-    ) -> Option<i64> {
+    fn next_index(&self, this_index: i64, data: OVOD) -> Option<i64> {
         let mg = self.0.lock();
         let lua = &mg.0;
 
@@ -200,21 +196,16 @@ impl NextSelector for LuaNextSelector {
 }
 
 use parking_lot::Mutex;
+use ruci::map::acc::OVOD;
 
-#[allow(unused)]
 #[cfg(test)]
+#[allow(unused)]
 mod test {
 
-    use std::net::TcpListener;
-    use std::sync::atomic::AtomicU64;
-
     use super::*;
-    use mlua::prelude::*;
-    use mlua::{Error, Lua, LuaSerdeExt, UserData, Value};
+    use mlua::{Error, Lua, LuaSerdeExt};
     use ruci::map;
     use ruci::user::PlainText;
-
-    use super::*;
 
     #[test]
     fn testin() -> mlua::Result<()> {
@@ -269,9 +260,6 @@ mod test {
 
     #[test]
     fn testout() -> mlua::Result<()> {
-        let lua = Lua::new();
-        let globals = lua.globals();
-
         let text = r#"
     
             tls = { TLS = {  host = "my.com", insecure = true } }
@@ -324,9 +312,6 @@ mod test {
 
     #[test]
     fn testout2() -> mlua::Result<()> {
-        let lua = Lua::new();
-        let globals = lua.globals();
-
         let text = r#"
         listen = { Listener =  "0.0.0.0:1080"   }
         chain1 = {
@@ -370,9 +355,6 @@ mod test {
 
     #[test]
     fn testout3() -> mlua::Result<()> {
-        let lua = Lua::new();
-        let globals = lua.globals();
-
         let text = r#"
 
         isac2 = { { Stdio={ fixed_target_addr= "udp://127.0.0.1:20800", pre_defined_early_data = "abc" } } , { Adder = 1 } } 
@@ -396,6 +378,8 @@ mod test {
         let dial = c.outbounds;
         let first_listen_group = dial.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
+        println!("{:#?}", last_m);
+
         // assert!(matches!(InMapperConfig::Counter, last_m));
 
         // let first_m = first_listen_group.chain.first().unwrap();
@@ -412,9 +396,6 @@ mod test {
 
     #[test]
     fn test_tag_route() -> mlua::Result<()> {
-        let lua = Lua::new();
-        let globals = lua.globals();
-
         let text = r#"
         listen = { Listener =   "0.0.0.0:1080"   }
         chain1 = {
@@ -458,9 +439,6 @@ mod test {
 
     #[test]
     fn test_rule_route() -> mlua::Result<()> {
-        let lua = Lua::new();
-        let globals = lua.globals();
-
         let text = r#"
         listen = { Listener =   "0.0.0.0:1080"   }
         chain1 = {
@@ -520,7 +498,7 @@ mod test {
         Ok(())
     }
 
-    fn get_ovod() -> anyhow::Result<Option<Vec<Option<Box<dyn ruci::map::Data>>>>> {
+    fn get_ovod() -> anyhow::Result<OVOD> {
         let u1 = 3u8;
         let boxed_u1: Box<dyn Data> = Box::new(u1);
 
@@ -530,7 +508,12 @@ mod test {
         let pt = PlainText::new("user".to_string(), "pass".to_string());
         let boxed_pt: Box<dyn Data> = Box::new(pt);
 
-        Ok(Some(vec![Some(boxed_u1), Some(boxed_a1), Some(boxed_pt)]))
+        Ok(Some(vec![
+            Some(boxed_u1),
+            Some(boxed_a1),
+            None,
+            Some(boxed_pt),
+        ]))
     }
     #[test]
     fn test_serde_json() -> anyhow::Result<()> {
@@ -549,13 +532,27 @@ mod test {
         use mlua::chunk;
         use mlua::Function;
 
+        let inspect: LuaTable = lua.load(lua_inspect::INSPECT).eval()?;
+        lua.globals().set("inspect", inspect)?;
+
+        //rust None in lua will be: userdata: 0x0000000000000000,
+        //Other types will be a lua table.
+
         let f = lua
             .load(chunk! {
-                function(data1)
-                    print("data is ",data1)
-                    print("data is ",data1[1])
-                    print("data is ",data1[1]["type"])
-                    print("data is ",data1[1]["value"])
+                function(vec)
+                print( inspect(vec))
+
+                    print("data is ",vec,type(vec))
+                    print("data1 is ",vec[1])
+                    print("data2 is ",vec[2])
+                    print("data3 is ",vec[3], type(vec[3]))
+
+                    print("inspect", inspect(vec[3]))
+
+                    print("data4 is ",vec[4])
+                    print("data is ",vec[1]["type"])
+                    print("data is ",vec[1]["value"])
 
                 end
             })

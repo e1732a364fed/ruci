@@ -8,6 +8,10 @@
 #[cfg(feature = "lua")]
 pub mod lua;
 
+#[cfg(feature = "lua")]
+#[cfg(test)]
+pub mod lua_inspect;
+
 pub mod dynamic;
 
 use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};

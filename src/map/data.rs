@@ -6,14 +6,23 @@ use bitflags::bitflags;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub  struct DataFlags: u32 {
-        const None = 0b00000000;
+    pub  struct DataFlags: u16 {
+        const None = 0;
+        const Unsigned = 0;
+        const Integer = 0;
+        const Float = 0b10000000;
+        const Signed = 0b01000000;
+
         const Bool = 0b00000001;
-        const RAddr = 0b00000010;
-        const LAddr = 0b00000100;
-        const User = 0b00001000;
-        const CID = 0b00010000;
-        const U8 = 0b00100000;
+        const Byte = 0b00000011;
+        const Word = 0b00000111;
+        const DWord = 0b00001111;
+        const QWord = 0b00011111;
+
+        const RAddr = 0b1000000000000000;
+        const LAddr = 0b0100000000000000;
+        const User = 0b0010000000000000;
+        const CID = 0b0001000000000000;
 
         const RLAddr = Self::RAddr.bits() | Self::LAddr.bits();
     }
@@ -74,7 +83,7 @@ impl Data for u8 {
         Some(*self)
     }
     fn get_flags(&self) -> DataFlags {
-        DataFlags::U8
+        DataFlags::Byte
     }
 }
 

@@ -88,6 +88,16 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 
 这样, 就保证了每一不同生命周期的部分都有自己数据的所有权, 就不再需要 static
 
+## MapResult 中的 "任意数据类型"
+
+在项目初期，对其实现做了多种尝试, 一开始使用 enum AnyData, 后来将 enum 分成
+单体AnyData 和 Vec<AnyData> 两部分, 再后来尝试使用smallvec<[AnyData;1]>
+
+最终使用了 #[typetag::serde] 的 trait 方式
+
+最初是将动态数据 Arc<AtomicU64>也放在 enum 中，后来移出, 单独做处理, 因为
+动态数据不能也不应该做序列化
+
 ## maxmind db 的 geoip
 
 在(24.2.28)测试中发现, 最新的 mmdb ,
