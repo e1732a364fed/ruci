@@ -38,11 +38,11 @@ jobs:
       - name: Install cross
         run: cargo install cross
       
-      - name: Install Openssl
-        run: |
-          cd crates/ruci-cmd
-          sudo docker build -f Dockerfile_aarch64 -t openssl:aarch64 .
-          sudo docker build -f Dockerfile_android -t openssl:android .
+      # - name: Install Openssl
+      #   run: |
+      #     cd crates/ruci-cmd
+      #     sudo docker build -f Dockerfile_aarch64 -t openssl:aarch64 .
+      #     sudo docker build -f Dockerfile_android -t openssl:android .
 
       - name: Build ${{ matrix.target }}
         run: |
