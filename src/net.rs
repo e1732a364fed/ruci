@@ -27,6 +27,8 @@ use std::{
 use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
 use tokio::net::TcpStream;
+use tokio::net::UdpSocket;
+use tokio::net::UnixStream;
 
 pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
     match ip_addr {
@@ -75,6 +77,8 @@ pub enum Network {
     #[default]
     TCP,
     UDP,
+
+    #[cfg(unix)]
     Unix,
 }
 
@@ -84,6 +88,7 @@ impl Network {
             "ip" => Ok(Network::IP),
             "tcp" => Ok(Network::TCP),
             "udp" => Ok(Network::UDP),
+            #[cfg(unix)]
             "unix" => Ok(Network::Unix),
             _ => Err(io::Error::other(format!(
                 "not supported network string: {}",
@@ -97,6 +102,7 @@ impl Network {
             Network::IP => "ip",
             Network::TCP => "tcp",
             Network::UDP => "udp",
+            #[cfg(unix)]
             Network::Unix => "unix",
         }
     }
@@ -245,7 +251,8 @@ impl Addr {
         }
     }
 
-    //如果没法从已有的 SocketAddr 转，则尝试用系统方法解析域名, 并使用第一个值
+    /// 如果没法从已有的 SocketAddr 转，则尝试用系统方法解析域名, 并使用第一个值.
+    /// 不适用于 UDS
     pub fn get_socket_addr_or_resolve(&self) -> io::Result<SocketAddr> {
         use std::net::ToSocketAddrs;
 
@@ -267,6 +274,29 @@ impl Addr {
         }
     }
 
+    pub async fn try_dial(&self) -> io::Result<Stream> {
+        match self.network {
+            Network::TCP => {
+                let so = self.get_socket_addr_or_resolve()?;
+
+                let c = TcpStream::connect(so).await?;
+                return Ok(Stream::TCP(Box::new(c)));
+            }
+            Network::UDP => {
+                let so = self.get_socket_addr_or_resolve()?;
+
+                let u = UdpSocket::bind(so).await?;
+                return Ok(Stream::UDP(udp::new(u)));
+            }
+            #[cfg(unix)]
+            Network::Unix => {
+                let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
+                return Ok(Stream::TCP(Box::new(u)));
+            }
+            _ => unimplemented!(),
+        }
+    }
+
     ///可为 www.baidu.com:80 或 127.0.0.1:1234 这种形式,
     /// 如果 name和ip都给出了，首选ip
     pub fn get_addr_str(&self) -> String {
@@ -281,6 +311,7 @@ impl Addr {
                 NetAddr::Name(n, p) => format!("{}:{}", n, p),
                 NetAddr::NameAndSocket(_, ip, p) => format!("{}:{}", ip, p),
             },
+            #[cfg(unix)]
             Network::Unix => match &self.addr {
                 NetAddr::Socket(_) => {
                     panic!("network is unix but addr in Addr is SocketAddr rather than Name")
@@ -369,6 +400,12 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync + Name> ConnTrait for T {}
 impl crate::Name for TcpStream {
     fn name(&self) -> &str {
         "tcpstream"
+    }
+}
+
+impl crate::Name for UnixStream {
+    fn name(&self) -> &str {
+        "unixstream"
     }
 }
 

@@ -94,6 +94,7 @@ pub async fn handle_tcp<'a>(
     state.outc_name = outc_name.to_string();
 
     //todo: DNS 功能
+    /*
     let socket_addr = match real_target_addr.get_socket_addr_or_resolve() {
         Ok(t) => t,
         Err(e) => {
@@ -108,6 +109,7 @@ pub async fn handle_tcp<'a>(
         }
     };
 
+
     let out_tcp = match TcpStream::connect(socket_addr).await {
         Ok(tcp) => tcp,
         Err(e) => {
@@ -118,23 +120,45 @@ pub async fn handle_tcp<'a>(
             return Err(e);
         }
     };
-    let out_conn = Box::new(out_tcp);
+     */
+
+    let out_stream = match real_target_addr.try_dial().await {
+        Ok(t) => t,
+        Err(e) => {
+            warn!(
+                "{}, parse target addr failed, {} , {}",
+                state, real_target_addr, e
+            );
+            if let Some(c) = listen_result.c {
+                let _ = c.try_unwrap_tcp()?.shutdown().await;
+            }
+            return Err(e);
+        }
+    };
+
+    let out_conn = out_stream;
 
     if is_direct {
-        cp_tcp::cp_tcp(
-            cid,
-            listen_result.c.take().unwrap().try_unwrap_tcp()?,
-            out_conn,
-            listen_result.b.take(),
-            ti,
-        )
-        .await;
+        match out_conn {
+            net::Stream::TCP(out_conn) => {
+                cp_tcp::cp_tcp(
+                    cid,
+                    listen_result.c.take().unwrap().try_unwrap_tcp()?,
+                    out_conn,
+                    listen_result.b.take(),
+                    ti,
+                )
+                .await;
+            }
+            net::Stream::UDP(_) => todo!(),
+            net::Stream::None => unimplemented!(),
+        }
     } else {
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
                 TcpOutAccumulator::accumulate(
                     cid,
-                    out_conn,
+                    out_conn.try_unwrap_tcp()?,
                     outc_iterator,
                     Some(target_addr),
                     listen_result.b.take(),

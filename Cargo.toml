@@ -11,7 +11,7 @@ panic = "abort"
 debug = false
 strip = true
 debug-assertions = false
-#opt-level = 'z' # use this and upx (on windows) will get the smallest binary
+#opt-level = 'z' # use this and upx will get the smallest binary
 
 [dependencies]
 log = "0.4.20"

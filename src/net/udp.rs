@@ -18,6 +18,25 @@ pub struct Conn {
     pub base: Arc<UdpSocket>,
 }
 
+impl Conn {
+    pub fn new(u: UdpSocket) -> Self {
+        let a = Arc::new(u);
+        Conn { base: a }
+    }
+
+    pub fn duplicate(&self) -> Conn {
+        let b = self.base.clone();
+        Conn { base: b }
+    }
+}
+
+/// calls duplicated inside
+pub fn new(u: UdpSocket) -> AddrConn {
+    let a = Arc::new(u);
+    let b = a.clone();
+    AddrConn(Box::new(Conn { base: a }), Box::new(Conn { base: b }))
+}
+
 /// wrap u with Arc, and return 2 copys.
 pub fn duplicate(u: UdpSocket) -> (Conn, Conn) {
     let a = Arc::new(u);

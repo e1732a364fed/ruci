@@ -189,7 +189,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut r1: R1,
     mut w1: W1,
 ) -> Result<u64, Error> {
-    const MAX_DATAGRAM_SIZE: usize = 65_507;
+    const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
     let mut whole_write = 0;
 
     loop {

@@ -73,7 +73,7 @@ impl AsyncWrite for AdderConn {
             abuf.clear();
             abuf.extend_from_slice(buf);
 
-            //考虑使用 simd 或 rayon
+            //todo: 考虑使用 simd 或 rayon; 可以在其它impl包中实现，也可在此实现
             for a in abuf.iter_mut() {
                 *a = (x + *a as i16) as u8;
             }
