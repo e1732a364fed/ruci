@@ -24,7 +24,8 @@ listen_socks5http = {listen, {
 }}
 
 tlsout = {
-    TLS = {
+    NativeTLS = {
+    --TLS = {
         host = "www.1234.com",
         insecure = true
     }

@@ -110,6 +110,7 @@ impl map::Mapper for Server {
 #[derive(Clone, Debug, MapperExt)]
 pub struct Client {
     pub domain: String,
+    pub in_secure: bool,
 }
 
 impl Name for Client {
@@ -128,12 +129,26 @@ impl map::Mapper for Client {
     ) -> map::MapResult {
         let conn = params.c;
         if let ruci::net::Stream::Conn(conn) = conn {
-            let connector =
-                TlsConnector::from(tokio_native_tls::native_tls::TlsConnector::new().unwrap());
+            let connector = if self.in_secure {
+                TlsConnector::from(
+                    tokio_native_tls::native_tls::TlsConnector::builder()
+                        .danger_accept_invalid_certs(true)
+                        .danger_accept_invalid_hostnames(true)
+                        .build()
+                        .unwrap(),
+                )
+            } else {
+                TlsConnector::from(tokio_native_tls::native_tls::TlsConnector::new().unwrap())
+            };
 
             let r = connector.connect(&self.domain, conn).await;
             match r {
-                anyhow::Result::Ok(c) => return MapResult::new_c(Box::new(c)).a(params.a).build(),
+                anyhow::Result::Ok(c) => {
+                    return MapResult::new_c(Box::new(c))
+                        .a(params.a)
+                        .b(params.b)
+                        .build()
+                }
                 Err(e) => MapResult::from_e(e),
             }
         } else {

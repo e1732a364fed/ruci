@@ -439,6 +439,7 @@ impl ToMapperBox for OutMapperConfig {
             #[cfg(feature = "tokio-native-tls")]
             OutMapperConfig::NativeTLS(c) => Box::new(crate::map::native_tls::Client {
                 domain: c.host.clone(),
+                in_secure: c.insecure.unwrap_or_default(),
                 ext_fields: Some(MapperExtFields::default()),
             }),
 
