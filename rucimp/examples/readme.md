@@ -14,8 +14,8 @@ chain_infinite 演示 完全动态链，其与 chain 的运行方式一样，不
 # in folder rucimp, run:
 
 # chain mode
-cargo run --example chain -- local.lua
-cargo run --example chain -- remote.lua
+RUST_LOG=none,ruci=debug cargo run --example chain
+RUST_LOG=none,ruci=debug cargo run --example chain -- remote.lua
 
 # suit mode
 cargo run --example suit -- local.suit.toml

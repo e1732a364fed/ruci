@@ -5,7 +5,7 @@ use http::{Response, StatusCode};
 use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
-    net::{self, helpers::EarlyDataWrapper, http::CommonConfig},
+    net::{self, helpers::EarlyDataWrapper},
 };
 use tokio::sync::mpsc;
 
@@ -13,9 +13,7 @@ use tracing::{debug, info};
 
 use super::*;
 #[derive(Clone, Debug, NoMapperExt, Default)]
-pub struct Server {
-    pub config: Option<CommonConfig>,
-}
+pub struct Server {}
 impl ruci::Name for Server {
     fn name(&self) -> &str {
         "h2_server"
@@ -71,24 +69,23 @@ impl Server {
                 let send = match send {
                     Ok(send) => send,
                     Err(e) => {
-                        info!("cid = %cid, accept h2 got e2 {}", e);
+                        info!(cid = %cid, "accept h2 got e2 {}", e);
                         break;
                     }
                 };
                 let subid = recv.stream_id().as_u32();
                 let subid2 = send.stream_id().as_u32();
-                info!("cid = %cid, accept h2 got new {} {}", subid, subid2);
-                assert!(subid == subid2);
+                info!(cid = %cid, "accept h2 got new {}", subid);
+                assert_eq!(subid, subid2);
 
                 let stream = super::H2Stream::new(recv, send);
-                info!("cid = %cid, accept h2 got new");
                 let mut ncid = cid.clone();
                 ncid.push_num(subid);
 
                 let m = MapResult::new_c(Box::new(stream)).new_id(ncid).build();
                 let r = tx.send(m).await;
                 if let Err(e) = r {
-                    info!("accept h2 got e3 {}", e);
+                    info!(cid = %cid, "accept h2 got e3 {}", e);
                     break;
                 }
             }

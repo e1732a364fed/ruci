@@ -61,9 +61,12 @@ ws = {
 -- if http_filter is used, 
 -- http_config field in WebSocket can be omitted.
 
-trojan_ws_chain = {tcp, tls,http_filter,  basic_ws, trojan_in}
+ws_trojans_chain = {tcp, tls,http_filter,  basic_ws, trojan_in}
 
---trojan_ws_chain = {tcp, tls, ws, trojan_in}
+--ws_trojans_chain = {tcp, tls, ws, trojan_in}
+
+h2_trojans_chain = {tcp, tls, "H2", trojan_in}
+
 
 dial = {
     Dialer = "tcp://0.0.0.0:10801"
@@ -83,7 +86,8 @@ config = {
     inbounds = { 
         
        --  {chain = trojan_chain, tag = "listen1"} ,
-    {  chain = trojan_ws_chain,  tag = "listen1"  } 
+     --  {  chain = ws_trojans_chain,  tag = "listen1"  } 
+       {  chain = h2_trojans_chain,  tag = "listen1"  } 
     
     -- {chain = socks5http_chain, tag = "listen1"} ,
     -- {chain =  { unix,tls, trojan_in }, tag = "listen1"} ,

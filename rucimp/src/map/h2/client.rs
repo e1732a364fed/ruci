@@ -11,19 +11,22 @@ use tokio::sync::mpsc;
 use tracing::{debug, info};
 
 use super::*;
+
+/// SingleClient 不使用 h2 的多路复用特性
 #[derive(Clone, Debug, NoMapperExt, Default)]
-pub struct Client {}
-impl ruci::Name for Client {
+pub struct SingleClient {}
+impl ruci::Name for SingleClient {
     fn name(&self) -> &str {
-        "h2_client"
+        "h2_single_client"
     }
 }
 
-impl Client {
+impl SingleClient {
     async fn handshake(
         &self,
         cid: net::CID,
         mut conn: net::Conn,
+        a: Option<net::Addr>,
         early_data: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
         let r = h2::client::handshake(conn).await;
@@ -36,10 +39,11 @@ impl Client {
         };
         let (mut send_request, connection) = r;
 
+        let cc = cid.clone();
         //这是一个 h2 包规定的奇怪用法
-        tokio::spawn(async {
+        tokio::spawn(async move {
             connection.await.expect("connection failed");
-            debug!("await ok");
+            debug!(cid = %cc, "h2 await end");
         });
 
         let mut request = Request::builder().body(()).unwrap();
@@ -50,13 +54,16 @@ impl Client {
 
         let stream = super::H2Stream::new(recv_stream, send_stream);
 
-        let mb = MapResult::new_c(Box::new(stream)).build();
+        let mb = MapResult::new_c(Box::new(stream))
+            .a(a)
+            .b(early_data)
+            .build();
         (Ok(mb))
     }
 }
 
 #[async_trait]
-impl Mapper for Client {
+impl Mapper for SingleClient {
     async fn maps(
         &self,
         cid: net::CID,
@@ -65,7 +72,7 @@ impl Mapper for Client {
     ) -> map::MapResult {
         let conn = params.c;
         if let net::Stream::Conn(conn) = conn {
-            let r = self.handshake(cid, conn, params.b).await;
+            let r = self.handshake(cid, conn, params.a, params.b).await;
             match r {
                 anyhow::Result::Ok(r) => r,
                 Err(e) => MapResult::from_e(e.context("h2_server handshake failed")),

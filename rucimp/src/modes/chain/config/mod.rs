@@ -197,6 +197,7 @@ pub enum InMapperConfig {
 
     #[cfg(feature = "tokio-native-tls")]
     NativeTLS(TlsIn),
+    H2,
 
     Http(PlainTextSet),
     Socks5(PlainTextSet),
@@ -225,6 +226,7 @@ pub enum OutMapperConfig {
     Socks5(Socks5Out),
     Trojan(String),
     WebSocket(CommonConfig),
+    H2Single,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -396,6 +398,7 @@ impl ToMapperBox for InMapperConfig {
             InMapperConfig::HttpFilter(c) => {
                 Box::new(ruci::map::http_filter::Server { config: c.clone() })
             }
+            InMapperConfig::H2 => Box::new(crate::map::h2::server::Server {}),
         }
     }
 }
@@ -467,6 +470,7 @@ impl ToMapperBox for OutMapperConfig {
 
                 Box::new(client)
             }
+            OutMapperConfig::H2Single => Box::new(crate::map::h2::client::SingleClient {}),
         }
     }
 }

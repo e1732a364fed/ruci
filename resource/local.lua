@@ -63,7 +63,9 @@ websocket_out = {
 }
 
 dial_trojan_chain = {dial, tlsout, trojan_out}
-dial_trojan_ws_chain = {dial, tlsout, websocket_out, trojan_out}
+dial_ws_trojan_chain = {dial, tlsout, websocket_out, trojan_out}
+
+dial_h2_trojan_chain = {dial, tlsout, "H2Single", trojan_out}
 
 stdio_socks5_chain = {{
     Stdio = {}
@@ -149,14 +151,24 @@ config = {
 
 --]=]
 
+--[=[
+config = {
+    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
+    outbounds = { { tag="dial1", chain = dial_ws_trojan_chain } },
+
+-- 演示 inbound 是 socks5http, outbound 是 tcp+tls+ws+trojan 的情况
+
+
+}
+
+--]=]
+
 ---[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
-    outbounds = { { tag="dial1", chain = dial_trojan_ws_chain } },
---[[
-这个 config 块是演示 inbound 是 socks5http, outbound 是 trojan+tls+ws 的情况
---]]
+    outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },
 
+    -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+h2+trojan 的情况
 }
 
 --]=]
