@@ -35,11 +35,10 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{
-    quic_common,
-    tproxy::{self, TcpResolver},
-    ws,
-};
+use crate::map::{quic_common, ws};
+
+#[cfg(all(feature = "sockopt", target_os = "linux"))]
+use crate::map::tproxy::{self, TcpResolver};
 
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
