@@ -32,6 +32,8 @@ use ruci::{
     user::*,
 };
 
+use crate::COMMON_DIRS;
+
 #[derive(Debug)]
 pub struct RuleSetOutSelector {
     pub outbounds_rules_vec: Vec<RuleSet>, // rule -> out_tag
@@ -248,7 +250,7 @@ impl RuleSet {
                 Some(cs) => match addr.addr {
                     NetAddr::Socket(so) | NetAddr::NameAndSocket(_, so, _) => {
                         let ip = so.ip();
-                        let country = geoip::get_ip_iso(ip);
+                        let country = geoip::get_ip_iso(ip, "Country.mmdb", &COMMON_DIRS);
                         cs.contains(&country)
                     }
                     _ => allow_empty,

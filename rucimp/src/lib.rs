@@ -12,3 +12,5 @@ pub mod example_common;
 pub mod route;
 
 pub const VERSION: &str = "0.0.1";
+
+pub const COMMON_DIRS: [&'static str; 4] = ["./", "ruci_config/", "resource/", "../resource/"];

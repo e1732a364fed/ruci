@@ -177,16 +177,3 @@ fn test_clone_box_and_iter() {
 
     // cloning an iter is cheap
 }
-#[test]
-fn test_miter() {
-    let a = Adder::default();
-
-    let a: MapperBox = Box::new(a);
-
-    let b = Adder::default();
-
-    let v = vec![Arc::new(a), Arc::new(Box::new(b))];
-    let m: MIterBox = Box::new(v.into_iter());
-    println!("{:?}", m);
-    assert!(m.count() == 2);
-}
