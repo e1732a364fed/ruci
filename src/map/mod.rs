@@ -49,25 +49,12 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
 use log::{info, log_enabled, warn};
-use tokio::{net::TcpStream, sync::oneshot};
+use tokio::sync::oneshot;
 use typed_builder::TypedBuilder;
 
 use std::{fmt::Debug, sync::Arc};
 
 use self::addr_conn::AddrConn;
-
-/// 如果新连接不是udp, 则内含新连接
-pub enum NewConnection {
-    TcpConnection(TcpStream),
-    #[cfg(unix)]
-    UnixConnection(tokio::net::UnixStream),
-    UdpConnection,
-}
-
-pub struct NewConnectionOptData {
-    pub new_connection: NewConnection,
-    pub data: OptData,
-}
 
 #[derive(Debug)]
 pub enum AnyData {
@@ -84,7 +71,7 @@ pub struct InputData {
     pub hyperparameter: OptData,  // 超参数, 即不上层计算决定的数据
 }
 
-/// map方法的参数
+/// the parameter for Mapper's maps method
 #[derive(Default, TypedBuilder)]
 pub struct MapParams {
     ///base conn
@@ -213,6 +200,12 @@ impl MapResult {
 }
 
 /// indicate the meaning of what the Mapper is really doing
+///
+/// A proxy would have 2 behaviors in general:
+///
+/// 1. "encode" the target addr into the stream
+/// 2. "decode" the target addr from the stream
+///
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProxyBehavior {
     #[default]
