@@ -157,6 +157,7 @@ pub struct PlainText {
 
 impl PlainText {
     pub fn new(user: String, pass: String) -> Self {
+        // 采用 \n, 以支持 用户名或密码中有空格的情况
         let astr = format!("plaintext:{}\n{}", user, pass);
         PlainText { user, pass, astr }
     }
@@ -205,7 +206,7 @@ impl UserTrait for PlainText {
     }
 }
 
-/// 存储User, 实现 AsyncUserAuthenticator
+/// store User, impl AsyncUserAuthenticator
 #[derive(Debug)]
 pub struct UsersMap<T: UserTrait + Clone> {
     m: Mutex<InnerUsersmapStruct<T>>,

@@ -215,11 +215,11 @@ impl TcpStreamGenerator {
                             loop {
                                 let r = listener.accept().await;
 
-
                                 let (tcpstream, raddr) =match r{
                                     Ok(x) => x,
                                     Err(e) => {
-                                        info!("loop tcp ended,listen e: {}", e);
+                                        let e = anyhow!("listen tcp ended by listen e: {}",e);
+                                        info!("{}", e);
                                         lastr = Err(e);
                                         break;
                                     },
@@ -229,10 +229,13 @@ impl TcpStreamGenerator {
 
                                 let pa = Addr{ addr:net::NetAddr::Socket(raddr), network: net::Network::TCP };
 
-                                let r = tx.send(MapResult{ a: None, b: None, c: Stream::TCP(Box::new(tcpstream)), d: Some(AnyData::Addr(pa)), e:None, new_id: None }).await;
+                                let r = tx.send(
+                                    MapResult::cd(Box::new(tcpstream),AnyData::Addr(pa))
+                                ).await;
                                 if let Err(e) = r {
-                                    info!("loop tcp ended,tx e: {}", e);
-                                    lastr = Err(io::Error::other(format!("{}",e)));
+                                    let e = anyhow!("listen tcp ended by tx e: {}",e);
+                                    info!("{}", e);
+                                    lastr = Err(e);
                                     break;
                                 }
                             }
@@ -244,7 +247,7 @@ impl TcpStreamGenerator {
                         }
 
                         _ = shutdown_rx => {
-                            info!("terminating accept loop");
+                            info!("terminating tcp listen");
                             Ok(())
                         }
                     }
@@ -255,6 +258,7 @@ impl TcpStreamGenerator {
         }
     }
 
+    /// not recommended
     pub async fn listen_addr_forever(a: &net::Addr) -> io::Result<Receiver<MapResult>> {
         let r = TcpListener::bind(a.clone().get_socket_addr().expect("a has socket addr")).await;
 
@@ -313,11 +317,11 @@ impl Mapper for TcpStreamGenerator {
             None => self
                 .fixed_target_addr
                 .as_ref()
-                .expect("self has fixed_target_addr"),
+                .expect("TcpStreamGenerator always has a fixed_target_addr"),
         };
 
         if log_enabled!(log::Level::Debug) {
-            debug!("{}, start listen {}", cid, a)
+            debug!("{}, start listen tcp {}", cid, a)
         }
 
         let r = match params.shutdown_rx {

@@ -225,6 +225,16 @@ impl MapResult {
             new_id: None,
         }
     }
+    pub fn cd(c: net::Conn, d: AnyData) -> Self {
+        MapResult {
+            a: None,
+            b: None,
+            c: Stream::TCP(c),
+            d: Some(d),
+            e: None,
+            new_id: None,
+        }
+    }
 
     pub fn s(s: net::Stream) -> Self {
         MapResult {
