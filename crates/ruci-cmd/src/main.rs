@@ -55,7 +55,7 @@ struct Args {
 
     /// use infinite dynamic chain that is written in the lua config file (the "infinite"
     /// global variable must exist)
-    #[cfg(feature = "lua")]
+    #[cfg(any(feature = "lua", feature = "lua54"))]
     #[arg(long)]
     infinite: bool,
 

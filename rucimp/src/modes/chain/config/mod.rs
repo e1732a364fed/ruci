@@ -5,7 +5,7 @@
  * 有限动态链的Mapper组成也可用 StaticConfig 定义, 但其状态转移函数在dynamic模块中定义
  */
 
-#[cfg(feature = "lua")]
+#[cfg(any(feature = "lua", feature = "lua54"))]
 pub mod lua;
 
 pub mod dynamic;

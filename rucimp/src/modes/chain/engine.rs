@@ -92,7 +92,7 @@ impl Engine {
     }
 
     /// finite dynamic or static, depends on the content of the lua code
-    #[cfg(feature = "lua")]
+    #[cfg(any(feature = "lua", feature = "lua54"))]
     pub fn init_lua(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
 
@@ -106,7 +106,7 @@ impl Engine {
     }
 
     /// load static chain
-    #[cfg(feature = "lua")]
+    #[cfg(any(feature = "lua", feature = "lua54"))]
     pub fn init_lua_static(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
         use anyhow::Context;
@@ -118,7 +118,7 @@ impl Engine {
     }
 
     /// load finite dynamic chain
-    #[cfg(feature = "lua")]
+    #[cfg(any(feature = "lua", feature = "lua54"))]
     pub fn init_lua_finite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
         use anyhow::Context;
 
@@ -135,7 +135,7 @@ impl Engine {
     }
 
     /// load infinite dynamic chain
-    #[cfg(feature = "lua")]
+    #[cfg(any(feature = "lua", feature = "lua54"))]
     pub fn init_lua_infinite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::{dynamic::IndexInfinite, lua};
 

@@ -1,6 +1,6 @@
 #[cfg(test)]
 #[allow(unused)]
-#[cfg(feature = "lua")]
+#[cfg(any(feature = "lua", feature = "lua54"))]
 pub mod test;
 
 use self::dynamic::NextSelector;
