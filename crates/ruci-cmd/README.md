@@ -22,7 +22,7 @@ cargo run -F lua -F api_server -F api_client -F utils -F use-native-tls --releas
 
 debug:
 ```
-cargo run -F lua -F utils -F use-native-tls  -- -l trace --log-file ""
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls  -- --log-file ""
 
 RUST_LOG=none,ruci=debug cargo run -F lua -F use-native-tls  -- --log-file "" -c remote.lua
 

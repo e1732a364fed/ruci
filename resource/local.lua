@@ -58,7 +58,7 @@ trojan_out = {
 
 websocket_out = {
     WebSocket = {
-        host = "127.0.0.1:10801",
+        host = "myhost",
         path = "/path1",
         use_early_data = true
     }
@@ -162,7 +162,7 @@ config = {
 
 --]=]
 
---[=[
+---[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_ws_trojan_chain } },
@@ -174,7 +174,7 @@ config = {
 
 --]=]
 
----[=[
+--[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },
