@@ -20,7 +20,7 @@ impl std::fmt::Display for NewConnInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}, {} -> {}, ta: {}\n",
+            "{} {} -> {} => {} , ",
             self.cid, self.in_tag, self.out_tag, self.target_addr
         )?;
         #[cfg(not(feature = "trace"))]
@@ -30,9 +30,26 @@ impl std::fmt::Display for NewConnInfo {
         {
             write!(
                 f,
-                "in_trace: {:?}\n , out_trace: {:?}\n",
+                "in_trace: {:?},\nout_trace: {:?}\n",
                 self.in_trace, self.out_trace
             )
         }
     }
+}
+
+#[test]
+fn test() {
+    let n = NewConnInfo {
+        cid: CID::new(),
+        in_tag: "intag1".to_string(),
+        out_tag: "outt1".to_string(),
+        target_addr: net::Addr::from_network_addr_str("127.1.2.3:389").unwrap(),
+
+        #[cfg(feature = "trace")]
+        in_trace: Vec::new(),
+
+        #[cfg(feature = "trace")]
+        out_trace: Vec::new(),
+    };
+    println!("{}", n)
 }

@@ -40,6 +40,7 @@ use futures::{io::Error, FutureExt};
 use log::{debug, log_enabled};
 use rand::Rng;
 use std::sync::atomic::AtomicU32;
+use std::vec;
 use std::{fmt::Debug, net::Ipv4Addr};
 use std::{
     fmt::{Display, Formatter},
@@ -71,10 +72,20 @@ pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
     lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
 }
 
+/// ```
+/// use ruci::net::CIDChain;
+///
+/// let cc = CIDChain {
+///       id_list: vec![1, 2, 3],
+///  };
+///  println!("{}", cc)
+/// ```
+///
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CIDChain {
     pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
 }
+
 impl Display for CIDChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match (self.id_list).len() {
