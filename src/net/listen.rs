@@ -1,7 +1,6 @@
 use std::{fs::remove_file, path::PathBuf};
 
 use anyhow::{bail, Context};
-use bytes::BytesMut;
 use tokio::net::TcpListener;
 use tracing::warn;
 
@@ -116,9 +115,7 @@ impl Listener {
     }
 
     /// returns stream, raddr, laddr
-    pub async fn accept(
-        &mut self,
-    ) -> anyhow::Result<(Stream, net::Addr, net::Addr, Option<BytesMut>)> {
+    pub async fn accept(&mut self) -> anyhow::Result<(Stream, net::Addr, net::Addr)> {
         match self {
             Listener::TCP(tl) => {
                 let (tcp_stream, tcp_soa) = tl.accept().await?;
@@ -132,7 +129,7 @@ impl Listener {
                     addr: net::NetAddr::Socket(tcp_stream.local_addr()?),
                     network: net::Network::TCP,
                 };
-                Ok((Stream::Conn(Box::new(tcp_stream)), ra, la, None))
+                Ok((Stream::Conn(Box::new(tcp_stream)), ra, la))
             }
             #[cfg(unix)]
             Listener::UNIX((ul, _)) => {
@@ -142,11 +139,11 @@ impl Listener {
                 let ra = Addr::from_unix(unix_soa);
                 let la = Addr::from_unix(unix_stream.local_addr()?);
 
-                Ok((Stream::Conn(Box::new(unix_stream)), ra, la, None))
+                Ok((Stream::Conn(Box::new(unix_stream)), ra, la))
             }
             Listener::UDP(ul) => {
-                let (ac, ra, la, b) = ul.accept().await?;
-                Ok((Stream::AddrConn(ac), ra, la, Some(b)))
+                let (ac, ra, la) = ul.accept().await?;
+                Ok((Stream::AddrConn(ac), ra, la))
             }
         }
     }

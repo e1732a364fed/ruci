@@ -26,7 +26,7 @@ use super::{
 pub struct FixedTargetAddrUDPListener {
     pub laddr: Addr,
     pub dst: Addr,
-    rx: mpsc::Receiver<(AddrConn, Addr, BytesMut)>,
+    rx: mpsc::Receiver<(AddrConn, Addr)>,
 }
 
 impl FixedTargetAddrUDPListener {
@@ -47,15 +47,19 @@ impl FixedTargetAddrUDPListener {
                 let r = udp.recv_from(&mut buf).await;
                 let (u, a) = match r {
                     Ok(r) => r,
-                    Err(_) => break,
+                    Err(e) => {
+                        debug!("UdpListener loop recv_from got e will break {e}");
+                        break;
+                    }
                 };
-                let srt = Addr {
+                let src = Addr {
                     network: Network::UDP,
                     addr: NetAddr::Socket(a),
                 };
 
-                if hs.contains_key(&srt) {
-                    let tx = hs.get(&srt).unwrap();
+                if hs.contains_key(&src) {
+                    //debug!("UdpListener loop got old conn msg: {src} {u}");
+                    let tx = hs.get(&src).unwrap();
                     let new_buf = BytesMut::from(&buf[..u]);
                     let r = tx.send(new_buf).await;
                     if let Err(e) = r {
@@ -63,12 +67,15 @@ impl FixedTargetAddrUDPListener {
                         continue;
                     }
                 } else {
+                    //debug!("UdpListener loop got new conn: {src} {u}");
                     let (tx2, rx2) = mpsc::channel(100);
-                    let ac = new(udp.clone(), rx2, srt.clone(), dst_c.clone());
 
-                    hs.insert(srt.clone(), tx2);
-                    let new_buf = BytesMut::from(&buf[..u]);
-                    let r = tx.send((ac, srt, new_buf)).await;
+                    hs.insert(src.clone(), tx2);
+                    let first_buf = BytesMut::from(&buf[..u]);
+
+                    let ac = new(udp.clone(), rx2, src.clone(), dst_c.clone(), first_buf);
+
+                    let r = tx.send((ac, src)).await;
                     if let Err(e) = r {
                         debug!("UdpListener loop got e: {e}");
                         break;
@@ -81,13 +88,13 @@ impl FixedTargetAddrUDPListener {
     }
 
     /// conn, raddr, laddr, first_data
-    pub async fn accept(&mut self) -> anyhow::Result<(AddrConn, Addr, Addr, BytesMut)> {
-        let (ac, raddr, b) = self
+    pub async fn accept(&mut self) -> anyhow::Result<(AddrConn, Addr, Addr)> {
+        let (ac, raddr) = self
             .rx
             .recv()
             .await
             .ok_or(anyhow::anyhow!("udplistener accept got rx closed"))?;
-        Ok((ac, raddr, self.laddr.clone(), b))
+        Ok((ac, raddr, self.laddr.clone()))
     }
 }
 
@@ -96,8 +103,19 @@ impl FixedTargetAddrUDPListener {
 /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
 /// 以及用 send 而不是 send_to
 ///
-pub fn new(u: Arc<UdpSocket>, rx2: Receiver<BytesMut>, dst: Addr, src: Addr) -> AddrConn {
-    let r = Reader { dst, rx2 };
+pub fn new(
+    u: Arc<UdpSocket>,
+    rx2: Receiver<BytesMut>,
+    src: Addr,
+    dst: Addr,
+
+    first_buf: BytesMut,
+) -> AddrConn {
+    let r = Reader {
+        dst,
+        rx2,
+        first_buf: Some(first_buf),
+    };
     let w = Writer { u: u.clone(), src };
     AddrConn::new(Box::new(r), Box::new(w))
 }
@@ -108,7 +126,7 @@ pub struct Writer {
 }
 impl crate::Name for Writer {
     fn name(&self) -> &str {
-        "udp"
+        "udp_fixed_w"
     }
 }
 impl AsyncWriteAddr for Writer {
@@ -118,11 +136,7 @@ impl AsyncWriteAddr for Writer {
         buf: &[u8],
         _addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        // debug!(
-        //     "udp write called {} {addr} {}",
-        //     buf.len(),
-        //     self.peer_addr.is_some()
-        // );
+        //debug!("udp fixed write called {} {addr} {}", buf.len(), self.src);
 
         let sor = self.src.get_socket_addr_or_resolve();
         match sor {
@@ -143,10 +157,11 @@ impl AsyncWriteAddr for Writer {
 pub struct Reader {
     rx2: Receiver<BytesMut>,
     dst: Addr,
+    first_buf: Option<BytesMut>,
 }
 impl crate::Name for Reader {
     fn name(&self) -> &str {
-        "udp"
+        "udp_fixed_r"
     }
 }
 
@@ -156,13 +171,20 @@ impl AsyncReadAddr for Reader {
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
+        if let Some(mut b) = self.first_buf.take() {
+            let r_len = b.len();
+            //debug!("udp fix read first {} {}", r_len, self.dst);
+            b.copy_to_slice(&mut buf[..r_len]);
+
+            return Poll::Ready(Ok((r_len, self.dst.clone())));
+        }
         let r = self.rx2.poll_recv(cx);
         match r {
             Poll::Ready(r) => match r {
                 Some(mut b) => {
                     let r_len = b.len();
-                    //debug!("udp read got {} {so}", r_len);
-                    b.copy_to_slice(buf);
+                    //debug!("udp fix read  got {} ", r_len);
+                    b.copy_to_slice(&mut buf[..r_len]);
 
                     Poll::Ready(Ok((r_len, self.dst.clone())))
                 }

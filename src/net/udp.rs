@@ -122,11 +122,7 @@ impl AsyncWriteAddr for Conn {
         buf: &[u8],
         addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        // debug!(
-        //     "udp write called {} {addr} {}",
-        //     buf.len(),
-        //     self.peer_addr.is_some()
-        // );
+        //debug!("udp write called {} {addr} {:?}", buf.len(), self.peer_addr);
         if self.peer_addr.is_some() || addr.eq(&Addr::default()) {
             self.u.poll_send(cx, buf)
         } else {
@@ -174,7 +170,7 @@ impl AsyncReadAddr for Conn {
                 Poll::Ready(r) => match r {
                     Ok(_) => {
                         let r_len = r_buf.filled().len();
-                        // debug!("udp read got {}", r_len);
+                        //debug!("udp with peer_addr read got {}", r_len);
 
                         Poll::Ready(Ok((r_len, pa.clone())))
                     }
