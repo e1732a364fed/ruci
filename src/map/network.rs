@@ -75,7 +75,7 @@ impl Mapper for Direct {
                             }
                             return MapResult::c(Box::new(c));
                         }
-                        return MapResult::newc(Box::new(c)).b(params.b).build();
+                        return MapResult::cb(Box::new(c), params.b);
                     }
                     Err(e) => return MapResult::from_io_err(e),
                 }

@@ -91,14 +91,14 @@ pub struct MapParams {
     pub c: Stream,
 
     ///target_addr
-    #[builder(default)]
+    #[builder(default, setter(strip_option))]
     pub a: Option<net::Addr>,
 
     ///pre_read_buf
-    #[builder(default)]
+    #[builder(default, setter(strip_option))]
     pub b: Option<BytesMut>,
 
-    #[builder(default)]
+    #[builder(default, setter(strip_option))]
     pub d: Option<InputData>,
 
     /// if Stream is a Generator, shutdown_rx should be provided.
@@ -117,7 +117,7 @@ impl MapParams {
     }
 
     pub fn ca(c: net::Conn, target_addr: net::Addr) -> Self {
-        MapParams::newc(c).a(Some(target_addr)).build()
+        MapParams::newc(c).a(target_addr).build()
     }
 }
 
@@ -163,6 +163,10 @@ impl MapResult {
         gs: tokio::sync::mpsc::Receiver<MapResult>,
     ) -> MapResultBuilder<((), (), (net::Stream,), (), (), ())> {
         MapResult::builder().c(Stream::Generator(gs))
+    }
+
+    pub fn cb(c: net::Conn, b: Option<BytesMut>) -> Self {
+        MapResult::newc(Box::new(c)).b(b).build()
     }
 
     pub fn err_str(estr: &str) -> Self {
