@@ -1,7 +1,7 @@
 use self::dynamic::NextSelector;
 
 use super::*;
-use lua::dynamic::Bounded;
+use lua::dynamic::Finite;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Result, Value};
 
@@ -23,8 +23,8 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
 
 const GET_DYN_SELECTOR_FOR: &str = "get_dyn_selector_for";
 
-/// test if the lua text is ok for bounded dynamic
-pub fn try_load_bounded_dynamic(lua_text: &str) -> Result<()> {
+/// test if the lua text is ok for finite dynamic
+pub fn try_load_finite_dynamic(lua_text: &str) -> Result<()> {
     let lua = Lua::new();
     lua.load(lua_text).eval()?;
 
@@ -40,7 +40,7 @@ struct SelectorHelper {
     pub outbounds_selector: HashMap<String, LuaNextSelector>,
 }
 
-pub fn load_bounded_dynamic(
+pub fn load_finite_dynamic(
     lua_text: String,
 ) -> Result<(
     StaticConfig,
@@ -49,13 +49,13 @@ pub fn load_bounded_dynamic(
     Arc<HashMap<String, DMIterBox>>,
 )> {
     let lua = Lua::new();
-    let (sc, sh) = load_bounded_dynamic_helper(&lua, lua_text)?;
+    let (sc, sh) = load_finite_dynamic_helper(&lua, lua_text)?;
 
     let (a, b, c) = get_dmiter_from_static_config_and_helper(sc.clone(), sh);
     Ok((sc, a, b, c))
 }
 
-fn load_bounded_dynamic_helper(
+fn load_finite_dynamic_helper(
     lua: &Lua,
     lua_text: String,
 ) -> Result<(StaticConfig, SelectorHelper)> {
@@ -79,7 +79,7 @@ fn load_bounded_dynamic_helper(
             let x = match getter.call::<String, LuaFunction>(tag.to_string()) {
                 Ok(rst) => rst,
                 Err(err) => {
-                    panic!("get dyn_bounded_selector for {tag} err: {}", err);
+                    panic!("get get_dyn_selector_for for {tag} err: {}", err);
                 }
             };
             (
@@ -98,7 +98,7 @@ fn load_bounded_dynamic_helper(
             let x = match getter.call::<String, LuaFunction>(tag.to_string()) {
                 Ok(rst) => rst,
                 Err(err) => {
-                    panic!("get dyn_bounded_selector for {tag} err: {}", err);
+                    panic!("get get_dyn_selector_for for {tag} err: {}", err);
                 }
             };
             (
@@ -130,7 +130,7 @@ fn get_dmiter_from_static_config_and_helper(
 
             let selector = Box::new(sh.inbounds_selector.remove(&tag).unwrap());
 
-            let x: DMIterBox = Box::new(Bounded {
+            let x: DMIterBox = Box::new(Finite {
                 mb_vec: inbound,
                 current_index: -1,
                 history: Vec::new(),
@@ -158,7 +158,7 @@ fn get_dmiter_from_static_config_and_helper(
 
             let selector = Box::new(sh.outbounds_selector.remove(&ts).unwrap());
 
-            let outbound_iter: DMIterBox = Box::new(Bounded {
+            let outbound_iter: DMIterBox = Box::new(Finite {
                 mb_vec: outbound,
                 current_index: -1,
                 history: Vec::new(),
@@ -173,11 +173,15 @@ fn get_dmiter_from_static_config_and_helper(
         })
         .collect();
 
-    (v, first_o.expect("has a outbound"), Arc::new(omap))
+    (v, first_o.expect("has an outbound"), Arc::new(omap))
 }
 
 ///(用OwnedFunction 后无生命周期了, 但用了 mlua 的 unstable feature)
+///
+/// https://github.com/mlua-rs/mlua/pull/148
+///
 /// https://github.com/mlua-rs/mlua/issues/262
+///
 #[derive(Debug, Clone)]
 pub struct LuaNextSelector(Arc<parking_lot::Mutex<mlua::OwnedFunction>>);
 

@@ -1,6 +1,10 @@
 
 config 是 提供给 rucimp 的项，静态示例如下
 
+# 静态链
+
+无论lua 中代码怎么写，对于静态链, 程序只会在lua 代码中找一个全局变量 "config"
+
 ```lua
 tls = { TLS = {  cert = "test.cert", key = "test.key" } }
 listen = { Listener   "0.0.0.0:1080" }
@@ -55,7 +59,70 @@ config = {
 
 要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 mapper (映射函数)
 
+# 动态链
+
+演示动态链的基本用法：
+
+## 有限动态链
+
+有限动态链中，程序一样会读取 config 变量，和 静态链一样，但还要读一个 get_dyn_selector_for 函数
+
+get_dyn_selector_for, 对每一个tag 的inbound/outbound 都要有返回一个selector
+
+selector 接受 this_index 和 data 作为输入, 返回一个新的index, index 是 在 该chain (Mapper数组) 中的索引
+
+    selector 在 "有限状态机" 里对应的是 "状态转移函数"
 
 
+示例：
+
+```lua
+
+---[[
+
+-- 演示 动态链的 选择器用法
 
 
+function get_dyn_selector_for(tag)
+    if tag == "listen1" then 
+        return dyn_inbound_next_selector
+    end
+     if tag == "dial1" then 
+        return dyn_outbound_next_selector
+    end
+end
+
+-- 下面两个selector 示例都是 最简单的示例, 使得动态链的行为和静态链相同
+
+dyn_inbound_next_selector = function (this_index, ovov)
+   -- print("ovov:is_some()",ovov:is_some())
+
+    if ovov:is_some()  then
+       -- print("ovov:len()",ovov:len())
+
+        if ovov:len() > 0 then
+            ov = ovov:get(0)
+           -- print("ov:has_value()",ov:has_value())
+
+            if ov:has_value() then
+                the_type = ov:get_type()
+              --  print(the_type)
+
+                if the_type == "data" then
+                    d = ov:get_data()
+              --      print(d:get_u64())
+                end
+            end
+        end
+    end
+   
+    return this_index + 1
+end
+
+dyn_outbound_next_selector = function (this_index, ovov)
+    return this_index + 1
+end
+
+
+--]]
+```

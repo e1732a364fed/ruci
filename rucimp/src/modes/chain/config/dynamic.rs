@@ -9,7 +9,8 @@
  * 我将这种链叫做 "Partial Dynamic Chain", 把完全动态的链叫做 "Complete
  * Dynamic Chain"
  *
- * Partial 是有界的 (Bounded) ,  Complete 是无界的 (Unbounded)
+ * Partial 是有界的 (Bounded) (即有限状态机 FSM),  Complete 是无界的 (Unbounded),
+ * (即无限状态机)
  *
  * 部分动态链比完全动态链更实用
  *
@@ -28,7 +29,7 @@ use ruci::map::{acc::DynIterator, MapperBox};
 use uuid::Uuid;
 
 /// Complete Dynamic Chain using index
-pub struct IndexUnbounded {
+pub struct IndexInfinite {
     pub selector: Box<dyn IndexNextInMapperGenerator>,
 
     /// 生成的 新 MapperBox 会存储在 cache 中
@@ -52,7 +53,7 @@ pub trait IndexNextInMapperGenerator {
 }
 
 // #[async_trait]
-// impl DynIterator for IndexUnbounded {
+// impl DynIterator for IndexInfinite {
 //     async fn next_with_data(
 //         &mut self,
 //         data: Option<Vec<ruci::map::OptVecData>>,
@@ -75,7 +76,7 @@ pub trait IndexNextInMapperGenerator {
 // }
 
 /// Complete Dynamic Chain using uuid
-pub struct UuidUnbounded {
+pub struct UuidInfinite {
     pub selector: Box<dyn UuidInfiniteNextInMapperGenerator>,
 
     /// 生成的 新 MapperBox 会存储在 cache 中
@@ -96,9 +97,9 @@ pub trait UuidInfiniteNextInMapperGenerator {
     ) -> Option<UUIDMapperBox>;
 }
 
-/// 有界部分动态链
+/// 有界部分动态链, 即有限状态机
 #[derive(Debug, Clone)]
-pub struct Bounded {
+pub struct Finite {
     /// 每一个 MapperBox 都是静态的, 在 Vec中有固定的序号.
     /// 根据 selector 返回的序号 决定下一个调用哪一个.
     /// selector 返回 None 表示  链终止
@@ -112,14 +113,20 @@ pub struct Bounded {
     pub history: Vec<usize>,
 }
 
+/// 即FSM的 状态转移函数
 pub trait NextSelector: Debug + DynClone + Send + Sync {
+    ///
+    /// acts like a state-transition function, data and this_index is the current state
+    ///
+    /// initial state is None and -1.
+    ///
     /// 初始index 传入 -1. 如果 返回值为 None, 或 返回值<0 或 返回值 大于最大索引值,
     /// 则意味着链终止
     fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64>;
 }
 dyn_clone::clone_trait_object!(NextSelector);
 
-impl DynIterator for Bounded {
+impl DynIterator for Finite {
     fn next_with_data(
         &mut self,
         data: Option<Vec<ruci::map::OptVecData>>,

@@ -117,7 +117,7 @@ impl StaticConfig {
                 (ts, outbound_iter)
             })
             .collect();
-        (first_o.expect("has a outbound"), omap)
+        (first_o.expect("has an outbound"), omap)
     }
 
     /// panic if the given tag isn't presented in outbounds
