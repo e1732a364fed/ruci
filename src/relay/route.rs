@@ -11,9 +11,9 @@ use async_trait::async_trait;
 use rustls::pki_types::IpAddr;
 
 use crate::{
-    map::{AnyData, AnyS, MIterBox},
+    map::{AnyBox, AnyData, AnyS, MIterBox},
     net,
-    user::{self, UserBox, UserVec},
+    user::{self, User, UserVec},
 };
 
 /// Send + Sync to use in async
@@ -23,7 +23,7 @@ pub trait OutSelector: Send + Sync {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: Vec<Option<AnyData>>,
+        params: &Vec<Option<AnyData>>,
     ) -> MIterBox;
 }
 
@@ -38,7 +38,7 @@ impl OutSelector for FixedOutSelector {
         &self,
         _addr: &net::Addr,
         _in_chain_tag: &str,
-        _params: Vec<Option<AnyData>>,
+        _params: &Vec<Option<AnyData>>,
     ) -> MIterBox {
         self.default.clone()
     }
@@ -57,7 +57,7 @@ impl OutSelector for TagOutSelector {
         &self,
         _addr: &net::Addr,
         in_chain_tag: &str,
-        _params: Vec<Option<AnyData>>,
+        _params: &Vec<Option<AnyData>>,
     ) -> MIterBox {
         let ov = self.outbounds_tag_route_map.get(in_chain_tag);
         match ov {
@@ -97,10 +97,6 @@ impl RouteRuleConfig {
     pub fn matches(&self, _r: Rule) -> bool {
         unimplemented!()
     }
-
-    pub fn expand(&self) -> HashSet<Rule> {
-        unimplemented!()
-    }
 }
 
 /// (k,v), v 为 out_tag, k 为 所有能对应 v的 rule 值的集合
@@ -120,35 +116,74 @@ pub struct RuleSetOutSelector {
     pub default: MIterBox,
 }
 
-pub fn get_user_from_anydata(anys: &AnyS) -> Option<UserBox> {
-    let a = anys.downcast_ref::<UserBox>();
+/// from &AnyS get `Box<dyn User>`
+///
+/// # Example
+///
+/// ```
+/// use ruci::map::AnyBox;
+/// use ruci::user::{PlainText, User};
+/// use ruci::relay::route::bget_user_from_anydata;
+///
+/// let u = PlainText::new("u".to_string(), "".to_string());
+/// let ub0: Box<dyn User> = Box::new(u);
+/// let ub2: AnyArc = Arc::new(Mutex::new(ub0));
+/// let anyv = ub2.lock().await;
+/// let y = get_user_from_anydata(&*anyv);
+/// assert!(y.is_some());
+/// ```
+///
+pub fn get_user_from_anydata(anys: &AnyS) -> Option<Box<dyn User>> {
+    let a = anys.downcast_ref::<Box<dyn User>>();
     a.map(|u| u.clone())
 }
 
-pub async fn get_user_from_anydata_vec(adv: Vec<Option<AnyData>>) -> Option<UserVec> {
+/// from &AnyBox get `Box<dyn User>`
+///
+/// # Example
+///
+/// ```
+/// use ruci::map::AnyBox;
+/// use ruci::user::{PlainText, User};
+/// use ruci::relay::route::bget_user_from_anydata;
+///
+/// let u = PlainText::new("u".to_string(), "".to_string());
+/// let ub0: Box<dyn User> = Box::new(u);
+/// let ub2:AnyBox = Box::new(ub0);
+/// let y = bget_user_from_anydata(&ub2);
+/// assert!(y.is_some());
+/// ```
+///
+pub fn bget_user_from_anydata(anys: &AnyBox) -> Option<Box<dyn User>> {
+    let a = anys.downcast_ref::<Box<dyn User>>();
+    a.map(|u| u.clone())
+}
+
+pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<UserVec> {
     let mut v = UserVec::new();
 
-    for anyd in adv {
-        if let Some(d) = anyd {
-            match d {
-                AnyData::A(arc) => {
-                    let anyv = arc.lock().await;
-                    let oub = get_user_from_anydata(&*anyv);
-                    if let Some(ub) = oub {
-                        v.0.push(ub);
-                    }
+    for anyd in adv
+        .iter()
+        .filter(|d| d.is_some())
+        .map(|d| d.as_ref().unwrap())
+    {
+        match anyd {
+            AnyData::A(arc) => {
+                let anyv = arc.lock().await;
+                let oub = get_user_from_anydata(&*anyv);
+                if let Some(ub) = oub {
+                    v.0.push(user::UserBox(ub));
                 }
-                AnyData::B(b) => {
-                    let oub = get_user_from_anydata(&b);
-                    if let Some(ub) = oub {
-                        v.0.push(ub);
-                    }
-                }
-                _ => {}
             }
+            AnyData::B(b) => {
+                let oub = bget_user_from_anydata(b);
+                if let Some(ub) = oub {
+                    v.0.push(user::UserBox(ub));
+                }
+            }
+            _ => {}
         }
     }
-
     if v.0.is_empty() {
         None
     } else {
@@ -162,7 +197,7 @@ impl OutSelector for RuleSetOutSelector {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: Vec<Option<AnyData>>,
+        params: &Vec<Option<AnyData>>,
     ) -> MIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = Rule {
@@ -192,34 +227,48 @@ impl OutSelector for RuleSetOutSelector {
 
 #[cfg(test)]
 mod test {
+
     use crate::map::math::*;
     use crate::map::*;
     use crate::net::Addr;
+    use crate::user::PlainText;
 
     use super::*;
-    #[tokio::test]
-    async fn tag_select() {
-        let teams_list = vec![
-            ("l1".to_string(), "d1".to_string()),
-            ("l2".to_string(), "d2".to_string()),
-        ];
-        let outbounds_route_map: HashMap<_, _> = teams_list.into_iter().collect();
 
-        let a = Adder::default();
+    fn get_miter_ab() -> MIterBox {
+        let mut a = Adder::default();
+        a.addnum = 1;
         let a: MapperBox = Box::new(a);
-
-        let ac = a.clone();
 
         let b = Adder::default();
         let b: MapperBox = Box::new(b);
 
         let v = vec![a, b];
-        let v2 = vec![ac];
         let v = Box::leak(Box::new(v));
         let m: MIterBox = Box::new(v.iter());
+        m
+    }
+    fn get_miter_a() -> MIterBox {
+        let mut a = Adder::default();
+        a.addnum = 2;
+        let a: MapperBox = Box::new(a);
 
-        let v2 = Box::leak(Box::new(v2));
-        let m2: MIterBox = Box::new(v2.iter());
+        let v = vec![a];
+        let v = Box::leak(Box::new(v));
+        let m: MIterBox = Box::new(v.iter());
+        m
+    }
+
+    #[tokio::test]
+    async fn tag_select() {
+        let pair_list = vec![
+            ("l1".to_string(), "d1".to_string()),
+            ("l2".to_string(), "d2".to_string()),
+        ];
+        let outbounds_route_map: HashMap<_, _> = pair_list.into_iter().collect();
+
+        let m: MIterBox = get_miter_ab();
+        let m2: MIterBox = get_miter_a();
 
         let mut outbounds_map = HashMap::new();
         outbounds_map.insert("d1".to_string(), m);
@@ -230,11 +279,60 @@ mod test {
             outbounds_map,
             default: m2,
         };
-        let x = t.select(&Addr::default(), "l1", Vec::new()).await;
+        let x = t.select(&Addr::default(), "l1", &Vec::new()).await;
         println!("{:?}", x);
         assert_eq!(x.count(), 2);
-        let x = t.select(&Addr::default(), "l11", Vec::new()).await;
+        let x = t.select(&Addr::default(), "l11", &Vec::new()).await;
         println!("{:?}", x);
         assert_eq!(x.count(), 1);
+    }
+
+    #[tokio::test]
+    async fn ruleset_select() {
+        let m: MIterBox = get_miter_ab();
+        let m2: MIterBox = get_miter_a();
+
+        let mut outbounds_map = HashMap::new();
+        outbounds_map.insert("d1".to_string(), m);
+        let outbounds_map = Arc::new(outbounds_map);
+
+        let r1 = Rule {
+            in_tag: String::from("l1"),
+            target_addr: Addr::default(),
+            users: None,
+        };
+        let r2 = Rule {
+            in_tag: String::from("l2"),
+            target_addr: Addr::default(),
+            users: None,
+        };
+        let mut hs = HashSet::new();
+        hs.insert(r1);
+        hs.insert(r2);
+
+        let rs = RuleSet(hs, "d1".to_string());
+
+        let rsv = vec![rs];
+
+        let rsos = RuleSetOutSelector {
+            outbounds_ruleset_vec: rsv,
+            outbounds_map,
+            default: m2,
+        };
+
+        let u = PlainText::new("user".to_string(), "pass".to_string());
+        let ub: Box<dyn User> = Box::new(u);
+
+        let mut params: Vec<Option<AnyData>> = Vec::new();
+        params.push(Some(AnyData::B(Box::new(ub))));
+
+        let x = rsos.select(&Addr::default(), "l1", &params).await;
+
+        assert_eq!(x.count(), 1);
+
+        params.clear();
+        let x = rsos.select(&Addr::default(), "l1", &params).await;
+
+        assert_eq!(x.count(), 2);
     }
 }

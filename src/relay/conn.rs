@@ -92,7 +92,7 @@ pub async fn handle_in_accumulate_result(
     }
 
     let outc_iterator = out_selector
-        .select(&target_addr, &listen_result.chain_tag, listen_result.d)
+        .select(&target_addr, &listen_result.chain_tag, &listen_result.d)
         .await;
 
     let cidc = cid.clone();

@@ -67,7 +67,7 @@ pub struct NewConnectionOptData {
     pub data: OptData,
 }
 
-pub type AnyS = dyn Any + Send; // 加 Send 以支持多线程
+pub type AnyS = dyn Any + Send + Sync; // 加 Send+ Sync 以支持多线程
 pub type AnyBox = Box<AnyS>;
 pub type AnyArc = Arc<Mutex<AnyS>>;
 

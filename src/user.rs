@@ -6,7 +6,7 @@ use dyn_clone::DynClone;
 use std::hash::Hash;
 use std::sync::Mutex;
 /// 用于用户鉴权
-pub trait UserTrait: Send + Sync {
+pub trait UserTrait: Debug + Send + Sync {
     /// 每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name. 用于在非敏感环境显示该用户
     fn identity_str(&self) -> String;
 
@@ -25,7 +25,7 @@ impl<T: UserTrait + DynClone> User for T {}
 dyn_clone::clone_trait_object!(User);
 
 #[derive(Clone)]
-pub struct UserBox(Box<dyn User>);
+pub struct UserBox(pub Box<dyn User>);
 
 impl Debug for UserBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
