@@ -234,45 +234,48 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     );
 
     #[allow(unused_mut)]
-    let mut fl: Vec<&str> = Vec::new();
+    let mut features_list: Vec<&str> = Vec::new();
 
     #[cfg(feature = "api_server")]
-    fl.push("api_server");
+    features_list.push("api_server");
 
     #[cfg(feature = "api_client")]
-    fl.push("api_client");
+    features_list.push("api_client");
 
     #[cfg(feature = "utils")]
-    fl.push("utils");
+    features_list.push("utils");
 
     #[cfg(feature = "lua")]
-    fl.push("lua");
+    features_list.push("lua");
 
     #[cfg(feature = "lua54")]
     fl.push("lua54");
 
     #[cfg(feature = "trace")]
-    fl.push("trace");
+    features_list.push("trace");
 
     #[cfg(feature = "use-native-tls")]
-    fl.push("native-tls");
+    features_list.push("native-tls");
 
     #[cfg(feature = "native-tls-vendored")]
     fl.push("native-tls-vendored");
 
     #[cfg(feature = "quinn")]
-    fl.push("quinn");
+    features_list.push("quinn");
 
     #[cfg(feature = "quic")]
     fl.push("quic");
 
     #[cfg(feature = "tun")]
-    fl.push("tun");
+    features_list.push("tun");
+
+    #[cfg(feature = "smoltcp")]
+    features_list.push("smoltcp");
 
     info!(
         ruci_cmd = env!("CARGO_PKG_VERSION"),
         rucimp = rucimp::VERSION,
-        features = ?fl
+        features = ?features_list
     );
 
     if no_file {

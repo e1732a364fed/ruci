@@ -270,25 +270,11 @@ impl  SmoltcpDevice {
         Ok(())
     }
 
-    pub async fn write(&mut self,  b: BytesMut){
+    pub async fn write(&mut self,  b: BytesMut)->anyhow::Result<()>{
         
-        let _ = self.w.write_all(&b).await;
-             
+        self.w.write_all(&b).await?;
+        Ok(())
      }
-
-     
-    // pub async fn write_loop(&mut self,mut rx:Receiver<BytesMut>){
-    //    loop {
-    //        let r = rx.recv().await;
-    //        match r {
-    //         Some(b) => {
-    //             let _ = self.w.write_all(&b).await;
-    //         },
-    //         None => return,
-    //        }
-    //    }
-    // }
-
 
     /// 被 Device trait 的 receive 方法调用, 检查 self.buf, 判断是否有新 tcp 产生，如有, 建立新 TcpStream 并 送入 new_stream_tx, 并创建新的 sockethandle 放入 sockets，
     fn check_read_buf_for_new_conn(&mut self,
@@ -576,16 +562,6 @@ impl  SmoltcpDevice {
             self.sockets.remove(handle);
         }
     }
-
-   
-    // pub fn process_egress(&mut self) {
-    //     debug!("process_egress called");
-    //     while let Ok((sh, _source, mut data)) = self.tcp_write_data_rx.try_recv() {
-    //         self.process_egress2(sh,data);
-    //     }
-    //     debug!("process_egress ended");
-        
-    // }
 
     /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 base_conn(tun)
     pub fn process_tcp_egress(&mut self, sh: SocketHandle, mut data: BytesMut) {

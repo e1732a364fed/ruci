@@ -54,13 +54,22 @@ impl Map for Stack {
                     let mut iface = device::create_interface(&mut device);
 
                     loop {
-                        //info!("loop");
-
                         tokio::select! {
                             ob = device_write_r.recv() =>{
                                 match ob {
-                                    Some(b) => device.write(b).await,
-                                    None => todo!(),
+                                    Some(b) => {
+                                        match device.write(b).await {
+                                            Ok(_) => {},
+                                            Err(e) => {
+                                                debug!("smoltcp write got e {e}, will break.");
+                                                break;
+                                            },
+                                        }
+                                    },
+                                    None => {
+                                        debug!("smoltcp write got None, will break.");
+                                        break;
+                                    },
                                 }
                             }
                             _ = &mut shutdown_rx =>{
@@ -68,8 +77,6 @@ impl Map for Stack {
                                 break;
                             }
                             r = device.read() =>{
-                        //info!("device.read");
-
                                 match r {
                                     Err(e) => {
                                         tracing::warn!("SmoltcpDevice read got e {e}");
@@ -83,8 +90,6 @@ impl Map for Stack {
                                         });
 
                                         device.process_ingress();
-                        //info!("process_ingress end");
-
                                     },
 
                                 }
@@ -94,9 +99,6 @@ impl Map for Stack {
                                     Some((sh,_,b)) => {
                                         device.process_tcp_egress(sh, b);
 
-                        //info!("process_tcp_egress end");
-
-
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
                                         let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
@@ -104,7 +106,6 @@ impl Map for Stack {
                                         iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
                                             &mut *sockets
                                         });
-                                        //info!("process_tcp_egress end poll end");
 
                                     },
                                     None => {
@@ -117,7 +118,6 @@ impl Map for Stack {
                                 match r {
                                     Some((sh,d,b)) => {
                                         device.process_udp_egress(sh,d, b);
-                                        //info!("process_udp_egress end");
 
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
@@ -126,7 +126,6 @@ impl Map for Stack {
                                         iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
                                             &mut *sockets
                                         });
-                                        //info!("process_udp_egress end poll end");
 
                                     },
                                     None => {
