@@ -116,17 +116,23 @@ local out_stdio_chain = { {
     Stdio = {}
 } }
 
+local out_stdio_show_bytes_chain = { {
+    Stdio = {
+        write_mode = "Bytes" -- 默认的 write_mode 为 UTF8, 可以用 Bytes 模式来观察16进制数据
+    }
+} }
+
 local direct_out_chain = { "Direct" }
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
-        -- { chain = trojans_chain, tag = "listen1" },
+         { chain = trojans_chain, tag = "listen1" },
         -- { chain = ws_trojans_chain,  tag = "listen1"  }
         -- { chain = in_h2_trojans_chain, tag = "listen1" }
         -- { chain = in_quic_chain, tag = "listen1" }
         -- { chain = socks5http_chain, tag = "listen1"} ,
         -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
-         { chain =  { tcp,tls, ws}, tag = "listen1"} ,
+        -- { chain =  { tcp,tls, ws}, tag = "listen1"} ,
         --[[
         {
             chain = {{
@@ -156,6 +162,7 @@ Config = {
     } },
     -- ]]
 
+
     --[[
     -- 对应 local.lua 使用 tproxy 的 outbound 配置
     -- 如果 用 tproxy 时 direct 不用 opt_direct 设置 somark, 将造成无限回环, 无法联网
@@ -168,7 +175,7 @@ Config = {
     } },
     --]]
 
-    ---[[
+    --[[
     -- 对应 local.lua 使用 tun 的 outbound 配置. 
     --  注意, 不像 tproxy, tun 示例不能本机自连测试
 
@@ -197,6 +204,7 @@ Config = {
 
 
     -- outbounds = { { tag="dial1", chain = out_stdio_chain  } }, --以命令行为出口
+    outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } },
 
     fallback_route = { { "listen1", "fallback_d" } }
 

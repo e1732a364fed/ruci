@@ -98,12 +98,6 @@ impl<'a> TxToken for MyTxToken<'a> {
     }
 }
 
-#[cfg(target_os = "macos")]
-const PREFIX: usize = 4;
-
-#[cfg(not(target_os = "macos"))]
-const PREFIX: usize = 0;
-
 /// 实现 smoltcp 的 Device trait. 
 /// 
 /// Device trait 的 receive 方法会在 smoltcp 的 iface.poll 被调用 后自动触发.
@@ -116,7 +110,7 @@ pub struct SmoltcpDevice  {
     pub state: Poll<usize>,
 
     traffic: Traffic,
-    buf : Box<[u8; PREFIX + u16::MAX as usize]>,
+    buf : Box<[u8;  u16::MAX as usize]>,
 
     /// 在 Device trait 的 transmit 方法被调用后，创建的新 Token 中会有 w 的复本.
     /// 利用它向 base_conn 写入数据
@@ -177,7 +171,7 @@ impl  Device for SmoltcpDevice  {
             Poll::Pending => return None,
             Poll::Ready(n) => {
                 self.check_read_buf_for_new_conn(n);
-                let data = &mut self.buf[PREFIX..n];
+                let data = &mut self.buf[ ..n];
 
                 let rx = MyRxToken { data };
                 let tx = MyTxToken {
@@ -222,7 +216,7 @@ impl  SmoltcpDevice {
        // let (udp_sender, udp_receiver) = mpsc::channel(100);
 
         Self { 
-            cid, traffic: Traffic::new(), buf: Box::new([0; PREFIX + u16::MAX as usize]), w, r, 
+            cid, traffic: Traffic::new(), buf: Box::new([0;   u16::MAX as usize]), w, r, 
             sockets: smoltcp::iface::SocketSet::new([])        ,
              new_stream_tx, 
              tcp_read_data_tx_map: Arc::new(Mutex::new(HashMap::new())), 
@@ -240,13 +234,10 @@ impl  SmoltcpDevice {
     /// data length.
      pub async fn read(&mut self)->anyhow::Result<()>{
         let n = self.r.read(self.buf.as_mut()).await?;
-        if n < PREFIX{
-            anyhow::bail!("smoltcp_stack read got n less than: {PREFIX} {n}");
-        }else{
+       
         debug!("smoltcp device read {n}");
 
-            self.state = Poll::Ready(n)
-        }
+        self.state = Poll::Ready(n);
 
         Ok(())
     }
@@ -256,7 +247,7 @@ impl  SmoltcpDevice {
     fn check_read_buf_for_new_conn(&mut self,
         n:usize,
     ) {
-        let data = & self.buf[0..n];//mac 上不能为 PREFIX, 而要为0
+        let data = & self.buf[..n];
 
         debug!("check_read_buf_for_new_conn {n}");
 
