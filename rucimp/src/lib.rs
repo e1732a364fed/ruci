@@ -4,6 +4,7 @@
 
 */
 pub mod chain;
+pub mod map;
 pub mod suit;
 pub mod user;
 
