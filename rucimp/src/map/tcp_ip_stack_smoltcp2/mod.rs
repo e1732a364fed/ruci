@@ -1,5 +1,7 @@
 /*!
 Defines a [`Map`] called [`Stack`] using user level tcp/ip stack based on `smoltcp`.
+
+The module is buggy. Do not use. Use mod tcp_ip_stack_smoltcp instead.
  */
 pub mod device;
 pub mod ip_packet;

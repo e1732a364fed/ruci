@@ -1,13 +1,13 @@
 define compile
-	cargo build --target ${BUILD_TRIPLET} -F steganography -F lua -F file_server -F api_server -F api_client -F utils -F quinn -F use-native-tls -F tun -F lwip ${EXTRA} --release
+	cargo build --target ${BUILD_TRIPLET} -F steganography -F lua -F file_server -F api_server -F api_client -F utils -F quinn -F use-native-tls -F tun -F lwip -F smoltcp ${EXTRA} --release
 endef
 
 define default_target
-	cargo build -F steganography -F lua -F file_server -F api_server -F api_client -F utils -F quinn -F use-native-tls -F tun -F lwip ${EXTRA} --release
+	cargo build -F steganography -F lua -F file_server -F api_server -F api_client -F utils -F quinn -F use-native-tls -F tun -F lwip -F smoltcp ${EXTRA} --release
 endef
 
 define compile_cross
-	cargo build --target ${BUILD_TRIPLET} -F steganography -F lua54 -F file_server -F api_server -F api_client -F utils -F quinn -F native-tls-vendored -F tun -F lwip ${EXTRA} --release
+	cargo build --target ${BUILD_TRIPLET} -F steganography -F lua54 -F file_server -F api_server -F api_client -F utils -F quinn -F native-tls-vendored -F tun -F lwip -F smoltcp ${EXTRA} --release
 endef
 
 

@@ -237,23 +237,12 @@ windows 上，根据系统语言不同，网卡名称也不同，比如 "ETHERNE
 
 smoltcp 和 lwip 是两种 tcp/ip stack 的实现
 
-lwip 无法在 windows 上编译。
-
 二者均需要使用 tun 包 或 tun2 包来作为底层tun device.
 
 一开始，先有 tun包，后来作者不维护了，又出现了tun2包，但是到了 24年年底，
 tun2包的作者又开始维护 tun 包，因此 此时 tun 包就更新了。
 
 tun 包在 windows 平台使用 wintun, 而在 其它平台使用 系统调用。
-
-经测试发现，windows 上的 wintun 性能很强，而在其它平台则用起来很卡顿，也许是平台问题，
-也许是tun 包的 异步实现代码的问题。
-
-smoltcp 的实现目前有 bug。因此 ruci-cmd 发布版采用了 lwip 的网络栈。
-
-在linux/macOS 上还发现了 内存泄漏问题，也许和 tun 包有关. windows上没有任何问题。
-
-
 
 # dev note
 

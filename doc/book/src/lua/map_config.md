@@ -330,10 +330,8 @@ rucimp/src/map/tproxy/route/mod.rs
 auto_route 为 true 时， 若 auto_route_tcp 也为 true, 则 自动路由过程 只会为 tcp 设置路由,
 udp 将不被路由到tproxy中.
 
-## Stack
+## StackSmoltcp/StackLwip
 in
-
-Stack 本身没有任何配置。直接写成 "Stack" 就行。
 
 ## 
 

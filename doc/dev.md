@@ -1,9 +1,9 @@
 Clippy:
 ruci-cmd 目录下
-cargo clippy --all-targets --no-default-features --features "steganography lua file_server api_server api_client utils quinn use-native-tls tun lwip"
+cargo clippy --all-targets --no-default-features --features "steganography lua file_server api_server api_client utils quinn use-native-tls tun lwip smoltcp"
 
 在 rucimp 目录下
-cargo clippy --all-targets --no-default-features --features "tun quinn lua sockopt use-native-tls ruci-rustls21 trace steganography"
+cargo clippy --all-targets --no-default-features --features "tun lwip smoltcp quinn lua sockopt use-native-tls ruci-rustls21 trace steganography"
 
 或在ruci目录下直接
 
@@ -11,15 +11,17 @@ cargo clippy --all-targets --all-features
 
 注意 rucimp 中不能使用 --all-features 因为 lua 有多个feature, 却只能使用一个
 
+还可直接配置 .vscode/settings.json 中的 
 
+```
+"rust-analyzer.check.command": "clippy",
+```
 
 2024.8.28
 尝试使用 serde-pickle 但发现生成的 文件在 python 中读取时显示 EOFError: Ran out of input
 
 24.12.25
-netstack-lwip 包 无法在 windows 上编译通过, 因此没有加入 ruci-cmd 的feature中 。且经手动测试，发现其性能可能比smoltcp 差一些
-
-在windows 上,tun 包的性能 似乎是因为使用了wintun 的原因，比在 macOS/linux 上要快不少
+netstack-lwip 包 无法在 windows 上编译通过, 因此没有加入 ruci-cmd 的feature中
 
 macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关。
 
@@ -41,3 +43,5 @@ macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关
 保留c，也没通过 tx 发送，致其被释放
 
 又发现 windows 上开启tun 后，存在大量的组播请求，占用大量资源。这里有问题
+
+新的 netstack-lwip 代码已可以在 windows 上编译通过。
