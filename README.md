@@ -238,10 +238,9 @@ o2node-.->collector
 
 # License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT OR Apache-2.0 License.
 
-Any commit by e1732a364fed is also distributed with CC0 1.0 Universal License if the related file has no conflict with the MIT License.
-(For example, most readme files and doc files.)
+readme files and doc files are also distributed with CC0 1.0 Universal License if the related file has no conflict with the MIT OR Apache-2.0 License.
 
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fe1732a364fed%2Fruci.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fe1732a364fed%2Fruci?ref=badge_large)
