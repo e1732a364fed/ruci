@@ -1,5 +1,8 @@
 use super::*;
 
+#[allow(unused)]
+use anyhow::Context;
+
 pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
     match ip_addr {
         IpAddr::V4(v4) => v4.octets().to_vec(),
