@@ -2,9 +2,11 @@ use anyhow;
 use futures::Future;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
+#[allow(unused)]
+use ruci::net;
 use ruci::{
     map::{acc::MIterBox, *},
-    net::{self, GlobalTrafficRecorder},
+    net::GlobalTrafficRecorder,
     relay::{handle_in_accumulate_result, route::*, *},
 };
 use std::{collections::HashMap, sync::Arc};
@@ -155,7 +157,7 @@ impl Engine {
         out_selector: Arc<Box<dyn OutSelector>>,
         ti: Arc<GlobalTrafficRecorder>,
         conn_info_recorder: OptNewInfoSender,
-        conn_info_updater: net::OptUpdater,
+        #[cfg(feature = "trace")] conn_info_updater: net::OptUpdater,
     ) -> anyhow::Result<()> {
         loop {
             let ar = arx.recv().await;
