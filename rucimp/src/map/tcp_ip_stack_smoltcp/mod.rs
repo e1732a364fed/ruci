@@ -7,6 +7,8 @@ pub mod tcp;
 pub mod udp;
 pub mod udp2;
 
+use std::time::Duration;
+
 use async_trait::async_trait;
 use ruci::map::{self, *};
 use ruci::net::*;
@@ -55,8 +57,13 @@ impl Map for Stack {
 
                     let mut iface = device::create_interface(&mut device);
 
+                    let mut interval = tokio::time::interval(Duration::from_secs(30));
+
                     loop {
                         tokio::select! {
+                            _ = interval.tick() =>{
+                                device.udp_health_check();
+                            }
                             ob = device_write_rx.recv() =>{
                                 match ob {
                                     Some(b) => {

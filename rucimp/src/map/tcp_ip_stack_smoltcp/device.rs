@@ -440,13 +440,34 @@ impl SmoltcpDevice {
         }
     }
 
+    /// check timeout udp and remove from device's SocketSet
+    pub fn udp_health_check(&mut self) {
+        //debug!("udp_health_check");
+        let mut udp_src_to_remove = Vec::new();
+
+        {
+            let m = self.udp_read_data_tx_map.lock();
+
+            for (src, sender) in m.iter() {
+                if sender.is_closed() {
+                    //debug!("udp_health_check got a closed");
+                    udp_src_to_remove.push(src.to_owned());
+                }
+            }
+        }
+
+        self.remove_udp_list(udp_src_to_remove);
+    }
+
     /// 名称跟随 smoltcp 的规范.  从smoltcp的 base_conn(tun) 对每个 socket 用 recv_slice 读取数据, 并解析、发送到到实际 TcpStream/UDP的AddrConn 中
     pub fn process_ingress(&mut self) {
         let mut handles_to_remove = Vec::new();
         let mut tcp_src_to_remove = Vec::new();
-        let mut udp_dst_to_remove = Vec::new();
+        let mut udp_src_to_remove = Vec::new();
 
         //debug!("process_ingress...");
+
+        //let mut udp_count = 0;
 
         self.sockets.iter_mut().for_each(|(h, so)| {
             match so {
@@ -455,7 +476,7 @@ impl SmoltcpDevice {
                     smoltcp 中, udp 在 client端 的逻辑是反的，它在建立udp socket 时(bind)，只存储目标的ip+port,
                     对 该 socket 进行 recv_slice 时, 得到的地址是 源的ip+port (本地地址)
                      */
-
+                    //udp_count += 1;
                     if !so.can_recv() {
                         return;
                     }
@@ -481,7 +502,7 @@ impl SmoltcpDevice {
                                 let udp_read_data_sender = match m.get(&src.endpoint) {
                                     Some(s) => s,
                                     None => {
-                                        debug!("udp recv from {dst_ipe} but not in map");
+                                        debug!("udp recv from {} but not in map", src.endpoint);
                                         return;
                                     }
                                 };
@@ -489,21 +510,21 @@ impl SmoltcpDevice {
                                 let r2 = udp_read_data_sender.try_send((dst_ipe, buffer));
                                 if r2.is_err() {
                                     debug!("udp e2 {:?}", r2);
-                                    udp_dst_to_remove.push(dst_ipe);
+                                    udp_src_to_remove.push(src.endpoint);
                                     break;
                                 }
                             }
                             Err(e) => {
                                 debug!("udp e1 {e}");
 
-                                udp_dst_to_remove.push(dst_ipe);
+                                handles_to_remove.push(h);
                                 break;
                             }
                         }
                     }
                     if !so.is_open() {
                         debug!("udp not open");
-                        udp_dst_to_remove.push(dst_ipe);
+                        handles_to_remove.push(h);
                     }
                 }
                 smoltcp::socket::Socket::Tcp(so) => {
@@ -561,12 +582,11 @@ impl SmoltcpDevice {
             } //match
         }); //iter
 
-        for endpoint in tcp_src_to_remove {
-            self.remove_tcp(endpoint);
-        }
-        for endpoint in udp_dst_to_remove {
-            self.remove_udp(endpoint);
-        }
+        //debug!("udp count {udp_count}");
+
+        self.remove_tcp_list(tcp_src_to_remove);
+        self.remove_udp_list(udp_src_to_remove);
+
         for handle in handles_to_remove {
             self.sockets.remove(handle);
         }
@@ -636,25 +656,55 @@ impl SmoltcpDevice {
         }
     }
 
-    fn remove_tcp(&mut self, src: IpEndpoint) {
-        tracing::debug!("remove tcp {}", src);
-        let mut tcp_src_handle_map_lock = self.tcp_src_handle_map.lock();
-        if let Some(h) = tcp_src_handle_map_lock.get(&src) {
-            self.sockets.remove(*h);
-            tcp_src_handle_map_lock.remove(&src);
+    // fn remove_tcp(&mut self, src: IpEndpoint) {
+    //     tracing::debug!("remove tcp {}", src);
+    //     let mut tcp_src_handle_map_lock = self.tcp_src_handle_map.lock();
+    //     if let Some(h) = tcp_src_handle_map_lock.get(&src) {
+    //         self.sockets.remove(*h);
+    //         tcp_src_handle_map_lock.remove(&src);
+    //     }
+    //     self.tcp_read_data_tx_map.lock().remove(&src);
+    // }
+
+    fn remove_tcp_list(&mut self, handles_to_remove: Vec<IpEndpoint>) {
+        //tracing::debug!("remove udp {}", src);
+
+        let mut tcp_src_handle_map_lock = self.udp_src_handle_map.lock();
+        let mut l2 = self.tcp_read_data_tx_map.lock();
+
+        for src in handles_to_remove {
+            if let Some(h) = tcp_src_handle_map_lock.get(&src) {
+                self.sockets.remove(*h);
+                tcp_src_handle_map_lock.remove(&src);
+            }
+            l2.remove(&src);
         }
-        self.tcp_read_data_tx_map.lock().remove(&src);
     }
 
-    fn remove_udp(&mut self, src: IpEndpoint) {
-        tracing::debug!("remove udp {}", src);
+    // fn remove_udp(&mut self, src: IpEndpoint) {
+    //     tracing::debug!("remove udp {}", src);
+
+    //     let mut udp_src_handle_map_lock = self.udp_src_handle_map.lock();
+    //     if let Some(h) = udp_src_handle_map_lock.get(&src) {
+    //         self.sockets.remove(*h);
+    //         udp_src_handle_map_lock.remove(&src);
+    //     }
+
+    //     self.udp_read_data_tx_map.lock().remove(&src);
+    // }
+
+    fn remove_udp_list(&mut self, handles_to_remove: Vec<IpEndpoint>) {
+        //tracing::debug!("remove udp {}", src);
 
         let mut udp_src_handle_map_lock = self.udp_src_handle_map.lock();
-        if let Some(h) = udp_src_handle_map_lock.get(&src) {
-            self.sockets.remove(*h);
-            udp_src_handle_map_lock.remove(&src);
-        }
+        let mut l2 = self.udp_read_data_tx_map.lock();
 
-        self.udp_read_data_tx_map.lock().remove(&src);
+        for src in handles_to_remove {
+            if let Some(h) = udp_src_handle_map_lock.get(&src) {
+                self.sockets.remove(*h);
+                udp_src_handle_map_lock.remove(&src);
+            }
+            l2.remove(&src);
+        }
     }
 }

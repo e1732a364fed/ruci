@@ -138,12 +138,14 @@ impl AsyncReadAddr for R {
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
         let me = self.get_mut();
-        if let Some((src, mut data)) = ready!(me.rx.poll_recv(cx)) {
-            let bl = buf.len();
-            data.copy_to_slice(&mut buf[..min(data.len(), bl)]);
-            Poll::Ready(Ok((data.len(), ip_end_point_to_addr(&src))))
-        } else {
-            Poll::Pending
+
+        match ready!(me.rx.poll_recv(cx)) {
+            Some((src, mut data)) => {
+                let bl = buf.len();
+                data.copy_to_slice(&mut buf[..min(data.len(), bl)]);
+                Poll::Ready(Ok((data.len(), ip_end_point_to_addr(&src))))
+            }
+            None => Poll::Ready(Ok((0, Addr::default()))),
         }
     }
 }
