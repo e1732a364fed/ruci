@@ -47,7 +47,6 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
     let socket = Socket::new(domain, typ, Some(protocol))?;
 
     if so.tproxy.unwrap_or_default() {
-        //debug!("calls set_tproxy_socket_opts");
         so_opts::set_tproxy_socket_opts(is_v4, is_udp, &socket)?;
     }
     if let Some(m) = so.so_mark {
@@ -162,7 +161,9 @@ pub fn connect_tproxy_udp(laddr: &net::Addr, raddr: &net::Addr) -> anyhow::Resul
         .get_socket_addr()
         .context("connect_tproxy_udp failed, requires raddr has socket addr")?;
 
-    socket.connect(&ra.into()).context("connect failed")?;
+    socket
+        .connect_timeout(&ra.into(), Duration::from_secs(1))
+        .context("connect failed")?;
 
     Ok(socket)
 }

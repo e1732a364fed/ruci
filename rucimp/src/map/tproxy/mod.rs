@@ -266,7 +266,7 @@ impl Name for UdpR {
 }
 
 // (buf_index, left_bound, right_bound)
-pub type DataDstSrc = ((usize, usize, usize), net::Addr, net::Addr);
+type DataDstSrc = ((usize, usize, usize), net::Addr, net::Addr);
 
 /// 将 外来 的udp 数据 写回 本机
 impl AsyncWriteAddr for UdpW {

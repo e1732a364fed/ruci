@@ -127,7 +127,7 @@ websocket_out = {
 }
 
 dial_trojan_chain = {dial, tlsout, trojan_out}
-opt_dial_trojan_chain = {opt_dial, trojan_out}
+opt_dial_trojan_chain = {opt_dial, tlsout, trojan_out}
 dial_ws_trojan_chain = {dial, tlsout, websocket_out, trojan_out}
 
 h2_single_out = {
@@ -207,7 +207,7 @@ config = {
 
 
 
---[=[
+---[=[
 
 config = {
     inbounds = {{
@@ -228,7 +228,7 @@ config = {
 
     --[[
 这个 config 块是演示 inbound 是 tproxy, outbound 是 direct 的情况
-
+注意 direct 用的是 opt_direct, 用了 somark 和 bind_to_device
 透明代理tproxy 只能在 linux 上使用.
 --]]
 
@@ -236,7 +236,7 @@ config = {
 
 -- ]=]
 
----[=[
+--[=[
 
 config = {
     inbounds = {{
