@@ -1,20 +1,20 @@
 use std::{fs, sync::Arc, time::Duration};
 
-use super::*;
 use anyhow::{Context, Ok};
+use clap::Subcommand;
 use ruci::net;
 use serde::Deserialize;
 use serde_value::Value;
 use tokio::sync::mpsc;
 use tracing::info;
 
-// #[cfg(feature = "file_server")]
-// pub mod folder_serve;
-
 pub const WINTUN_DOWNLOAD_LINK: &str = "https://www.wintun.net/builds/wintun-0.14.1.zip";
 
 pub const MMDB_DOWNLOAD_LINK: &str =
     "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb";
+
+pub const RUCI_WEBUI_DOWNLOAD_LINK: &str =
+    "https://github.com/e1732a364fed/ruci-webui/releases/latest/download/dist.tar.gz";
 
 // 运行示例： ruci-cmd utils convert-format local.lua json
 
@@ -26,11 +26,17 @@ pub enum Commands {
     /// download wintun.zip
     Wintun,
 
+    Webui,
+
     /// calculate trojan hash for a plain text password
-    CalcuTrojanHash { password: String },
+    CalcuTrojanHash {
+        password: String,
+    },
 
     /// generate self signed root certificate and key
-    GenCer { subject_alt_names: Vec<String> },
+    GenCer {
+        subject_alt_names: Vec<String>,
+    },
 
     //CA证书一定是自签名的
     /// generate CA certificate and key
@@ -47,15 +53,21 @@ pub enum Commands {
     Repl,
 
     /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name.
-    Pack { folder: String },
+    Pack {
+        folder: String,
+    },
 
     /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name, then compress it into a .zip file.
     ///
     /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
-    PackZ { folder: String },
+    PackZ {
+        folder: String,
+    },
 
     /// print the QrCode of a string in the console.
-    QR { str: String },
+    QR {
+        str: String,
+    },
 
     /// 转换配置文件格式，支持在 lua、json 之间互相转换。输入格式将根据文件后缀自动识别
     ConvertFormat {
@@ -72,6 +84,9 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         None => return Ok(()),
     };
     match cmd {
+        Commands::Webui => {
+            download_webui().await?;
+        }
         Commands::Mmdb => {
             download_mmdb().await?;
         }
@@ -171,7 +186,7 @@ pub async fn convert_format(
     output_format: String,
 ) -> anyhow::Result<()> {
     let (input_file_contents, data_source) =
-        mode::chain::get_config_file(&mut input_file_name, false)
+        crate::mode::chain::get_config_file(&mut input_file_name, false)
             .await
             .context(format!("failed to read file: {}", input_file_name))?;
 
@@ -347,6 +362,11 @@ pub async fn dl_url(url: &str, file_name: Option<&str>) -> anyhow::Result<Option
             Ok(Some(v))
         }
     }
+}
+
+async fn download_webui() -> anyhow::Result<()> {
+    dl_url(RUCI_WEBUI_DOWNLOAD_LINK, None).await?;
+    Ok(())
 }
 
 async fn download_mmdb() -> anyhow::Result<()> {
