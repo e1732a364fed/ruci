@@ -24,6 +24,7 @@ use tracing::debug;
 use tracing::warn;
 use udp::{UdpRead, UdpWrite};
 
+#[allow(clippy::type_complexity)]
 pub trait Builder: Send + Sync {
     type AsyncConn: ruci::net::AsyncConn + 'static;
     type StackStream: Stream<Item = std::io::Result<Vec<u8>>>

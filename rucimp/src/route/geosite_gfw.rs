@@ -14,6 +14,7 @@ use std::error::Error;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GeositeGfwConfig {
+    // "http://127.0.0.1:5000/check";
     pub api_url: String,
     pub proxy: Option<String>,
     pub only_proxy: bool,
@@ -74,7 +75,6 @@ pub async fn check_api(
     config: &GeositeGfwConfig,
     domain: &str,
 ) -> Result<CheckResponse, Box<dyn Error>> {
-    // let api_url = "http://127.0.0.1:5000/check";
     let client = Client::new();
 
     let request_data = CheckRequest {

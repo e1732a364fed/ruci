@@ -237,6 +237,7 @@ pub static CORE_STATE: OnceLock<std::sync::Arc<parking_lot::Mutex<State>>> = Onc
 /// # Safety
 ///
 /// The caller must ensure that json_content is valid UTF-8
+#[allow(clippy::let_underscore_future)]
 #[no_mangle]
 pub unsafe extern "C" fn c_run_main_with_json_args(
     json_content: *const std::ffi::c_char,
