@@ -5,7 +5,7 @@ on:
     branches: [ "tokio" ]
     paths-ignore: 
       - '*.md'
-      - '.github/workflows/'
+      - '.github/workflows/*.yml'
   pull_request:
     branches: [ "tokio" ]
     paths-ignore: 
