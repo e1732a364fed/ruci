@@ -79,8 +79,8 @@ in_h2_trojans_chain = {tcp, tls, {
 in_quic_chain = {
     {
         Quic = {
-            key_path = "test.key",
-            cert_path = "test.crt",
+            key_path = "test2.key",
+            cert_path = "test2.crt",
             listen_addr = "127.0.0.1:10801",
             -- alpn = ["h3", "myalpn1"]
         }

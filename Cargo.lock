@@ -378,10 +378,6 @@ name = "cc"
 version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cd6604a82acf3039f1144f54b8eb34e91ffba622051189e71b781822d5ee1f5"
-dependencies = [
- "jobserver",
- "libc",
-]
 
 [[package]]
 name = "cexpr"
@@ -1021,12 +1017,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
-name = "hex"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
 name = "hex-literal"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1310,15 +1300,6 @@ name = "itoa"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
-
-[[package]]
-name = "jobserver"
-version = "0.1.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab46a6e9526ddef3ae7f787c06f0f2600639ba80ea3eade3d8e670a2230f51d6"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "js-sys"
@@ -2219,7 +2200,7 @@ dependencies = [
  "regex",
  "ruci",
  "s2n-quic",
- "s2n-quic-tls",
+ "s2n-quic-rustls",
  "serde",
  "serde_json",
  "socket2",
@@ -2359,7 +2340,7 @@ dependencies = [
  "s2n-quic-core",
  "s2n-quic-crypto",
  "s2n-quic-platform",
- "s2n-quic-tls-default",
+ "s2n-quic-rustls",
  "s2n-quic-transport",
  "tokio",
  "zerocopy",
@@ -2432,31 +2413,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "s2n-quic-tls"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "386f29a7f2e75d6a5d089548d5d66bb5e4676de7bd5dc4b68dc95a67ed2003d8"
-dependencies = [
- "bytes",
- "errno",
- "libc",
- "s2n-codec",
- "s2n-quic-core",
- "s2n-quic-crypto",
- "s2n-tls",
-]
-
-[[package]]
-name = "s2n-quic-tls-default"
-version = "0.34.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ba7bc3a1769ac8939be1cd2c7726b02127eb446158599cf536d2d4804df2265"
-dependencies = [
- "s2n-quic-rustls",
- "s2n-quic-tls",
-]
-
-[[package]]
 name = "s2n-quic-transport"
 version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2472,30 +2428,6 @@ dependencies = [
  "s2n-quic-core",
  "siphasher",
  "smallvec",
-]
-
-[[package]]
-name = "s2n-tls"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d49e7ff0a2f7fa23816ba41e8cd6a04d3e06c28d6a0bd6e572702c7a8be9abd"
-dependencies = [
- "errno",
- "hex",
- "libc",
- "pin-project-lite",
- "s2n-tls-sys",
-]
-
-[[package]]
-name = "s2n-tls-sys"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7252540b5c58110aec78ebaeac0fe7268ab6f5b301e78bed9f8085b858513ef2"
-dependencies = [
- "aws-lc-rs",
- "cc",
- "libc",
 ]
 
 [[package]]

@@ -25,12 +25,11 @@ jobs:
         platform:
           - ubuntu-latest
           - macos-latest
-          # - windows-latest
+          - windows-latest
 
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: ilammy/setup-nasm@v1
     - uses: actions/checkout@v4
     - uses: taiki-e/install-action@cargo-hack
     - name: Build

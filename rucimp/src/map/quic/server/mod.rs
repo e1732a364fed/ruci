@@ -52,7 +52,7 @@ impl Server {
     }
     async fn handshake(&self, cid: CID) -> anyhow::Result<map::MapResult> {
         //builder() use default, default will use h3 as alpn
-        let mut tls = s2n_quic_tls::Server::builder().with_certificate(
+        let mut tls = s2n_quic_rustls::Server::builder().with_certificate(
             Path::new(self.tls_cert_path.as_str()),
             Path::new(self.tls_key_path.as_str()),
         )?;
