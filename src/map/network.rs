@@ -1,15 +1,15 @@
 use log::{debug, info, log_enabled};
-use macro_mapper::common_mapper_field;
+use macro_mapper::{common_mapper_field, CommonMapperExt, DefaultMapperExt};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::mpsc::{self, Receiver},
 };
 
+use super::*;
+use crate::map;
 use crate::Name;
 
-use super::*;
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, DefaultMapperExt)]
 pub struct Direct;
 impl Name for Direct {
     fn name(&self) -> &'static str {
@@ -53,7 +53,7 @@ impl Mapper for Direct {
 }
 
 #[common_mapper_field]
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, CommonMapperExt)]
 pub struct TcpDialer {}
 
 impl Name for TcpDialer {
@@ -77,11 +77,6 @@ impl TcpDialer {
             Ok(c) => MapResult::oabc(pass_a, pass_b, Box::new(c)),
             Err(e) => MapResult::from_err(e),
         }
-    }
-}
-impl MapperExt for TcpDialer {
-    fn configured_target_addr(&self) -> Option<net::Addr> {
-        self.fixed_target_addr.clone()
     }
 }
 
@@ -156,10 +151,9 @@ impl Mapper for TcpDialer {
 }
 
 /// 不命名为TcpListener 只是因为不希望有重名
-#[derive(Clone, Debug)]
-pub struct TcpStreamGenerator {
-    pub addr: Option<net::Addr>,
-}
+#[common_mapper_field]
+#[derive(CommonMapperExt, Clone, Debug, Default)]
+pub struct TcpStreamGenerator {}
 
 impl Name for TcpStreamGenerator {
     fn name(&self) -> &'static str {
@@ -258,7 +252,7 @@ impl Mapper for TcpStreamGenerator {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
-            None => self.addr.as_ref().unwrap(),
+            None => self.fixed_target_addr.as_ref().unwrap(),
         };
 
         if log_enabled!(log::Level::Debug) {

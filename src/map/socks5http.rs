@@ -5,6 +5,7 @@ use std::io::{self};
 
 use futures::executor::block_on;
 use log::debug;
+use macro_mapper::DefaultMapperExt;
 
 use crate::map::{self, MapResult};
 use crate::net::CID;
@@ -30,7 +31,7 @@ impl ToMapper for Config {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Server {
     pub https: http::Server,
     pub socks5s: socks5::server::Server,

@@ -2,6 +2,7 @@ use std::io;
 
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
+use macro_mapper::DefaultMapperExt;
 use tokio::io::AsyncWriteExt;
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
 
 use super::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Client {
     pub u: User,
 }

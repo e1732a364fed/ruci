@@ -363,24 +363,22 @@ pub trait ToMapper {
 /// 一些辅助方法. See crates/macro_mapper.
 /// ```plaintext
 /// use macro_mapper::*;
-/// #[derive(MapperExt)]
 /// #[common_mapper_field]
+/// #[derive(CommonMapperExt)]
+///
+/// 或 #[derive(DefaultMapperExt)]
 /// ```
 /// 来自动添加实现
 pub trait MapperExt: Mapper {
-    fn set_configured_target_addr(&mut self, _a: Option<net::Addr>) {}
-    fn set_is_tail_of_chain(&mut self, _is: bool) {}
-    fn configured_target_addr(&self) -> Option<net::Addr> {
-        None
-    }
-    fn is_tail_of_chain(&self) -> bool {
-        false
-    }
+    fn set_configured_target_addr(&mut self, _a: Option<net::Addr>);
+    fn set_is_tail_of_chain(&mut self, _is: bool);
+    fn configured_target_addr(&self) -> Option<net::Addr>;
+    fn is_tail_of_chain(&self) -> bool;
 }
 
 //令 Mapper 实现 Send + Sync, 否则异步/多线程报错
-pub trait MapperSync: Mapper + Send + Sync + Debug {}
-impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
+pub trait MapperSync: MapperExt + Send + Sync + Debug {}
+impl<T: MapperExt + Send + Sync + Debug> MapperSync for T {}
 dyn_clone::clone_trait_object!(MapperSync);
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc

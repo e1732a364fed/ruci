@@ -8,6 +8,7 @@ use crate::{
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
+use macro_mapper::DefaultMapperExt;
 use std::io::{self};
 use tokio::io::AsyncReadExt;
 
@@ -24,7 +25,7 @@ impl ToMapper for Config {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Server {
     pub um: UsersMap<User>,
 }

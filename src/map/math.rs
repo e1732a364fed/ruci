@@ -1,9 +1,11 @@
+use crate::map;
 use crate::{
     net::{self, Stream, CID},
     Name,
 };
 use async_trait::async_trait;
 use bytes::BytesMut;
+use macro_mapper::DefaultMapperExt;
 use std::{io, pin::Pin, task::Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
@@ -141,7 +143,7 @@ impl AsyncWrite for AdderConn {
 }
 
 // 可生成一个 AdderConn, 其对输入进行加(减)法操作
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, DefaultMapperExt)]
 pub struct Adder {
     pub addnum: i8,
     pub direction: AddDirection,

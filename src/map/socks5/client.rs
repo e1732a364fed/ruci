@@ -1,11 +1,12 @@
 use bytes::BufMut;
+use macro_mapper::DefaultMapperExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use self::map::{MapParams, ProxyBehavior, CID};
 use super::*;
 use crate::{map::MapResult, net};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Client {
     pub up: Option<UserPass>, //todo: make sure len <= 255
 

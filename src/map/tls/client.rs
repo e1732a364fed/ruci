@@ -1,3 +1,4 @@
+use macro_mapper::DefaultMapperExt;
 use rustls::{
     client::danger::ServerCertVerified,
     pki_types::{CertificateDer, Der, ServerName, TrustAnchor, UnixTime},
@@ -9,7 +10,7 @@ use self::map::CID;
 
 use super::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Client {
     pub domain: String,
     pub is_insecure: bool,

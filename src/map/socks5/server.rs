@@ -11,6 +11,7 @@ use crate::{
 use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
 use log::{debug, log_enabled, warn};
+use macro_mapper::DefaultMapperExt;
 use std::{
     cmp::min,
     io::{self, Error},
@@ -41,7 +42,7 @@ impl ToMapper for Config {
 ///  support_udp开关udp associate的支持
 ///
 /// 支持 AuthNone和 AuthUserPass
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Server {
     pub um: Option<UsersMap<UserPass>>,
     pub support_udp: bool,

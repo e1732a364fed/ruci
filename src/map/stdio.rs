@@ -6,7 +6,7 @@
 use std::{pin::Pin, task::Poll};
 
 use async_trait::async_trait;
-use macro_mapper::common_mapper_field;
+use macro_mapper::{common_mapper_field, CommonMapperExt};
 
 use crate::{net::CID, Name};
 
@@ -61,7 +61,7 @@ impl AsyncWrite for Conn {
 }
 
 #[common_mapper_field]
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, CommonMapperExt)]
 pub struct Stdio {}
 
 impl Name for Stdio {
@@ -73,7 +73,7 @@ impl Name for Stdio {
 impl Stdio {
     pub fn from(s: &str) -> MapperBox {
         if s.is_empty() {
-            Box::new(Stdio::default())
+            Box::<Stdio>::default()
         } else {
             let a = net::Addr::from_network_addr_str(s).unwrap();
             Box::new(Stdio {
@@ -81,12 +81,6 @@ impl Stdio {
                 ..Default::default()
             })
         }
-    }
-}
-
-impl MapperExt for Stdio {
-    fn configured_target_addr(&self) -> Option<net::Addr> {
-        self.fixed_target_addr.clone()
     }
 }
 

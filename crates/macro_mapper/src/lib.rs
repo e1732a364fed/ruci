@@ -36,16 +36,16 @@ pub fn common_mapper_field(_args: TokenStream, input: TokenStream) -> TokenStrea
 
 use syn;
 
-#[proc_macro_derive(MapperExt)]
-pub fn hello_macro_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(CommonMapperExt)]
+pub fn commonext_macro_derive(input: TokenStream) -> TokenStream {
     // 基于 input 构建 AST 语法树
     let ast: DeriveInput = syn::parse(input).unwrap();
 
     // 构建特征实现代码
-    impl_mapperext_macro(&ast)
+    impl_common_mapperext_macro(&ast)
 }
 
-fn impl_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
+fn impl_common_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let gen = quote! {
         impl MapperExt for #name {
@@ -61,6 +61,33 @@ fn impl_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
             }
             fn set_is_tail_of_chain(&mut self, is: bool) {
                 self.is_tail_of_chain = is
+            }
+
+        }
+    };
+    gen.into()
+}
+
+#[proc_macro_derive(DefaultMapperExt)]
+pub fn ext_macro_derive(input: TokenStream) -> TokenStream {
+    // 基于 input 构建 AST 语法树
+    let ast: DeriveInput = syn::parse(input).unwrap();
+
+    // 构建特征实现代码
+    impl_mapperext_macro(&ast)
+}
+
+fn impl_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
+    let name = &ast.ident;
+    let gen = quote! {
+        impl map::MapperExt for #name {
+            fn set_configured_target_addr(&mut self, _a: Option<net::Addr>) {}
+            fn set_is_tail_of_chain(&mut self, _is: bool) {}
+            fn configured_target_addr(&self) -> Option<net::Addr> {
+                None
+            }
+            fn is_tail_of_chain(&self) -> bool {
+                false
             }
 
         }

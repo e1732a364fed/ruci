@@ -145,7 +145,10 @@ impl ToMapper for InMapperConfig {
             InMapperConfig::Listener(lis) => match lis {
                 Listener::TcpListener(tcp_l_str) => {
                     let a = net::Addr::from_ip_addr_str("tcp", tcp_l_str).unwrap();
-                    Box::new(ruci::map::network::TcpStreamGenerator { addr: Some(a) })
+                    Box::new(ruci::map::network::TcpStreamGenerator {
+                        fixed_target_addr: Some(a),
+                        ..Default::default()
+                    })
                 }
                 Listener::UnixListener(_) => todo!(),
             },
