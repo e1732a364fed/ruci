@@ -705,9 +705,11 @@ local config_18_recorder = {
         chain = { listen, {
             Recorder = {
                 label = "socks5",
-                serialize_format = "cbor", --"json"
-                --full_record = true
-                no_truncate = true,
+                output_file_extension = "Json", --"Cbor"
+                output_format = "Har",          --"Ruci"
+                record_mode = "Info",
+                -- piece_truncate_option = "NoTruncate",
+                -- session_truncate_option = "NoTruncate",
             }
         }, {
             Socks5Http = {}
@@ -720,8 +722,12 @@ local config_18_recorder = {
         chain = { direct, {
             Recorder = {
                 label = "direct",
-                serialize_format = "cbor",
-                no_truncate = true,
+                output_file_extension = "Json",
+                output_format = "Har",
+                record_mode = "Info",
+
+                -- piece_truncate_option = "NoTruncate",
+                -- session_truncate_option = "NoTruncate",
             }
         } }
     } }
@@ -919,7 +925,7 @@ local config_24_chain_mitm = {
 }
 
 
-Config = config_24_chain_mitm
+Config = config_18_recorder
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)
