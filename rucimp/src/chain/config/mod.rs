@@ -10,6 +10,7 @@ pub mod dynamic;
 
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
+use bytes::BytesMut;
 use ruci::{
     map::{acc::MIterBox, *},
     net,
@@ -132,7 +133,7 @@ pub struct OutMapperConfigChain {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
-    Stdio(String),    //单流发生器
+    Stdio(Ext),       //单流发生器
     Listener(String), //多流发生器
     Adder(i8),
     Counter,
@@ -145,15 +146,34 @@ pub enum InMapperConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapperConfig {
-    Direct,
     Blackhole,
-    Stdio(String),
+    Direct,
+    Stdio(Ext),
     Dialer(String),
     Adder(i8),
     Counter,
     TLS(TlsOut),
     Socks5(Socks5Out),
     Trojan(String),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Ext {
+    fixed_target_addr: Option<String>,
+
+    pre_defined_early_data: Option<String>,
+}
+impl Ext {
+    fn to_ext_fields(&self) -> MapperExtFields {
+        let mut extf = MapperExtFields::default();
+        if let Some(ta) = self.fixed_target_addr.as_ref() {
+            extf.fixed_target_addr = net::Addr::from_network_addr_str(ta).ok();
+        }
+        if let Some(s) = self.pre_defined_early_data.as_ref() {
+            extf.pre_defined_early_data = Some(BytesMut::from(s.as_bytes()));
+        }
+        extf
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -189,8 +209,10 @@ pub struct TrojanIn {
 impl ToMapper for InMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            InMapperConfig::Stdio(s) => {
-                ruci::map::stdio::Stdio::from(s).expect("s is a  network addr str")
+            InMapperConfig::Stdio(ext) => {
+                let extf = ext.to_ext_fields();
+
+                ruci::map::stdio::Stdio::from(extf).expect("valid extf")
             }
             InMapperConfig::Listener(l_str) => {
                 let a = net::Addr::from_network_addr_str(l_str).expect("network_addr is valid");
@@ -259,8 +281,10 @@ impl ToMapper for InMapperConfig {
 impl ToMapper for OutMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            OutMapperConfig::Stdio(s) => {
-                ruci::map::stdio::Stdio::from(s).expect("s is a network addr str")
+            OutMapperConfig::Stdio(ext) => {
+                let extf = ext.to_ext_fields();
+
+                ruci::map::stdio::Stdio::from(extf).expect("valid extf")
             }
             OutMapperConfig::Blackhole => Box::new(ruci::map::network::BlackHole::default()),
 

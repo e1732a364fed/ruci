@@ -16,6 +16,7 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
             let r = TcpListener::bind(a.get_socket_addr().expect("a has socket addr")).await?;
             return Ok(Listener::TCP(r));
         }
+        #[cfg(unix)]
         net::Network::Unix => {
             let r = UnixListener::bind(a.get_name().expect("a has a name"))?;
             return Ok(Listener::UNIX(r));
@@ -28,6 +29,7 @@ impl Listener {
     pub fn network(&self) -> net::Network {
         match self {
             Listener::TCP(_) => net::Network::TCP,
+            #[cfg(unix)]
             Listener::UNIX(_) => net::Network::Unix,
         }
     }
@@ -42,6 +44,7 @@ impl Listener {
                 };
                 return Ok((Stream::TCP(Box::new(tcp_stream)), a));
             }
+            #[cfg(unix)]
             Listener::UNIX(ul) => {
                 let (unix_stream, unix_soa) = ul.accept().await?;
 

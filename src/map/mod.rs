@@ -333,11 +333,26 @@ pub trait MapperExt: Mapper {
         self.set_ext_fields(Some(efc));
     }
 
+    fn set_pre_defined_early_data(&mut self, ed: Option<BytesMut>) {
+        let mut efc = self.get_ext_fields_clone_or_default();
+
+        efc.pre_defined_early_data = ed;
+        self.set_ext_fields(Some(efc));
+    }
+
     fn get_chain_tag(&self) -> &str {
         if let Some(ef) = self.get_ext_fields() {
             return &ef.chain_tag;
         }
         ""
+    }
+
+    /// will clone the data
+    fn get_pre_defined_early_data(&self) -> Option<BytesMut> {
+        if let Some(ef) = self.get_ext_fields() {
+            return ef.pre_defined_early_data.clone();
+        }
+        None
     }
     fn is_tail_of_chain(&self) -> bool {
         if let Some(ef) = self.get_ext_fields() {

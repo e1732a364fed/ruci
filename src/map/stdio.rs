@@ -71,17 +71,17 @@ impl Name for Stdio {
 }
 
 impl Stdio {
-    pub fn from(network_addr_str: &str) -> anyhow::Result<MapperBox> {
-        if network_addr_str.is_empty() {
-            Ok(Box::<Stdio>::default())
-        } else {
-            let a = net::Addr::from_network_addr_str(network_addr_str)?;
-            let mut ext_f = MapperExtFields::default();
-            ext_f.fixed_target_addr = Some(a);
-            Ok(Box::new(Stdio {
-                ext_fields: Some(ext_f),
-                ..Default::default()
-            }))
+    pub fn from(ext: MapperExtFields) -> anyhow::Result<MapperBox> {
+        match ext.fixed_target_addr {
+            Some(a) => {
+                let mut ext_f = MapperExtFields::default();
+                ext_f.fixed_target_addr = Some(a);
+                Ok(Box::new(Stdio {
+                    ext_fields: Some(ext_f),
+                    ..Default::default()
+                }))
+            }
+            None => Ok(Box::<Stdio>::default()),
         }
     }
 }

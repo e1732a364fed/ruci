@@ -32,7 +32,7 @@ mod test {
         let text = r#"
     
         tls = { TLS = {  cert = "test.cert", key = "test.key" } }
-        listen = { Listener = { TcpListener = "0.0.0.0:1080" }  }
+        listen = { Listener =  "0.0.0.0:1080"  }
         c = "Counter"
         chain1 = {
             listen,
@@ -54,7 +54,8 @@ mod test {
         config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"}
-            }
+            },
+            outbounds = {}
         }
     "#;
 
@@ -85,7 +86,7 @@ mod test {
         let text = r#"
     
             tls = { TLS = {  host = "my.com", insecure = true } }
-            dialer = { Dialer = { TcpDialer = "0.0.0.0:1081" }  }
+            dialer = { Dialer =  "0.0.0.0:1081"   }
             c = "Counter"
             chain1 = {
                 dialer,
@@ -138,7 +139,7 @@ mod test {
         let globals = lua.globals();
 
         let text = r#"
-        listen = { Listener = { TcpListener = "0.0.0.0:1080" }  }
+        listen = { Listener =  "0.0.0.0:1080"   }
         chain1 = {
             listen,
             { Socks5 = {   } },
@@ -151,7 +152,7 @@ mod test {
             outbounds = {
                 { 
                     tag="dial1", chain = {
-                        { Dialer = { TcpDialer = "0.0.0.0:1080" }  }
+                        { Dialer =  "0.0.0.0:1080"  }
                     } 
                 }
             }
@@ -184,7 +185,7 @@ mod test {
         let globals = lua.globals();
 
         let text = r#"
-        listen = { Listener = { TcpListener = "0.0.0.0:1080" }  }
+        listen = { Listener =   "0.0.0.0:1080"   }
         chain1 = {
             listen,
             { Socks5 = {   } },
@@ -198,7 +199,7 @@ mod test {
             outbounds = {
                 { 
                     tag="dial1", chain = {
-                        { Dialer = { TcpDialer = "0.0.0.0:1080" }  }
+                        { Dialer =  "0.0.0.0:1080"   }
                     }
                 },
 
