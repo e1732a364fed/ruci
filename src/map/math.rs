@@ -68,10 +68,7 @@ impl AsyncWrite for AdderConn {
                 *a = (x + *a as i16) as u8;
             }
         }
-        let r = self.write_wbuf(cx);
-
-        if let Poll::Ready(Ok(_)) = &r {}
-        r
+        self.write_wbuf(cx)
     }
 
     fn poll_flush(
