@@ -59,6 +59,10 @@ impl std::str::FromStr for Header {
     }
 }
 
+pub trait HeaderContainer {
+    fn get_header(&self, s: &str) -> Option<&Header>;
+}
+
 #[derive(Debug)]
 pub struct ParsedHttpRequest {
     pub version: String,
@@ -82,6 +86,11 @@ impl Default for ParsedHttpRequest {
         }
     }
 }
+impl HeaderContainer for ParsedHttpRequest {
+    fn get_header(&self, s: &str) -> Option<&Header> {
+        self.headers.iter().find(|h| h.head.contains(s))
+    }
+}
 
 #[derive(Debug)]
 pub struct ParsedHttpResponse {
@@ -103,6 +112,12 @@ impl Default for ParsedHttpResponse {
             parse_result: Ok(()),
             body_start_index: 0,
         }
+    }
+}
+
+impl HeaderContainer for ParsedHttpResponse {
+    fn get_header(&self, s: &str) -> Option<&Header> {
+        self.headers.iter().find(|h| h.head.contains(s))
     }
 }
 
