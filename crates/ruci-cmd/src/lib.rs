@@ -448,7 +448,7 @@ pub async fn run_main_with_args(mut args: Args) -> anyhow::Result<()> {
                         #[cfg(feature = "file_server")]
                         args.file_server_tar_zip_data_source_base64.take(),
                     )
-                    .await;
+                    .await?;
                     api_server_started = true;
 
                     if args.config == DEFAULT_LUA_CONFIG_FILE_NAME {

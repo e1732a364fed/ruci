@@ -3,6 +3,7 @@ use std::env::current_dir;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use anyhow::bail;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum::routing::post;
@@ -62,7 +63,7 @@ impl Server {
         api_extensions: Option<ApiExtensionMap>,
         extension_api_doc: Option<utoipa::openapi::OpenApi>,
         #[cfg(feature = "file_server")] file_server_tar_data_source_base64: Option<String>,
-    ) -> (Self, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>) {
+    ) -> anyhow::Result<(Self, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>)> {
         let (tx, rx) = mpsc::channel(10);
 
         let global_traffic = Arc::new(GlobalTrafficRecorder::default());
@@ -89,8 +90,8 @@ impl Server {
             #[cfg(feature = "file_server")]
             file_server_tar_data_source_base64,
         )
-        .await;
-        (server, rx, global_traffic)
+        .await?;
+        Ok((server, rx, global_traffic))
     }
 }
 
@@ -429,6 +430,48 @@ pub async fn app_working_dir() -> String {
     format!("{r:?}")
 }
 
+fn serve_folder_by_tar_data_source_base64(
+    mut app: Router,
+    file_server_tar_data_source_base64: String,
+) -> anyhow::Result<Router> {
+    use base64::Engine;
+    use data_source::file_server::*;
+    use data_source::DataSource;
+    let zip_data = {
+        match base64::engine::general_purpose::STANDARD.decode(&file_server_tar_data_source_base64)
+        {
+            Ok(d) => d,
+            Err(_) => base64::engine::general_purpose::STANDARD.decode(std::fs::read_to_string(
+                &file_server_tar_data_source_base64,
+            )?)?,
+        }
+    };
+
+    use anyhow::Context;
+    use std::io::Cursor;
+    use zip::ZipArchive;
+    let cursor = Cursor::new(zip_data);
+    let mut archive = ZipArchive::new(cursor).context("Failed to open ZIP archive")?;
+    if archive.len() != 1 {
+        bail!("Expected exactly one file in the ZIP archive");
+    }
+
+    use std::io::Read;
+    let mut tar_file = archive
+        .by_index(0)
+        .context("Failed to read TAR file in ZIP archive")?;
+    let mut tar_data = Vec::new();
+    debug!("tarfile is {}", tar_file.name());
+    tar_file
+        .read_to_end(&mut tar_data)
+        .context("Failed to read TAR file contents")?;
+
+    let data_source = DataSource::TarInMemory(tar_data);
+    app = register_data_source_route(app, "/files/{*path}", data_source);
+
+    Ok(app)
+}
+
 /// non-blocking, it calls tokio::spawn
 pub async fn serve(
     s: &Server,
@@ -451,44 +494,10 @@ pub async fn serve(
         match file_server_tar_zip_data_source_base64 {
             None => app = app.nest_service("/dist", tower_http::services::ServeDir::new("dist")),
             Some(file_server_tar_data_source_base64) => {
-                use base64::Engine;
-                use data_source::file_server::*;
-                use data_source::DataSource;
-                let zip_data = {
-                    match base64::engine::general_purpose::STANDARD
-                        .decode(&file_server_tar_data_source_base64)
-                    {
-                        Ok(d) => d,
-                        Err(_) => base64::engine::general_purpose::STANDARD
-                            .decode(
-                                std::fs::read_to_string(&file_server_tar_data_source_base64)
-                                    .unwrap(),
-                            )
-                            .unwrap(),
-                    }
-                };
-
-                use std::io::Cursor;
-                use zip::ZipArchive;
-
-                let cursor = Cursor::new(zip_data);
-                let mut archive = ZipArchive::new(cursor).expect("Failed to open ZIP archive");
-                if archive.len() != 1 {
-                    panic!("Expected exactly one file in the ZIP archive");
-                }
-
-                use std::io::Read;
-                let mut tar_file = archive
-                    .by_index(0)
-                    .expect("Failed to read TAR file in ZIP archive");
-                let mut tar_data = Vec::new();
-                debug!("tarfile is {}", tar_file.name());
-                tar_file
-                    .read_to_end(&mut tar_data)
-                    .expect("Failed to read TAR file contents");
-
-                let data_source = DataSource::TarInMemory(tar_data);
-                app = register_data_source_route(app, "/files/{*path}", data_source);
+                app = serve_folder_by_tar_data_source_base64(
+                    app,
+                    file_server_tar_data_source_base64,
+                )?;
             }
         }
     }
@@ -590,10 +599,10 @@ pub async fn serve(
     use tower_http::cors::{Any, CorsLayer};
     use tower_http::trace::TraceLayer;
 
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
 
     tokio::spawn(async move {
-        axum::serve(
+        let r = axum::serve(
             listener,
             app.layer(TraceLayer::new_for_http()).layer(
                 CorsLayer::new()
@@ -602,8 +611,9 @@ pub async fn serve(
                     .allow_headers(Any),
             ),
         )
-        .await
-        .unwrap();
+        .await;
+
+        debug!("api server finished with {r:?}");
     });
 
     info!("api server started {addr}");
