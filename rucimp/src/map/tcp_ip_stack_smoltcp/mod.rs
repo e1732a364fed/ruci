@@ -47,12 +47,12 @@ impl Map for Stack {
                 let (new_stream_tx, new_stream_rx) = mpsc::channel(1000);
 
                 tokio::spawn(async move {
-                    let mut device = SmoltcpDevice::new(cid, base_conn, new_stream_tx);
+                    let (mut device, mut tcp_rx) =
+                        SmoltcpDevice::new(cid, base_conn, new_stream_tx);
 
                     let mut iface = device::create_interface(&mut device);
 
                     loop {
-                        debug!("loop...");
                         tokio::select! {
                             _ = &mut shutdown_rx =>{
                                 debug!("smoltcp got shutdown signal");
@@ -72,9 +72,28 @@ impl Map for Stack {
                                         });
 
                                         device.process_ingress();
-                                        device.process_egress();
                                     },
 
+                                }
+                            }
+                            r = tcp_rx.recv() =>{
+                                match r {
+                                    Some((sh,_,b)) => {
+                                        device.process_egress2(sh, b);
+
+                                        // egress 之后还是要 poll 一次，否则不会真发出去.
+
+                                        let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
+
+                                        iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
+                                            &mut *sockets
+                                        });
+
+                                    },
+                                    None => {
+                                        tracing::warn!("SmoltcpDevice tcp_rx read got None");
+                                        break;
+                                    },
                                 }
                             }
 

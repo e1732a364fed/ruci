@@ -631,7 +631,7 @@ local config_17_tcp_ip_stack = {
                         tun_dev_name = "utun321",
                         tun_gateway = "10.0.0.1",
                         router_ip = "192.168.0.1",
-                        original_dev_name = "wlp3s0",
+                        original_dev_name = "en0",
                         dns_list = { "114.114.114.114" }
                     }
                 }
@@ -651,7 +651,7 @@ local config_17_tcp_ip_stack = {
             OptDialer = {
                 dial_addr = "tcp://192.168.0.225:10801",
                 sockopt = {
-                    bind_to_device = "wlp3s0"
+                    bind_to_device = "en0"
                 }
             }
         }, tlsout, trojan_out }

@@ -93,7 +93,10 @@ impl<'a> TxToken for MyTxToken<'a> {
     {
         self.traffic.tx_bytes += len;
         let r = f(&mut self.buf[..len]);
+        //debug!("consume called {len}");
         let _ = futures::executor::block_on( self.conn.write_all(&self.buf[..len]));
+        //debug!("consume finished {len}");
+
         r
     }
 }
@@ -144,8 +147,8 @@ pub struct SmoltcpDevice  {
     /// only here to be cloned for new TcpStream
     tcp_write_data_tx: Sender<(SocketHandle, SocketAddr, BytesMut)>,
 
-    /// receive tcp new write data from all the TcpStream
-    tcp_write_data_rx: Receiver<(SocketHandle,SocketAddr, BytesMut)>,
+    // receive tcp new write data from all the TcpStream
+   // pub tcp_write_data_rx: Receiver<(SocketHandle,SocketAddr, BytesMut)>,
 
 }
 
@@ -208,14 +211,16 @@ fn is_tcp_client_hello(tcp_packet: &TcpPacket<&[u8]>) -> bool {
  
 impl  SmoltcpDevice {
 
-    /// 接受的 net_stream_tx 将被用于向外发送 从 base_conn 新解析出的 tcp/udp stream.
-    pub fn new(  cid: CID,  base_conn: ruci::net::Conn,new_stream_tx: tokio::sync::mpsc::Sender<MapResult>,)->Self{
+    /// 返回 SmoltcpDevice，和 接收 tcp 写新信息 的 Receiver
+    /// 
+    ///  接受的 net_stream_tx 将被用于向外发送 从 base_conn 新解析出的 tcp/udp stream.
+    pub fn new(  cid: CID,  base_conn: ruci::net::Conn,new_stream_tx: tokio::sync::mpsc::Sender<MapResult>,)->(Self, Receiver<(SocketHandle, SocketAddr, BytesMut)>){
         let (r,w ) = tokio::io::split(base_conn);
 
         let (tcp_write_data_tx, tcp_write_data_rx) = mpsc::channel(100);
        // let (udp_sender, udp_receiver) = mpsc::channel(100);
 
-        Self { 
+        (Self { 
             cid, traffic: Traffic::new(), buf: Box::new([0;   u16::MAX as usize]), w, r, 
             sockets: smoltcp::iface::SocketSet::new([])        ,
              new_stream_tx, 
@@ -223,9 +228,9 @@ impl  SmoltcpDevice {
              tcp_src_handle_map:  Arc::new(Mutex::new(HashMap::new())), 
               udp_src_handle_map: Arc::new(Mutex::new(HashMap::new())), 
               tcp_write_data_tx,
-            tcp_write_data_rx, 
+            //tcp_write_data_rx, 
             state: Poll::Pending
-        }
+        }, tcp_write_data_rx)
     }
 
     /// read the base_conn's ReadHalf part(`r`), data will be written in `buf`。
@@ -376,7 +381,7 @@ impl  SmoltcpDevice {
     }
 
 
-    /// 名称跟随 smoltcp 的规范.  从smoltcp 对每个 socket 用 recv_slice 读取数据
+    /// 名称跟随 smoltcp 的规范.  从smoltcp的 base_conn(tun) 对每个 socket 用 recv_slice 读取数据, 并解析、发送到到实际 TcpStream中
     pub fn process_ingress(&mut self) {
         let mut handles_to_remove = Vec::new();
         let mut tcp_src_to_remove = Vec::new();
@@ -389,10 +394,10 @@ impl  SmoltcpDevice {
                 smoltcp::socket::Socket::Icmp(_) => {},
                 smoltcp::socket::Socket::Udp(_) => {},
                 smoltcp::socket::Socket::Tcp(so) => {
-                    debug!("process_ingress1...");
+                    //debug!("process_ingress1...");
 
                     if !so.can_recv() {
-                        debug!("process_ingress...1");
+                        //debug!("process_ingress...1");
 
                         return;
                     }
@@ -406,8 +411,6 @@ impl  SmoltcpDevice {
                     let m = self.tcp_read_data_tx_map.lock();
                     let tcp_read_data_sender = m.get(&src).unwrap();
 
-                    debug!("process_ingress...2");
-
                     while so.can_recv() && tcp_read_data_sender.capacity() > 0 {
                         let mut buffer = BytesMut::with_capacity(so.recv_queue());
                         unsafe {
@@ -415,7 +418,7 @@ impl  SmoltcpDevice {
                         }
                         if let Ok(n) = so.recv_slice(buffer.as_mut()) {
 
-                            debug!("process_ingress...3");
+                            //debug!("process_ingress...3 {n}");
 
                             if n != buffer.len() {
                                 tracing::warn!("so.recv_slice n != buffer.len(), {n} {}",buffer.len());
@@ -430,8 +433,6 @@ impl  SmoltcpDevice {
                                 break;
                             }
                         } else {
-
-                            debug!("process_ingress...4");
 
                             tracing::debug!("tcp_read_data_tx so.recv_slice failed");
                             so.close();
@@ -460,17 +461,26 @@ impl  SmoltcpDevice {
         }
     }
 
-    /// 名称跟随 smoltcp 的规范. 从tcp/udp 的我们自建的缓存中 对每个socket 读取要写的数据，并用 send_slice 写入 smoltcp
-    pub fn process_egress(&mut self) {
-        while let Ok((sh, _source, mut data)) = self.tcp_write_data_rx.try_recv() {
+   
+    // pub fn process_egress(&mut self) {
+    //     debug!("process_egress called");
+    //     while let Ok((sh, _source, mut data)) = self.tcp_write_data_rx.try_recv() {
+    //         self.process_egress2(sh,data);
+    //     }
+    //     debug!("process_egress ended");
+        
+    // }
 
-            debug!("process_egress...");
+    /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 base_conn(tun)
+    pub fn process_egress2(&mut self, sh: SocketHandle, mut data: BytesMut) {
+        
+            debug!("process_egress for {sh}, {}",data.len());
 
             let socket: &mut smoltcp::socket::tcp::Socket = self.sockets.get_mut(sh);
 
              if data.is_empty() {
                 socket.close();
-                 continue;
+                 return;
              }
              let mut left_data = data.len();
 
@@ -487,13 +497,11 @@ impl  SmoltcpDevice {
                 }
              }
 
-         
-
-        }
     }
 
+
     fn remove_tcp(&mut self, src: IpEndpoint) {
-        tracing::info!("remove tcp {}", src);
+        tracing::debug!("remove tcp {}", src);
         let mut tcp_src_handle_map_lock = self.tcp_src_handle_map.lock();
         if let Some(h) = tcp_src_handle_map_lock.get(&src) {
             self.sockets.remove(*h);
