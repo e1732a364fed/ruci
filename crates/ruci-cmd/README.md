@@ -7,16 +7,20 @@
 
 run with api server:
 
-```
+```sh
 cargo run -F lua -F api_server -F api_client -F utils -F use-native-tls --release -- -a run
 
 ```
 
 debug:
-```
+```sh
 RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn -- --log-file ""
 
 RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn  -- --log-file "" -c remote.lua
+
+#powershell
+$Env:RUST_LOG="none,ruci=debug";cargo run -F lua -F utils -F use-native-tls -F quinn -- --log-file ""
+
 
 RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn  -- --log-file "" -c local_mux2_h2.lua --infinite
 
