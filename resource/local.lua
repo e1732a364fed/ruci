@@ -924,23 +924,6 @@ Config = config_24_chain_mitm
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)
 
---[[
-
--- 有限动态链的 选择器用法 的基本演示
--- 有限动态链使用 Config 所提供的列表, 在 Dyn_Selectors 中动态地
--- 根据参数 返回列表的索引值
--- 下面 示例是 最简单的示例, 使得动态链的行为和静态链相同
-
-function Dyn_Selectors(tag)
-    return function(this_index, data)
-        -- print("data:",data)
-
-        return this_index + 1
-    end
-end
-
--- ]]
-
 ---[[
 
 -- 完全动态链的基本演示

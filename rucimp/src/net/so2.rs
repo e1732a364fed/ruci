@@ -326,16 +326,16 @@ pub fn new_socket2(na: &net::Addr, sopt: &SockOpt, is_listen: bool) -> anyhow::R
                 if is_v4 {
                     setsockopt(
                         handle,
-                        IPPROTO_IP as i32,
-                        IP_UNICAST_IF as i32,
+                        IPPROTO_IP,
+                        IP_UNICAST_IF,
                         &if_index as *const _ as windows_sys::core::PCSTR,
                         std::mem::size_of_val(&if_index) as i32,
                     );
                 } else {
                     setsockopt(
                         handle,
-                        IPPROTO_IPV6 as i32,
-                        IPV6_UNICAST_IF as i32,
+                        IPPROTO_IPV6,
+                        IPV6_UNICAST_IF,
                         &if_index as *const _ as windows_sys::core::PCSTR,
                         std::mem::size_of_val(&if_index) as i32,
                     );

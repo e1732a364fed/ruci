@@ -38,7 +38,7 @@ pub async fn get_file(
 
                     let mut v = vec![];
 
-                    let mut file = std::fs::File::open(&file_name)?;
+                    let mut file = std::fs::File::open(file_name.clone())?;
                     file.read_to_end(&mut v)?;
 
                     v
