@@ -233,10 +233,33 @@ impl ToMapBox for DialerConfig {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct StdioConfig {
+    pub write_mode: Option<ruci::map::stdio::WriteMode>,
+    pub ext: Option<Ext>,
+}
+
+impl ToMapBox for StdioConfig {
+    fn to_map_box(&self) -> MapBox {
+        let mut s = ruci::map::stdio::Stdio::default();
+
+        if let Some(ext) = &self.ext {
+            let ext_f = ext.to_ext_fields();
+
+            s.set_ext_fields(Some(ext_f));
+        }
+
+        if let Some(m) = self.write_mode {
+            s.write_mode = m;
+        }
+        Box::new(s)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapConfig {
     Echo,                     //单流消耗器
-    Stdio(Ext),               //单流发生器
+    Stdio(StdioConfig),       //单流发生器
     Fileio(FileConfig),       //单流发生器
     BindDialer(DialerConfig), //单流发生器
     Listener {
@@ -288,7 +311,7 @@ pub enum InMapConfig {
 pub enum OutMapConfig {
     Blackhole,                //单流消耗器
     Direct,                   //单流发生器
-    Stdio(Ext),               //单流发生器
+    Stdio(StdioConfig),       //单流发生器
     Fileio(FileConfig),       //单流发生器
     BindDialer(DialerConfig), //单流发生器
     Adder(i8),
@@ -392,13 +415,7 @@ impl ToMapBox for InMapConfig {
     fn to_map_box(&self) -> ruci::map::MapBox {
         match self {
             InMapConfig::Echo => Box::<Echo>::default(),
-            InMapConfig::Stdio(ext) => {
-                let ext_f = ext.to_ext_fields();
-
-                let mut s = ruci::map::stdio::Stdio::boxed();
-                s.set_ext_fields(Some(ext_f));
-                s
-            }
+            InMapConfig::Stdio(sc) => sc.to_map_box(),
             InMapConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
                     i_name: f.i.clone(),
@@ -543,13 +560,7 @@ impl ToMapBox for InMapConfig {
 impl ToMapBox for OutMapConfig {
     fn to_map_box(&self) -> ruci::map::MapBox {
         match self {
-            OutMapConfig::Stdio(ext) => {
-                let ext_f = ext.to_ext_fields();
-
-                let mut s = ruci::map::stdio::Stdio::boxed();
-                s.set_ext_fields(Some(ext_f));
-                s
-            }
+            OutMapConfig::Stdio(sc) => sc.to_map_box(),
             OutMapConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
                     i_name: f.i.clone(),

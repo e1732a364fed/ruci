@@ -7,7 +7,7 @@ Defines a Map that write, read stdio (标准输入输出, 即命令行).
 use crate::map;
 use async_trait::async_trait;
 use macro_map::{map_ext_fields, MapExt};
-use std::{pin::Pin, task::Poll};
+use std::{fmt, pin::Pin, task::Poll};
 use tracing::debug;
 
 use crate::{net::CID, Name};
@@ -15,9 +15,18 @@ use crate::{net::CID, Name};
 use super::*;
 use tokio::io::{self, AsyncRead, AsyncWrite, AsyncWriteExt, Stdin, Stdout};
 
+#[derive(Default, Debug, Clone, Copy, Deserialize, Serialize)]
+pub enum WriteMode {
+    #[default]
+    UTF8,
+    Bytes,
+}
+
 pub struct Conn {
     input: Pin<Box<Stdin>>,
     out: Pin<Box<Stdout>>,
+
+    write_mode: WriteMode,
 }
 impl Name for Conn {
     fn name(&self) -> &'static str {
@@ -36,26 +45,58 @@ impl AsyncRead for Conn {
     }
 }
 
+pub struct HexSlice<'a>(&'a [u8]);
+
+impl fmt::Display for HexSlice<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let len = self.0.len();
+        write!(f, "{:06},", len)?;
+
+        for byte in self.0 {
+            write!(f, "{:02X}", byte)?;
+        }
+        write!(f, "\n")?;
+        Ok(())
+    }
+}
+
 impl AsyncWrite for Conn {
     fn poll_write(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        // 不能向windows 的 stdio 输出 非 utf8 信息, or we will get
-        // Windows stdio in console mode does not support writing non-UUTF-8 byte sequence
-
         let old_len = buf.len();
-        let str = String::from_utf8_lossy(buf);
-        let sb = str.as_bytes();
-        let r = self.out.as_mut().poll_write(cx, sb);
+        let sb_len;
+
+        let r = match self.write_mode {
+            WriteMode::UTF8 => {
+                // 不能向windows 的 stdio 输出 非 utf8 信息, or we will get
+                // Windows stdio in console mode does not support writing non-UUTF-8 byte sequence
+                // 别的系统则没问题
+
+                let str = String::from_utf8_lossy(buf);
+                let sb = str.as_bytes();
+                sb_len = sb.len();
+                self.out.as_mut().poll_write(cx, sb)
+            }
+            WriteMode::Bytes => {
+                let buf = HexSlice(buf);
+                let str = format!("{buf}");
+
+                let sb = str.as_bytes();
+                sb_len = sb.len();
+                self.out.as_mut().poll_write(cx, sb)
+            }
+        };
+
         match r {
             Poll::Ready(r) => match r {
                 Ok(u) => {
-                    if sb.len() == u {
+                    if sb_len == u {
                         Poll::Ready(Ok(old_len))
                     } else {
-                        Poll::Ready(Ok(old_len - sb.len() + u))
+                        Poll::Ready(Ok(old_len - sb_len + u))
                     }
                 }
                 Err(e) => Poll::Ready(Err(e)),
@@ -81,7 +122,9 @@ impl AsyncWrite for Conn {
 
 #[map_ext_fields]
 #[derive(Clone, Debug, Default, MapExt)]
-pub struct Stdio {}
+pub struct Stdio {
+    pub write_mode: WriteMode,
+}
 
 impl Name for Stdio {
     fn name(&self) -> &'static str {
@@ -108,6 +151,7 @@ impl Map for Stdio {
         let mut c = Conn {
             input: Box::pin(stdin),
             out: Box::pin(stdout),
+            write_mode: self.write_mode,
         };
 
         let a = if params.a.is_some() {

@@ -193,7 +193,9 @@ local stdio_socks5_chain = { {
 -- 设了 abc 为预先信息, 刚连上后就会发出abc 信号
 local in_stdio_adder_chain = { {
     Stdio = {
-        pre_defined_early_data = "abc"
+        ext = {
+            pre_defined_early_data = "abc"
+        }
     }
 }, {
     Adder = 1
@@ -202,6 +204,13 @@ local in_stdio_adder_chain = { {
 local out_stdio_chain = { {
     Stdio = {}
 } }
+
+local out_stdio_show_bytes_chain = { {
+    Stdio = {
+        write_mode = "Bytes" -- 默认的 write_mode 为 UTF8, 可以用 Bytes 模式来观察16进制数据
+    }
+} }
+
 
 local direct_out_chain = { "Direct" }
 
@@ -493,8 +502,10 @@ local config_14_stdio_adder_udp_fixed_target_addr = {
             chain = {
                 {
                     Stdio = {
-                        fixed_target_addr = "udp://127.0.0.1:20800",
-                        pre_defined_early_data = "abc"
+                        ext = {
+                            fixed_target_addr = "udp://127.0.0.1:20800",
+                            pre_defined_early_data = "abc"
+                        }
                     }
                 },
                 { Adder = 1 }
@@ -517,39 +528,14 @@ local config_15_tun = {
 
     inbounds = {
 
-        --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
-        -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
-
         {
             chain = { {
                 BindDialer = {
-                    bind_addr = "ip://10.0.0.1:24#utun321",
-                }
-            } },
-            tag = "listen1"
-        },
-    },
-
-    --[[
-演示 inbound 是 ip, outbound 是stdio的情况, 即把 tun 收到的 ip 信息打印在命令行中
-
-此时需要注意, 该配置下 要用 sudo 运行, 且 rucimp 的 "tun" feature 是打开的
-
-它会建一个 叫 utun321 的 utun 虚拟网卡, 然后 ruci 会监听 其 网卡的 10.0.0.1
-
---]]
-
-    outbounds = { { tag = "dial1", chain = out_stdio_chain } }
-}
 
 
-local config_16_tun = {
+                    --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
+                    -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
-    inbounds = {
-
-        {
-            chain = { {
-                BindDialer = {
                     bind_addr = "ip://10.0.0.1:24#utun321",
 
                     -- 自动配置 系统路由 以 代理全局
@@ -567,14 +553,21 @@ local config_16_tun = {
     },
 
     --[[
-和 config_15_tun 类似, 但 用了自动路由, 这样 全局的流量都会打印在 命令行中
 
---]]
+        演示 inbound 是 ip, outbound 是stdio的情况, 即把 tun 收到的 ip 信息打印在命令行中
 
-    outbounds = { { tag = "dial1", chain = out_stdio_chain } }
+        此时需要注意, 该配置下 要用 sudo 运行, 且 rucimp 的 "tun" feature 是打开的
+
+        它会建一个 叫 utun321 的 utun 虚拟网卡, 然后 ruci 会监听 其 网卡的 10.0.0.1
+
+        用了自动路由, 这样 全局的流量都会打印在 命令行中 (但也只会打印在命令行中, 该配置中 没有转发到别处)
+
+    --]]
+
+    outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
 }
 
-Config = config_16_tun
+Config = config_15_tun
 
 ---[[
 
