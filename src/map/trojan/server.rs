@@ -108,9 +108,10 @@ impl Server {
         }
 
         if previous_read_len < PASS_LEN + 8 + 1 {
-            return Ok(MapResult::buf_err_str(
+            return Ok(MapResult::ebc(
+                anyhow!("trojan handshake len too short"),
                 buf,
-                "trojan handshake len too short",
+                base,
             ));
         }
 
@@ -125,13 +126,18 @@ impl Server {
         let opt_user = self.um.auth_user_by_authstr(&trojan_hash).await;
 
         if opt_user.is_none() {
-            return Ok(MapResult::buf_err_str(buf, "trojan hash not match"));
+            return Ok(MapResult::ebc(
+                anyhow!("trojan hash not match, given hash_str is {}", hash_str),
+                buf,
+                base,
+            ));
         }
         let crlf = buf.get_u16();
         if crlf != CRLF {
-            return Ok(MapResult::buf_err_str(
+            return Ok(MapResult::ebc(
+                anyhow!("trojan crlf wrong, {} ", crlf),
                 buf,
-                &format!("trojan crlf wrong, {} ", crlf),
+                base,
             ));
         }
         let cmd_b = buf.get_u8();
