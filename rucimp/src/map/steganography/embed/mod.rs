@@ -74,13 +74,15 @@ impl Map for Embedder {
             }
         }
 
-        let mut info_conn = EmbedConn {
+        let mut conn = EmbedConn {
             file: self.file.clone(),
             base: Box::pin(c),
             current_packet_index: Arc::new(AtomicUsize::new(0)),
             behavior,
             write_state: None,
             read_state: Default::default(),
+            read_waker: None,
+            write_waker: None,
         };
 
         match behavior {
@@ -88,22 +90,20 @@ impl Map for Embedder {
                 let b = ruci::utils::ob_to_buf(ob);
                 if !b.is_empty() {
                     if self.is_tail_of_chain() {
-                        info_conn.write_state = Some(WriteState::FirstBufToWrite(b));
+                        conn.write_state = Some(WriteState::FirstBufToWrite(b));
 
-                        return MapResult::new_c(Box::new(info_conn)).a(params.a).build();
+                        return MapResult::new_c(Box::new(conn)).a(params.a).build();
                     }
                 }
+                let ob = ruci::utils::buf_to_ob(b);
 
-                MapResult::new_c(Box::new(info_conn))
-                    .b(Some(b))
-                    .a(params.a)
-                    .build()
+                MapResult::new_c(Box::new(conn)).b(ob).a(params.a).build()
             }
             ProxyBehavior::DECODE => {
-                info_conn.read_state.cur_info_read_buf = ruci::utils::ob_to_buf(ob);
+                conn.read_state.cur_info_read_buf = ruci::utils::ob_to_buf(ob);
                 //第一个包被认为是完全的
 
-                MapResult::new_c(Box::new(info_conn)).a(params.a).build()
+                MapResult::new_c(Box::new(conn)).a(params.a).build()
             }
             ProxyBehavior::UNSPECIFIED => panic!("shoudn't happen"),
         }
@@ -127,6 +127,9 @@ pub struct EmbedConn {
 
     write_state: Option<WriteState>,
     read_state: ReadState,
+
+    read_waker: Option<std::task::Waker>,  // 存储读操作的 waker
+    write_waker: Option<std::task::Waker>, // 存储写操作的 waker
 }
 
 #[derive(Default)]
@@ -158,17 +161,45 @@ impl Display for EmbedConn {
 }
 
 impl EmbedConn {
-    fn advance_packet_index(&self) {
+    // 唤醒一个被阻塞的操作
+    fn wake_pending_operation(&mut self, is_write: bool) {
+        if is_write {
+            //唤醒等待的写操作
+            if let Some(waker) = self.write_waker.take() {
+                debug!("embed wake write");
+                waker.wake();
+            }
+        } else {
+            //唤醒等待的读操作
+            if let Some(waker) = self.read_waker.take() {
+                debug!("embed wake read");
+
+                waker.wake();
+            }
+        }
+    }
+
+    fn advance_packet_index(&mut self) {
         let idx = self
             .current_packet_index
             .load(std::sync::atomic::Ordering::Relaxed);
 
-        if idx + 1 == self.file.len() {
+        let cur_idx = if idx + 1 == self.file.len() {
             self.current_packet_index
                 .store(0, std::sync::atomic::Ordering::Relaxed);
+            0
         } else {
             self.current_packet_index
-                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        };
+
+        let vec = self.file.clone();
+        let cur_info = vec.get(cur_idx).unwrap();
+
+        if direction_match_write(self.behavior, cur_info.direction) {
+            self.wake_pending_operation(true)
+        } else {
+            self.wake_pending_operation(false)
         }
     }
 
@@ -236,6 +267,7 @@ impl AsyncRead for EmbedConn {
 
             if direction_match_write(self.behavior, cur_info.direction) {
                 debug!("read pending {:?} {}", self.behavior, cur_info.direction);
+                self.read_waker = Some(cx.waker().clone());
                 return Poll::Pending;
             }
 
@@ -433,7 +465,11 @@ impl EmbedConn {
         buf: &[u8],
         is_first_buf: bool,
     ) -> Poll<WriteBufResult> {
-        debug!("want to write buf len: {}", buf.len());
+        debug!(
+            "want to write buf len: {}, {}",
+            buf.len(),
+            buf.escape_ascii()
+        );
         // 太小了就直接写入 padding 包
         if cur_info.length < 2 {
             let mut tmp = BytesMut::with_capacity(cur_info.length);
@@ -477,6 +513,8 @@ impl EmbedConn {
 
         let r = self.base.as_mut().poll_write(cx, &fitted_buf);
 
+        debug!("actual write len {}, r:{:?}", cur_info.length, r);
+
         match ready!(r) {
             Ok(u) => {
                 if u == cur_info.length {
@@ -516,6 +554,8 @@ impl AsyncWrite for EmbedConn {
                     "embed write pending {:?} {}",
                     self.behavior, cur_info.direction
                 );
+                self.write_waker = Some(cx.waker().clone());
+
                 return Poll::Pending;
             }
 

@@ -1010,8 +1010,32 @@ local config_26_chain_mitm_embedder = {
     } }
 }
 
+local config_27_embedder = {
+    inbounds = { {
+        chain = {
+            listen_10800,
+            { Socks5Http = {} },
+        },
+        tag = "listen1"
+    } },
+    outbounds = { {
+        tag = "dial1",
+        chain = {
+            { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
+            {
+                NativeTLS = {
+                    host = "www.google.com",
+                    insecure = true,
+                    alpn = { "h2", "http/1.1" }
+                }
+            },
+            { Embedder = { file_name = "record_dir1/1-2_mitm_ruci_info.json" } },
+            { Trojan = { password = "mypassword", do_not_use_early_data = false } }
+        }
+    } }
+}
 
-Config = config_26_chain_mitm_embedder
+Config = config_27_embedder
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)

@@ -169,7 +169,7 @@ Config = {
         -- { chain = lua_example1, tag = "listen1" },
     },
 
-    --[[
+    ---[[
     -- 一般情况下 的 outbound 配置
 
     outbounds = { {
@@ -190,7 +190,7 @@ Config = {
     },
     -- ]]
 
-    ---[[
+    --[[
     -- 对应 客户端使用 mitm 时，服务端的 outboud 配置。
     -- 注意 direct 后面要加上 TLS 来重新包装数据，否则隐私信息会明文传递在 服务器 与 目标地址 的网络链路上
     -- 而且这里的 TLS 最好使用的是 NativeTLS, 以增强真实性
