@@ -59,20 +59,20 @@ impl SingleClient {
         a: Option<net::Addr>,
         early_data: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
-        debug!(cid = %cid,"h2 single client handshake");
+        //debug!(cid = %cid,"h2 single client handshake");
 
         let r = h2::client::handshake(conn).await;
         let (mut send_request, connection) = match r {
             Ok(r) => r,
             Err(e) => {
-                let e = anyhow::anyhow!("accept h2 got e {}", e);
+                let e = anyhow::anyhow!("h2 single client handshake got e {}", e);
                 return Ok(MapResult::from_e(e));
             }
         };
 
         let stream = new_stream_by_send_request(
             cid,
-            false,
+            self.is_grpc,
             false,
             &mut send_request,
             self.req.clone(),

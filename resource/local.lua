@@ -67,7 +67,17 @@ websocket_out = {
 dial_trojan_chain = {dial, tlsout, trojan_out}
 dial_ws_trojan_chain = {dial, tlsout, websocket_out, trojan_out}
 
-dial_h2_trojan_chain = {dial, tlsout, "H2Single", trojan_out}
+h2_single_out = {
+    H2Single = {
+        is_grpc = true,
+        http_config = {
+            host = "myhost",
+            path = "/service1/Tun"
+        }
+    }
+}
+
+dial_h2_trojan_chain = {dial, tlsout, h2_single_out, trojan_out}
 
 stdio_socks5_chain = {{
     Stdio = {}
@@ -91,7 +101,7 @@ out_stdio_chain = {{
 
 direct_out_chain = {"Direct"}
 
----[=[
+--[=[
 
 config = {
     inbounds = {{
@@ -164,7 +174,7 @@ config = {
 
 --]=]
 
---[=[
+---[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },

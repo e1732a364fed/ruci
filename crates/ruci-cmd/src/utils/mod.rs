@@ -13,8 +13,14 @@ pub const MMDB_DOWNLOAD_LINK: &str =
 
 #[derive(Subcommand, Clone)]
 pub enum Commands {
+    /// download Country.mmdb
     DownloadMMDB,
+
+    /// download wintun.zip
     DownloadWINTUN,
+
+    /// calculate trojan hash for a plain text password
+    CalcuTrojanHash { password: String },
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -29,8 +35,14 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         Commands::DownloadWINTUN => {
             download_wintun().await?;
         }
+        Commands::CalcuTrojanHash { password } => calcu_trojan_hash(&password),
     };
     Ok(())
+}
+
+fn calcu_trojan_hash(plain_text: &str) {
+    let h = ruci::map::trojan::sha224_hex_string_lower_case(plain_text);
+    info!("trojan hash for {plain_text} is : {h}")
 }
 
 //https://github.com/seanmonstar/reqwest/issues/482#issuecomment-1951347935
