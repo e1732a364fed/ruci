@@ -6,7 +6,7 @@ use bytes::{Buf, BytesMut};
 use parking_lot::Mutex;
 use smoltcp::iface::SocketHandle;
 use smoltcp::phy::{Device, RxToken, TxToken};
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use ruci::map::*;
 use ruci::net::*;
@@ -230,11 +230,11 @@ impl Device for SmoltcpDevice {
 
 /// returned by SmoltcpDevice::create
 pub struct DeviceAndReceivers {
+    pub iface: smoltcp::iface::Interface,
     pub device: SmoltcpDevice,
-    pub w: tokio::io::WriteHalf<Conn>,
+    // pub w: tokio::io::WriteHalf<Conn>,
     pub tcp_rx: Receiver<(SocketHandle, SocketAddr, BytesMut)>,
     pub udp_rx: Receiver<(SocketHandle, IpEndpoint, BytesMut)>,
-    pub device_write_rx: Receiver<BytesMut>,
 }
 
 /// 返回 SmoltcpDevice，和 接收 tcp 写新信息 的 Receiver 和 接收 udp 写新信息 的 Receiver
@@ -245,14 +245,14 @@ pub fn create(
     base_conn: ruci::net::Conn,
     new_stream_tx: tokio::sync::mpsc::Sender<MapResult>,
 ) -> DeviceAndReceivers {
-    let (device_write_tx, device_write_rx) = mpsc::channel(10000);
+    let (device_write_tx, mut device_write_rx) = mpsc::channel(10000);
 
     let (tcp_write_data_tx, tcp_write_data_rx) = mpsc::channel(100);
     let (udp_write_data_tx, udp_write_data_rx) = mpsc::channel(100);
 
-    let (r, w) = tokio::io::split(base_conn);
+    let (r, mut w) = tokio::io::split(base_conn);
 
-    let device = SmoltcpDevice {
+    let mut device = SmoltcpDevice {
         r,
         cid,
         //traffic: Traffic::new(),
@@ -284,13 +284,43 @@ pub fn create(
 
         new_read_handle: NewReadType::None,
     };
+    let iface = create_interface(&mut device);
 
+    tokio::spawn(async move {
+        loop {
+            let ob = device_write_rx.recv().await;
+            match ob {
+                Some(b) => match w.write(&b).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        debug!("smoltcp write got e {e}, will break.");
+                        break;
+                    }
+                },
+                None => {
+                    debug!("smoltcp write got None, will break.");
+                    break;
+                }
+            }
+        }
+    });
+
+    // tokio::spawn(async {
+    //     let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
+
+    //     loop {
+    //         tokio::select! {
+    //             _ = interval.tick() =>{
+    //                 device.udp_health_check();
+    //             }
+    //         }
+    //     }
+    // });
     DeviceAndReceivers {
+        iface,
         device,
-        w,
         tcp_rx: tcp_write_data_rx,
         udp_rx: udp_write_data_rx,
-        device_write_rx,
     }
 }
 
