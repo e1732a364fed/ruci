@@ -11,21 +11,10 @@ use ruci::Name;
 use ruci::{map, net::Stream};
 
 use macro_mapper::*;
-use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tracing::debug;
 
 use crate::map::{quic_common, rustls21};
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Config {
-    pub server_addr: String,
-    pub server_name: String,
-
-    pub cert_path: Option<String>,
-    pub alpn: Option<Vec<String>>,
-    pub is_insecure: Option<bool>,
-}
 
 #[mapper_ext_fields]
 #[derive(Debug, Clone, MapperExt)]

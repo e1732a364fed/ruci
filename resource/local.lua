@@ -83,14 +83,16 @@ h2_single_out = {
 
 quic_out_chain = {{
     Quic = {
-        is_insecure = true,
+        --is_insecure = true,
 
-        -- cert_path = "test2.crt", -- 可给出 服务端的 证书 (若 is_insecure = false, 须为非自签的真证书)
+        -- 可给出 服务端的 证书, 这样就算 is_insecure = false 也通过验证
+        -- 证书须为 真证书, 或真fullchain 证书, 或自签的根证书
+        cert_path = "test2.crt", 
         server_addr = "127.0.0.1:10801",
 
         -- 须给出 server_name, 
-        --  且 若 is_insecure 为 false, 须为 证书中所写的 CN;
-        -- ruci 提供的 test.crt中的 CN(CommonName) 为 www.mytest.com, 
+        --  且 若 is_insecure 为 false, 须为 证书中所写的 CN 或 Subject Alternative Name;
+        -- ruci 提供的 test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 localhost, 
 
         server_name = "www.mytest.com",
 

@@ -20,8 +20,26 @@ openssl req -new -x509 -days 7305 -key cert.key -out cert.pem
 # rsa key
 openssl req -x509 -sha256 -newkey rsa:4096 -keyout test2.key -out test2.crt -days 7305
 openssl rsa -in test2.key -out test2.key
+
+
+# 生成自签 根证书 (root-req.csr 为中间产物)
+
+openssl genrsa -out root.key 2048
+openssl req -new -out root-req.csr -key root.key -keyform PEM
+openssl x509 -req -in root-req.csr -out root-cert.cer -signkey root.key -CAcreateserial -days 3650  -extfile ext.ini
 ```
 
+ext.ini:
+
+```ini
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @alt_names
+ 
+[alt_names]
+DNS.1 = www.mytest.com
+DNS.2 = localhost
+```
 
 
 
@@ -222,23 +240,6 @@ trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来, 这
 使用了 s2n-quic 包 或 quinn 包
 
 使用 quic 会给 ruci-cmd release 加 3-4MB 大小左右
-
-### s2n-quic 的 s2n-tls
-
-它默认用的是 s2n-tls, 没问题. 但试图用 rustls 如:
-
-```toml
-s2n-quic = {version = "1",default-features = false, features = ["provider-address-token-default", "provider-tls-rustls"]}
-```
-
-加载 ec key 时，会报错:
-
-unexpected error: could not load any valid private keys
-
-加载正确的自签证书后，客户端连接时显示错误, 
-The connection was closed on the transport level with error unexpected error by the local endpoint
-
-似乎还是 tls 错误. 也许是自签名证书的原因, 开启 is_insecure 后就不报错了
 
 
 ### quic 的两种不同实现的 多代理程序  互通性：

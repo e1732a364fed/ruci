@@ -258,6 +258,12 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     #[cfg(feature = "native-tls-vendored")]
     fl.push("native-tls-vendored");
 
+    #[cfg(feature = "quinn")]
+    fl.push("quinn");
+
+    #[cfg(feature = "quic")]
+    fl.push("quic");
+
     info!(
         ruci_cmd = env!("CARGO_PKG_VERSION"),
         rucimp = rucimp::VERSION,
