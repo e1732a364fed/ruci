@@ -21,16 +21,16 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
 
 //todo: 写得太乱了，improve code
 
-const DYN_SELECTORS: &str = "dyn_selectors";
+const DYN_SELECTORS_STR: &str = "dyn_selectors";
 
 /// test if the lua text is ok for finite dynamic
-pub fn try_load_finite_dynamic(lua_text: &str) -> Result<()> {
+pub fn is_finite_dynamic_available(lua_text: &str) -> Result<()> {
     let lua = Lua::new();
     lua.load(lua_text).eval()?;
 
     let lg = lua.globals();
 
-    let _s1: LuaFunction = lg.get(DYN_SELECTORS)?;
+    let _s1: LuaFunction = lg.get(DYN_SELECTORS_STR)?;
 
     Ok(())
 }
@@ -61,13 +61,13 @@ fn load_finite_dynamic_helper(
 ) -> Result<(StaticConfig, SelectorHelper)> {
     lua.load(&lua_text).eval()?;
 
-    let lg = lua.globals();
+    let g = lua.globals();
 
-    let clt: LuaTable = lg.get("config").context("lua has no config field")?;
+    let clt: LuaTable = g.get("config").context("lua has no config field")?;
 
-    let _: LuaFunction = lg
-        .get(DYN_SELECTORS)
-        .context(format!("lua has no {}", DYN_SELECTORS))?;
+    let _: LuaFunction = g
+        .get(DYN_SELECTORS_STR)
+        .context(format!("lua has no {}", DYN_SELECTORS_STR))?;
 
     let c: StaticConfig = lua.from_value(Value::Table(clt))?;
     let x: HashMap<String, LuaNextSelector> = c
@@ -76,21 +76,9 @@ fn load_finite_dynamic_helper(
         .map(|x| {
             let tag = x.tag.as_ref().unwrap();
 
-            let real_lua = Lua::new();
-            real_lua.load(&lua_text).eval::<()>().expect("must be ok");
-
-            let real_getter: LuaFunction =
-                real_lua.globals().get(DYN_SELECTORS).expect("must be ok");
-
-            let x = match real_getter.call::<String, LuaFunction>(tag.to_string()) {
-                Ok(rst) => rst,
-                Err(err) => {
-                    panic!("get dyn_selectors for {tag} err: {}", err);
-                }
-            };
             (
                 tag.to_string(),
-                LuaNextSelector(Arc::new(Mutex::new(x.into_owned()))),
+                LuaNextSelector::from(&lua_text, &tag).expect("get handler from lua must be ok"),
             )
         })
         .collect();
@@ -101,21 +89,9 @@ fn load_finite_dynamic_helper(
         .map(|x| {
             let tag = &x.tag;
 
-            let real_lua = Lua::new();
-            real_lua.load(&lua_text).eval::<()>().expect("must be ok");
-
-            let real_getter: LuaFunction =
-                real_lua.globals().get(DYN_SELECTORS).expect("must be ok");
-
-            let x = match real_getter.call::<String, LuaFunction>(tag.to_string()) {
-                Ok(rst) => rst,
-                Err(err) => {
-                    panic!("get dyn_selectors for {tag} err: {}", err);
-                }
-            };
             (
                 tag.to_string(),
-                LuaNextSelector(Arc::new(Mutex::new(x.into_owned()))),
+                LuaNextSelector::from(&lua_text, &tag).expect("get handler from lua must be ok"),
             )
         })
         .collect();
@@ -188,14 +164,25 @@ fn get_dmiter_from_static_config_and_helper(
     (v, first_o.expect("has an outbound"), Arc::new(omap))
 }
 
-///(用OwnedFunction 后无生命周期了, 但用了 mlua 的 unstable feature)
-///
-/// https://github.com/mlua-rs/mlua/pull/148
-///
-/// https://github.com/mlua-rs/mlua/issues/262
-///
+impl LuaNextSelector {
+    pub fn from(lua_text: &str, tag: &str) -> anyhow::Result<LuaNextSelector> {
+        let lua = Lua::new();
+        lua.load(lua_text).eval::<()>()?;
+
+        let selectors: LuaFunction = lua.globals().get(DYN_SELECTORS_STR)?;
+        let f = match selectors.call::<&str, LuaFunction>(tag) {
+            Ok(rst) => rst,
+            Err(err) => {
+                panic!("get dyn_selectors for {tag} err: {}", err);
+            }
+        };
+
+        Ok(LuaNextSelector(Arc::new(Mutex::new(f.into_owned()))))
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct LuaNextSelector(Arc<Mutex<mlua::OwnedFunction>>);
+pub struct LuaNextSelector(Arc<Mutex<LuaOwnedFunction>>);
 
 unsafe impl Send for LuaNextSelector {}
 unsafe impl Sync for LuaNextSelector {}
@@ -203,9 +190,9 @@ unsafe impl Sync for LuaNextSelector {}
 impl NextSelector for LuaNextSelector {
     fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64> {
         let w = OptVecOptVecDataLuaWrapper(data);
-        let f = self.0.lock();
+        let inner = self.0.lock();
 
-        match f.call::<_, i64>((this_index, w)) {
+        match inner.call::<_, i64>((this_index, w)) {
             Ok(rst) => Some(rst),
             Err(err) => {
                 warn!("{}", err);
@@ -222,7 +209,6 @@ impl NextSelector for LuaNextSelector {
 
 //////////////////////////////////////////////////////////////////////////////
 */
-
 use mlua::{UserData, UserDataMethods};
 use parking_lot::Mutex;
 
@@ -744,7 +730,7 @@ mod test {
             .eval::<Function>()
             .expect("cannot create Lua handler");
 
-        let handler = lua
+        let handler: LuaRegistryKey = lua
             .create_registry_value(handler_fn)
             .expect("cannot store Lua handler");
 

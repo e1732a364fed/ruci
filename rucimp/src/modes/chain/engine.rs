@@ -78,7 +78,7 @@ impl Engine {
 
         debug!("trying init_lua");
 
-        let r = lua::try_load_finite_dynamic(&config_string);
+        let r = lua::is_finite_dynamic_availiable(&config_string);
         match r {
             Ok(_) => self.init_lua_finite_dynamic(config_string),
             Err(_) => self.init_lua_static(config_string),
