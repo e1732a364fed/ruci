@@ -38,7 +38,7 @@ impl UserData for LuaMapWrapper {
     }
 }
 
-/// set global func create_in_map for lua
+/// set global func Create_in_map for lua
 pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
         let c = lua.from_value::<InMapConfig>(v)?;
@@ -46,11 +46,11 @@ pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
         let m = LuaMapWrapper(Arc::new(m));
         Ok(m)
     })?;
-    lua.globals().set("create_in_map", f)?;
+    lua.globals().set("Create_in_map", f)?;
     Ok(())
 }
 
-/// set global func create_out_map for lua
+/// set global func Create_out_map for lua
 pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
         let c = lua.from_value::<OutMapConfig>(v)?;
@@ -58,25 +58,25 @@ pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
         let m = LuaMapWrapper(Arc::new(m));
         Ok(m)
     })?;
-    lua.globals().set("create_out_map", f)?;
+    lua.globals().set("Create_out_map", f)?;
     Ok(())
 }
 
 /// load chain::config::StaticConfig from a lua file which has a
-/// "config" global variable
+/// "Config" global variable
 pub fn load_static(lua_text: &str) -> mlua::Result<StaticConfig> {
     let lua = Lua::new();
 
     lua.load(lua_text).exec()?;
 
-    let ct: LuaTable = lua.globals().get("config")?;
+    let ct: LuaTable = lua.globals().get("Config")?;
 
     let c: StaticConfig = lua.from_value(Value::Table(ct))?;
 
     Ok(c)
 }
 
-const DYN_SELECTORS_STR: &str = "dyn_selectors";
+const DYN_SELECTORS_STR: &str = "Dyn_Selectors";
 
 /// test if the lua text is ok for finite dynamic
 pub fn is_finite_dynamic_available(lua_text: &str) -> mlua::Result<()> {
@@ -115,15 +115,15 @@ fn load_finite_config_and_selector_map(
 
     let g = lua.globals();
 
-    let config: LuaTable = g
-        .get("config")
-        .with_context(|e| format!("lua has no config field {}", e))?;
+    let c: LuaTable = g
+        .get("Config")
+        .with_context(|e| format!("lua has no Config field {}", e))?;
 
     let _: LuaFunction = g
         .get(DYN_SELECTORS_STR)
         .with_context(|e| format!("lua has no {}, {e}", DYN_SELECTORS_STR))?;
 
-    let c: StaticConfig = lua.from_value(Value::Table(config))?;
+    let c: StaticConfig = lua.from_value(Value::Table(c))?;
     let mut selector_map: HashMap<String, LuaNextSelector> = c
         .inbounds
         .iter()
@@ -212,7 +212,7 @@ fn get_io_bounds_by_config_and_selector_map(
 /// used by load_infinite,
 pub type GMap = HashMap<String, LuaNextGenerator>;
 
-const INFINITE_CONFIG_FIELD: &str = "infinite";
+const INFINITE_CONFIG_FIELD: &str = "Infinite";
 
 /// get (inbounds generator map, outbounds generator map).
 ///
@@ -232,7 +232,7 @@ fn get_infinite_g_map_from(text: &str, behavior: ProxyBehavior) -> anyhow::Resul
     let ct: LuaTable = lua
         .globals()
         .get(INFINITE_CONFIG_FIELD)
-        .context("get infinite failed")?;
+        .context("get Infinite failed")?;
 
     let t_key = match behavior {
         ProxyBehavior::UNSPECIFIED => todo!(),
@@ -289,7 +289,7 @@ impl LuaNextSelector {
         let f = match selectors.call::<&str, LuaFunction>(tag) {
             Ok(rst) => rst,
             Err(err) => {
-                panic!("get dyn_selectors for {tag} err: {}", err);
+                panic!("get Dyn_Selectors for {tag} err: {}", err);
             }
         };
         let key: LuaRegistryKey = lua
@@ -381,7 +381,7 @@ impl InnerLuaNextGenerator {
                 Some((i, Some(Arc::new(mb))))
             }
             Err(e) => {
-                warn!("expect an map config, got error: {e}");
+                warn!("expect an map, got error: {e}");
                 None
             }
         }

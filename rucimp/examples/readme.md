@@ -47,7 +47,7 @@ sudo RUST_LOG=debug cargo run --example chain -F tun -F lua
 
 ### macos test
 
-使用 local.lua 的对应示例 config, inbounds 如
+使用 local.lua 的对应示例, inbounds 如
 
 ```lua
 inbounds = { 

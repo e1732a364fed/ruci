@@ -1,7 +1,7 @@
-print("this is a lua config file")
+print("this is a lua local config file")
 
 -- lua 的好处有很多, 你可以定义很多变量
--- 真正的配置块是 config 变量, 可以用搜索快速找到它
+-- 真正的配置块是 接近文件底部的 Config 变量, 可以用搜索快速找到它
 
 local listen = {
     Listener = { listen_addr = "0.0.0.0:10800" }
@@ -565,7 +565,7 @@ local config_14_stdio_adder_udp_fixed_target_addr = {
 --]=]
 
 ---[=[
-    local config_15_tun = {
+local config_15_tun = {
 
     inbounds = {
 
@@ -589,16 +589,16 @@ local config_14_stdio_adder_udp_fixed_target_addr = {
 
 --]=]
 
-config = config_2_tproxy1
+Config = config_2_tproxy1
 
 ---[[
 
 -- 有限动态链的 选择器用法 的基本演示
--- 有限动态链使用 config 所提供的列表, 在 dyn_selectors 中动态地
+-- 有限动态链使用 Config 所提供的列表, 在 Dyn_Selectors 中动态地
 -- 根据参数 返回列表的索引值
 -- 下面 示例是 最简单的示例, 使得动态链的行为和静态链相同
 
-function dyn_selectors(tag)
+function Dyn_Selectors(tag)
     return function(this_index, data)
         -- print("data:",data)
 
@@ -616,11 +616,11 @@ end
 -- generator, generator 根据参数内容来动态生成 [Map], 如果不想
 -- 重复生成以前生成过的Map, 则可以返回一个已创建过的Map (参见其它包含 infinite 的配置文件中的示例)
 
-local inspect = require("inspect")
+-- local inspect = require("inspect")
 
 -- my_cid_record = {}
 
-infinite = {
+Infinite = {
 
     -- 下面这个演示 与第一个普通示例 行为上等价
 

@@ -1,4 +1,4 @@
-print("this is a lua config file")
+print("this is a lua remote config file")
 
 -- lua 的好处有很多, 你可以定义很多变量
 
@@ -13,29 +13,29 @@ local unix = {
     }
 }
 
-local opt_direct_chain = {{
+local opt_direct_chain = { {
     OptDirect = {
         so_mark = 255,
         bind_to_device = "enp0s1"
     }
-}}
+} }
 
-local socks5_chain = {tcp, {
+local socks5_chain = { tcp, {
     Socks5 = {}
-}}
-local http_chain = {tcp, {
+} }
+local http_chain = { tcp, {
     Http = {}
-}}
-local socks5http_chain = {tcp, {
+} }
+local socks5http_chain = { tcp, {
     Socks5Http = {}
-}}
+} }
 
 local tls = {
     -- NativeTLS = {
     TLS = {
         cert = "test.crt",
         key = "test.key",
-        alpn = {"h2", "http"}
+        alpn = { "h2", "http" }
 
     }
 }
@@ -46,8 +46,8 @@ local trojan_in = {
     }
 }
 
-local trojan_chain = {tcp, trojan_in}
-local trojans_chain = {tcp, tls, trojan_in}
+local trojan_chain = { tcp, trojan_in }
+local trojans_chain = { tcp, tls, trojan_in }
 
 local http_filter = {
     HttpFilter = {
@@ -69,16 +69,16 @@ local ws = {
     }
 }
 
--- use http_filter to support fallback. 
+-- use http_filter to support fallback.
 
--- if http_filter is used, 
+-- if http_filter is used,
 -- http_config field in WebSocket can be omitted.
 
-local ws_trojans_chain = {tcp, tls, http_filter, basic_ws, trojan_in}
+local ws_trojans_chain = { tcp, tls, http_filter, basic_ws, trojan_in }
 
 -- ws_trojans_chain = {tcp, tls, ws, trojan_in}
 
-local in_h2_trojans_chain = {tcp, tls, {
+local in_h2_trojans_chain = { tcp, tls, {
     H2 = {
         is_grpc = true,
         http_config = {
@@ -86,16 +86,16 @@ local in_h2_trojans_chain = {tcp, tls, {
             path = "/service1/Tun"
         }
     }
-}, trojan_in}
+}, trojan_in }
 
-local in_quic_chain = {{
+local in_quic_chain = { {
     Quic = {
         key_path = "test2.key",
         cert_path = "test2.crt",
         listen_addr = "127.0.0.1:10801",
-        alpn = {"h3"}
+        alpn = { "h3" }
     }
-}, trojan_in}
+}, trojan_in }
 
 local dial = {
     BindDialer = {
@@ -103,25 +103,25 @@ local dial = {
     }
 }
 
-local dial_trojan = {dial, {
+local dial_trojan = { dial, {
     Trojan = "mypassword"
-}}
+} }
 
-local out_stdio_chain = {{
+local out_stdio_chain = { {
     Stdio = {}
-}}
+} }
 
-local direct_out_chain = {"Direct"}
+local direct_out_chain = { "Direct" }
 
-config = {
+Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
-     { chain = trojans_chain, tag = "listen1"} ,
-    -- { chain = ws_trojans_chain,  tag = "listen1"  } 
-    -- { chain = in_h2_trojans_chain, tag = "listen1" } 
-    -- { chain = in_quic_chain, tag = "listen1" } 
-    -- { chain = socks5http_chain, tag = "listen1"} ,
-    -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
-        --[[ 
+        { chain = trojans_chain, tag = "listen1" },
+        -- { chain = ws_trojans_chain,  tag = "listen1"  }
+        -- { chain = in_h2_trojans_chain, tag = "listen1" }
+        -- { chain = in_quic_chain, tag = "listen1" }
+        -- { chain = socks5http_chain, tag = "listen1"} ,
+        -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
+        --[[
         {
             chain = {{
                 BindDialer = {
@@ -130,24 +130,24 @@ config = {
             }, "Echo"},
             tag = "udp_echo"
 
-        } 
-        -- ]] 
+        }
+        -- ]]
     },
 
     ---[[
     -- 一般情况下 的 outbound 配置
 
-    outbounds = {{
+    outbounds = { {
         tag = "dial1",
         chain = direct_out_chain
     }, {
         tag = "fallback_d",
-        chain = {{
+        chain = { {
             BindDialer = {
                 dial_addr = "tcp://0.0.0.0:80"
             }
-        }}
-    }},
+        } }
+    } },
     -- ]]
 
     --[[
@@ -161,7 +161,6 @@ config = {
 
     -- outbounds = { { tag="dial1", chain = out_stdio_chain  } }, --以命令行为出口
 
-    fallback_route = {{"listen1", "fallback_d"}}
+    fallback_route = { { "listen1", "fallback_d" } }
 
 }
-

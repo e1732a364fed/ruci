@@ -1,9 +1,9 @@
 
-config 是 提供给 rucimp 的项, 静态示例如下
+Config 是 提供给 rucimp 的项, 静态示例如下
 
 # 静态链
 
-无论lua 中代码怎么写, 对于静态链, 程序只会在lua 代码中找一个全局变量 "config"
+无论lua 中代码怎么写, 对于静态链, 程序只会在lua 代码中找一个全局变量 "Config"
 
 ```lua
 tls = { TLS = {  cert = "test.cert", key = "test.key" } }
@@ -27,7 +27,7 @@ for i=1,5 do
     print(len)
 end
 
-config = {
+Config = {
     inbounds = {
         {chain = chain1, tag = "listen1"}
     },
@@ -74,9 +74,9 @@ BlackList 意思是, 给出的规则有任意一项匹配就算通过.
 
 ## 有限(局部)动态链
 
-有限动态链中, 程序一样会读取 config 变量, 和 静态链一样. 但它还要读一个 dyn_selectors 全局函数
+有限动态链中, 程序一样会读取 Config 变量, 和 静态链一样. 但它还要读一个 Dyn_Selectors 全局函数
 
-dyn_selectors, 对每一个tag 的inbound/outbound 都要有返回一个selector
+Dyn_Selectors, 对每一个tag 的inbound/outbound 都要有返回一个selector
 
 selector 接受 this_index 和 data 作为输入, 返回一个新的index, index 是 在 该chain (Map数组) 中的索引
 
@@ -92,7 +92,7 @@ selector 接受 this_index 和 data 作为输入, 返回一个新的index, index
 -- 演示 有限动态链的 选择器用法
 
 
-function dyn_selectors(tag)
+function Dyn_Selectors(tag)
     if tag == "listen1" then 
         return dyn_inbound_next_selector
     end
@@ -138,7 +138,7 @@ local inspect = require("inspect")
 
 -- my_cid_record = {}
 
-infinite = {
+Infinite = {
 
     inbounds = {{
         tag = "listen1",

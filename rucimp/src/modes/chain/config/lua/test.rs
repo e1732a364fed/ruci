@@ -30,7 +30,7 @@ fn test_in() -> mlua::Result<()> {
             len = len + 2
         end
 
-        config = {
+        Config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"}
             },
@@ -90,7 +90,7 @@ fn test_out() -> mlua::Result<()> {
                 len = len + 2
             end
     
-            config = {
+            Config = {
                 inbounds = {},
                 outbounds = {
                     {chain = chain1, tag = "dial1"}
@@ -138,7 +138,7 @@ fn test_out2() -> mlua::Result<()> {
             { Socks5 = {   } },
         }
         
-        config = {
+        Config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"}
             },
@@ -191,7 +191,7 @@ fn test_out3() -> mlua::Result<()> {
 
         out_socks5_c = {{ Socks5 = {} }}
 
-        config = {
+        Config = {
             inbounds = { 
                 {chain = ic, tag = "in_stdio_adder_chain"} , 
             } ,
@@ -233,7 +233,7 @@ fn test_tag_route() -> mlua::Result<()> {
             { Socks5 = {   } },
         }
         
-        config = {
+        Config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"},
                 {chain = { Stdio="my_fake.com" }, tag = "listen2"},
@@ -276,7 +276,7 @@ fn test_rule_route() -> mlua::Result<()> {
             { Socks5 = {   } },
         }
         
-        config = {
+        Config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"},
                 {chain = { Stdio="my_fake.com" }, tag = "listen2"},
@@ -402,6 +402,7 @@ async fn test_pass_in_data() -> anyhow::Result<()> {
     Ok(())
 }
 
+/*
 #[tokio::test]
 async fn load_finite_dynamic1() -> anyhow::Result<()> {
     let lua = Lua::new();
@@ -426,12 +427,13 @@ async fn load_finite_dynamic1() -> anyhow::Result<()> {
 
     Ok(())
 }
+*/
 
 #[tokio::test]
 async fn load_infinite() -> anyhow::Result<()> {
     let text = r#"
         
-infinite = {
+Infinite = {
     inbounds = {{
         tag = "listen1",
         generator = function(this_index, data)

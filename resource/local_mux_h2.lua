@@ -11,7 +11,7 @@ local tlsout_config = {
     TLS = {
         host = "www.1234.com",
         insecure = true,
-        alpn = {"h2"}
+        alpn = { "h2" }
 
     }
 }
@@ -29,70 +29,66 @@ local h2_out_config = {
     }
 }
 
-infinite = {
+Infinite = {
 
-    inbounds = {{
+    inbounds = { {
         tag = "listen1",
 
         generator = function(cid, state_index, data)
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = { listen_addr = "0.0.0.0:10800"}
+                        Listener = { listen_addr = "0.0.0.0:10800" }
                     },
                     new_thread_fn = function(cid, state_index, data)
-
-                        if socks5_in == nil then
-                            socks5_in = create_in_map {
+                        if Socks5_in == nil then
+                            Socks5_in = Create_in_map {
                                 Socks5 = {}
                             }
                         end
 
-                        local new_cid, newi, new_data = coroutine.yield(1, socks5_in:clone())
+                        local new_cid, newi, new_data = coroutine.yield(1, Socks5_in:clone())
                         return -1, {}
                     end
                 }
             end
         end
-    }},
+    } },
 
-    outbounds = {{
+    outbounds = { {
         tag = "dial1",
         generator = function(cid, state_index, data)
             if state_index == -1 then
-
-                if h2_out ~= nil then
-                    return 2, h2_out:clone()
+                if H2_out ~= nil then
+                    return 2, H2_out:clone()
                 end
 
-                if dial_out == nil then
-                    dial_out = create_out_map(dial_config)
+                if Dial_out == nil then
+                    Dial_out = Create_out_map(dial_config)
                 end
-                return 0, dial_out:clone()
-
+                return 0, Dial_out:clone()
             elseif state_index == 0 then
-
-                if tlsout == nil then
-                    tlsout = create_out_map(tlsout_config)
+                if Tlsout == nil then
+                    Tlsout = Create_out_map(tlsout_config)
                 end
 
-                return 1, tlsout:clone()
+                return 1, Tlsout:clone()
             elseif state_index == 1 then
-                if h2_out == nil then
-                    h2_out = create_out_map(h2_out_config)
+                if H2_out == nil then
+                    H2_out = Create_out_map(h2_out_config)
                 end
 
-                return 2, h2_out:clone()
+                return 2, H2_out:clone()
             elseif state_index == 2 then
-                if trojan_out == nil then
-                    trojan_out = create_out_map(trojan_out_config)
+                if Trojan_out == nil then
+                    Trojan_out = Create_out_map(trojan_out_config)
                 end
 
-                return 3, trojan_out:clone()
+                return 3, Trojan_out:clone()
             else
                 return -1, {}
             end
         end
-    }}
+    } }
 
 }

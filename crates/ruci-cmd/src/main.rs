@@ -62,7 +62,7 @@ struct Args {
     #[arg(long)]
     log_dir: Option<String>,
 
-    /// use infinite dynamic chain that is written in the lua config file (the "infinite"
+    /// use infinite dynamic chain that is written in the lua config file (the "Infinite"
     /// global variable must exist)
     #[cfg(any(feature = "lua", feature = "lua54"))]
     #[arg(long)]
@@ -194,7 +194,9 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     use tracing_appender::{non_blocking, rolling};
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    let console_layer = fmt::layer().with_line_number(true).with_writer(std::io::stderr);
+    let console_layer = fmt::layer()
+        .with_line_number(true)
+        .with_writer(std::io::stderr);
 
     let logger = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
