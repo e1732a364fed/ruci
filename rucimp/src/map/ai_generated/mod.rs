@@ -47,7 +47,7 @@ impl AIGeneratedMap {
         target_addr: Option<&net::Addr>,
         early_data: Option<&[u8]>,
         is_handshake: bool,
-    ) -> Result<(Vec<u8>, Option<net::Addr>)> {
+    ) -> Result<AISequence> {
         let data_base64 = BASE64.encode(data);
         let target_addr_str = target_addr.map(|addr| addr.to_string());
         let early_data_base64 = early_data.map(|data| BASE64.encode(data));
@@ -59,14 +59,34 @@ impl AIGeneratedMap {
             "客户端"
         };
         let system_prompt = format!(
-            "你是一个网络协议处理器的{}。根据以下算法描述处理数据：\n{}\n\n\
+            "你是一个网络协议处理器的{}。你需要实现一个隐写协议，将数据隐藏在HTTPS流量中：\n\
+             1. 隐写原理：\n\
+                - 每个实际的写入操作(W)都会被转换为一系列交替的写和读操作(w1,r1,w2,r2,...,wN,rN)\n\
+                - 其中wi包含实际需要传输的信息，ri是用于隐写的填充数据\n\
+                - 第一个包w1包含整个序列的元信息，使得接收方知道后续的交互模式\n\
+             2. 协议特性：\n\
+                - 发送方在发送w1后，等待接收方返回r1才能发送w2\n\
+                - 接收方在收到w1后，能解析出整个序列的结构，知道何时发送ri\n\
+                - 这种交替的读写模式帮助隐藏真实的数据流向\n\
+                - 特殊情况：当ri长度为0时，表示跳过该读取步骤，直接发送下一个wi+1\n\
+             3. HTTPS伪装要求：\n\
+                - 所有数据包必须符合TLS格式\n\
+                - 数据包长度分布要与典型的HTTPS流量相匹配\n\
+                - 读写操作的时序模式要模仿HTTP over TLS的特征\n\
+                - 确保整体流量特征（包大小分布、读写频率、突发性等）与正常HTTPS流量一致\n\
+             4. 数据格式：\n\
              请按以下格式返回结果：\n\
-             PROCESSED_DATA: <base64编码的处理后数据>\n\
-             TARGET_ADDR_NETWORK: <网络类型：tcp/udp/ip>\n\
-             TARGET_ADDR_HOST: <域名，如果没有则返回空>\n\
-             TARGET_ADDR_IP: <IP地址，如果没有则返回空>\n\
-             TARGET_ADDR_PORT: <端口号>\n\
-             EARLY_DATA: <base64编码的early data>",
+             WRITE_PACKETS: [base64编码的实际数据包序列 w1,w2,...,wN]\n\
+             READ_LENGTHS: [期望接收的数据包长度序列 r1,r2,...,rN]\n\
+             TARGET_ADDR_NETWORK: <网络类型>\n\
+             TARGET_ADDR_HOST: <域名>\n\
+             TARGET_ADDR_IP: <IP地址>\n\
+             TARGET_ADDR_PORT: <端口号>\n\n\
+             请确保：\n\
+             1. w1包含足够的信息，使得接收方能推导出整个交互序列\n\
+             2. 所有包都符合TLS格式\n\
+             3. 整体交互模式符合HTTPS特征\n\n\
+            基于以下具体算法的描述来工作：\n{}",
             role, self.config.algorithm_description
         );
 
@@ -138,15 +158,7 @@ impl AIGeneratedMap {
             .ok_or_else(|| anyhow::anyhow!("Invalid API response format"))?;
 
         // 解析AI的响应
-        if self.config.is_server {
-            // 服务端需要从响应中提取目标地址和数据
-            let (processed_data, extracted_addr) = parse_server_response(content)?;
-            Ok((processed_data, extracted_addr))
-        } else {
-            // 客户端只需要处理后的数据
-            let processed_data = BASE64.decode(content.trim())?;
-            Ok((processed_data, None))
-        }
+        parse_server_response(content)
     }
 
     /// 请求AI生成一个新的隐写协议算法
@@ -159,14 +171,31 @@ impl AIGeneratedMap {
             json!({
                 "role": "user",
                 "content": "请设计一个隐写协议算法，要求如下：
-                1. 该协议需要完全隐藏在HTTPS流量中，外部观察者无法区分此流量与普通HTTPS流量
-                2. 协议需要包含握手阶段和数据传输阶段
-                3. 算法必须是确定性的，这样服务端和客户端使用相同的算法描述时可以正确通信
-                4. 请详细描述：
-                   - 握手阶段如何处理数据
-                   - 普通数据传输阶段如何处理数据
-                   - 如何确保流量特征与HTTPS相似
-                请以结构化的方式描述算法，使得其他AI系统可以准确理解和执行。"
+                1. 隐写原理：
+                   - 每个实际的写入操作(W)都会被转换为一系列交替的写和读操作(w1,r1,w2,r2,...,wN,rN)
+                   - 其中wi包含实际需要传输的信息，ri是用于隐写的填充数据
+                   - 第一个包w1包含整个序列的元信息，使得接收方知道后续的交互模式
+                2. 协议特性：
+                   - 发送方在发送w1后，等待接收方返回r1才能发送w2
+                   - 接收方在收到w1后，能解析出整个序列的结构，知道何时发送ri
+                   - 这种交替的读写模式帮助隐藏真实的数据流向
+                   - 特殊情况：当ri长度为0时，表示跳过该读取步骤，直接发送下一个wi+1
+                3. HTTPS伪装要求：
+                   - 所有数据包必须符合TLS格式
+                   - 数据包长度分布要与典型的HTTPS流量相匹配
+                   - 读写操作的时序模式要模仿HTTP over TLS的特征
+                   - 确保整体流量特征（包大小分布、读写频率、突发性等）与正常HTTPS流量一致
+                4. 握手阶段特殊要求：
+                   - 客户端握手：输入包含目标地址信息（网络类型、域名、IP、端口），需要将这些信息编码在握手包中
+                   - 服务端握手：需要能从握手包中解析出完整的目标地址信息
+                   - 握手包同样需要遵循w1,r1,w2,r2,...,wN,rN的序列格式
+                
+                请以结构化的方式描述算法，使得其他AI系统可以准确理解和执行。
+                算法描述中必须包含：
+                1. 如何在w1中编码序列信息
+                2. 如何确保数据包符合TLS格式
+                3. 如何控制数据包大小和时序分布
+                4. 如何在握手阶段处理目标地址信息"
             }),
         ];
 
@@ -224,63 +253,55 @@ impl AIGeneratedMap {
 }
 
 /// 解析服务端AI响应
-/// 期望的响应格式：
-/// ```text
-/// PROCESSED_DATA: <base64编码的处理后数据>
-/// TARGET_ADDR_NETWORK: <网络类型：tcp/udp/ip>
-/// TARGET_ADDR_HOST: <域名，如果没有则返回空>
-/// TARGET_ADDR_IP: <IP地址，如果没有则返回空>
-/// TARGET_ADDR_PORT: <端口号>
-/// ```
-fn parse_server_response(content: &str) -> Result<(Vec<u8>, Option<net::Addr>)> {
-    let mut processed_data = None;
+fn parse_server_response(content: &str) -> Result<AISequence> {
+    let mut write_packets = Vec::new();
+    let mut read_lengths = Vec::new();
     let mut network = None;
     let mut host = None;
     let mut ip = None;
     let mut port = None;
 
-    // 按行解析响应
     for line in content.lines() {
         let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-
         if let Some((key, value)) = line.split_once(':') {
             let value = value.trim();
             match key.trim() {
-                "PROCESSED_DATA" => {
-                    processed_data =
-                        Some(BASE64.decode(value).map_err(|e| {
-                            anyhow::anyhow!("Invalid processed data base64: {}", e)
-                        })?);
+                "WRITE_PACKETS" => {
+                    // 解析逗号分隔的base64编码数据包
+                    for packet in value.split(',') {
+                        let packet = packet.trim();
+                        if !packet.is_empty() {
+                            write_packets.push(BASE64.decode(packet)?);
+                        }
+                    }
+                }
+                "READ_LENGTHS" => {
+                    // 解析逗号分隔的长度值
+                    for len in value.split(',') {
+                        let len = len.trim();
+                        if !len.is_empty() {
+                            read_lengths.push(len.parse()?);
+                        }
+                    }
                 }
                 "TARGET_ADDR_NETWORK" => {
                     if !value.is_empty() {
-                        network = Some(value.to_string());
+                        network = Some(value.to_string())
                     }
                 }
                 "TARGET_ADDR_HOST" => {
                     if !value.is_empty() {
-                        host = Some(value.to_string());
+                        host = Some(value.to_string())
                     }
                 }
                 "TARGET_ADDR_IP" => {
                     if !value.is_empty() {
-                        ip = Some(
-                            value
-                                .parse()
-                                .map_err(|e| anyhow::anyhow!("Invalid IP address: {}", e))?,
-                        );
+                        ip = Some(value.parse()?)
                     }
                 }
                 "TARGET_ADDR_PORT" => {
                     if !value.is_empty() {
-                        port = Some(
-                            value
-                                .parse()
-                                .map_err(|e| anyhow::anyhow!("Invalid port: {}", e))?,
-                        );
+                        port = Some(value.parse()?)
                     }
                 }
                 _ => {} // 忽略未知字段
@@ -288,18 +309,18 @@ fn parse_server_response(content: &str) -> Result<(Vec<u8>, Option<net::Addr>)> 
         }
     }
 
-    // 确保至少有processed_data
-    let processed_data =
-        processed_data.ok_or_else(|| anyhow::anyhow!("Missing processed data in response"))?;
-
-    // 如果有必要的地址信息，则构造Addr
+    // 构造目标地址（如果有必要的信息）
     let target_addr = if let (Some(network), Some(port)) = (network, port) {
         Some(net::Addr::from(&network, host, ip, port)?)
     } else {
         None
     };
 
-    Ok((processed_data, target_addr))
+    Ok(AISequence {
+        write_packets,
+        read_lengths,
+        target_addr,
+    })
 }
 
 impl Name for AIGeneratedMap {
@@ -314,7 +335,7 @@ impl Map for AIGeneratedMap {
         match behavior {
             ProxyBehavior::ENCODE => {
                 // 客户端：编码目标地址和数据
-                let (processed_data, _) = self
+                let processed_data = self
                     .process_with_ai(
                         &[], // 空主数据
                         params.a.as_ref(),
@@ -336,9 +357,10 @@ impl Map for AIGeneratedMap {
             ProxyBehavior::DECODE => {
                 // 服务端：解码出目标地址和数据
                 if let Some(data) = params.b {
-                    let (processed_data, extracted_addr) =
+                    let processed_data =
                         self.process_with_ai(&data, None, None, true).await.unwrap();
 
+                    let ta = processed_data.target_addr.clone();
                     // 创建新的连接，包装原始连接
                     let conn = AIConn::new(
                         params.c.try_unwrap_tcp().unwrap(),
@@ -348,7 +370,7 @@ impl Map for AIGeneratedMap {
 
                     MapResult::builder()
                         .c(Stream::Conn(Box::new(conn)))
-                        .a(extracted_addr)
+                        .a(ta)
                         .build()
                 } else {
                     MapResult::builder().c(params.c).build()
@@ -359,4 +381,11 @@ impl Map for AIGeneratedMap {
             }
         }
     }
+}
+
+#[derive(Debug)]
+pub struct AISequence {
+    pub write_packets: Vec<Vec<u8>>,    // w1,w2,...,wN
+    pub read_lengths: Vec<usize>,       // r1,r2,...,rN
+    pub target_addr: Option<net::Addr>, // 可能包含的目标地址
 }
