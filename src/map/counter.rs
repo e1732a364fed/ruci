@@ -1,5 +1,5 @@
 /*!
- * 使用 Counter 与 Arc<TransmissionInfo> 的区别是, Arc<TransmissionInfo> 是全局解密流量的统计，
+ * 使用 Counter 与 Arc<TransmissionInfo> 的区别是, Arc<TransmissionInfo> 是全局解密流量的统计,
  * 而Counter是针对自己持有的 Conn的流量的统计
  */
 
@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use log::{debug, log_enabled};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
-/// 持有上层Conn的所有权，用于计数
+/// 持有上层Conn的所有权, 用于计数
 pub struct CounterConn {
     pub data: CounterData,
     base: Pin<net::Conn>,
@@ -151,7 +151,7 @@ impl Mapper for Counter {
                 }
             }
             Stream::UDP(_) => {
-                unimplemented!()
+                todo!()
             }
             Stream::None => MapResult::err_str("counter: can't count without a stream"),
             _ => MapResult::err_str("counter: can't count with a stream generator"),

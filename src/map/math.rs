@@ -136,7 +136,7 @@ impl crate::map::Mapper for Adder {
                 }
             }
             Stream::UDP(_) => {
-                unimplemented!()
+                todo!()
             }
             Stream::None => MapResult::err_str("adder: can't add without a stream"),
             _ => MapResult::err_str("adder: can't count with a stream generator"),

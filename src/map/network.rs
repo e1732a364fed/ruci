@@ -18,19 +18,29 @@ impl Name for Direct {
 
 #[async_trait]
 impl Mapper for Direct {
+    /// dial params.a.
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        if params.a.is_none() {
+            return MapResult::err_str(&format!("cid: {}, direct need params.a, got empty", cid));
+        }
         let a = params.a.unwrap();
 
         if log_enabled!(log::Level::Debug) {
             debug!("direct dial, {} , {}", a, cid);
         }
 
-        let aso = a.get_socket_addr_or_resolve().unwrap();
-        let r = TcpStream::connect(aso).await;
+        let asor = a.get_socket_addr_or_resolve();
 
-        match r {
-            Ok(c) => {
-                return MapResult::c(Box::new(c));
+        match asor {
+            Ok(aso) => {
+                let r = TcpStream::connect(aso).await;
+
+                match r {
+                    Ok(c) => {
+                        return MapResult::c(Box::new(c));
+                    }
+                    Err(e) => return MapResult::from_err(e),
+                }
             }
             Err(e) => return MapResult::from_err(e),
         }
@@ -226,7 +236,6 @@ impl TcpStreamGenerator {
 
 #[async_trait]
 impl Mapper for TcpStreamGenerator {
-    /// generate new CID, regardless of cid passed in and any  params.c
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,

@@ -592,7 +592,7 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
         in_iter_accumulate_forever::<IterMapperBoxRef>(CID::default(), rx, tx, inmappers, oti)
             .await;
     } else {
-        warn!("accumulate_from_start, not a stream generator");
+        warn!("accumulate_from_start, not a stream generator, {}", r.c);
 
         return;
     }

@@ -92,8 +92,8 @@ async fn test_counter1() -> std::io::Result<()> {
 
                 println!(
                     "Successfully downcasted to CounterConn, {}, {}",
-                    cd.ub.fetch_add(0, std::sync::atomic::Ordering::Relaxed),
-                    cd.db.fetch_add(0, std::sync::atomic::Ordering::Relaxed)
+                    cd.ub.load(std::sync::atomic::Ordering::Relaxed),
+                    cd.db.load(std::sync::atomic::Ordering::Relaxed)
                 );
                 Ok(())
             } else {

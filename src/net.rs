@@ -455,6 +455,18 @@ pub enum Stream {
     #[default]
     None,
 }
+
+impl Display for Stream {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            Stream::TCP(_) => write!(f, "TcpStream"),
+            Stream::UDP(_) => write!(f, "UdpStream"),
+            Stream::Generator(_) => write!(f, "StreamGenerator"),
+            Stream::None => write!(f, "NoStream"),
+        }
+    }
+}
+
 impl Stream {
     pub async fn try_shutdown(self) -> io::Result<()> {
         if let Stream::TCP(mut t) = self {
