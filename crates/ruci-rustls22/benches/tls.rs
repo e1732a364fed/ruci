@@ -15,7 +15,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
 };
 
-use ruci_tls::client::TlsClientOptions;
+use ruci_rustls22::client::TlsClientOptions;
 
 async fn dial_future(
     listen_host_str: &str,
@@ -26,7 +26,7 @@ async fn dial_future(
         .await
         .expect("dial tcp succeed");
 
-    let a = ruci_tls::client::Client::new(TlsClientOptions {
+    let a = ruci_rustls22::client::Client::new(TlsClientOptions {
         host: Some("test.domain".to_string()),
         insecure: true,
         ..Default::default()
@@ -77,13 +77,13 @@ async fn listen_future(
     let mut path2 = PathBuf::new();
     path2.push("test.key");
 
-    let sc = ruci_tls::server::ServerPEMOptions {
+    let sc = ruci_rustls22::server::ServerPEMOptions {
         cert: fs::read_to_string(path)?,
         key: fs::read_to_string(path2)?,
         ..Default::default()
     };
 
-    let a = ruci_tls::server::Server::new(sc);
+    let a = ruci_rustls22::server::Server::new(sc);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
         .await

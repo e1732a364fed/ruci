@@ -9,11 +9,10 @@ use rustls::{
     server::WebPkiClientVerifier,
     ClientConfig,
 };
-use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt;
 
 use ruci::{
-    map::{self, MapResult, ProxyBehavior},
+    map::{self, tls_config::ClientOptions, MapResult, ProxyBehavior},
     net::{self, CID},
 };
 use ruci::{
@@ -45,21 +44,8 @@ fn default_cc() -> ClientConfig {
         .with_no_client_auth()
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct TlsClientOptions {
-    pub host: Option<String>,
-    pub insecure: bool,
-    pub alpn: Option<Vec<String>>,
-}
-
-impl From<TlsClientOptions> for map::MapBox {
-    fn from(value: TlsClientOptions) -> Self {
-        Box::new(Client::new(value))
-    }
-}
-
 impl Client {
-    pub fn new(opt: TlsClientOptions) -> Self {
+    pub fn new(opt: ClientOptions) -> Self {
         let mut config = default_cc();
 
         if opt.insecure {

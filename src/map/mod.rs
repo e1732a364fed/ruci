@@ -41,6 +41,27 @@ pub mod trojan;
 #[cfg(test)]
 mod test;
 
+pub mod tls_config {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+    pub struct ClientOptions {
+        pub host: Option<String>,
+        pub insecure: bool,
+        pub alpn: Option<Vec<String>>,
+
+        pub cert_path: Option<String>,
+    }
+
+    #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+    pub struct ServerOptions {
+        pub alpn: Option<Vec<String>>,
+
+        pub cert_path: String,
+        pub key_path: String,
+    }
+}
+
 use crate::{
     net::{self, *},
     *,
