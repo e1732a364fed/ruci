@@ -391,6 +391,9 @@ async fn socks5_direct_and_request() -> std::io::Result<()> {
         () = dial_future => {
             info!("dial finished first , {:?}",arc_tic);
 
+            //wait the second part of copy to end so that we can see the correct db debug info from net::cp
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            info!("dial finished first ,print again, {:?}",arc_tic);
         },
         _ = sleep_f =>{
 
@@ -419,6 +422,7 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
     let ti = net::TransmissionInfo::default();
     let arc_ti = Arc::new(ti);
+    let arc_tic = arc_ti.clone();
 
     let alsuit = Arc::new(lsuit);
     let alsuitc = alsuit.clone();
@@ -449,6 +453,8 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
         },
         r = dial_future => {
             info!("dial finished first , {:?}",r);
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            info!("dial finished first ,print again, {:?}",arc_tic);
 
         },
         _ = sleep_f =>{
@@ -632,6 +638,8 @@ async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
         },
         () = dial_future => {
             info!("dial finished first , {:?}",arc_tic);
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            info!("dial finished first ,print again, {:?}",arc_tic);
 
         },
         _ = sleep_f =>{
@@ -698,6 +706,8 @@ async fn socks5_direct_longwait_write_and_request() {
         },
         () = dial_future => {
             info!("dial finished first, will return in 2 secs... , {:?}",arc_tic);
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            info!("dial finished first ,print again, {:?}",arc_tic);
 
         },
         _ = sleep_f =>{
@@ -775,6 +785,9 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
 
         () = dial_future => {
             info!("dial finished first, will return , {:?}",arc_tic);
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            info!("dial finished first ,print again, {:?}",arc_tic);
+
         },
         () = listen_future => {
             panic!("listen finished first");
@@ -840,6 +853,9 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
 
         () = dial_future => {
             info!("dial finished first, will return , {:?}",arc_tic);
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            info!("dial finished first ,print again, {:?}",arc_tic);
+
         },
         () = listen_future => {
             panic!("listen finished first");

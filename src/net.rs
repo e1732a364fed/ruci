@@ -6,7 +6,11 @@
  *
 */
 pub mod addr_conn;
+pub mod helpers;
 pub mod udp;
+
+#[cfg(test)]
+mod test;
 
 use futures::pin_mut;
 use futures::select;
@@ -347,7 +351,6 @@ impl crate::Name for TcpStream {
 pub type Conn = Box<dyn ConnTrait>;
 
 /// may log debug or do other side-effect stuff with id.
-/// shutdown_f 用于同时关闭 c1 和 c2 对应的两个底层连接。
 pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
     c1: C1,
     c2: C2,
@@ -381,13 +384,11 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     }
                 }
 
-                //c1_read.unsplit(c1_write);
 
                 // can't borrow mut more than once. We just hope tokio will shutdown tcp
                 // when it's dropped.
+                // during the tests we can prove it's dropped.
 
-                // c1_write.shutdown();
-                // c2_write.shutdown();
 
                 let r2 = c2_to_c1.await;
                 if let Some(info) = opt {
@@ -399,10 +400,8 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         }
                     }
                 }
-            }else{
-                // c1_write.shutdown();
-                // c2_write.shutdown();
             }
+
 
             if log_enabled!(log::Level::Debug) {
                 debug!("cp end c1_to_c2, cid: {} ",cid);
@@ -419,8 +418,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         debug!("cp, cid: {}, c2_to_c1r2, {}, {}",cid, n,tt);
                     }
                 }
-                // c1_write.shutdown();
-                // c2_write.shutdown();
+
 
                 let r1 = c1_to_c2.await;
                 if let Some(ref info) = opt {
@@ -432,10 +430,8 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         }
                     }
                 }
-            }else{
-                // c1_write.shutdown();
-                // c2_write.shutdown();
             }
+
 
             if log_enabled!(log::Level::Debug) {
                 debug!("cp end c2_to_c1, { } ",cid);
@@ -445,8 +441,3 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
         },
     }
 }
-
-pub mod helpers;
-
-#[cfg(test)]
-mod test;
