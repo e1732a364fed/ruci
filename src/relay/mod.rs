@@ -335,14 +335,16 @@ pub fn cp_stream(
 
 pub async fn cp_udp(
     cid: CID,
-    in_conn: net::addr_conn::AddrConn,
+    mut in_conn: net::addr_conn::AddrConn,
     mut out_conn: net::addr_conn::AddrConn,
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
     no_timeout: bool,
 ) {
-    info!(cid = %cid, "relay udp start",);
+    use crate::Name;
+
+    info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "relay udp start",);
 
     let tc = tr.clone();
     scopeguard::defer! {
@@ -353,6 +355,7 @@ pub async fn cp_udp(
         }
         info!( cid = %cid,
         "udp relay end" );
+
     }
 
     if let Some(real_ed) = ed {
@@ -361,6 +364,7 @@ pub async fn cp_udp(
             let r = out_conn.w.write(&real_ed, &real_first_target).await;
             if let Err(e) = r {
                 warn!("cp_udp: writing ed failed: {e}");
+                let _ = out_conn.w.shutdown().await;
                 return;
             }
         } else {
@@ -368,10 +372,17 @@ pub async fn cp_udp(
             let r = out_conn.w.write(&real_ed, &Addr::default()).await;
             if let Err(e) = r {
                 warn!("cp_udp: writing ed failed: {e}");
+                let _ = out_conn.w.shutdown().await;
                 return;
             }
         }
     }
 
-    let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, tr, no_timeout).await;
+    let _ = net::addr_conn::cp(cid.clone(), &mut in_conn, &mut out_conn, tr, no_timeout).await;
+
+    debug!("cp_udp: calling shutdown");
+
+    let r1 = in_conn.w.shutdown().await;
+    let r2 = out_conn.w.shutdown().await;
+    debug!("cp_udp: called shutdown {:?} {:?}", r1, r2);
 }

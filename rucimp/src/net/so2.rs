@@ -6,7 +6,6 @@ use tokio::net::{TcpListener, TcpStream, UdpSocket};
 
 use ruci::net::{self, Network, Stream};
 use socket2::{Domain, Protocol, Socket, Type};
-use tracing::debug;
 
 use super::so_opts;
 
@@ -101,7 +100,7 @@ pub async fn dial_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket>
 }
 
 pub async fn listen_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
-    debug!("so2: listen_udp {}", na);
+    //debug!("listen_udp {}", na);
     let socket = new_socket2(na, so, true).await?;
     let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
     Ok(s)

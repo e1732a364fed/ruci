@@ -357,12 +357,15 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
 /// copy data between two AddrConn struct
 pub async fn cp(
     cid: CID,
-    c1: AddrConn,
-    c2: AddrConn,
+    c1: &mut AddrConn,
+    c2: &mut AddrConn,
     opt: Option<Arc<GlobalTrafficRecorder>>,
     no_timeout: bool,
 ) -> Result<u64, Error> {
-    cp_between(cid, c1.r, c1.w, c2.r, c2.w, opt, no_timeout).await
+    cp_between(
+        cid, &mut c1.r, &mut c1.w, &mut c2.r, &mut c2.w, opt, no_timeout,
+    )
+    .await
 }
 
 pub async fn cp_between<
@@ -372,10 +375,10 @@ pub async fn cp_between<
     W2: AddrWriteTrait,
 >(
     cid: CID,
-    r1: R1,
-    w1: W1,
-    r2: R2,
-    w2: W2,
+    r1: &mut R1,
+    w1: &mut W1,
+    r2: &mut R2,
+    w2: &mut W2,
     opt: Option<Arc<GlobalTrafficRecorder>>,
     no_timeout: bool,
 ) -> Result<u64, Error> {

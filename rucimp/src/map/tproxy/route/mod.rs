@@ -6,6 +6,7 @@ pub const DEFAULT_LOCAL_NET: &str = "192.168.0.0/16";
 ///
 /// 对 udp 和 tcp 执行一样的过程, 不会特别处理 udp 的 53 端口
 pub fn run_tcp_route(port: u32, also_udp: bool) -> anyhow::Result<()> {
+    let _ = down_auto_route(port);
     let list = r#"ip rule add fwmark 1 table 100
 ip route add local 0.0.0.0/0 dev lo table 100
 iptables -t mangle -N rucimp

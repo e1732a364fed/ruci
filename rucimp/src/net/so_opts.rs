@@ -1,10 +1,7 @@
 /*!
-* /// from https://github.com/lazytiger/trojan-rs/blob/master/src/sys/unix/mod.rs
+from (MIT) https://github.com/lazytiger/trojan-rs/blob/master/src/sys/unix/mod.rs
 
-将其中的函数名加以修改,  如将其从 set_socket_opts 改名为 set_tproxy_socket_opts
-
-因为 还有 别的 socket_opts 可以设置, 而所有原文件中的大部分方法都是对应 tproxy 的, 名称要清晰一些才行
-
+并加以修改
 */
 
 use std::{

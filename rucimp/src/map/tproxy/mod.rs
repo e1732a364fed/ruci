@@ -29,7 +29,7 @@ use ruci::{
 use macro_mapper::{mapper_ext_fields, MapperExt};
 use serde::{Deserialize, Serialize};
 use tokio::net::UdpSocket;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, info, warn};
 
 use crate::net::so2::{self, SockOpt};
@@ -152,7 +152,11 @@ impl Name for UDPListener {
 }
 
 impl UDPListener {
-    pub async fn listen(&self, listen_a: &net::Addr) -> MapResult {
+    pub async fn listen(
+        &self,
+        listen_a: &net::Addr,
+        shutdown_rx: oneshot::Receiver<()>,
+    ) -> MapResult {
         let r = match listen_a.network {
             Network::UDP => so2::listen_udp(&listen_a, &self.sopt).await.map(|s| {
                 let (tx, rx) = mpsc::channel(100); //todo: adjust this
@@ -162,13 +166,23 @@ impl UDPListener {
                 let src_dst_map = Arc::new(Mutex::new(HashMap::new()));
                 let mapc = src_dst_map.clone();
 
-                let mcr = MsgConnR { rx };
+                let mcr = UdpR { rx };
 
-                let mcw = MsgConnW { us, src_dst_map };
+                let mcw = UdpW { us, src_dst_map };
 
                 // 阻塞函数要用 新线程 而不是 tokio::spawn, 否则 程序退出时会卡住
 
-                std::thread::spawn(|| loop_accept_udp(usc, tx, mapc));
+                use terminate_thread::Thread;
+                let thr = Thread::spawn(|| loop_accept_udp(usc, tx, mapc));
+
+                //let _jh = std::thread::spawn(|| loop_accept_udp(usc, tx, mapc));
+
+                tokio::spawn(async move {
+                    let _ = shutdown_rx.await;
+                    info!("tproxy udp got shutdown signal");
+                    thr.terminate();
+                    info!("tproxy udp terminated");
+                });
 
                 let mut ac = AddrConn::new(Box::new(mcr), Box::new(mcw));
                 ac.cached_name = "tproxy_udp".to_string();
@@ -181,6 +195,9 @@ impl UDPListener {
                 ))
             }
         };
+
+        // provide a fake request, as tproxy udp doesn't have first request
+
         let fake_b = BytesMut::zeroed(10);
 
         match r {
@@ -205,7 +222,7 @@ impl Mapper for UDPListener {
         match params.c {
             Stream::None => {
                 if let Some(configured_dial_a) = &self.configured_target_addr() {
-                    return self.listen(configured_dial_a).await;
+                    return self.listen(configured_dial_a, params.shutdown_rx.expect("tproxy_udp_listener requires a shutdown_rx to support graceful shutdown")).await;
                 }
                 return MapResult::err_str("tproxy_udp_listener can't dial without an address");
             }
@@ -219,23 +236,23 @@ impl Mapper for UDPListener {
     }
 }
 
-/// tproxy 的 udp 不是 fullcone 的, 而是对称的
-pub struct MsgConnR {
+pub struct UdpR {
     rx: mpsc::Receiver<AddrData>,
 }
 
-pub struct MsgConnW {
+/// tproxy 的 udp 不是 fullcone 的, 而是对称的
+pub struct UdpW {
     us: Arc<UdpSocket>,
     src_dst_map: Arc<Mutex<HashMap<Addr, Addr>>>,
 }
 
-impl Name for MsgConnW {
+impl Name for UdpW {
     fn name(&self) -> &'static str {
         "tproxy_udp_w"
     }
 }
 
-impl Name for MsgConnR {
+impl Name for UdpR {
     fn name(&self) -> &'static str {
         "tproxy_udp_r"
     }
@@ -243,7 +260,7 @@ impl Name for MsgConnR {
 
 pub type AddrData = (BytesMut, net::Addr);
 
-impl AsyncWriteAddr for MsgConnW {
+impl AsyncWriteAddr for UdpW {
     fn poll_write_addr(
         self: Pin<&mut Self>,
         cx: &mut Context,
@@ -277,7 +294,7 @@ impl AsyncWriteAddr for MsgConnW {
     }
 }
 
-impl AsyncReadAddr for MsgConnR {
+impl AsyncReadAddr for UdpR {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
         _cx: &mut Context<'_>,
