@@ -9,7 +9,7 @@ used by quinn and quic mod
  */
 use std::{fs::File, io::BufReader, path::Path, sync::Arc, time::SystemTime};
 
-use anyhow::bail;
+use anyhow::{bail, Result};
 use rustls::{
     client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerConfig, ServerName,
 };
@@ -23,7 +23,7 @@ pub struct ClientOptions {
     pub cert_path: Option<String>,
 }
 
-pub(crate) fn cc(opt: ClientOptions) -> anyhow::Result<ClientConfig> {
+pub(crate) fn cc(opt: ClientOptions) -> Result<ClientConfig> {
     let mut root_store = rustls::RootCertStore::empty();
 
     root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
@@ -64,7 +64,7 @@ pub struct ServerOptions {
     pub key_path: String,
 }
 
-pub fn sc(opt: ServerOptions) -> anyhow::Result<ServerConfig> {
+pub fn sc(opt: ServerOptions) -> Result<ServerConfig> {
     let (c, k) = read_certs_from_file(opt.cert_path.as_str(), opt.key_path.as_str())?;
 
     let mut config = ServerConfig::builder()
@@ -99,7 +99,7 @@ impl rustls::client::ServerCertVerifier for SuperDanVer {
     }
 }
 
-pub fn load_key(path: &Path) -> anyhow::Result<PrivateKey> {
+pub fn load_key(path: &Path) -> Result<PrivateKey> {
     match read_one(&mut BufReader::new(File::open(path)?)) {
         Ok(Some(Item::RSAKey(data) | Item::PKCS8Key(data) | Item::ECKey(data))) => {
             Ok(PrivateKey(data))
@@ -111,7 +111,7 @@ pub fn load_key(path: &Path) -> anyhow::Result<PrivateKey> {
 }
 
 /// 注：一个文件有多个 cert 的情况一般是 fullchain
-pub fn load_certs(cert_path: &str) -> anyhow::Result<Vec<rustls::Certificate>> {
+pub fn load_certs(cert_path: &str) -> Result<Vec<rustls::Certificate>> {
     let mut cert_chain_reader = BufReader::new(File::open(cert_path)?);
     let certs = rustls_pemfile::certs(&mut cert_chain_reader)?
         .into_iter()
@@ -123,7 +123,7 @@ pub fn load_certs(cert_path: &str) -> anyhow::Result<Vec<rustls::Certificate>> {
 pub fn read_certs_from_file(
     cert_path: &str,
     key_path: &str,
-) -> anyhow::Result<(Vec<rustls::Certificate>, rustls::PrivateKey)> {
+) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey)> {
     let certs = load_certs(cert_path)?;
 
     let key = load_key(Path::new(key_path))?;

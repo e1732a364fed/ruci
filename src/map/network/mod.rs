@@ -3,7 +3,6 @@ Defines [`Map`]s that can either generate basic Stream(s) like ip/tcp/udp/uds, o
 */
 
 pub mod accept;
-pub mod echo;
 
 use macro_map::*;
 use tokio::sync::mpsc::Receiver;
@@ -13,6 +12,7 @@ use tracing::info;
 use super::*;
 use crate::map;
 use crate::Name;
+use anyhow::Result;
 
 /// BlackHole drops the connection instantly
 #[map_ext_fields]
@@ -361,7 +361,7 @@ impl Listener {
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
         opt_fixed_target_addr: Option<net::Addr>,
-    ) -> anyhow::Result<Receiver<MapResult>> {
+    ) -> Result<Receiver<MapResult>> {
         let listener = match listen::listen(a, opt_fixed_target_addr.clone()).await {
             Ok(l) => l,
             Err(e) => return Err(e.context(format!("Listener failed for {}", a))),
@@ -376,7 +376,7 @@ impl Listener {
     pub async fn listen_addr_forever(
         a: &net::Addr,
         opt_fixed_target_addr: Option<net::Addr>,
-    ) -> anyhow::Result<Receiver<MapResult>> {
+    ) -> Result<Receiver<MapResult>> {
         let listener = listen::listen(a, opt_fixed_target_addr.clone()).await?;
 
         let r = accept::loop_accept_forever(listener, opt_fixed_target_addr).await;

@@ -47,6 +47,8 @@ impl Map for Server {
             buf.truncate(u);
 
             let result = parse_h1_request(&buf, false);
+
+            // 若连 h1 都不是，则就不支持 fallback, 因此 用的 from_e 而不是 ebc
             if result.parse_result != Ok(()) {
                 return MapResult::from_e(anyhow!(
                     "http_filter parse failed {:?}",

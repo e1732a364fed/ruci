@@ -283,6 +283,7 @@ pub enum Stream {
     ///  raw ip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
     Conn(Conn),
 
+    /// 情况与 Conn 一样，但是提供的是已经分裂好的 RW
     RW(RW),
 
     /// 一般为 udp

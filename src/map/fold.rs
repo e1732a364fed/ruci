@@ -461,7 +461,7 @@ fn spawn_fold_forever(mut params: SpawnFoldForeverParams) {
         if let Stream::Generator(rx) = r.c {
             let cid = r.id;
 
-            debug!(cid = %cid, "spawn_acc_forever recursive");
+            debug!(cid = %cid, "spawn_fold_forever recursive");
             in_iter_fold_forever(InIterFoldForeverParams {
                 cid,
                 global_data: params.global_data.clone(),

@@ -26,6 +26,7 @@ pub mod fold;
 pub use data::*;
 
 pub mod counter;
+pub mod echo;
 pub mod fileio;
 pub mod http_filter;
 pub mod http_proxy;

@@ -40,7 +40,7 @@ pub struct Stack {}
 
 impl Name for Stack {
     fn name(&self) -> &'static str {
-        "smoltcp_stack"
+        "lwip_stack"
     }
 }
 
@@ -52,7 +52,7 @@ impl Map for Stack {
         // 2. 转为 AsyncConn 后 用 tokio 的 split
         // 3. 转为 Frame 后 分成 sink 和 stream
 
-        //24.12.25: 实测第一种情况 会在 向 tun 写入时卡住, 第2、3种情况效果相同。
+        //24.12.25: 实测3种情况效果相同。
 
         // if let ruci::net::Stream::RW(rw) = params.c {
         // if let ruci::net::Stream::Frame(f) = params.c {
@@ -82,7 +82,7 @@ impl Map for Stack {
                         break;
                     }
                 }
-                debug!("end2");
+                // debug!("end2");
             });
 
             // tokio::spawn(async move {
@@ -106,7 +106,7 @@ impl Map for Stack {
                         // debug!("stack wrting ok");
                     }
                 }
-                debug!("end1");
+                // debug!("end1");
             });
 
             // tokio::spawn(async move {

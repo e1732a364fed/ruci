@@ -4,7 +4,7 @@ use anyhow::bail;
 use bytes::BytesMut;
 use tracing::{trace, warn};
 
-/// remove first character
+/// remove first character, and return the trimmed str
 pub fn rm_first(value: &str) -> &str {
     let mut chars = value.chars();
     chars.next();

@@ -287,7 +287,6 @@ impl Client {
             ta.get_addr_str(),
             ta.get_addr_str()
         );
-        // println!("b {b}");
         let b = b.as_bytes();
         base.write_all(b).await?;
         base.flush().await?;
@@ -295,27 +294,28 @@ impl Client {
         let mut buf = BytesMut::zeroed(1024);
 
         let n: usize = base.read(&mut buf).await?;
-        //buf.truncate(n);
 
-        if self.is_tail_of_chain() {
-            if let Some(b) = &first_payload {
-                if !b.is_empty() {
-                    let r = base.write_all(b).await;
-                    match r {
-                        Ok(_) => first_payload = None,
-                        Err(e) => return Ok(MapResult::from_e(e)),
+        Ok(
+            if n == CONNECT_REPLY_STR.len() && buf[..n].eq(CONNECT_REPLY_STR.as_bytes()) {
+                if self.is_tail_of_chain() {
+                    if let Some(b) = &first_payload {
+                        if !b.is_empty() {
+                            let r = base.write_all(b).await;
+                            match r {
+                                Ok(_) => first_payload = None,
+                                Err(e) => return Ok(MapResult::from_e(e)),
+                            }
+
+                            //debug!("trojan client writing ed {}", bl);
+                        }
                     }
-
-                    //debug!("trojan client writing ed {}", bl);
                 }
-            }
-        }
 
-        if n == CONNECT_REPLY_STR.len() {
-            Ok(MapResult::new_c(base).b(first_payload).build())
-        } else {
-            Ok(MapResult::from_e(anyhow!("len != CONNECT_REPLY_STR.len")))
-        }
+                MapResult::new_c(base).b(first_payload).build()
+            } else {
+                MapResult::from_e(anyhow!("len != CONNECT_REPLY_STR.len"))
+            },
+        )
     }
 }
 

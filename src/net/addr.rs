@@ -35,7 +35,7 @@ pub fn gen_random_higher_port() -> u16 {
     rng.gen_range(10240..=65535)
 }
 
-/// work better than use a.eq(b).
+/// This function might work better than using a.eq(b).
 ///
 /// If a and b are all unspecified then `true` will also be returned)
 ///
@@ -671,24 +671,3 @@ impl Display for Addr {
         write!(f, "{}://{}", self.network.to_static_str(), s)
     }
 }
-
-// pub struct OptAddrRef<'a>(pub &'a Option<Addr>);
-// pub struct OptAddr(pub Option<Addr>);
-
-// impl Display for OptAddr {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//         match &self.0 {
-//             Some(value) => write!(f, "{}", value),
-//             None => write!(f, "EmptyAddr"),
-//         }
-//     }
-// }
-
-// impl<'a> Display for OptAddrRef<'a> {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//         match &self.0 {
-//             Some(value) => write!(f, "{}", value),
-//             None => write!(f, "EmptyAddr"),
-//         }
-//     }
-// }

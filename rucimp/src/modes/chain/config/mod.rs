@@ -28,8 +28,9 @@ use recorder::RecorderMap;
 use ruci::{
     map::{
         counter::Counter,
+        echo::Echo,
         fold::{DMIterBox, DynVecIterWrapper},
-        network::{echo::Echo, BlackHole, Direct},
+        network::{BlackHole, Direct},
         *,
     },
     net::{self, dns, http::CommonConfig},

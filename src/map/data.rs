@@ -10,6 +10,7 @@ use bitflags::bitflags;
 
 pub const DEFAULT_READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间.
 
+/// Contains some global level data used by Map.
 #[derive(Debug, Default, Clone)]
 pub struct GlobalData {
     pub run_instance_id: u32,
@@ -20,6 +21,8 @@ pub struct GlobalData {
 }
 
 bitflags! {
+
+    /// a flag that returned by [`Data`]'s get_flags method
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub  struct DataFlags: u16 {
         const None = 0;

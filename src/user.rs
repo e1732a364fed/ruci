@@ -167,14 +167,6 @@ pub struct UsersMap<T: UserTrait + Clone> {
     m: InnerUsersMapStruct<T>,
 }
 
-// impl<T: UserTrait + Clone> Clone for UsersMap<T> {
-//     fn clone(&self) -> Self {
-//         Self {
-//             m: Mutex::new(self.m.clone()),
-//         }
-//     }
-// }
-
 #[derive(Debug, Clone)]
 struct InnerUsersMapStruct<T: UserTrait + Clone> {
     id_map: HashMap<String, T>, // id map
@@ -200,7 +192,6 @@ impl<T: UserTrait + Clone> UsersMap<T> {
     pub fn new() -> Self {
         UsersMap {
             m: InnerUsersMapStruct::new(),
-            //m: Mutex::new(InnerUsersMapStruct::new()),
         }
     }
 
@@ -220,7 +211,6 @@ impl<T: UserTrait + Clone> UsersMap<T> {
     }
 }
 
-//#[async_trait]
 impl<T: UserTrait + Clone> AsyncUserAuthenticator<T> for UsersMap<T> {
     fn auth_user_by_authstr(&self, authstr: &str) -> Option<T> {
         let inner = &self.m;

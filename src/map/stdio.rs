@@ -45,8 +45,7 @@ impl AsyncRead for Conn {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        let r = self.input.as_mut().poll_read(cx, buf);
-        r
+        self.input.as_mut().poll_read(cx, buf)
     }
 }
 
@@ -80,16 +79,13 @@ impl AsyncWrite for Conn {
             }
         };
 
-        match ready!(r) {
-            Ok(u) => {
-                if sb_len == u {
-                    Poll::Ready(Ok(old_len))
-                } else {
-                    Poll::Ready(Ok(old_len - sb_len + u))
-                }
+        Poll::Ready(ready!(r).map(|u| {
+            if sb_len == u {
+                old_len
+            } else {
+                old_len - sb_len + u
             }
-            Err(e) => Poll::Ready(Err(e)),
-        }
+        }))
     }
 
     fn poll_flush(
@@ -116,12 +112,6 @@ pub struct Stdio {
 impl Name for Stdio {
     fn name(&self) -> &'static str {
         "stdio"
-    }
-}
-
-impl Stdio {
-    pub fn boxed() -> MapBox {
-        Box::<Stdio>::default()
     }
 }
 

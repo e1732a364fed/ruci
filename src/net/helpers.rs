@@ -1,5 +1,6 @@
 /*!
-Defines some address related helper functions, some wrappers that wraps AsyncConn to provide more features, and some fake Stream implementations for debugging.
+Defines some address related helper functions, some wrappers that wraps AsyncConn to
+provide more features, and some fake Stream implementations for debugging.
  */
 
 use std::{
@@ -164,10 +165,16 @@ impl AsyncWrite for MpscRWrapper {
     }
 }
 
-/// Wrap R: AsyncRead + Unpin,W: AsyncWrite + Unpin as an AsyncConn
+/// Wrap R,W as an AsyncConn
 pub struct RWWrapper<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> {
     pub r: R,
     pub w: W,
+}
+
+impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> RWWrapper<R, W> {
+    pub fn split(self) -> (R, W) {
+        (self.r, self.w)
+    }
 }
 
 impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> AsyncRead for RWWrapper<R, W> {

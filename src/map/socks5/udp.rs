@@ -66,11 +66,11 @@ impl AsyncWriteAddr for Conn {
     }
 
     fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(std::result::Result::Ok(()))
+        Poll::Ready(Ok(()))
     }
 
     fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(std::result::Result::Ok(()))
+        Poll::Ready(Ok(()))
     }
 }
 
