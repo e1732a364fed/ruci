@@ -72,9 +72,9 @@ BlackList 意思是，给出的规则有任意一项匹配就算通过.
 
 演示动态链的基本用法：
 
-## 有限动态链
+## 有限(局部)动态链
 
-有限动态链中，程序一样会读取 config 变量，和 静态链一样，但还要读一个 dyn_selectors 函数
+有限动态链中，程序一样会读取 config 变量，和 静态链一样。但它还要读一个 dyn_selectors 全局函数
 
 dyn_selectors, 对每一个tag 的inbound/outbound 都要有返回一个selector
 
@@ -103,35 +103,80 @@ end
 
 -- 下面两个selector 示例都是 最简单的示例, 使得动态链的行为和静态链相同
 
-dyn_inbound_next_selector = function (this_index, ovov)
-   -- print("ovov:is_some()",ovov:is_some())
-
-    if ovov:is_some()  then
-       -- print("ovov:len()",ovov:len())
-
-        if ovov:len() > 0 then
-            ov = ovov:get(0)
-           -- print("ov:has_value()",ov:has_value())
-
-            if ov:has_value() then
-                the_type = ov:get_type()
-              --  print(the_type)
-
-                if the_type == "data" then
-                    d = ov:get_data()
-              --      print(d:get_u64())
-                end
-            end
-        end
-    end
+dyn_inbound_next_selector = function (this_index, data)
+    -- print("data:",data)
    
     return this_index + 1
 end
 
-dyn_outbound_next_selector = function (this_index, ovov)
+dyn_outbound_next_selector = function (this_index, data)
     return this_index + 1
 end
 
 
 --]]
+```
+
+### 无限(完全)动态链
+
+完全动态链的基本演示完全动态链不使用 固定的列表 来预定义任何Mappers, 它只给出一个函数
+
+generator, generator 根据参数内容来动态生成 [Mapper], 如果不想
+
+重复生成以前生成过的Mapper, 则可以返回一个已创建过的Mapper 
+
+演示的功能是 inbound 为 tcp - socks5, outbound 为 direct
+
+#### 基本演示
+
+```lua
+
+---[[
+
+
+local inspect = require("inspect")
+
+-- my_cid_record = {}
+
+infinite = {
+
+    inbounds = {{
+        tag = "listen1",
+
+        generator = function(cid, state_index, data)
+            if state_index == -1 then
+                return 0, {
+                    stream_generator = {
+                        Listener = "0.0.0.0:10800"
+                    },
+                    new_thread_fn = function(cid, state_index, data)
+                        -- print("lua: cid",inspect(cid))
+                        -- table.insert(my_cid_record,cid)
+                        -- print("lua: cid cache",inspect(my_cid_record))
+
+                        local new_cid, newi, new_data = coroutine.yield(1, {
+                            Socks5 = {}
+                        })
+                        return -1, {}
+                    end
+                }
+            end
+        end
+    }},
+
+    outbounds = {{
+        tag = "dial1",
+        generator = function(cid, state_index, data)
+            if state_index == -1 then
+                return 0, "Direct"
+            else
+                return -1, {}
+            end
+        end
+    }}
+
+}
+
+-- ]]
+
 ```

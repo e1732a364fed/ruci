@@ -10,10 +10,12 @@ ruci pronounced lucy。
 
 ## 介绍
 
-本项目是 一个网络代理框架，采用rust(Rust 2021 edition 1.75+)
+一个网络代理框架，采用rust(Rust 2021 edition 1.75+)
+
+更多 notes 见: [notes.md](doc/notes.md)
 
 文档所限，肯定有东西没有涉及到，可提交issue提问或加入讨论。
-本项目不是一个人能做完的，所以欢迎加入我们。注意低调。
+欢迎加入我们。注意低调。
 
 一个好的解决问题的模式：有暂时不懂的问题可以先进群问, 确定问题后再发 issue
 
@@ -39,8 +41,8 @@ ruci-cmd 是最终的全功能的可执行文件，包含一些系统路由的�
 
 由下文可知，ruci现在支持两种配置格式，
 
-1. "suit mode"，是扁平配置，兼容verysimple的 toml格式. (suit 含义是 "套装")
-2. "chain mode", 链式配置，是新的lua格式。
+1. "suit mode"，是扁平配置, toml格式. (suit 含义是 "套装")
+2. "chain mode", 链式配置, lua格式。
 
 lua格式可参考 [用例](resource/local.lua)  和 [lua配置功能](doc/lua.md) 
 
@@ -175,11 +177,11 @@ o2node-.->collector
 - [x] chain配置格式 (新增, lua格式)
 - [x] 静态链
 - [x] 动态链(有限动态链, 完全动态链)
-- [x] 示例代理程序 (rucimp/examples: suit 或 chain)
+- [x] rucimp/examples: suit , chain, etc.
 - [x] 路由 (rule_route)
 - [x] tproxy
 - [x] native-tls
-- [x] http header, websocket(including early data)
+- [x] http_filter, websocket(including early data)
 - [x] h2, grpc
 - [ ] tcp/ip netstack (lwip/smoltcp)
 - [ ] quic

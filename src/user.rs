@@ -11,8 +11,6 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
-//use crate::{AnyBox, AnyS};
-
 /// 用于用户鉴权
 #[typetag::serde]
 pub trait UserTrait: Debug + Send + Sync {
