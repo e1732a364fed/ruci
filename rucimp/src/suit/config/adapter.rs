@@ -36,6 +36,12 @@ pub fn load_in_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mappe
             ));
             Some(Box::new(a))
         }
+        "http" => {
+            let a = block_on(http::Server::new(
+                suit::config::adapter::get_http_server_option_from_ldconfig(c),
+            ));
+            Some(Box::new(a))
+        }
         "trojan" => {
             let a = block_on(trojan::server::Server::new(
                 suit::config::adapter::get_trojan_server_option_from_ldconfig(c),
@@ -113,6 +119,20 @@ pub fn get_socks5_server_option_from_ldconfig(c: LDConfig) -> socks5::server::Co
 pub fn get_socks5_server_option_from_toml_config_str(toml_str: &str) -> socks5::server::Config {
     let c: LDConfig = toml::from_str(toml_str).unwrap();
     get_socks5_server_option_from_ldconfig(c)
+}
+
+pub fn get_http_server_option_from_ldconfig(c: LDConfig) -> http::Config {
+    let mut so = http::Config::default();
+    so.user_whitespace_pass = c.uuid;
+    let ruci_userpass = c.users.map_or(None, |up_v| {
+        Some(
+            up_v.iter()
+                .map(|up| ruci::user::UserPass::new(up.user.clone(), up.pass.clone()))
+                .collect::<Vec<_>>(),
+        )
+    });
+    so.user_passes = ruci_userpass;
+    so
 }
 
 pub fn get_trojan_server_option_from_ldconfig(c: LDConfig) -> trojan::server::Config {
