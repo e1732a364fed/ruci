@@ -13,7 +13,7 @@ listen_trojan = { listen, { Trojan = { password = "mypassword" } }, }
 
 dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
 
-dial_trojan_chain = { dial,tls, { Trojan = "mypassword"} }
+dial_trojan_chain = { dial,tls,tls, { Trojan = "mypassword"} }
 
 stdio_socks5_chain = { { Stdio="fake.com:80" } , { Socks5 = {} } }
 
@@ -42,6 +42,27 @@ config = {
 --]=]
 
 
+
+---[=[
+
+config = {
+    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
+    outbounds = { { tag="dial1", chain = dial_trojan_chain } }
+
+--[[
+这个 config 块是演示 inbound 是 socks5http, outbound 是 trojan+若干tls 的情况
+
+它是一个基本的远程代理示例. 运行它, 设置您的系统代理为相应端口,
+并参照 config.chain2.lua 在另一个终端 运行 另一部分,
+看看能不能正常访问网络吧
+--]]
+
+}
+
+--]=]
+
+
+
 --[=[
 config = {
 
@@ -64,8 +85,12 @@ config = {
 --]=]
 
 
+--[[
+
 
 config = {
+
+-- stdin + 1 -> trojan_out
 
     inbounds = { 
         {chain = in_stdio_adder_chain, tag = "listen1"} ,
@@ -74,3 +99,4 @@ config = {
     outbounds = { { tag="dial1", chain = dial_trojan_chain } }
 }
 
+--]]

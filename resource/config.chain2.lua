@@ -9,7 +9,7 @@ socks5http_chain = { tcp, { Socks5Http = {} }, }
 
 tls = { TLS = {  cert = "test.crt", key = "test.key" } }
 
-trojan_chain = { tcp, tls, { Trojan = { password = "mypassword" } }, }
+trojan_chain = { tcp, tls,tls, { Trojan = { password = "mypassword" } }, }
 
 dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
 
@@ -20,17 +20,15 @@ out_stdio_chain = { { Stdio="" } }
 
 direct_out_chain = { "Direct" }
 
--- config = {
---     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
---     outbounds = { { tag="dial1", chain = { "Direct" } } }
--- }
+
+
 
 config = {
     inbounds = { 
         {chain = trojan_chain, tag = "listen1"} ,
     },
 
-    --outbounds = { { tag="dial1", chain = direct_out_chain  } }
-    outbounds = { { tag="dial1", chain = out_stdio_chain  } }
+    outbounds = { { tag="dial1", chain = direct_out_chain  } }
+    --outbounds = { { tag="dial1", chain = out_stdio_chain  } } --以命令行为出口
 }
 

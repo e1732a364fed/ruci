@@ -58,16 +58,15 @@ async fn test_adder_r() -> std::io::Result<()> {
 
 #[tokio::test]
 async fn test_adder_w() -> std::io::Result<()> {
-    let writev = Arc::new(Mutex::new(Vec::new()));
-
     let client_tcps = MockTcpStream {
         read_data: vec![1, 2, 3],
         write_data: Vec::new(),
-        write_target: Some(writev),
+        write_target: None,
     };
 
     let mut a = Adder::default();
     a.addnum = 2;
+    a.direction = AddDirection::Read;
 
     let r = a
         .maps(
