@@ -309,7 +309,6 @@ async fn test_basic_write_sequence() -> Result<()> {
         Box::new(client_tcp),
         GeneralMap::from_processor(false, Arc::new(Box::new(map))),
         None,
-        None,
     );
 
     // 在另一个任务中处理服务端
@@ -371,7 +370,6 @@ async fn test_basic_read_sequence() -> Result<()> {
         Box::new(client_tcp),
         GeneralMap::from_processor(false, Arc::new(Box::new(map))),
         None,
-        None,
     );
 
     // 在另一个任务中处理服务端
@@ -419,7 +417,6 @@ async fn test_multiple_read_write_sequence() -> Result<()> {
     let mut conn = GeneralConn::new(
         Box::new(client_tcp),
         GeneralMap::from_processor(false, Arc::new(Box::new(map))),
-        None,
         None,
     );
 

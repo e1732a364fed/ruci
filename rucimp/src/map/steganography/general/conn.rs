@@ -7,7 +7,6 @@ use anyhow::Result;
 use bytes::BytesMut;
 use futures::future::BoxFuture;
 use futures_lite::FutureExt;
-use ruci::net::Addr;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{ready, Context, Poll};
@@ -57,17 +56,11 @@ pub struct GeneralConn {
     handshake_completed: bool,
 
     // 若为客户端握手，则传入；若为服务端握手，则由Parse生成后，由调用者取出
-    pub target_addr: Option<Addr>,
     pub first_buf: Option<BytesMut>,
 }
 
 impl GeneralConn {
-    pub fn new(
-        inner: ruci::net::Conn,
-        map: GeneralMap,
-        first_buf: Option<BytesMut>,
-        target_addr: Option<Addr>,
-    ) -> Self {
+    pub fn new(inner: ruci::net::Conn, map: GeneralMap, first_buf: Option<BytesMut>) -> Self {
         Self {
             inner,
             map,
@@ -75,7 +68,6 @@ impl GeneralConn {
             read_waker: None,
             write_waker: None,
             handshake_completed: false,
-            target_addr,
             first_buf,
         }
     }
@@ -98,11 +90,8 @@ impl GeneralConn {
     fn initiate_ai_write_processing(&mut self, data: Vec<u8>) -> Result<()> {
         let map = self.map.clone();
         let is_handshake = self.is_handshake(true);
-        let target_addr = self.target_addr.take();
-        let future = Box::pin(async move {
-            map.generate_sequence(&data, target_addr, is_handshake, false)
-                .await
-        });
+        let future =
+            Box::pin(async move { map.generate_sequence(&data, is_handshake, false).await });
         self.state = ConnState::ProcessingParse {
             future: Arc::new(Mutex::new(future)),
             is_write: true,
@@ -119,7 +108,7 @@ impl GeneralConn {
         let map = self.map.clone();
         let is_handshake = self.is_handshake(false);
         let future =
-            Box::pin(async move { map.generate_sequence(&data, None, is_handshake, true).await });
+            Box::pin(async move { map.generate_sequence(&data, is_handshake, true).await });
         self.state = ConnState::ProcessingParse {
             future: Arc::new(Mutex::new(future)),
             is_write: false,
@@ -215,7 +204,7 @@ impl AsyncRead for GeneralConn {
                     drop(future);
 
                     match ready!(poll_result) {
-                        Ok(ParsedResult::Read { sequence, addr }) => {
+                        Ok(ParsedResult::Read(sequence)) => {
                             debug!(
                                 "GeneralConn::poll_read processing completed with read sequence"
                             );
@@ -223,11 +212,6 @@ impl AsyncRead for GeneralConn {
                             let is_handshake = this.is_handshake(false);
                             if is_handshake {
                                 this.handshake_completed = true;
-
-                                if this.map.is_server {
-                                    // 服务端在握手时会收到客户端的目标地址
-                                    this.target_addr = addr;
-                                }
                             }
 
                             this.state = ConnState::Reading(sequence);

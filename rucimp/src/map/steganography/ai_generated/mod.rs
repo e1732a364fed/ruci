@@ -6,18 +6,17 @@ use anyhow::Result;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use reqwest;
- 
-use ruci::{net, Name};
+
+use ruci::Name;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-
 
 #[cfg(test)]
 mod test;
 use tracing::debug;
 
 use crate::map::steganography::general::*;
- 
+
 fn no_proxy_client() -> reqwest::Client {
     reqwest::ClientBuilder::new().no_proxy().build().unwrap()
 }
@@ -50,7 +49,6 @@ impl AIGeneratedProcessor {
             client: no_proxy_client(),
         }
     }
-
 
     /// 请求AI生成一个新的隐写协议算法, 并存在 self.config.algorithm_description 中
     pub async fn generate_algorithm(&mut self) -> Result<()> {
@@ -113,7 +111,6 @@ impl AIGeneratedProcessor {
         // 创建最终实例
         Ok(result)
     }
-
 }
 
 impl Name for AIGeneratedProcessor {
@@ -124,7 +121,6 @@ impl Name for AIGeneratedProcessor {
 
 #[async_trait]
 impl SteganographyProcessor for AIGeneratedProcessor {
-   
     /// 调用OpenAI API处理数据
     ///
     /// 在客户端，处理目标地址和数据，生成写序列
@@ -132,12 +128,10 @@ impl SteganographyProcessor for AIGeneratedProcessor {
     async fn generate_sequence(
         &self,
         data: &[u8],
-        target_addr: Option<net::Addr>,
         is_handshake: bool,
         is_read: bool,
     ) -> Result<ParsedResult> {
         let data_base64 = BASE64.encode(data);
-        let target_addr_str = target_addr.map(|addr| addr.to_string());
 
         let role = if self.config.is_server {
             "server"
@@ -154,8 +148,7 @@ impl SteganographyProcessor for AIGeneratedProcessor {
              READ_LENGTHS: [expected received packet length sequence r1,r2,...,rN]\n\
              For read sequences, please return:\n\
              WRITE_PACKETS: [base64 encoded response packet sequence w1,w2,...,wN]\n\
-             READ_LENGTHS: [expected received packet length sequence r1,r2,...,rN]\n\
-             TARGET_ADDR_*: [address information, only needed for server handshake]",
+             READ_LENGTHS: [expected received packet length sequence r1,r2,...,rN]\n",
              self.config.algorithm_description
         );
 
@@ -174,18 +167,13 @@ impl SteganographyProcessor for AIGeneratedProcessor {
         };
 
         // 构建用户提示
-        let user_prompt = match (self.config.is_server, target_addr_str) {
-        
-            (false, Some(addr)) => format!(
-                "This is {} data. Please process the following information:\nTarget address: {}\nMain data: {}",
-                operation_type, addr, data_base64
-            ),
-            (true, _) => format!(
-                "This is {} data. Please extract the target address and actual data from the following data:\n{}",
+        let user_prompt = match self.config.is_server {
+            false => format!(
+                "This is {} data. Please process the following information:\nMain data: {}",
                 operation_type, data_base64
             ),
-            _ => format!(
-                "This is {} data. Please process the following data:\n{}",
+            true => format!(
+                "This is {} data. Please extract the actual data from the following data:\n{}",
                 operation_type, data_base64
             ),
         };
@@ -227,24 +215,16 @@ impl SteganographyProcessor for AIGeneratedProcessor {
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid API response format"))?;
 
-        if is_handshake && self.config.is_server {
-            // 握手阶段的服务端需要解析地址信息
-            let (sequence, addr) = parse_ai_response_to_read_sequence(content)?;
-            Ok(ParsedResult::Read { sequence, addr })
-        } else if is_read {
+        if is_read {
             // 普通读取操作
-            let (sequence, _) = parse_ai_response_to_read_sequence(content)?;
-            Ok(ParsedResult::Read {
-                sequence,
-                addr: None,
-            })
+            let sequence = parse_ai_response_to_read_sequence(content)?;
+            Ok(ParsedResult::Read(sequence))
         } else {
             // 普通写入操作
             let sequence = parse_ai_response_to_write_sequence(content)?;
             Ok(ParsedResult::Write(sequence))
         }
     }
-   
 
     /// 解密从隐写协议中读取的数据
     async fn decrypt_read_sequence(&self, combined_data: Vec<u8>) -> Result<Vec<u8>> {
@@ -312,13 +292,9 @@ impl SteganographyProcessor for AIGeneratedProcessor {
 }
 
 /// 解析服务端AI响应，生成读序列
-fn parse_ai_response_to_read_sequence(content: &str) -> Result<(ReadSequence, Option<net::Addr>)> {
+fn parse_ai_response_to_read_sequence(content: &str) -> Result<ReadSequence> {
     let mut write_packets = Vec::new();
     let mut read_lengths = Vec::new();
-    let mut network = None;
-    let mut host = None;
-    let mut ip = None;
-    let mut port = None;
 
     for line in content.lines() {
         let line = line.trim();
@@ -343,26 +319,7 @@ fn parse_ai_response_to_read_sequence(content: &str) -> Result<(ReadSequence, Op
                         }
                     }
                 }
-                "TARGET_ADDR_NETWORK" => {
-                    if !value.is_empty() {
-                        network = Some(value.to_string())
-                    }
-                }
-                "TARGET_ADDR_HOST" => {
-                    if !value.is_empty() {
-                        host = Some(value.to_string())
-                    }
-                }
-                "TARGET_ADDR_IP" => {
-                    if !value.is_empty() {
-                        ip = Some(value.parse()?)
-                    }
-                }
-                "TARGET_ADDR_PORT" => {
-                    if !value.is_empty() {
-                        port = Some(value.parse()?)
-                    }
-                }
+
                 _ => {
                     debug!("unknown key1: {}", key);
                 } // 忽略未知字段
@@ -370,25 +327,15 @@ fn parse_ai_response_to_read_sequence(content: &str) -> Result<(ReadSequence, Op
         }
     }
 
-    // 构造目标地址（如果有必要的信息）
-    let target_addr = if let (Some(network), Some(port)) = (network, port) {
-        Some(net::Addr::from(&network, host, ip, port)?)
-    } else {
-        None
-    };
-
-    Ok((
-        ReadSequence {
-            write_packets,
-            read_lengths,
-            read_packets: Vec::new(),
-            current_step: ReadStep {
-                is_read: true,
-                index: 0,
-            },
+    Ok(ReadSequence {
+        write_packets,
+        read_lengths,
+        read_packets: Vec::new(),
+        current_step: ReadStep {
+            is_read: true,
+            index: 0,
         },
-        target_addr,
-    ))
+    })
 }
 
 /// 解析服务端AI响应，生成写序列
@@ -435,4 +382,3 @@ fn parse_ai_response_to_write_sequence(content: &str) -> Result<WriteSequence> {
         },
     })
 }
-

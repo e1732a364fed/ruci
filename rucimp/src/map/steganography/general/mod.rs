@@ -13,6 +13,8 @@
  *
  * 而 SteganographyProcessor 中的实现 要保证所生成的序列 满足所要隐写协议的统计特征。
  *
+ * 注意，作为 纯隐写协议，这里不考虑任何 “代理协议”、“加密”的功能。若要需要这些功能，在链尾添加相应的 Map 即可。
+ *
  */
 
 use std::sync::Arc;
@@ -21,11 +23,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
-use ruci::{
-    map::*,
-    net::{self, CID},
-    Name,
-};
+use ruci::{map::*, net::CID, Name};
 
 pub mod conn;
 
@@ -87,10 +85,7 @@ impl WriteSequence {
 #[derive(Debug)]
 pub enum ParsedResult {
     Write(WriteSequence),
-    Read {
-        sequence: ReadSequence,
-        addr: Option<net::Addr>,
-    },
+    Read(ReadSequence),
 }
 
 /// 隐写协议处理器
@@ -103,7 +98,6 @@ pub trait SteganographyProcessor: Send + Sync + Name + DynClone {
     async fn generate_sequence(
         &self,
         data: &[u8],
-        target_addr: Option<net::Addr>,
         is_handshake: bool,
         is_read: bool,
     ) -> Result<ParsedResult>;
@@ -146,12 +140,11 @@ impl GeneralMap {
     async fn generate_sequence(
         &self,
         data: &[u8],
-        target_addr: Option<net::Addr>,
         is_handshake: bool,
         is_read: bool,
     ) -> Result<ParsedResult> {
         self.processor
-            .generate_sequence(data, target_addr, is_handshake, is_read)
+            .generate_sequence(data, is_handshake, is_read)
             .await
     }
 
@@ -180,30 +173,24 @@ impl Map for GeneralMap {
     async fn maps(&self, _cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match behavior {
             ProxyBehavior::ENCODE => {
-                let conn = GeneralConn::new(
-                    params.c.try_unwrap_tcp().unwrap(),
-                    self.clone(),
-                    params.b,
-                    params.a,
-                );
-                MapResult::new_c(Box::new(conn)).build()
+                let conn =
+                    GeneralConn::new(params.c.try_unwrap_tcp().unwrap(), self.clone(), params.b);
+                MapResult::new_c(Box::new(conn)).a(params.a).build()
             }
             ProxyBehavior::DECODE => {
-                let mut conn = GeneralConn::new(
-                    params.c.try_unwrap_tcp().unwrap(),
-                    self.clone(),
-                    params.b,
-                    params.a,
-                );
+                let mut conn =
+                    GeneralConn::new(params.c.try_unwrap_tcp().unwrap(), self.clone(), params.b);
 
                 let mut buf = BytesMut::zeroed(2048); //todo: change this
                 let r = conn.read_buf(&mut buf).await;
                 match r {
                     Ok(n) => {
                         debug!("general steganography: server read handshake success, {n}");
-                        let ta = conn.target_addr.take();
 
-                        MapResult::new_c(Box::new(conn)).b(Some(buf)).a(ta).build()
+                        MapResult::new_c(Box::new(conn))
+                            .b(Some(buf))
+                            .a(params.a)
+                            .build()
                     }
                     Err(e) => MapResult::from_e(anyhow::anyhow!(
                         "general steganography: server read handshake failed, {e}"
