@@ -106,8 +106,19 @@ impl AsyncWrite for FileIOConn {
 
 /// use an existing file as the stream source.
 ///
+/// ## Read:
+///
+/// ### sleep_interval
+///
+/// if sleep_interval was given, reading from FileIO will read  intermittently.
+///
+/// ### bytes_per_turn
+///
+/// if bytes_per_turn was given, each read will only read the required amount of data.
+///
 /// ## Write:
-/// append or create the file
+/// append or create the file with name oname
+///
 #[mapper_ext_fields]
 #[derive(Debug, MapperExt)]
 pub struct FileIO {
