@@ -3025,7 +3025,6 @@ dependencies = [
  "rustls 0.22.4",
  "rustls-pemfile 1.0.4",
  "serde",
- "thiserror 1.0.69",
  "time",
  "tokio",
  "tokio-rustls",

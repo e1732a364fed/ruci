@@ -1,5 +1,7 @@
 use std::{fmt::Display, sync::Arc};
 
+use async_trait::async_trait;
+use bytes::BytesMut;
 use macro_map::{map_ext_fields, MapExt};
 use rustls::{
     client::danger::ServerCertVerified,

@@ -12,12 +12,6 @@ pub mod server;
 #[cfg(test)]
 pub mod test;
 
-/// for benchmark
-// #[cfg(any(test, feature = "benchmark"))]
-pub mod test2;
-
-use async_trait::async_trait;
-use bytes::BytesMut;
 // use rustls::pki_types::{Der, TrustAnchor};
 
 pub use client::Client as TlsClient;
