@@ -114,11 +114,15 @@ generator->[s1] -> [s2] -> [ output ]
 
 ```mermaid
 graph LR
-
-p1((p1))-.->s1_node[s1]-.->o1node((o1))
-p2((p2))-.->s2_node[s2]-.->o2node((o2))
+p1((p1))-->s1_node[stream1]-.->o1node((o1))
+p2((p2))-->s2_node[stream2]-.->o2node((o2))
+o1node-..->s2_node
 generator-->s1_node-->s2_node-->output
 
+collector[data_collector]
+
+o1node-.->collector
+o2node-.->collector
 
 ```
 
