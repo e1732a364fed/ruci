@@ -13,9 +13,8 @@ use super::LDConfig;
 pub fn load_in_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<MapperBox> {
     match s {
         "adder" => {
-            let a = ruci::map::math::Adder {
-                addnum: c.number_arg.unwrap_or(1) as i8,
-            };
+            let mut a = ruci::map::math::Adder::default();
+            a.addnum = c.number_arg.unwrap_or(1) as i8;
             Some(Box::new(a))
         }
         "counter" => {
@@ -67,9 +66,8 @@ pub fn load_out_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mapp
         "direct" => Some(Box::new(ruci::map::network::Direct)),
 
         "adder" => {
-            let a = ruci::map::math::Adder {
-                addnum: c.number_arg.unwrap_or(1) as i8,
-            };
+            let mut a = ruci::map::math::Adder::default();
+            a.addnum = c.number_arg.unwrap_or(1) as i8;
             Some(Box::new(a))
         }
         "counter" => {

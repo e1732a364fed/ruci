@@ -1,14 +1,15 @@
+use crate::map::math::{AddDirection, Adder};
 use crate::map::{MapParams, Mapper, CID};
 use crate::net::helpers::MockTcpStream;
 
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use super::ProxyBehavior;
 
 #[tokio::test]
-async fn test_adder1() -> std::io::Result<()> {
+async fn test_adder_r() -> std::io::Result<()> {
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();
 
@@ -18,7 +19,10 @@ async fn test_adder1() -> std::io::Result<()> {
         write_target: Some(writev),
     };
 
-    let a = crate::map::math::Adder { addnum: 2 };
+    let mut a = Adder::default();
+    a.addnum = 2;
+    a.direction = AddDirection::Write;
+
     let r = a
         .maps(
             CID::default(),
@@ -49,6 +53,44 @@ async fn test_adder1() -> std::io::Result<()> {
         println!("it     be {:?}", v);
         assert!(v.eq(&vec![255, 0, 1]));
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_adder_w() -> std::io::Result<()> {
+    let writev = Arc::new(Mutex::new(Vec::new()));
+
+    let client_tcps = MockTcpStream {
+        read_data: vec![1, 2, 3],
+        write_data: Vec::new(),
+        write_target: Some(writev),
+    };
+
+    let mut a = Adder::default();
+    a.addnum = 2;
+
+    let r = a
+        .maps(
+            CID::default(),
+            ProxyBehavior::UNSPECIFIED,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
+
+    if let Some(e) = r.e {
+        return Err(e);
+    }
+
+    let r = r.c;
+    let mut r = r.try_unwrap_tcp()?;
+    {
+        let mut buf = [0u8; 3];
+        r.read(&mut buf).await?;
+
+        println!("it     be {:?}", buf);
+        assert_eq!(buf, [3u8, 4, 5]);
+    }
+
     Ok(())
 }
 

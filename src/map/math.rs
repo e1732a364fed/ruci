@@ -5,7 +5,7 @@ use crate::{
 use async_trait::async_trait;
 use bytes::BytesMut;
 use std::{io, pin::Pin, task::Poll};
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 use super::*;
 
@@ -34,12 +34,45 @@ pub struct AdderConn {
     pub cid: CID,
     base: Pin<net::Conn>,
     wbuf: BytesMut,
+
+    readl: usize,
+
+    direction: AddDirection,
+}
+
+//todo: 考虑使用 simd 或 rayon; 可以在其它impl包中实现, 也可在此实现
+
+#[derive(Clone, Copy, Debug, Default)]
+pub enum AddDirection {
+    #[default]
+    Read,
+    Write,
+    Both,
 }
 
 impl AdderConn {
     //write self.wbuf to  self.base
     fn write_wbuf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<usize>> {
         self.base.as_mut().poll_write(cx, &self.wbuf)
+    }
+
+    //read self.base to self.wbuf
+    fn read_wbuf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<()>> {
+        let mut abuf = &mut self.wbuf;
+        abuf.resize(abuf.capacity(), 0);
+        let mut rb = ReadBuf::new(&mut abuf);
+
+        let r = self.base.as_mut().poll_read(cx, &mut rb);
+
+        self.readl = rb.filled().len();
+        self.wbuf.resize(self.readl, 0);
+
+        let x: i16 = self.add as i16;
+        for a in self.wbuf.iter_mut() {
+            *a = (x + *a as i16) as u8;
+        }
+
+        r
     }
 }
 impl Name for AdderConn {
@@ -48,15 +81,32 @@ impl Name for AdderConn {
     }
 }
 
+#[test]
+fn set_size_tocap() {
+    let mut bytes_mut = BytesMut::with_capacity(10);
+
+    // 设置 size 等于 cap
+    bytes_mut.resize(bytes_mut.capacity(), 0);
+    assert_eq!(bytes_mut.len(), bytes_mut.capacity());
+}
+
 impl AsyncRead for AdderConn {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        let r = self.base.as_mut().poll_read(cx, buf);
-        if let Poll::Ready(Ok(_)) = &r {}
-        r
+        match self.direction {
+            AddDirection::Write => self.base.as_mut().poll_read(cx, buf),
+            _ => {
+                let r = self.read_wbuf(cx);
+
+                if let Poll::Ready(Ok(_)) = &r {
+                    buf.put_slice(&self.wbuf);
+                }
+                r
+            }
+        }
     }
 }
 
@@ -66,19 +116,23 @@ impl AsyncWrite for AdderConn {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        let x: i16 = self.add as i16;
+        match self.direction {
+            AddDirection::Read => self.base.as_mut().poll_write(cx, buf),
+            _ => {
+                let x: i16 = self.add as i16;
 
-        {
-            let abuf = &mut self.wbuf;
-            abuf.clear();
-            abuf.extend_from_slice(buf);
+                {
+                    let abuf = &mut self.wbuf;
+                    abuf.clear();
+                    abuf.extend_from_slice(buf);
 
-            //todo: 考虑使用 simd 或 rayon; 可以在其它impl包中实现, 也可在此实现
-            for a in abuf.iter_mut() {
-                *a = (x + *a as i16) as u8;
+                    for a in abuf.iter_mut() {
+                        *a = (x + *a as i16) as u8;
+                    }
+                }
+                self.write_wbuf(cx)
             }
         }
-        self.write_wbuf(cx)
     }
 
     fn poll_flush(
@@ -100,6 +154,7 @@ impl AsyncWrite for AdderConn {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Adder {
     pub addnum: i8,
+    pub direction: AddDirection,
 }
 impl Name for Adder {
     fn name(&self) -> &'static str {
@@ -109,7 +164,8 @@ impl Name for Adder {
 
 impl ToMapper for i8 {
     fn to_mapper(&self) -> MapperBox {
-        let a = Adder { addnum: *self };
+        let mut a = Adder::default();
+        a.addnum = *self;
         Box::new(a)
     }
 }
@@ -123,7 +179,9 @@ impl crate::map::Mapper for Adder {
                     cid,
                     add: self.addnum,
                     base: Box::pin(c),
-                    wbuf: BytesMut::new(),
+                    wbuf: BytesMut::with_capacity(1024), //todo change this
+                    readl: 0,
+                    direction: self.direction,
                 };
 
                 MapResult {
