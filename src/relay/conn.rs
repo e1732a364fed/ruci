@@ -43,19 +43,15 @@ pub async fn handle_conn<'a>(
 
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            type DummyType = std::vec::IntoIter<OptData>;
-            TcpInAccumulator::accumulate::<_, DummyType>(cid, in_conn, ins_iterator, None).await
+            type T = std::vec::IntoIter<OptData>;
+            TcpInAccumulator::accumulate::<_, T>(cid, in_conn, ins_iterator, None).await
         })
         .await;
 
     let mut listen_result = match listen_result {
         Ok(lr) => lr,
         Err(e) => {
-            warn!(
-                "{}, handshake in server failed with io::Error, {}",
-                state, e
-            );
-            //let _ = in_conn.shutdown();
+            warn!("{state}, handshake in server failed with io::Error, {e}");
 
             return Err(e.into());
         }
@@ -64,10 +60,7 @@ pub async fn handle_conn<'a>(
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {
-            warn!(
-                "{}, handshake in server succeed but got no target_addr",
-                state
-            );
+            warn!("{state}, handshake in server succeed but got no target_addr",);
             if let Some(c) = listen_result.c {
                 let _ = c.try_shutdown().await;
             }
@@ -79,8 +72,8 @@ pub async fn handle_conn<'a>(
 
     if log_enabled!(log::Level::Info) {
         info!(
-            "{}, handshake in server succeed, target_addr: {}",
-            state, &target_addr
+            "{state}, handshake in server succeed, target_addr: {}",
+            &target_addr
         )
     }
 
@@ -101,10 +94,7 @@ pub async fn handle_conn<'a>(
     let out_stream = match real_target_addr.try_dial().await {
         Ok(t) => t,
         Err(e) => {
-            warn!(
-                "{}, parse target addr failed, {} , {}",
-                state, real_target_addr, e
-            );
+            warn!("{state}, parse target addr failed, {real_target_addr} , {e}",);
             if let Some(c) = listen_result.c {
                 let _ = c.try_shutdown().await;
             }
@@ -136,14 +126,14 @@ pub async fn handle_conn<'a>(
             .await;
 
         if let Err(e) = dial_result {
-            warn!("{}, dial out client timeout, {}", state, e);
+            warn!("{state}, dial out client timeout, {e}",);
             //let _ = in_conn.shutdown();
             //let _ = out_stream.try_shutdown();
             return Err(e.into());
         }
         let dial_result = dial_result.unwrap();
         if let Err(e) = dial_result {
-            warn!("{}, dial out client failed, {}", state, e);
+            warn!("{state}, dial out client failed, {e}",);
             //let _ = in_conn.shutdown();
             //let _ = out_stream.try_shutdown();
             return Err(e);
@@ -151,10 +141,7 @@ pub async fn handle_conn<'a>(
 
         let (out_stream, remain_target_addr, _extra_out_data_vec) = dial_result.unwrap();
         if let Some(rta) = remain_target_addr {
-            warn!(
-                "{}, dial out client succeed, but the target_addr is not consumed, {} ",
-                state, rta
-            );
+            warn!("{state}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
         }
         cp_stream(cid, listen_result.c.take().unwrap(), out_stream, None, ti).await;
     }
@@ -190,7 +177,7 @@ pub async fn cp_udp(
     out_conn: net::addr_conn::AddrConn,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
-    info!("cid: {}, relay udp start", cid);
+    info!("cid: {cid}, relay udp start",);
 
     //discard early data, as we don't know it's target addr
 
@@ -201,7 +188,7 @@ pub async fn cp_udp(
             ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 
         }
-        info!("cid: {},udp relay end", cid);
+        info!("cid: {cid},udp relay end" );
     }
 
     let _ = net::addr_conn::cp(cid, in_conn, out_conn, ti).await;
