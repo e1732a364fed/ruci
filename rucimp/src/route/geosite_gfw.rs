@@ -39,8 +39,9 @@ impl route::OutSelector for GeositeGfwOutSelector {
         _in_chain_tag: &str,
         _params: &[Option<Box<dyn Data>>],
     ) -> Option<DMIterBox> {
-        let domain = addr.get_name()?;
-        let r = check_api(&self.config, &domain).await;
+        let domain_or_ip = addr.get_name().or(addr.get_ip().map(|ip| ip.to_string()))?;
+
+        let r = check_api(&self.config, &domain_or_ip).await;
         match r {
             Ok(r) => {
                 let r = is_prediction_ok(&r.head_prediction, &r.body_prediction);
