@@ -8,6 +8,49 @@ use std::{
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 const MAX_VARINT_LEN64: usize = 10;
 
+pub const CONTENT_TYPE: &str = "content-type";
+pub const GRPC_CONTENT_TYPE: &str = "application/grpc";
+pub const USER_AGENT: &str = "grpc-go/1.41.0";
+
+pub fn build_grpc_request_from(c: &CommonConfig) -> Request<()> {
+    let mut request = Request::builder()
+        .method(c.method.as_deref().unwrap_or("POST"))
+        .uri("http://".to_string() + c.host.as_str() + &c.path)
+        .header("Host", c.host.as_str())
+        .header(CONTENT_TYPE, GRPC_CONTENT_TYPE)
+        .header("user-agent", USER_AGENT)
+        .header("Te", "trailers");
+
+    if let Some(h) = &c.headers {
+        for (k, v) in h.iter() {
+            if k != "Host" {
+                request = request.header(k.as_str(), v.as_str());
+            }
+        }
+    }
+    request.body(()).unwrap()
+}
+
+pub fn match_grpc_request_header<'a, T: 'a>(r: &'a Request<T>) -> Result<(), HttpMatchError<'a>> {
+    let r = r
+        .headers()
+        .get(CONTENT_TYPE)
+        .ok_or(HttpMatchError::InvalidContentType {
+            expected: GRPC_CONTENT_TYPE,
+            found: "",
+        })?
+        .to_str()
+        .expect("ok");
+    if r != GRPC_CONTENT_TYPE {
+        return Err(HttpMatchError::InvalidContentType {
+            expected: GRPC_CONTENT_TYPE,
+            found: r,
+        });
+    }
+
+    Ok(())
+}
+
 fn put_uvarint(buf: &mut [u8], mut x: usize) -> usize {
     let mut i = 0;
     while x >= 0x80 {
@@ -21,10 +64,13 @@ fn put_uvarint(buf: &mut [u8], mut x: usize) -> usize {
 
 use futures::ready;
 use h2::{RecvStream, SendStream};
-use ruci::utils::io_error;
+use http::Request;
+use ruci::{net::http::CommonConfig, utils::io_error};
 use thiserror::Error;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tracing::debug;
+
+use crate::net::HttpMatchError;
 
 #[derive(Error, Debug)]
 pub enum UVariantErr {

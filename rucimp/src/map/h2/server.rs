@@ -67,6 +67,26 @@ impl Server {
                 let (req, mut resp) = r;
 
                 if let Some(c) = &http_config {
+                    if is_grpc {
+                        let r = grpc::match_grpc_request_header(&req);
+
+                        if let Err(e) = r {
+                            warn!(
+                                cid = %cid,
+                                e= %e,
+                                "h2 grpc server got wrong grpc header"
+                            );
+                            let _ = resp.send_response(
+                                Response::builder()
+                                    .status(StatusCode::BAD_REQUEST)
+                                    .body(())
+                                    .unwrap(),
+                                false,
+                            );
+
+                            continue;
+                        }
+                    }
                     let r = crate::net::match_request_http_header(c, &req);
 
                     if let Err(e) = r {

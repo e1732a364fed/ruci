@@ -114,7 +114,7 @@ impl Mapper for SingleClient {
 #[derive(Clone, Debug, NoMapperExt, Default)]
 pub struct MuxClient {
     pub http_config: Option<CommonConfig>,
-    pub is_grpc: Option<bool>,
+    pub is_grpc: bool,
 
     req: Option<Request<()>>,
 
@@ -127,12 +127,19 @@ impl ruci::Name for MuxClient {
 }
 
 impl MuxClient {
-    pub fn new(http_config: Option<CommonConfig>) -> Self {
+    pub fn new(is_grpc: bool, http_config: Option<CommonConfig>) -> Self {
+        let req = if is_grpc {
+            http_config.as_ref().map(grpc::build_grpc_request_from)
+        } else {
+            http_config
+                .as_ref()
+                .map(|c| crate::net::build_request_from(c, "http://"))
+        };
+
         Self {
-            req: http_config
-                .clone()
-                .map(|c| crate::net::build_request_from(&c, "http://")),
+            req,
             http_config,
+            is_grpc,
             ..Default::default()
         }
     }
@@ -144,7 +151,7 @@ impl MuxClient {
         a: Option<net::Addr>,
         early_data: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
-        let is_grpc = self.is_grpc.unwrap_or_default();
+        let is_grpc = self.is_grpc;
 
         match conn {
             Some(conn) => {

@@ -42,6 +42,9 @@ pub enum HttpMatchError<'a> {
 
     #[error("invalid header (expected {expected:?}, found {found:?})")]
     InvalidHeader { expected: &'a str, found: &'a str },
+
+    #[error("invalid content-type (expected {expected:?}, found {found:?})")]
+    InvalidContentType { expected: &'a str, found: &'a str },
 }
 
 pub fn match_request_http_header<'a, T: 'a>(

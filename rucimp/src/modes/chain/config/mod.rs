@@ -489,9 +489,10 @@ impl ToMapperBox for OutMapperConfig {
                 http_config: config,
                 is_grpc,
             } => {
-                let mut m = crate::map::h2::client::MuxClient::new(config.clone());
-
-                m.is_grpc = *is_grpc;
+                let m = crate::map::h2::client::MuxClient::new(
+                    is_grpc.unwrap_or_default(),
+                    config.clone(),
+                );
 
                 Box::new(m)
             }
