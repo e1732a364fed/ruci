@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 use ruci::{
     map::*,
     net::TransmissionInfo,
-    relay::conn::{handle_in_accumulate_result, FixedOutSelector},
+    relay::{conn::handle_in_accumulate_result, route::FixedOutSelector},
 };
 use std::{io, sync::Arc};
 use tokio::sync::{

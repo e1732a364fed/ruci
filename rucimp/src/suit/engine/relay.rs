@@ -5,7 +5,7 @@ use log::warn;
 use ruci::{
     map,
     net::{Stream, CID},
-    relay::{conn::cp_stream, READ_HANDSHAKE_TIMEOUT},
+    relay::{cp_stream, READ_HANDSHAKE_TIMEOUT},
 };
 
 //todo: 移除 State。其作用不大

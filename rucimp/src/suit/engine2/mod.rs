@@ -5,7 +5,7 @@ use config::LDConfig;
 use futures::{future::select_all, Future};
 use log::{debug, info};
 use parking_lot::Mutex;
-use ruci::{map::*, net::TransmissionInfo};
+use ruci::{map::*, net::TransmissionInfo, relay::route::FixedOutSelector};
 
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -247,7 +247,7 @@ async fn listen_tcp2(
 
     let clone_oti = move || oti.clone();
 
-    let selector = relay::conn::FixedOutSelector {
+    let selector = FixedOutSelector {
         mappers: outc.get_mappers_vec().iter(),
     };
     let selector = Box::new(selector);

@@ -1,5 +1,6 @@
+use self::route::OutSelector;
+
 use super::*;
-use bytes::BytesMut;
 
 use log::{info, log_enabled, warn};
 use std::io;
@@ -52,75 +53,6 @@ where
     };
 
     handle_in_accumulate_result(listen_result, selector, ti).await
-}
-
-pub async fn cp_stream(
-    cid: CID,
-    s1: Stream,
-    s2: Stream,
-    ed: Option<BytesMut>, //earlydata
-    ti: Option<Arc<net::TransmissionInfo>>,
-) {
-    match (s1, s2) {
-        (Stream::TCP(i), Stream::TCP(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti).await,
-        (Stream::TCP(i), Stream::UDP(o)) => {
-            let _ = cp_udp::cp_udp_tcp(cid, o, i, false, ed, ti).await;
-        }
-        (Stream::UDP(i), Stream::TCP(o)) => {
-            let _ = cp_udp::cp_udp_tcp(cid, i, o, true, ed, ti).await;
-        }
-        (Stream::UDP(i), Stream::UDP(o)) => cp_udp(cid, i, o, ti).await,
-        _ => {
-            warn!("can't cp stream when either of them is None");
-        }
-    }
-}
-
-pub async fn cp_udp(
-    cid: CID,
-    in_conn: net::addr_conn::AddrConn,
-    out_conn: net::addr_conn::AddrConn,
-    ti: Option<Arc<net::TransmissionInfo>>,
-) {
-    info!("cid: {cid}, relay udp start",);
-
-    //discard early data, as we don't know it's target addr
-
-    let tic = ti.clone();
-    scopeguard::defer! {
-
-        if let Some(ti) = tic {
-            ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
-
-        }
-        info!("cid: {cid},udp relay end" );
-    }
-
-    let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, ti).await;
-}
-
-/// Send + Sync to use in async
-pub trait OutSelector<'a, T>: Send + Sync
-where
-    T: Iterator<Item = &'a MapperBox>,
-{
-    fn select(&self, params: Vec<Option<AnyData>>) -> T;
-}
-
-pub struct FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send,
-{
-    pub mappers: T,
-}
-
-impl<'a, T> OutSelector<'a, T> for FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send + Sync,
-{
-    fn select(&self, _params: Vec<Option<AnyData>>) -> T {
-        self.mappers.clone()
-    }
 }
 
 pub async fn handle_in_accumulate_result<'a, T, T2>(
