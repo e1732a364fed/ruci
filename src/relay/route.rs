@@ -7,17 +7,19 @@ use std::{
     sync::Arc,
 };
 
+use async_trait::async_trait;
 use rustls::pki_types::IpAddr;
 
 use crate::{
-    map::{AnyData, MIterBox},
+    map::{AnyData, AnyS, MIterBox},
     net,
     user::{self, UserBox, UserVec},
 };
 
 /// Send + Sync to use in async
+#[async_trait]
 pub trait OutSelector: Send + Sync {
-    fn select(
+    async fn select(
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
@@ -30,8 +32,9 @@ pub struct FixedOutSelector {
     pub default: MIterBox,
 }
 
+#[async_trait]
 impl OutSelector for FixedOutSelector {
-    fn select(
+    async fn select(
         &self,
         _addr: &net::Addr,
         _in_chain_tag: &str,
@@ -48,8 +51,9 @@ pub struct TagOutSelector {
     pub default: MIterBox,
 }
 
+#[async_trait]
 impl OutSelector for TagOutSelector {
-    fn select(
+    async fn select(
         &self,
         _addr: &net::Addr,
         in_chain_tag: &str,
@@ -90,7 +94,7 @@ pub struct RouteRuleConfig {
 }
 
 impl RouteRuleConfig {
-    pub fn matches(&self, r: Rule) -> bool {
+    pub fn matches(&self, _r: Rule) -> bool {
         unimplemented!()
     }
 
@@ -116,18 +120,51 @@ pub struct RuleSetOutSelector {
     pub default: MIterBox,
 }
 
-pub fn get_user_from_anydata_vec(v: Vec<Option<AnyData>>) -> Option<UserVec> {
-    unimplemented!()
+pub fn get_user_from_anydata(anys: &AnyS) -> Option<UserBox> {
+    let a = anys.downcast_ref::<UserBox>();
+    a.map(|u| u.clone())
 }
 
+pub async fn get_user_from_anydata_vec(adv: Vec<Option<AnyData>>) -> Option<UserVec> {
+    let mut v = UserVec::new();
+
+    for anyd in adv {
+        if let Some(d) = anyd {
+            match d {
+                AnyData::A(arc) => {
+                    let anyv = arc.lock().await;
+                    let oub = get_user_from_anydata(&*anyv);
+                    if let Some(ub) = oub {
+                        v.0.push(ub);
+                    }
+                }
+                AnyData::B(b) => {
+                    let oub = get_user_from_anydata(&b);
+                    if let Some(ub) = oub {
+                        v.0.push(ub);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    if v.0.is_empty() {
+        None
+    } else {
+        Some(v)
+    }
+}
+
+#[async_trait]
 impl OutSelector for RuleSetOutSelector {
-    fn select(
+    async fn select(
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
         params: Vec<Option<AnyData>>,
     ) -> MIterBox {
-        let users = get_user_from_anydata_vec(params);
+        let users = get_user_from_anydata_vec(params).await;
         let r = Rule {
             in_tag: in_chain_tag.to_string(),
             target_addr: addr.clone(),
@@ -160,8 +197,8 @@ mod test {
     use crate::net::Addr;
 
     use super::*;
-    #[test]
-    fn tag_select() {
+    #[tokio::test]
+    async fn tag_select() {
         let teams_list = vec![
             ("l1".to_string(), "d1".to_string()),
             ("l2".to_string(), "d2".to_string()),
@@ -193,10 +230,10 @@ mod test {
             outbounds_map,
             default: m2,
         };
-        let x = t.select(&Addr::default(), "l1", Vec::new());
+        let x = t.select(&Addr::default(), "l1", Vec::new()).await;
         println!("{:?}", x);
         assert_eq!(x.count(), 2);
-        let x = t.select(&Addr::default(), "l11", Vec::new());
+        let x = t.select(&Addr::default(), "l11", Vec::new()).await;
         println!("{:?}", x);
         assert_eq!(x.count(), 1);
     }

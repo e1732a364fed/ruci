@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt::Debug;
 
 use async_trait::async_trait;
@@ -24,7 +24,9 @@ pub trait User: UserTrait + DynClone {}
 impl<T: UserTrait + DynClone> User for T {}
 dyn_clone::clone_trait_object!(User);
 
+#[derive(Clone)]
 pub struct UserBox(Box<dyn User>);
+
 impl Debug for UserBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("UserBox")
@@ -39,6 +41,17 @@ impl Hash for UserBox {
     }
 }
 
+impl PartialOrd for UserBox {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for UserBox {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.auth_str().cmp(&other.0.auth_str())
+    }
+}
+
 impl PartialEq for UserBox {
     fn eq(&self, other: &Self) -> bool {
         self.0.auth_str() == other.0.auth_str()
@@ -48,7 +61,22 @@ impl PartialEq for UserBox {
 impl Eq for UserBox {}
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct UserVec(Vec<UserBox>);
+pub struct UserVec(pub Vec<UserBox>);
+
+impl UserVec {
+    pub fn new() -> Self {
+        UserVec(Vec::new())
+    }
+
+    /// sort_hash always sort vec before hash, meaning that
+    /// the sort_hash for UserVec([a,b,c]) and   UserVec([b,a,c]) is the same
+    pub fn sort_hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let bt: BTreeSet<&UserBox> = self.0.iter().collect();
+        bt.iter().for_each(|b| {
+            b.hash(state);
+        })
+    }
+}
 
 impl Hash for UserVec {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
