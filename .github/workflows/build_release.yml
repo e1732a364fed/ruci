@@ -60,13 +60,13 @@ jobs:
         cd rucimp
         make exe BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
 
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
+    - name: Upload Github Assets
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: dist/*.tar.xz
-        tag: ${{ github.ref }}
-        file_glob: true
+        files: dist/*.tar.xz
+        tag_name: ${{ inputs.tag || github.ref_name }}
 
   build-unix:
     permissions: write-all
