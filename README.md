@@ -32,7 +32,7 @@ ruci 是基础框架, 其中定义一些trait 和基本结构与方法，实现�
 
 rucimp 中提供若干流映射函数, 定义多种配置文件格式, 并提供一些 example 程序
 
-ruci-cmd 是最终的全功能的可执行文件，包含一些系统路由的配置功能。其在另外的github 仓库中保管
+ruci-cmd 是最终的全功能的可执行文件，包含一些系统路由的配置功能
 
 具体名词解释请看下文。
 
@@ -51,7 +51,7 @@ toml格式可参考 verysimple
 
 ## 目前的编译执行方式
 
-rucimp 子项目提供若干示例程序, suit, chain
+rucimp 提供若干示例程序, suit, chain
 
 linux/macOS 上的shell编译命令
 
@@ -151,7 +151,7 @@ o2node-.->collector
 
 - [x] 链式架构 
 - [x] tcp, udp, unix domain socket, ip (tun)([tun example](rucimp/examples/readme.md#tun))
-- [x] 流量记录 (两种实现，分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter))
+- [x] 流量记录 (两种实现，分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
 - [x] Direct, Blackhole, Listener, Dialer, Stdio, Fileio
 - [x] Tls, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
 - [x] Adder (按字节加法器), Counter, Echo
@@ -170,6 +170,7 @@ o2node-.->collector
 - [ ] grpc
 - [ ] tcp/ip netstack (lwip/smoltcp)
 - [ ] quic
+- [ ] ss?, vmess?
 
 #### 项目的实际目的？
 
@@ -177,12 +178,6 @@ o2node-.->collector
 
 详见 [终极目标]( doc/GOAL_zh.md)
 
-
-## 异步架构
-
-为了避免有人说笔者抄袭，在项目初期笔者选用了 async_std。
-后来才创建的 tokio 分支，可查看commit历史 求证。
-不过难以维护两套异步架构，现在async_std分支只能作为参考了。
 
 # 开源协议
 
