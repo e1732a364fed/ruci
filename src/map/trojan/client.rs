@@ -7,6 +7,7 @@ use tokio::io::AsyncWriteExt;
 use crate::{
     map::{self, MapResult, Mapper},
     net::{self, helpers, Network},
+    Name,
 };
 
 use super::*;
@@ -48,6 +49,11 @@ impl Client {
         Ok(MapResult::c(base))
     }
 }
+impl Name for Client {
+    fn name(&self) -> &'static str {
+        "trojan"
+    }
+}
 
 #[async_trait]
 impl Mapper for Client {
@@ -64,9 +70,5 @@ impl Mapper for Client {
             }
             _ => MapResult::err_str("trojan only support tcplike stream"),
         }
-    }
-
-    fn name(&self) -> &'static str {
-        "trojan"
     }
 }

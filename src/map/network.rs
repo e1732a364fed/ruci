@@ -1,5 +1,7 @@
 use tokio::net::TcpStream;
 
+use crate::Name;
+
 use super::*;
 
 pub struct TcpDialer {
@@ -19,11 +21,14 @@ impl TcpDialer {
     }
 }
 
-#[async_trait]
-impl Mapper for TcpDialer {
+impl Name for TcpDialer {
     fn name(&self) -> &'static str {
         "[tcp dialer]"
     }
+}
+
+#[async_trait]
+impl Mapper for TcpDialer {
     async fn maps(
         &self,
         cid: u32, //state 的 id

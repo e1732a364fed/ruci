@@ -17,6 +17,7 @@ use tokio_rustls::{TlsAcceptor, TlsConnector};
 use crate::{
     map,
     net::{self, helpers::EarlyDataWrapper},
+    Name,
 };
 use std::path::PathBuf;
 
@@ -77,12 +78,13 @@ impl Server {
 
 pub struct SeverTLSConnDescriber {}
 
-#[async_trait]
-impl map::Mapper for Server {
+impl Name for Server {
     fn name(&self) -> &'static str {
         "tls"
     }
-
+}
+#[async_trait]
+impl map::Mapper for Server {
     //behavior is always decode
     async fn maps(
         &self,
@@ -213,12 +215,14 @@ impl Client {
         })
     }
 }
-#[async_trait]
-impl map::Mapper for Client {
+
+impl Name for Client {
     fn name(&self) -> &'static str {
         "tls"
     }
-
+}
+#[async_trait]
+impl map::Mapper for Client {
     // behavior is always encode
     async fn maps(
         &self,

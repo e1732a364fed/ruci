@@ -94,12 +94,14 @@ impl Client {
     }
 }
 
-#[async_trait::async_trait]
-impl map::Mapper for Client {
+impl crate::Name for Client {
     fn name(&self) -> &'static str {
         "socks5"
     }
+}
 
+#[async_trait::async_trait]
+impl map::Mapper for Client {
     async fn maps(
         &self,
         cid: u32, //state 的 id

@@ -1,4 +1,4 @@
-use crate::net;
+use crate::{net, Name};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use std::{io, pin::Pin, task::Poll};
@@ -90,13 +90,14 @@ impl AsyncWrite for AdderConn {
 pub struct Adder {
     pub addnum: i8,
 }
-
-#[async_trait]
-impl crate::map::Mapper for Adder {
+impl Name for Adder {
     fn name(&self) -> &'static str {
         "adder"
     }
+}
 
+#[async_trait]
+impl crate::map::Mapper for Adder {
     async fn maps(
         &self,
         cid: u32, //state 的 id

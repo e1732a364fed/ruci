@@ -3,6 +3,7 @@ use crate::{
     map::{self, MapResult, Mapper},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
+    Name,
 };
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
@@ -153,6 +154,11 @@ impl Server {
         unimplemented!()
     }
 }
+impl Name for Server {
+    fn name(&self) -> &'static str {
+        "trojan"
+    }
+}
 
 #[async_trait]
 impl Mapper for Server {
@@ -169,9 +175,5 @@ impl Mapper for Server {
             }
             _ => MapResult::err_str("trojan only support tcplike stream"),
         }
-    }
-
-    fn name(&self) -> &'static str {
-        "trojan"
     }
 }

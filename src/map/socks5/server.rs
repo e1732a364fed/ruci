@@ -6,6 +6,7 @@ use crate::{
     map::{self, MapResult, ProxyBehavior},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, UserPass, UsersMap},
+    Name,
 };
 use bytes::{Buf, BytesMut};
 use futures::select;
@@ -619,13 +620,13 @@ impl Server {
         });
     }
 }
-
-#[async_trait::async_trait]
-impl map::Mapper for Server {
+impl Name for Server {
     fn name(&self) -> &'static str {
         "socks5"
     }
-
+}
+#[async_trait::async_trait]
+impl map::Mapper for Server {
     async fn maps(
         &self,
         cid: u32,

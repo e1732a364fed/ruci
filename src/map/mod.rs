@@ -261,7 +261,7 @@ pub enum ProxyBehavior {
 ///
 ///
 #[async_trait]
-pub trait Mapper {
+pub trait Mapper: crate::Name {
     /// InAdder 与 OutAdder 由 behavior 区分。
     ///
     /// # InAdder
@@ -301,11 +301,6 @@ pub trait Mapper {
         behavior: ProxyBehavior,
         params: MapParams,
     ) -> MapResult;
-
-    /// 约定具体实现中，统一用小写、不加中括号
-    fn name(&self) -> &'static str {
-        "[Function]"
-    }
 }
 
 //令 Adder 实现 Sync，否则报错

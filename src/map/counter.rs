@@ -14,7 +14,7 @@ use std::{
     task::Poll,
 };
 
-use crate::net;
+use crate::{net, Name};
 use async_trait::async_trait;
 use log::{debug, log_enabled};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -89,6 +89,12 @@ impl AsyncWrite for CounterConn {
 #[derive(Debug)]
 pub struct Counter;
 
+impl Name for Counter {
+    fn name(&self) -> &'static str {
+        "counter"
+    }
+}
+
 #[async_trait]
 impl Mapper for Counter {
     /// 生成的 AddResult 中的 d 为  Box<CounterConn>
@@ -137,9 +143,5 @@ impl Mapper for Counter {
             }
             Stream::None => MapResult::err_str("counter: can't count without a stream"),
         }
-    }
-
-    fn name(&self) -> &'static str {
-        "counter"
     }
 }
