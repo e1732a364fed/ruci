@@ -12,7 +12,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-cross:
+  build-ubuntu:
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: full
@@ -27,6 +27,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Install Rust
+      run: |
+        rustup set profile minimal
+        rustup toolchain install stable
+        rustup default stable
+        rustup override set stable
+        rustup target add --toolchain stable ${{ matrix.target }}
+
     - name: Install ARM compiler toolchain
       run: |
         sudo apt-get update
@@ -67,6 +75,14 @@ jobs:
           brew install gnu-tar
           echo "/usr/local/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
   
+      - name: Install Rust
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable
+          rustup default stable
+          rustup override set stable
+          rustup target add --toolchain stable ${{ matrix.target }}
+
       - name: Build ${{ matrix.target }}
         run: |
           cd rucimp

@@ -6,6 +6,7 @@ on:
     paths-ignore: 
       - '*.md'
       - '.github/workflows/*.yml'
+      - 'Makefile'
   pull_request:
     branches: [ "tokio" ]
     paths-ignore: 
