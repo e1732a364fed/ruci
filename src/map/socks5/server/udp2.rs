@@ -51,20 +51,26 @@ pub(super) async fn udp_associate(
         .get_ip()
         .expect("client_future_addr has ip");
 
+    let mut unspecified = false;
     if !cip.is_unspecified() {
         if !so.ip().eq(&cip) {
             bail!("socks5 server udp listen for user first msg got msg other than user's ip addr, should from {}, but is from {}", so.ip(), cip)
         }
+    } else {
+        unspecified = true;
     }
 
     let ad = decode_udp_diagram(&mut buf)?;
 
-    let inbound_c = new_addr_conn(
-        user_udp_socket,
+    let clientsoa = if unspecified {
+        so
+    } else {
         client_future_addr
             .get_socket_addr()
-            .expect("should have correct socketAddr"),
-    );
+            .expect("should have correct socketAddr")
+    };
+
+    let inbound_c = new_addr_conn(user_udp_socket, clientsoa);
     let mr = MapResult::builder()
         .a(Some(ad))
         .b(Some(buf))

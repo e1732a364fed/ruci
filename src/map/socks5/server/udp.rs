@@ -85,7 +85,7 @@ pub async fn loop_listen_udp_for_certain_client(
 
                             buf_w.clear();
                             encode_udp_diagram(
-                                net::Addr {
+                                &net::Addr {
                                     addr: net::NetAddr::Socket(from),
                                     network: net::Network::UDP,
                                 },

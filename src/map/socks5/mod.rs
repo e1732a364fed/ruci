@@ -69,9 +69,9 @@ pub fn decode_udp_diagram(buf: &mut BytesMut) -> anyhow::Result<net::Addr> {
 }
 
 //todo: 支持 fragment
-pub fn encode_udp_diagram(ad: net::Addr, buf: &mut BytesMut) {
+pub fn encode_udp_diagram(ad: &net::Addr, buf: &mut BytesMut) {
     buf.put_u16(0);
     buf.put_u8(0);
 
-    net::helpers::addr_to_socks5_bytes(&ad, buf);
+    net::helpers::addr_to_socks5_bytes(ad, buf);
 }

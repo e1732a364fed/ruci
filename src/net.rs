@@ -489,7 +489,7 @@ impl Addr {
         }
     }
 
-    //127.0.0.1:80
+    /// 127.0.0.1:80
     pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
         let ns: Vec<_> = s.split(':').collect();
         if ns.len() != 2 {

@@ -1,4 +1,5 @@
 use std::{
+    cmp::min,
     io,
     net::SocketAddr,
     pin::Pin,
@@ -26,20 +27,17 @@ pub struct Conn {
 }
 
 impl Conn {
-    pub fn new(u: UdpSocket, user_soa: SocketAddr) -> Self {
-        Conn::newa(Arc::new(u), user_soa)
+    pub fn new(u: UdpSocket, peer_soa: SocketAddr) -> Self {
+        Conn::newa(Arc::new(u), peer_soa)
     }
 
-    pub fn newa(u: Arc<UdpSocket>, user_soa: SocketAddr) -> Self {
-        Conn {
-            base: u,
-            peer_soa: user_soa,
-        }
+    pub fn newa(u: Arc<UdpSocket>, peer_soa: SocketAddr) -> Self {
+        Conn { base: u, peer_soa }
     }
 }
 
-pub fn new_addr_conn(u: UdpSocket, user_soa: SocketAddr) -> AddrConn {
-    let a = Box::new(Conn::new(u, user_soa));
+pub fn new_addr_conn(u: UdpSocket, peersoa: SocketAddr) -> AddrConn {
+    let a = Box::new(Conn::new(u, peersoa));
     let b = a.clone();
     AddrConn::new(a, b)
 }
@@ -57,7 +55,7 @@ impl AsyncWriteAddr for Conn {
                 let mut bf = BytesMut::with_capacity(buf.len() + MAX_LEN_SOCKS5_BYTES);
 
                 encode_udp_diagram(
-                    net::Addr {
+                    &net::Addr {
                         addr: net::NetAddr::Socket(so),
                         network: net::Network::UDP,
                     },
@@ -65,7 +63,7 @@ impl AsyncWriteAddr for Conn {
                 );
                 bf.extend_from_slice(buf);
 
-                self.base.poll_send(cx, &mut bf)
+                self.base.poll_send_to(cx, &mut bf, self.peer_soa)
             }
             Err(e) => Poll::Ready(Err(io::Error::other(e))),
         }
@@ -119,10 +117,11 @@ impl AsyncReadAddr for Conn {
                         Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
 
                         Ok((mut actual_buf, soa)) => {
-                            actual_buf.copy_to_slice(buf);
+                            let wlen = min(buf.len(), actual_buf.len());
+                            actual_buf.copy_to_slice(&mut buf[..wlen]);
 
                             Poll::Ready(Ok::<(usize, net::Addr), io::Error>((
-                                actual_buf.len(),
+                                wlen,
                                 crate::net::Addr {
                                     addr: NetAddr::Socket(soa),
                                     network: Network::UDP,
@@ -133,5 +132,99 @@ impl AsyncReadAddr for Conn {
                 }
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use anyhow::Ok;
+    use bytes::BytesMut;
+    use tokio::{net::UdpSocket, sync::mpsc};
+
+    use crate::net::{
+        addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt},
+        Addr,
+    };
+
+    use super::new_addr_conn;
+
+    #[tokio::test]
+    async fn test1() -> anyhow::Result<()> {
+        let u = UdpSocket::bind("127.0.0.1:0").await?;
+        let ula = u.local_addr()?;
+        println!("binded to , {}", ula);
+
+        let so12345 = Addr::from_ip_addr_str("udp", "127.0.0.1:12345")
+            .unwrap()
+            .get_socket_addr()
+            .unwrap();
+
+        //let so12345c = so12345.clone();
+
+        let mut ac = new_addr_conn(u, so12345);
+
+        let (tx, mut rx) = mpsc::channel(10);
+
+        tokio::spawn(async move {
+            let mut buf = BytesMut::zeroed(1500);
+
+            for _ in 0..2 {
+                println!("try read");
+
+                let r = ac.r.read(&mut buf).await;
+                println!("ok read");
+                let x = tx.send(r).await;
+                if x.is_err() {
+                    break;
+                }
+            }
+            println!("try w2");
+
+            let r =
+                ac.w.write(b"dfg", &Addr::from_addr_str("udp", "1.2.3.4:56").unwrap())
+                    .await;
+
+            println!("try w2 ok, {:?}", r);
+
+            Ok(())
+        });
+
+        let nu = UdpSocket::bind("127.0.0.1:12345").await?;
+        println!("try send, {}", ula);
+        nu.send_to(b"abc", ula).await?;
+        println!("ok send");
+
+        let readr = rx.recv().await;
+
+        println!("readr: {:?}", readr);
+        assert!(readr.unwrap().is_err());
+        let mut buf = BytesMut::with_capacity(100);
+        crate::map::socks5::encode_udp_diagram(
+            &Addr::from_addr_str("udp", "1.2.3.4:56").unwrap(),
+            &mut buf,
+        );
+        buf.extend_from_slice(b"abc");
+
+        println!("try send2, {}", ula);
+        nu.send_to(&buf, ula).await?;
+        println!("ok send2");
+
+        let readr = rx.recv().await;
+
+        println!("readr: {:?}", readr);
+        assert!(readr.unwrap().is_ok());
+
+        let n = nu.recv(&mut buf).await?;
+
+        println!("rok, {n}, {:?}", &buf[..n]);
+
+        // ac.w.write(
+        //     b"abc",
+        //     &Addr::from_ip_addr_str("udp", "127.0.0.1:12349").unwrap(),
+        // )
+        // .await?;
+
+        Ok(())
     }
 }
