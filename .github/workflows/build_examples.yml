@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - '*'
+      - '**'
 
 env:
   CARGO_TERM_COLOR: always
@@ -73,12 +73,3 @@ jobs:
         name: rucimp_${{ steps.get_version.outputs.VERSION }}_${{matrix.config.target_triple}}
         path: |
           dist
-              
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      if: github.event_name == 'release'
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: rucimp_${{ steps.get_version.outputs.VERSION }}_*
-        tag: ${{ github.ref }}
-        file_glob: true
