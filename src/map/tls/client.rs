@@ -125,6 +125,7 @@ impl Client {
 
         if self.is_tail_of_chain {
             if let Some(ed) = b {
+                debug!("tls client writing ed, because is_tail_of_chain");
                 bc.write_all(&ed).await?;
                 bc.flush().await?;
             }

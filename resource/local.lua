@@ -49,7 +49,7 @@ config = {
 
 
 
---[=[
+---[=[
 -- default counterpart for remote.lua
 
 config = {
@@ -129,7 +129,7 @@ config = {
 
 
 
----[=[
+--[=[
 
 config = {
     inbounds = { 
