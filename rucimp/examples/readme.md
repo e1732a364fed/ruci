@@ -3,6 +3,9 @@ rucimp 提供数个示例可执行文件, 若要全功能, 用 ruci-cmd
 
 suit, chain 分为以不同的代码运行 suit模式和 chain 模式
 
+还有 chain_trace 演示 单连接流量监控
+chain_infinite 演示 完全动态链，其与 chain 的运行方式一样，不再赘述
+
 # 通用
 
 接受 一个 命令行参数，将其作为配置文件读取，未提供或者找不到时，会在工作目录, ruci_config/ , resource/ , ../resource 等 目录下找默认的配置文件.

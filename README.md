@@ -50,7 +50,19 @@ toml格式可参考 verysimple
 
 两种配置模式目前可由不同的示例程序运行，如下。
 
-## 目前的编译执行方式
+## 编译/执行方式
+
+### ruci-cmd
+
+```
+cd crates/ruci-cmd
+RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run
+```
+
+详见 [ruci-cmd](crates/ruci-cmd/README.md)
+
+
+### rucimp/examples
 
 rucimp 提供若干示例程序, suit, chain
 
@@ -65,7 +77,7 @@ cp target/release/examples/suit .
 cp target/release/examples/chain .
 ```
 
-详见 [exmaples](rucimp/examples/readme.md)
+详见 [exmaples](rucimp/examples/README.md)
 
 
 # Dev
@@ -152,7 +164,7 @@ o2node-.->collector
 ### ruci
 
 - [x] 链式架构 
-- [x] tcp, udp, unix domain socket, ip (tun)([tun example](rucimp/examples/readme.md#tun))
+- [x] tcp, udp, unix domain socket, ip (tun)([tun example](rucimp/examples/README.md#tun))
 - [x] 流量记录 (两种实现，分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
 - [x] Direct, Blackhole, Listener, Dialer, Stdio, Fileio
 - [x] Tls, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
@@ -166,7 +178,7 @@ o2node-.->collector
 - [x] suit配置格式 （即旧 verysimple 的 toml 配置）
 - [x] chain配置格式 (新增, lua格式)
 - [x] 静态链
-- [x] 动态链
+- [x] 动态链(有限动态链，完全动态链)
 - [x] 示例代理程序 (rucimp/examples: suit 或 chain)
 - [x] 路由 (rule_route)
 - [x] tproxy

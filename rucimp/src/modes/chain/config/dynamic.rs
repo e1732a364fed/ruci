@@ -6,8 +6,8 @@
  * 不过, 有时会有这种情况: 动态链由几部分 静态链组成, 其中两个静态链之间的连接
  * 是动态的
  *
- * 我将这种链叫做 "Partial Dynamic Chain", 把完全动态的链叫做 "Complete
- * Dynamic Chain"
+ * 这里将这种链叫做 "Partial/Finite Dynamic Chain", 把完全动态的链叫做
+ * "Complete/Infinite Dynamic Chain"
  *
  * Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是无限的,
  * (即无限状态机)
