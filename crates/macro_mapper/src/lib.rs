@@ -7,16 +7,13 @@ pub fn mapper_ext_fields(_args: TokenStream, input: TokenStream) -> TokenStream 
     let mut ast = parse_macro_input!(input as DeriveInput);
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
-            match &mut struct_data.fields {
-                syn::Fields::Named(fields) => {
-                    fields.named.push(
-                        syn::Field::parse_named
-                            .parse2(quote! { pub ext_fields: Option<map::MapperExtFields> })
-                            .unwrap(),
-                    );
-                }
-                _ => (),
-            }
+            if let syn::Fields::Named(fields) = &mut struct_data.fields {
+                fields.named.push(
+                    syn::Field::parse_named
+                        .parse2(quote! { pub ext_fields: Option<map::MapperExtFields> })
+                        .unwrap(),
+                );
+            };
 
             quote! {
                 #ast
@@ -26,8 +23,6 @@ pub fn mapper_ext_fields(_args: TokenStream, input: TokenStream) -> TokenStream 
         _ => panic!("`add_mapper_common_field` has to be used with structs "),
     }
 }
-
-use syn;
 
 #[proc_macro_derive(MapperExt)]
 pub fn commonext_macro_derive(input: TokenStream) -> TokenStream {

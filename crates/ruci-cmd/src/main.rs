@@ -11,7 +11,6 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::Ok;
 use clap::{Parser, Subcommand, ValueEnum};
 use log::{info, log_enabled, warn, Level};
 use ruci::net::GlobalTrafficRecorder;

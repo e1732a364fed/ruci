@@ -460,7 +460,7 @@ impl Server {
             })
         }
         let d = ou_to_oad(the_user);
-        let d = d.map(|x| map::VecAnyData::Data(x));
+        let d = d.map(map::VecAnyData::Data);
 
         if cmd == CMD_CONNECT {
             let _ = base.write(&*COMMMON_TCP_HANDSHAKE_REPLY).await?;

@@ -46,7 +46,7 @@ impl route::OutSelector for RuleSetOutSelector {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: &Vec<OptVecData>,
+        params: &[OptVecData],
     ) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {

@@ -157,11 +157,8 @@ impl MapParams {
         } else {
             let oolast = self.d.last();
             match oolast {
-                Some(olast) => match olast {
-                    Some(last) => rb.d(last.clone()).build(),
-                    None => rb.build(),
-                },
-                None => rb.build(),
+                Some(Some(last)) => rb.d(last.clone()).build(),
+                _ => rb.build(),
             }
             //b.d(self.d.last().clone()).build()
         }

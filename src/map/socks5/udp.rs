@@ -71,7 +71,7 @@ impl AsyncWriteAddr for Conn {
                 );
                 bf.extend_from_slice(buf);
 
-                self.base.poll_send_to(cx, &mut bf, self.peer_soa)
+                self.base.poll_send_to(cx, &bf, self.peer_soa)
             }
             Err(e) => Poll::Ready(Err(io::Error::other(e))),
         }

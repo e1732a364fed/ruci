@@ -92,15 +92,14 @@ impl Client {
 
         let mut the_ed = b;
 
-        match self.get_pre_defined_early_data() {
-            Some(bf) => match the_ed {
+        if let Some(bf) = self.get_pre_defined_early_data() {
+            match the_ed {
                 Some(mut ed) => {
                     ed.extend_from_slice(&bf);
                     the_ed = Some(ed);
                 }
                 None => the_ed = Some(bf),
-            },
-            None => {}
+            }
         }
 
         if isudp {
@@ -161,7 +160,7 @@ impl Client {
 
             if let Some(ed) = &the_ed {
                 if self.is_tail_of_chain() {
-                    base.write_all(&ed).await?;
+                    base.write_all(ed).await?;
                     the_ed = None
                 }
             }

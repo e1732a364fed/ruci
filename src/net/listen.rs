@@ -24,7 +24,7 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
             let r = TcpListener::bind(a.get_socket_addr().expect("a has socket addr"))
                 .await
                 .context("tcp listen failed")?;
-            return Ok(Listener::TCP(r));
+            Ok(Listener::TCP(r))
         }
         #[cfg(unix)]
         net::Network::Unix => {
@@ -42,7 +42,7 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
             }
             let r = UnixListener::bind(p).context("unix listen failed")?;
 
-            return Ok(Listener::UNIX((r, filen)));
+            Ok(Listener::UNIX((r, filen)))
         }
         _ => bail!("listen not implemented for this network: {}", a.network),
     }
@@ -95,7 +95,7 @@ impl Listener {
                     addr: net::NetAddr::Socket(tcp_stream.local_addr()?),
                     network: net::Network::TCP,
                 };
-                return Ok((Stream::Conn(Box::new(tcp_stream)), ra, la));
+                Ok((Stream::Conn(Box::new(tcp_stream)), ra, la))
             }
             #[cfg(unix)]
             Listener::UNIX((ul, _)) => {
@@ -105,7 +105,7 @@ impl Listener {
                 let ra = Addr::from_unix(unix_soa);
                 let la = Addr::from_unix(unix_stream.local_addr()?);
 
-                return Ok((Stream::Conn(Box::new(unix_stream)), ra, la));
+                Ok((Stream::Conn(Box::new(unix_stream)), ra, la))
             }
         }
     }

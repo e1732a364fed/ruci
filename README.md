@@ -166,7 +166,7 @@ o2node-.->collector
 - [x] suit配置格式 （即旧 verysimple 的 toml 配置）
 - [x] chain配置格式 (新增, lua格式)
 - [x] 静态链
-- [ ] 动态链
+- [x] 动态链
 - [x] 示例代理程序 (rucimp/examples: suit 或 chain)
 - [x] 路由 (rule_route)
 - [x] tproxy

@@ -51,6 +51,7 @@ async fn dial_future(
 }
 
 #[allow(unused)]
+#[allow(clippy::unused_io_amount)]
 async fn listen_future(
     listen_host_str: &str,
     listen_port: u16,
@@ -134,7 +135,7 @@ pub async fn test_batch_run(l: usize, layer_num: u8) -> anyhow::Result<()> {
 
 pub async fn test_write(d: &mut Box<dyn ConnTrait>) -> anyhow::Result<()> {
     unsafe {
-        d.write(&VEC2).await?;
+        d.write_all(&VEC2).await?;
     }
 
     Ok(())

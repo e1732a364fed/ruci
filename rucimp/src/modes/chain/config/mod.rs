@@ -272,7 +272,7 @@ impl ToMapper for InMapperConfig {
             InMapperConfig::Stdio(ext) => {
                 let extf = ext.to_ext_fields();
 
-                let mut s = ruci::map::stdio::Stdio::new();
+                let mut s = ruci::map::stdio::Stdio::boxed();
                 s.set_ext_fields(Some(extf));
                 s
             }
@@ -364,7 +364,7 @@ impl ToMapper for OutMapperConfig {
             OutMapperConfig::Stdio(ext) => {
                 let extf = ext.to_ext_fields();
 
-                let mut s = ruci::map::stdio::Stdio::new();
+                let mut s = ruci::map::stdio::Stdio::boxed();
                 s.set_ext_fields(Some(extf));
                 s
             }

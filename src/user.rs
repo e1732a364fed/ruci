@@ -69,14 +69,10 @@ impl PartialEq for UserBox {
 impl Eq for UserBox {}
 
 /// 实现了 Hash
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct UserVec(pub Vec<UserBox>);
 
 impl UserVec {
-    pub fn new() -> Self {
-        UserVec(Vec::new())
-    }
-
     /// sort_hash always sort vec before hash, meaning that
     /// the sort_hash for UserVec([a,b,c]) and   UserVec([b,a,c]) is the same
     pub fn sort_hash<H: std::hash::Hasher>(&self, state: &mut H) {

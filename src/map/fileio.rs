@@ -176,7 +176,7 @@ impl Mapper for FileIO {
         let a = if params.a.is_some() {
             params.a
         } else {
-            self.configured_target_addr().map(|dr| dr.clone())
+            self.configured_target_addr().cloned()
         };
 
         let mut buf = params.b;

@@ -52,32 +52,24 @@ pub trait OutSelector: Send + Sync {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: &Vec<OptVecData>,
+        params: &[OptVecData],
     ) -> DMIterBox;
 }
 
-pub async fn get_user_from_anydata_vec(adv: &Vec<OptVecData>) -> Option<UserVec> {
-    let mut v = UserVec::new();
+pub async fn get_user_from_anydata_vec(adv: &[OptVecData]) -> Option<UserVec> {
+    let mut v = UserVec::default();
 
-    for anyd in adv
-        .iter()
-        .filter(|d| d.is_some())
-        .map(|d| d.as_ref().expect("d is some"))
-    {
+    for anyd in adv.iter().filter_map(|d| d.as_ref()) {
         match anyd {
-            super::VecAnyData::Data(data) => match data {
-                AnyData::User(u) => {
+            super::VecAnyData::Data(data) => {
+                if let AnyData::User(u) = data {
                     v.0.push(user::UserBox(u.clone()));
                 }
-                _ => {}
-            },
+            }
             super::VecAnyData::Vec(v2) => {
                 for data in v2 {
-                    match data {
-                        AnyData::User(u) => {
-                            v.0.push(user::UserBox(u.clone()));
-                        }
-                        _ => {}
+                    if let AnyData::User(u) = data {
+                        v.0.push(user::UserBox(u.clone()));
                     }
                 }
             }
@@ -101,7 +93,7 @@ impl OutSelector for FixedOutSelector {
         &self,
         _addr: &net::Addr,
         _in_chain_tag: &str,
-        _params: &Vec<OptVecData>,
+        _params: &[OptVecData],
     ) -> DMIterBox {
         self.default.clone()
     }
@@ -120,7 +112,7 @@ impl OutSelector for TagOutSelector {
         &self,
         _addr: &net::Addr,
         in_chain_tag: &str,
-        _params: &Vec<OptVecData>,
+        _params: &[OptVecData],
     ) -> DMIterBox {
         let ov = self.outbounds_tag_route_map.get(in_chain_tag);
         match ov {
@@ -177,7 +169,7 @@ impl OutSelector for InboundInfoOutSelector {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: &Vec<OptVecData>,
+        params: &[OptVecData],
     ) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {

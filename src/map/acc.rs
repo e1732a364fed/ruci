@@ -202,10 +202,10 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
             )
             .await;
 
-        if tag == "" {
+        if tag.is_empty() {
             let ct = adder.get_chain_tag();
 
-            if ct != "" {
+            if !ct.is_empty() {
                 tag = ct.to_string();
             }
         }

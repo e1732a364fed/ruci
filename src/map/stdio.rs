@@ -72,8 +72,8 @@ impl Name for Stdio {
 }
 
 impl Stdio {
-    pub fn new() -> MapperBox {
-        Box::new(Stdio::default())
+    pub fn boxed() -> MapperBox {
+        Box::<Stdio>::default()
     }
 }
 
@@ -95,7 +95,7 @@ impl Mapper for Stdio {
         let a = if params.a.is_some() {
             params.a
         } else {
-            self.configured_target_addr().map(|dr| dr.clone())
+            self.configured_target_addr().cloned()
         };
 
         let mut buf = params.b;
@@ -112,7 +112,7 @@ impl Mapper for Stdio {
         if let Some(ed) = buf.as_ref() {
             if self.is_tail_of_chain() {
                 debug!("stdio: write earlydata");
-                let r = c.write(&ed).await;
+                let r = c.write(ed).await;
                 if let Err(e) = r {
                     return MapResult::from_e(e);
                 }

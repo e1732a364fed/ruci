@@ -115,6 +115,18 @@ pub enum CID {
     Chain(CIDChain),
 }
 
+impl std::str::FromStr for CID {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        let u = s.parse::<u32>();
+        if let Ok(u) = u {
+            return Ok(CID::Unit(u));
+        }
+        Err(anyhow!("cid can't parse from {}", s))
+    }
+
+    type Err = anyhow::Error;
+}
+
 impl CID {
     ///random
     pub fn new() -> CID {
@@ -132,14 +144,6 @@ impl CID {
             Some(ti) => CID::new_ordered(&ti.last_connection_id),
             None => CID::new(),
         }
-    }
-
-    pub fn from_str(s: &str) -> Option<Self> {
-        let u = s.parse::<u32>();
-        if let Ok(u) = u {
-            return Some(CID::Unit(u));
-        }
-        None
     }
 
     ///
@@ -237,16 +241,10 @@ pub fn gen_random_higher_port() -> u16 {
 pub fn eq_socket_addr(a: &SocketAddr, b: &SocketAddr) -> bool {
     if a.eq(b) {
         true
+    } else if a.port() != b.port() {
+        false
     } else {
-        if a.port() != b.port() {
-            false
-        } else {
-            if a.ip().is_unspecified() || b.ip().is_unspecified() {
-                true
-            } else {
-                false
-            }
-        }
+        a.ip().is_unspecified() || b.ip().is_unspecified()
     }
 }
 
@@ -423,7 +421,7 @@ impl Addr {
     /// if no "#", it will fallback to from_network_addr_str
     ///
     pub fn from_name_network_addr_str(s: &str) -> Result<Self> {
-        let ns: Vec<_> = s.splitn(2, "#").collect();
+        let ns: Vec<_> = s.splitn(2, '#').collect();
         match ns.len() {
             1 => Addr::from_network_addr_str(s),
             2 => {
@@ -677,15 +675,11 @@ impl Addr {
     }
     pub fn get_display_addr_str(&self) -> String {
         let mut s = self.get_addr_str();
-        match self.network {
-            Network::IP => match &self.addr {
-                NetAddr::NameAndSocket(n, _, _) => {
-                    s.push('#');
-                    s.push_str(n);
-                }
-                _ => {}
-            },
-            _ => {}
+        if self.network == Network::IP {
+            if let NetAddr::NameAndSocket(n, _, _) = &self.addr {
+                s.push('#');
+                s.push_str(n);
+            }
         }
         s
     }
@@ -695,7 +689,7 @@ impl Addr {
     /// will return (10.0.0.1, 255.255.255.0)
     ///
     /// if it has a name, it will be returned too. might be used as a tun device name
-    pub fn to_name_ip_netmask(&self) -> Result<(Option<String>, IpAddr, (u8, u8, u8, u8))> {
+    pub fn to_name_ip_netmask(&self) -> Result<NameIpNetMask> {
         match &self.addr {
             NetAddr::Socket(so) => {
                 let nm = prefix_length_to_netmask(so.port() as u8);
@@ -709,6 +703,8 @@ impl Addr {
         }
     }
 }
+
+pub type NameIpNetMask = (Option<String>, IpAddr, (u8, u8, u8, u8));
 
 /// 以 url 的格式 描述 Addr
 impl Display for Addr {

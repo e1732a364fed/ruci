@@ -57,7 +57,7 @@ impl Mapper for Direct {
                 a,
                 cid,
                 behavior,
-                params.b.as_ref().and_then(|b| Some(b.len()))
+                params.b.as_ref().map(|b| b.len())
             );
         }
 

@@ -130,10 +130,11 @@ async fn get_conn_infos_range(
     Path(cid): Path<String>,
     State(allconn): State<NewConnInfoMap>,
 ) -> String {
+    use std::str::FromStr;
     let cid = CID::from_str(&cid);
     let cid = match cid {
-        Some(c) => c,
-        None => return String::from("None"),
+        Ok(c) => c,
+        Err(_) => return String::from("None"),
     };
 
     let mut s = String::new();
@@ -183,10 +184,11 @@ async fn get_gt_d(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> Str
 async fn get_conn_info(Path(cid): Path<String>, State(allconn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
     let m = allconn.read();
+    use std::str::FromStr;
     let cid = CID::from_str(&cid);
     let cid = match cid {
-        Some(c) => c,
-        None => return String::from("None"),
+        Ok(c) => c,
+        Err(_) => return String::from("None"),
     };
 
     let x = m.get(&cid);
@@ -203,10 +205,11 @@ async fn get_conn_info(Path(cid): Path<String>, State(allconn): State<NewConnInf
 }
 
 async fn get_flux_for(Path(cid): Path<String>, State(cache): State<FluxCache>) -> String {
+    use std::str::FromStr;
     let cid = CID::from_str(&cid);
     let cid = match cid {
-        Some(c) => c,
-        None => return String::from("None"),
+        Ok(c) => c,
+        Err(_) => return String::from("None"),
     };
 
     let x = cache.get(&cid);
