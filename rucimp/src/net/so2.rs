@@ -48,10 +48,10 @@ pub fn new_socket2(na: &net::Addr, sopt: &SockOpt, is_listen: bool) -> anyhow::R
     #[cfg(target_os = "linux")]
     {
         if sopt.tproxy.unwrap_or_default() {
-            super::so_opts::set_tproxy_socket_opts(is_v4, is_udp, &sopt)?;
+            super::so_opts::set_tproxy_socket_opts(is_v4, is_udp, &so)?;
         }
         if let Some(m) = sopt.so_mark {
-            super::so_opts::set_mark(&sopt, m)?;
+            super::so_opts::set_mark(&so, m)?;
         }
     }
 
