@@ -39,6 +39,8 @@ reqwest = { version = "0.12", default-features = false, features = [
 
 rcgen = { version = "0.13.1", optional = true }
 
+qrcode = { version = "0.14.1", optional = true, default-features = false }
+
 [features]
 lua = ["rucimp/lua"]
 
@@ -52,7 +54,7 @@ api_server = ["chrono", "axum", "tower", "tower-http"]
 api_client = ["reqwest"]
 file_server = ["axum", "tower-http"]
 
-utils = ["reqwest", "rcgen"]
+utils = ["reqwest", "rcgen", "qrcode"]
 trace = ["rucimp/trace", "TinyUFO"]
 
 use-native-tls = ["rucimp/use-native-tls"]

@@ -328,6 +328,8 @@ udp 将不被路由到tproxy中.
 ## Stack
 in
 
+Stack 本身没有任何配置。直接写成 "Stack" 就行。
+
 ## 
 
 # 网络协议 Map

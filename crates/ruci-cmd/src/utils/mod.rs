@@ -45,6 +45,9 @@ pub enum Commands {
     /// default listen is "0.0.0.0:18143"
     #[cfg(feature = "file_server")]
     ServeFolder { addr: Option<String> },
+
+    /// print the QrCode of a string in the console.
+    QR { str: String },
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -93,6 +96,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
 
             let _ = rucimp::utils::wait_close_sig().await;
         }
+        Commands::QR { str } => print_qrcode_of(&str),
     };
     Ok(())
 }
@@ -210,4 +214,16 @@ async fn download_wintun() -> anyhow::Result<()> {
     const WINTUN_ZIP: &str = "wintun.zip";
     dl_url(WINTUN_DOWNLOAD_LINK, Some(WINTUN_ZIP)).await?;
     Ok(())
+}
+
+fn print_qrcode_of(str: &str) {
+    use qrcode::render::unicode;
+    use qrcode::QrCode;
+    let code = QrCode::new(str).unwrap();
+    let image = code
+        .render::<unicode::Dense1x2>()
+        .dark_color(unicode::Dense1x2::Light)
+        .light_color(unicode::Dense1x2::Dark)
+        .build();
+    println!("{}", image);
 }

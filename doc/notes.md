@@ -506,3 +506,25 @@ outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不�
 
 在 suit 模式中, server 的行为是 listen, client 的行为是 dial; 而在 chain 模式中, inbound
 和 outbound 行为都叫做 map (映射) 
+
+
+## 其它rust代理项目
+
+https://github.com/shadowsocks/shadowsocks-rust
+
+https://github.com/YtFlow/YtFlowApp
+https://github.com/YtFlow/YtFlowCore
+
+https://github.com/Watfaq/clash-rs
+
+https://github.com/zephyrchien/midori
+
+https://github.com/lazytiger/trojan-rs
+
+https://github.com/cfal/shoes
+
+https://github.com/ylxdzsw/v2socks/tree/master
+
+https://github.com/erebe/turbine_lb
+
+https://github.com/tickbh/wmproxy

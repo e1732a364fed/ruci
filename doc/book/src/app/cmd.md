@@ -150,11 +150,6 @@ pack是打包为 tar 文件， pack-z 是在打包为 tar.zip 文件。
 
 该命令可以启用一个 lua repl (read, execute, print, loop), 用户可以在里面执行一些lua代码。
 
-## 生成自签名证书
-
-    ./ruci-cmd utils gen-cer
-
-
 
 # 高级用法
 
