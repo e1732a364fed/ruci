@@ -7,9 +7,10 @@
 use std::{
     env::{self, set_var},
     fs,
+    path::PathBuf,
 };
 
-use log::{info, log_enabled, warn, Level};
+use log::{debug, info, log_enabled, warn, Level};
 use rucimp::{
     suit::config::adapter::{
         load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
@@ -22,6 +23,7 @@ use rucimp::{
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("rucimp~ suit2\n");
     println!("working dir: {:?} \n", std::env::current_dir().unwrap());
+    let cdir = std::env::current_dir().unwrap();
 
     const RL: &str = "RUST_LOG";
     let l = env::var(RL).unwrap_or("info".to_string());
@@ -52,9 +54,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         &default_file
     };
 
-    let mut r_contents = fs::read_to_string(filename);
+    let mut r_contents = fs::read_to_string(PathBuf::from(filename));
     if r_contents.is_err() {
-        r_contents = fs::read_to_string("resource/config.suit.toml");
+        debug!("try resource folder");
+        let mut cd = cdir.clone();
+        cd.push("resource");
+
+        if cd.exists() {
+            std::env::set_current_dir(cd)?;
+            r_contents = fs::read_to_string(filename);
+        }
+    }
+    if r_contents.is_err() {
+        debug!("try ../resource folder");
+
+        let mut cd = cdir.clone();
+        cd.push("../resource");
+
+        if cd.exists() {
+            std::env::set_current_dir(cd)?;
+            r_contents = fs::read_to_string(filename);
+        }
     }
 
     let contents = r_contents.expect("no config.toml");
