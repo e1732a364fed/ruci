@@ -20,7 +20,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --release --example chain --example suit  --example suit2 --verbose
+      run: |
+        cd rucimp
+        cargo build --release --example chain --example suit  --example suit2 --verbose
     - name: Copy Files 
       run: |
         mkdir dist
