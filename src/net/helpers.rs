@@ -12,6 +12,7 @@ use parking_lot::Mutex;
 use tokio::{io::ReadBuf, sync::mpsc};
 
 use futures::task::Context;
+use tracing::trace;
 
 use std::cmp::min;
 
@@ -387,6 +388,244 @@ impl AsyncWrite for PrintWrapper {
         cx: &mut std::task::Context<'_>,
     ) -> Poll<io::Result<()>> {
         self.base.as_mut().poll_shutdown(cx)
+    }
+}
+
+#[derive(Default)]
+pub enum BufferReadState {
+    #[default]
+    ReadyForNew,
+    ContinueReadRemote {
+        content_len: usize,
+        body_start_index: usize,
+        filled_data_len: usize,
+    },
+    ContinueReadLocalCache {
+        from: usize,
+        to: usize,
+    },
+    Closed,
+}
+
+/// Provide Buffered Reading for such protocols:
+/// read the data head, and parse out a content_len,
+/// the content_len may be later than the actually received data.
+///
+/// In that case, the read data need to be cached to get the whole data.
+///
+/// It needs a clousure "content_len_body_start_index_parse_fn" to be provided.
+///
+/// The real data must be right after the body_start_index returned by the clousure.
+///
+pub struct BufContentLenProtocolReader {
+    pub read_cache: Option<BytesMut>,
+    pub read_state: BufferReadState,
+    pub read_cap: usize,
+    pub reader: Pin<Box<dyn AsyncRead + Send + Sync>>,
+    pub content_len_body_start_index_parse_fn:
+        Box<dyn Fn(&[u8]) -> std::io::Result<(usize, usize)> + Send + Sync>,
+}
+
+impl BufContentLenProtocolReader {
+    /// Call it after calling [`read`] and finished using the returned buffer.
+    pub fn put_back(&mut self, rc: BytesMut) {
+        let _ = self.read_cache.insert(rc);
+    }
+    /// if read succeed, it returns the buffer, the index where the data begins
+    /// and the index where the data ends.
+    ///
+    /// After reading the buffer, the user must put it back using self.put_back(buf).
+    ///
+    /// Also, it is required that the method will not be called again before.
+    ///
+    /// This is implemented this way to avoid extra memory copy.
+    /// [`put_back`] is called.
+    pub fn read(
+        &mut self,
+        cx: &mut Context<'_>,
+    ) -> Poll<std::io::Result<(BytesMut, usize, usize)>> {
+        let rc = self.read_cache.take();
+
+        match self.read_state {
+            BufferReadState::Closed => Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::ConnectionAborted,
+                "closed",
+            ))),
+            BufferReadState::ReadyForNew => {
+                let mut rc = rc.unwrap_or(BytesMut::zeroed(self.read_cap));
+
+                unsafe {
+                    rc.set_len(self.read_cap);
+                }
+
+                let mut rb = ReadBuf::new(&mut rc);
+                match self.reader.as_mut().poll_read(cx, &mut rb) {
+                    Poll::Ready(r) => match r {
+                        Ok(_) => {
+                            let l = rb.filled().len();
+                            if l == 0 {
+                                self.read_state = BufferReadState::Closed;
+                                tracing::trace!("bufprotocolreader read ok empty(EOF), will close");
+                                return Poll::Ready(Ok((BytesMut::new(), 0, 0)));
+                            }
+
+                            self.read_header(cx, rc, 0, l)
+                        }
+                        Err(e) => {
+                            let _ = self.read_cache.insert(rc);
+
+                            Poll::Ready(Err(e))
+                        }
+                    },
+                    Poll::Pending => {
+                        let _ = self.read_cache.insert(rc);
+
+                        Poll::Pending
+                    }
+                }
+            }
+            BufferReadState::ContinueReadRemote {
+                content_len,
+                body_start_index,
+                filled_data_len,
+            } => {
+                let mut rc = rc.unwrap_or(BytesMut::zeroed(self.read_cap));
+
+                unsafe {
+                    rc.set_len(self.read_cap);
+                }
+                let mut rb = ReadBuf::new(&mut rc);
+
+                rb.set_filled(filled_data_len);
+
+                let mut rb = ReadBuf::new(&mut rc);
+                match self.reader.as_mut().poll_read(cx, &mut rb) {
+                    Poll::Ready(r) => match r {
+                        Ok(_) => {
+                            let data = rb.filled();
+                            let dl = data.len();
+
+                            if dl == filled_data_len {
+                                trace!("  ContinueReadRemote got empty(EOF), will close");
+                                self.read_state = BufferReadState::Closed;
+                                return Poll::Ready(Ok((BytesMut::new(), 0, 0)));
+                            }
+
+                            let real_len = data[body_start_index..].len();
+
+                            if real_len < content_len {
+                                tracing::trace!("partial read2: {real_len} {content_len}",);
+
+                                self.read_state = BufferReadState::ContinueReadRemote {
+                                    content_len,
+                                    body_start_index,
+                                    filled_data_len: dl,
+                                };
+
+                                let _ = self.read_cache.insert(rc);
+
+                                self.read(cx)
+                            } else {
+                                if tracing::enabled!(tracing::Level::TRACE) {
+                                    let real_data =
+                                        &data[body_start_index..body_start_index + content_len];
+                                    let real_string = String::from_utf8_lossy(real_data);
+
+                                    tracing::trace!(
+                                        "partial read2 finish, {}, {}, {}",
+                                        real_len,
+                                        content_len,
+                                        real_string.len()
+                                    );
+                                }
+
+                                if real_len > content_len {
+                                    self.read_state = BufferReadState::ContinueReadLocalCache {
+                                        from: body_start_index + content_len,
+                                        to: dl,
+                                    }
+                                } else {
+                                    self.read_state = BufferReadState::ReadyForNew;
+                                }
+
+                                Poll::Ready(Ok((
+                                    rc,
+                                    body_start_index,
+                                    body_start_index + content_len,
+                                )))
+                            }
+                        }
+                        Err(e) => {
+                            let _ = self.read_cache.insert(rc);
+
+                            Poll::Ready(Err(e))
+                        }
+                    },
+                    Poll::Pending => {
+                        let _ = self.read_cache.insert(rc);
+
+                        Poll::Pending
+                    }
+                }
+            }
+            BufferReadState::ContinueReadLocalCache { from, to } => {
+                let rc = rc.unwrap_or(BytesMut::zeroed(self.read_cap));
+
+                self.read_header(cx, rc, from, to)
+            }
+        }
+    }
+
+    fn read_header(
+        &mut self,
+        cx: &mut Context<'_>,
+        rc: BytesMut,
+        from: usize,
+        to: usize,
+    ) -> Poll<std::io::Result<(BytesMut, usize, usize)>> {
+        let data = &rc[from..to];
+        let (content_len, body_start_index) = (self.content_len_body_start_index_parse_fn)(data)?;
+        let real_len = data[body_start_index..].len();
+
+        match content_len.cmp(&real_len) {
+            std::cmp::Ordering::Less => {
+                // let r = (self.real_read_fn)(body_start_index, content_len, buf, data);
+
+                self.read_state = BufferReadState::ContinueReadLocalCache {
+                    from: from + body_start_index + content_len,
+                    to,
+                };
+
+                Poll::Ready(Ok((
+                    rc,
+                    from + body_start_index,
+                    from + body_start_index + content_len,
+                )))
+            }
+            std::cmp::Ordering::Equal => {
+                self.read_state = BufferReadState::ReadyForNew;
+                Poll::Ready(Ok((
+                    rc,
+                    from + body_start_index,
+                    from + body_start_index + content_len,
+                )))
+            }
+            std::cmp::Ordering::Greater => {
+                let mut new_rc = BytesMut::with_capacity(self.read_cap);
+
+                new_rc.extend_from_slice(data);
+
+                self.read_state = BufferReadState::ContinueReadRemote {
+                    content_len,
+                    body_start_index,
+                    filled_data_len: data.len(),
+                };
+
+                let _ = self.read_cache.insert(new_rc);
+
+                self.read(cx)
+            }
+        }
     }
 }
 

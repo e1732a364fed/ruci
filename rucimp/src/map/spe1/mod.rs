@@ -43,6 +43,7 @@ use bytes::BytesMut;
 use itertools::Itertools;
 use macro_map::*;
 use rand::Rng;
+use ruci::net::helpers::BufContentLenProtocolReader;
 use ruci::net::http::CommonHttp;
 use ruci::{
     map::{self, MapParams, MapResult, ProxyBehavior},
@@ -420,14 +421,13 @@ pub struct Conn {
     // 缓存的 已解析后的 answer 的索引
     // bool 为 true 对应 1，为 false 对应 0
     server_cached_answers: Vec<(bool, u8)>,
-    base: Pin<ruci::net::Conn>,
+    base_w: Pin<Box<dyn AsyncWrite + Send + Sync>>,
     qa: Arc<QaData>,
 
-    read_cache: Option<BytesMut>,
     write_cache: Option<BytesMut>,
 
     write_state: WriteState,
-    read_state: ReadState,
+    pub reader: BufContentLenProtocolReader,
 }
 
 pub const READ_CAP: usize = 1024 * 1024;
@@ -452,226 +452,21 @@ fn get_pr_header_content_length_body_index(pr: Box<dyn CommonHttp>) -> Result<(u
 }
 
 impl Conn {
-    fn common_read(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &mut ReadBuf<'_>,
-    ) -> Poll<Result<()>> {
-        let rc = self.as_mut().read_cache.take();
-
-        match self.read_state {
-            ReadState::Closed => Poll::Ready(Err(io::Error::new(
-                io::ErrorKind::ConnectionAborted,
-                "closed",
-            ))),
-
-            ReadState::ReadyForNew => {
-                let mut rc = rc.unwrap_or(BytesMut::zeroed(READ_CAP));
-
-                unsafe {
-                    rc.set_len(READ_CAP);
-                }
-
-                let mut rb = ReadBuf::new(&mut rc);
-                match self.base.as_mut().poll_read(cx, &mut rb) {
-                    Poll::Pending => {
-                        let _ = self.read_cache.insert(rc);
-
-                        trace!(cid=%self.cid, "spe1 read pending");
-
-                        Poll::Pending
-                    }
-                    Poll::Ready(r) => match r {
-                        Err(e) => {
-                            let _ = self.read_cache.insert(rc);
-
-                            trace!(cid=%self.cid, "spe1 read err");
-
-                            Poll::Ready(Err(e))
-                        }
-                        Ok(_) => {
-                            let l = rb.filled().len();
-                            if l == 0 {
-                                self.read_state = ReadState::Closed;
-
-                                trace!(cid=%self.cid, "spe1 read ok empty(EOF), will close");
-
-                                let _ = self.poll_shutdown(cx);
-
-                                return Poll::Ready(Ok(()));
-                            }
-
-                            self.common_read_header(cx, rc, 0, l, buf)
-                        }
-                    },
-                }
-            }
-            ReadState::ContinueReadRemote {
-                content_len,
-                body_start_index,
-                filled_data_len,
-            } => {
-                let mut rc = rc.unwrap_or(BytesMut::zeroed(READ_CAP));
-
-                unsafe {
-                    rc.set_len(READ_CAP);
-                }
-                let mut rb = ReadBuf::new(&mut rc);
-
-                rb.set_filled(filled_data_len);
-
-                match self.base.as_mut().poll_read(cx, &mut rb) {
-                    Poll::Pending => {
-                        let _ = self.read_cache.insert(rc);
-                        Poll::Pending
-                    }
-                    Poll::Ready(r) => match r {
-                        Err(e) => {
-                            let _ = self.read_cache.insert(rc);
-                            Poll::Ready(Err(e))
-                        }
-                        Ok(_) => {
-                            let data = rb.filled();
-                            let dl = data.len();
-
-                            if dl == filled_data_len {
-                                trace!("spe1 ContinueReadRemote got empty(EOF), will close");
-                                self.read_state = ReadState::Closed;
-                                let _ = self.poll_shutdown(cx);
-                                return Poll::Ready(Ok(()));
-                            }
-
-                            let real_len = data[body_start_index..].len();
-
-                            if real_len < content_len {
-                                trace!(
-                                    cid=%self.cid,
-                                    "spe1 partial read2: {} {content_len}", real_len
-                                );
-
-                                self.read_state = ReadState::ContinueReadRemote {
-                                    content_len,
-                                    body_start_index,
-                                    filled_data_len: dl,
-                                };
-
-                                let _ = self.read_cache.insert(rc);
-
-                                self.common_read(cx, buf)
-                            } else {
-                                if tracing::enabled!(tracing::Level::TRACE) {
-                                    let real_data =
-                                        &data[body_start_index..body_start_index + content_len];
-                                    let real_string = String::from_utf8_lossy(real_data);
-
-                                    trace!( cid=%self.cid,
-                                        "spe1 partial read2 finish, {}, {}, {}",
-                                        real_len,
-                                        content_len,
-                                        real_string.len()
-                                    );
-                                }
-
-                                let r =
-                                    self.common_real_read(body_start_index, content_len, buf, data);
-                                let _ = self.read_cache.insert(rc);
-
-                                if real_len > content_len {
-                                    self.read_state = ReadState::ContinueReadLocalCache {
-                                        from: body_start_index + content_len,
-                                        to: dl,
-                                    }
-                                } else {
-                                    self.read_state = ReadState::ReadyForNew;
-                                }
-
-                                r
-                            }
-                        }
-                    },
-                }
-            }
-            ReadState::ContinueReadLocalCache { from, to } => {
-                let rc = rc.unwrap_or(BytesMut::zeroed(READ_CAP));
-
-                trace!(cid=%self.cid,"ContinueReadLocalCache, {}, {}",from, to);
-
-                self.common_read_header(cx, rc, from, to, buf)
-            }
-        }
-    }
-
-    fn common_read_header(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        rc: BytesMut,
+    fn common_real_read(
+        &mut self,
         from: usize,
         to: usize,
         buf: &mut ReadBuf<'_>,
-    ) -> Poll<Result<()>> {
-        let data = &rc[from..to];
-
-        let pr = ruci::net::http::common_parse(self.is_server, data);
-        let (content_len, si) = get_pr_header_content_length_body_index(pr)?;
-
-        let real_len = data[si..].len();
-
-        match content_len.cmp(&real_len) {
-            std::cmp::Ordering::Less => {
-                let r = self.common_real_read(si, content_len, buf, data);
-
-                self.read_state = ReadState::ContinueReadLocalCache {
-                    from: from + si + content_len,
-                    to,
-                };
-                let _ = self.read_cache.insert(rc);
-
-                r
-            }
-            std::cmp::Ordering::Equal => {
-                trace!(cid=%self.cid, "spe1 read ok {content_len} {real_len}");
-
-                let r = self.common_real_read(si, content_len, buf, data);
-                let _ = self.read_cache.insert(rc);
-                self.read_state = ReadState::ReadyForNew;
-                r
-            }
-            std::cmp::Ordering::Greater => {
-                trace!("spe1 partial read: {} {content_len}", real_len);
-
-                let mut new_rc = BytesMut::with_capacity(READ_CAP);
-
-                new_rc.extend_from_slice(data);
-
-                self.read_state = ReadState::ContinueReadRemote {
-                    content_len,
-                    body_start_index: si,
-                    filled_data_len: data.len(),
-                };
-
-                let _ = self.read_cache.insert(new_rc);
-
-                self.common_read(cx, buf)
-            }
-        }
-    }
-
-    fn common_real_read(
-        &mut self,
-        si: usize,
-        content_len: usize,
-
-        buf: &mut ReadBuf<'_>,
         data: &[u8],
     ) -> Poll<Result<()>> {
-        let real_data = &data[si..si + content_len];
+        let real_data = &data[from..to];
         let real_string = String::from_utf8_lossy(real_data).to_string();
         trace!( cid=%self.cid,"spe1 common_real_read called ");
 
         if self.is_server {
             Poll::Ready(match self.qa.questions_to_bytes(&real_string, true, true) {
                 Ok(bm) => {
-                    trace!(cid=%self.cid, "spe1server server_real_read {}, {}",bm.0.len(),&data[..si + content_len].len() );
+                    trace!(cid=%self.cid, "spe1server server_real_read {}, {}",bm.0.len(),&data[..to].len() );
 
                     buf.put_slice(&bm.0);
                     self.server_cached_answers = bm.1.unwrap();
@@ -723,11 +518,21 @@ impl Conn {
 
 impl AsyncRead for Conn {
     fn poll_read(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<Result<()>> {
-        self.common_read(cx, buf)
+        match self.reader.read(cx) {
+            Poll::Ready(r) => match r {
+                Ok((rc, from, to)) => {
+                    let r = self.common_real_read(from, to, buf, &rc);
+                    self.reader.put_back(rc);
+                    r
+                }
+                Err(e) => Poll::Ready(Err(e)),
+            },
+            Poll::Pending => Poll::Pending,
+        }
     }
 }
 impl AsyncWrite for Conn {
@@ -736,12 +541,12 @@ impl AsyncWrite for Conn {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize>> {
-        if matches!(self.read_state, ReadState::Closed) {
-            return Poll::Ready(Err(io::Error::new(
-                io::ErrorKind::ConnectionAborted,
-                "spe1: writing when read end closed",
-            )));
-        }
+        // if matches!(self.read_state, ReadState::Closed) {
+        //     return Poll::Ready(Err(io::Error::new(
+        //         io::ErrorKind::ConnectionAborted,
+        //         "spe1: writing when read end closed",
+        //     )));
+        // }
 
         if self.is_server {
             match self.write_state {
@@ -784,7 +589,7 @@ impl AsyncWrite for Conn {
 
                     let wl = write_cache.len();
 
-                    match self.base.as_mut().poll_write(cx, &write_cache[..]) {
+                    match self.base_w.as_mut().poll_write(cx, &write_cache[..]) {
                         Poll::Pending => {
                             let _ = self.write_cache.insert(write_cache);
 
@@ -834,7 +639,7 @@ impl AsyncWrite for Conn {
 
                     let write_data = &write_cache[head..];
 
-                    match self.base.as_mut().poll_write(cx, write_data) {
+                    match self.base_w.as_mut().poll_write(cx, write_data) {
                         Poll::Pending => {
                             let _ = self.write_cache.insert(write_cache);
 
@@ -910,7 +715,7 @@ impl AsyncWrite for Conn {
 
                     write_cache.extend_from_slice(&content_buf[..]);
 
-                    let r = self.base.as_mut().poll_write(cx, &write_cache[..]);
+                    let r = self.base_w.as_mut().poll_write(cx, &write_cache[..]);
 
                     let wcl = write_cache.len();
 
@@ -953,7 +758,7 @@ impl AsyncWrite for Conn {
                 WriteState::Previous(head) => {
                     let write_cache = self.write_cache.take().unwrap();
 
-                    match self.base.as_mut().poll_write(cx, &write_cache[head..]) {
+                    match self.base_w.as_mut().poll_write(cx, &write_cache[head..]) {
                         Poll::Pending => {
                             let _ = self.write_cache.insert(write_cache);
 
@@ -1005,11 +810,11 @@ impl AsyncWrite for Conn {
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        self.base.as_mut().poll_flush(cx)
+        self.base_w.as_mut().poll_flush(cx)
     }
 
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        self.base.as_mut().poll_shutdown(cx)
+        self.base_w.as_mut().poll_shutdown(cx)
     }
 }
 
@@ -1030,17 +835,31 @@ impl map::Map for ClientOrServer {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             ruci::net::Stream::Conn(base) => {
+                let is_ser = self.is_server;
+
+                let content_len_body_start_index_parse_fn = move |data: &[u8]| {
+                    let pr = ruci::net::http::common_parse(is_ser, data);
+                    get_pr_header_content_length_body_index(pr)
+                };
+                let (r, w) = tokio::io::split(base);
                 let c = Conn {
                     hasnt_written: true,
                     cid,
                     qa: self.qa.clone(),
                     is_server: self.is_server,
                     server_cached_answers: vec![],
-                    base: Box::pin(base),
-                    read_cache: None,
+                    base_w: Box::pin(Box::new(w)),
                     write_cache: Some(BytesMut::with_capacity(READ_CAP)),
                     write_state: WriteState::default(),
-                    read_state: ReadState::default(),
+                    reader: BufContentLenProtocolReader {
+                        read_cache: None,
+                        read_state: Default::default(),
+                        read_cap: READ_CAP,
+                        reader: Box::pin(r),
+                        content_len_body_start_index_parse_fn: Box::new(
+                            content_len_body_start_index_parse_fn,
+                        ),
+                    },
                 };
 
                 return MapResult::new_c(Box::new(c))
