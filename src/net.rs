@@ -368,7 +368,7 @@ pub enum Stream {
     UDP(AddrConn),
 
     // 比如： tcp listener
-    Generator(Box<dyn AsyncIterator<Item = Stream>>),
+    Generator(tokio::sync::mpsc::Receiver<Stream>),
 
     #[default]
     None,
