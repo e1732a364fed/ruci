@@ -19,6 +19,12 @@ impl Name for Echo {
     }
 }
 
+impl Echo {
+    pub fn boxed() -> MapBox {
+        Box::<Echo>::default()
+    }
+}
+
 #[async_trait]
 impl Map for Echo {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {

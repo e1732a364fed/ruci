@@ -103,6 +103,12 @@ impl AsyncWrite for CounterConn {
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Counter {}
 
+impl Counter {
+    pub fn boxed() -> MapBox {
+        Box::<Counter>::default()
+    }
+}
+
 impl Name for Counter {
     fn name(&self) -> &'static str {
         "counter"

@@ -20,7 +20,7 @@ pub type GMap = HashMap<String, LuaNextGenerator>;
 pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(move |lua, v: LuaValue| {
         let c = lua.from_value::<InMapConfig>(v)?;
-        let m: MapBox = c.try_into().map_err(|e| mlua::Error::external(e))?;
+        let m: MapBox = c.try_into().map_err(mlua::Error::external)?;
         let m = MapWrapper(Arc::new(m));
         Ok(m)
     })?;
@@ -34,7 +34,7 @@ pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
 pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(move |lua, v: LuaValue| {
         let c = lua.from_value::<OutMapConfig>(v)?;
-        let m: MapBox = c.try_into().map_err(|e| mlua::Error::external(e))?;
+        let m: MapBox = c.try_into().map_err(mlua::Error::external)?;
         let m = MapWrapper(Arc::new(m));
         Ok(m)
     })?;

@@ -159,8 +159,7 @@ impl map::Map for Client {
 
             let r = connector
                 .connect(
-                    &self
-                        .config
+                    self.config
                         .host
                         .as_ref()
                         .unwrap_or(&params.a.clone().unwrap().get_name().unwrap()),

@@ -25,6 +25,12 @@ impl Name for BlackHole {
     }
 }
 
+impl BlackHole {
+    pub fn boxed() -> MapBox {
+        Box::<BlackHole>::default()
+    }
+}
+
 #[async_trait]
 impl Map for BlackHole {
     /// always consume the stream, ignore all params.
@@ -171,7 +177,6 @@ impl BindDialer {
     }
 
     #[cfg(feature = "tun")]
-
     pub fn down_route(&mut self) {
         let mut mg = self.auto_route_state.lock();
         match &*mg {

@@ -216,7 +216,7 @@ pub fn parse_frames(buf: &[u8]) -> anyhow::Result<(Vec<SettingFrame>, Vec<(Strin
         }
     }
 
-    return Ok((settings, headers));
+    Ok((settings, headers))
 }
 
 #[derive(Debug, Clone)]

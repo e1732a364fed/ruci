@@ -58,7 +58,6 @@ pub struct BufReader {
 /// returned by [`BufContentLenProtocolReader`]'s method `read`
 ///
 /// It should not happen that `from >= to`. So `debug_assert!(from < to);` is recommended.
-
 pub struct BufReadResult {
     pub buf: BytesMut,
     pub body_from: usize,

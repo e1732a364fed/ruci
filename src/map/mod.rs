@@ -248,7 +248,7 @@ impl From<ProxyBehavior> for usize {
 /// the next Map
 ///
 #[async_trait]
-pub trait Map: Name + Debug {
+pub trait Map {
     /// Map 在代理逻辑上分 DECODE 和 ENCODE 两种
     ///
     ///   由 behavior 区分.
@@ -287,10 +287,11 @@ pub trait Map: Name + Debug {
 
 /// 令 Map 实现 Send + Sync, 否则异步/多线程报错
 ///
-/// 且添加了 [`MapExt`]
-pub trait MapSync: MapExt + Send + Sync {}
-impl<T: MapExt + Send + Sync> MapSync for T {}
+/// 且添加了 [`MapExt`] 等 对代码 必要的 trait
+pub trait MapSync: Name + Debug + MapExt + Send + Sync {}
+impl<T: Name + Debug + MapExt + Send + Sync> MapSync for T {}
 
+/// 代码最终使用的是 MapBox
 pub type MapBox = Box<dyn MapSync>;
 
 /// Some helper fields.

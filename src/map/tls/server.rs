@@ -32,6 +32,12 @@ impl ServerPEMOptions {
     }
 }
 
+impl From<ServerPEMOptions> for map::MapBox {
+    fn from(sc: ServerPEMOptions) -> Self {
+        Box::new(Server::new(sc))
+    }
+}
+
 // todo: 添加  tls_min_v
 #[map_ext_fields]
 #[derive(Clone, MapExt)]

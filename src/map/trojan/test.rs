@@ -32,8 +32,8 @@ fn test224_print() {
 
 async fn new_3user_trojan_server() -> Server {
     Server::new(Config {
-        pass: Some("pass".to_string()),
-        passes: Some(vec![
+        password: Some("pass".to_string()),
+        more: Some(vec![
             "pass2".to_string(), //a2efc77b5d3c5e14ce7d0520115b32bba3426c1463d93d36a368fed7
             "pass3".to_string(), //aaae8f86690070b538d2fc141d6389dd9ce0e7d8e0a4d800384f9454
         ]),

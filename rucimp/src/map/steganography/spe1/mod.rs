@@ -331,7 +331,7 @@ impl QaData {
         &self,
         data: &[u8],
         write_cache: &mut BytesMut,
-        server_cached_answers: &Vec<(bool, u8)>,
+        server_cached_answers: &[(bool, u8)],
     ) -> usize {
         let mut content_buf = BytesMut::with_capacity(READ_CAP);
         let s = server_cached_answers
@@ -789,7 +789,7 @@ impl ClientOrServer {
             ),
         };
 
-        return MapResult::new_c(Box::new(c)).a(a).b(b).build();
+        MapResult::new_c(Box::new(c)).a(a).b(b).build()
     }
 }
 

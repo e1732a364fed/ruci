@@ -274,6 +274,12 @@ impl Map for Server {
 #[derive(Debug, Clone, MapExt, Default)]
 pub struct Client {}
 
+impl Client {
+    pub fn boxed() -> MapBox {
+        Box::<Client>::default()
+    }
+}
+
 impl Name for Client {
     fn name(&self) -> &'static str {
         "http_proxy_client"

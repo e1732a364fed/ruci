@@ -13,10 +13,10 @@ use macro_map::*;
 use tokio::io::AsyncReadExt;
 use tracing::{debug, warn};
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub pass: Option<String>,
-    pub passes: Option<Vec<String>>,
+    pub password: Option<String>,
+    pub more: Option<Vec<String>>,
 }
 
 impl From<Config> for MapBox {
@@ -35,12 +35,12 @@ impl Server {
     pub async fn new(option: Config) -> Self {
         let mut um = UsersMap::new();
 
-        if let Some(u) = option.pass {
+        if let Some(u) = option.password {
             let u = User::new(&u);
             um.add_user(u);
         }
 
-        let mut cu = option.passes.clone();
+        let mut cu = option.more.clone();
         if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
             while let Some(u) = a.pop() {
                 let uup = User::new(&u);

@@ -162,7 +162,7 @@ impl Engine {
         Ok(())
     }
 
-    /// load finite dynamic chain
+    // load finite dynamic chain
     // #[cfg(any(feature = "lua", feature = "lua54"))]
     // pub fn init_lua_finite_dynamic(&mut self, lua_text: String) -> anyhow::Result<()> {
     //     use anyhow::Context;

@@ -42,6 +42,12 @@ pub struct TlsClientOptions {
     pub alpn: Option<Vec<String>>,
 }
 
+impl From<TlsClientOptions> for map::MapBox {
+    fn from(value: TlsClientOptions) -> Self {
+        Box::new(Client::new(value))
+    }
+}
+
 impl Client {
     pub fn new(opt: TlsClientOptions) -> Self {
         let mut config = default_cc();

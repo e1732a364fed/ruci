@@ -41,7 +41,6 @@ async fn main() -> anyhow::Result<()> {
                     host: Some("www.google.com".to_string()),
                     insecure: true,
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
-                    ..Default::default()
                 }),
                 OutMapConfig::Trojan("".to_string()),
             ],
@@ -68,7 +67,7 @@ async fn run_engine_server_end() -> anyhow::Result<()> {
                     key: "resource/test_ca_key.pem".into(),
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
                 }),
-                InMapConfig::Trojan(TrojanPassSet::default()),
+                InMapConfig::Trojan(ruci::map::trojan::server::Config::default()),
             ],
         }],
         outbounds: vec![OutMapConfigChain {

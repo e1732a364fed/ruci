@@ -477,6 +477,12 @@ pub struct Config {
     pub session_truncate: Option<usize>,
 }
 
+impl From<Config> for MapBox {
+    fn from(value: Config) -> Self {
+        Box::new(RecorderMap::new(value))
+    }
+}
+
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct RecorderMap {

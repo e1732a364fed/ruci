@@ -24,7 +24,6 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 use crate::map::quic;
 
 use bytes::BytesMut;
-use recorder::RecorderMap;
 use ruci::{
     map::{
         counter::Counter,
@@ -155,7 +154,7 @@ impl StaticConfig {
         &self,
         file_source: Arc<Option<FileSource>>,
     ) -> anyhow::Result<(DMIterBox, HashMap<String, DMIterBox>)> {
-        let obs = self.get_outbounds(file_source.clone())?;
+        let obs = self.get_outbounds(file_source)?;
 
         let mut first_o: Option<DMIterBox> = None;
 
@@ -293,8 +292,8 @@ impl TryFrom<BindDialerConfig> for MapBox {
         d.bind_addr = opt_bind_a;
         #[cfg(feature = "tun")]
         {
-            d.in_auto_route = value.in_auto_route.clone();
-            d.out_auto_route = value.out_auto_route.clone();
+            d.in_auto_route = value.in_auto_route;
+            d.out_auto_route = value.out_auto_route;
         }
         d.ext_fields = value.ext.as_ref().map(|e| e.to_ext_fields());
 
@@ -375,7 +374,7 @@ pub enum InMapConfig {
     Http(PlainTextPassSet),
     Socks5(PlainTextPassSet),
     Socks5Http(PlainTextPassSet),
-    Trojan(TrojanPassSet),
+    Trojan(trojan::server::Config),
     HttpFilter(Option<CommonConfig>),
     WebSocket {
         http_config: Option<CommonConfig>,
@@ -542,7 +541,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 Some(fs) => fs
                     .get_file_content(&s.to_string_lossy())
                     .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
-                    .map_err(|e| std::io::Error::other(e)),
+                    .map_err(std::io::Error::other),
                 None => std::fs::read_to_string(s),
             };
 
@@ -550,15 +549,15 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
         };
 
         match value.config {
-            InMapConfig::Echo => Ok(Box::<Echo>::default()),
+            InMapConfig::Echo => Ok(Echo::boxed()),
             InMapConfig::Stdio(sc) => sc.try_into(),
             InMapConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
-                    i_name: f.i.clone(),
-                    o_name: f.o.clone(),
+                    i_name: f.i,
+                    o_name: f.o,
                     sleep_interval: f.sleep_interval.map(Duration::from_millis),
                     bytes_per_turn: f.bytes_per_turn,
-                    ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
+                    ext_fields: f.ext.map(|e| e.to_ext_fields()),
                 };
                 Ok(Box::new(s))
             }
@@ -574,13 +573,13 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 Ok(Box::new(g))
             }
             InMapConfig::Adder(i) => Ok(i.into()),
-            InMapConfig::Counter => Ok(Box::<Counter>::default()),
-            InMapConfig::Recorder(c) => Ok(Box::new(RecorderMap::new(c.clone()))),
+            InMapConfig::Counter => Ok(Counter::boxed()),
+            InMapConfig::Recorder(c) => Ok(c.into()),
 
             InMapConfig::TLS(sc) => {
                 let sc = ServerPEMOptions::from(&sc, read_file_fn)?;
 
-                Ok(Box::new(ruci::map::tls::server::Server::new(sc)))
+                Ok(sc.into())
             }
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
@@ -591,7 +590,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
 
             InMapConfig::Http(c) => {
                 let sc = http_proxy::ServerConfig {
-                    user_whitespace_pass: c.userpass.clone(),
+                    user_whitespace_pass: c.userpass,
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
                             .map(|up| ruci::user::PlainText::from(up.to_string()))
@@ -605,7 +604,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::Socks5(c) => {
                 let sc = socks5::server::Config {
                     support_udp: true, //默认打开udp 支持
-                    user_whitespace_pass: c.userpass.clone(),
+                    user_whitespace_pass: c.userpass,
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
                             .map(|up| ruci::user::PlainText::from(up.to_string()))
@@ -617,7 +616,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             }
             InMapConfig::Socks5Http(c) => {
                 let sc = socks5http::Config {
-                    user_whitespace_pass: c.userpass.clone(),
+                    user_whitespace_pass: c.userpass,
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
                             .map(|up| ruci::user::PlainText::from(up.to_string()))
@@ -627,36 +626,28 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
 
                 Ok(sc.into())
             }
-            InMapConfig::Trojan(c) => {
-                let sc = trojan::server::Config {
-                    pass: c.password.clone(),
-                    passes: c.more.as_ref().map(|up_v| up_v.to_vec()),
-                };
-
-                Ok(sc.into())
-            }
+            InMapConfig::Trojan(sc) => Ok(sc.into()),
             InMapConfig::WebSocket {
                 http_config: config,
             } => Ok(Box::new(crate::map::ws::server::Server {
-                config: config.clone(),
+                config,
                 ..Default::default()
             })),
             InMapConfig::HttpFilter(c) => Ok(Box::new(ruci::map::http_filter::Server {
-                config: c.clone(),
+                config: c,
                 ..Default::default()
             })),
             InMapConfig::H2 {
                 http_config: config,
                 is_grpc,
             } => Ok(Box::new(crate::map::h2::server::Server::new(
-                is_grpc,
-                config.clone(),
+                is_grpc, config,
             ))),
             #[cfg(feature = "quic")]
-            InMapConfig::Quic(c) => Ok(Box::new(quic::server::Server::new(c.clone()))),
+            InMapConfig::Quic(c) => Ok(Box::new(quic::server::Server::new(c))),
 
             #[cfg(feature = "quinn")]
-            InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(c.clone()))),
+            InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(c))),
 
             #[cfg(feature = "sockopt")]
             InMapConfig::TcpOptListener {
@@ -665,12 +656,12 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 ext,
             } => Ok(Box::new(crate::map::opt_net::TcpOptListener {
                 listen_addr: net::Addr::from_network_addr_url(&listen_addr)?,
-                sopt: sockopt.clone(),
+                sopt: sockopt,
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             })),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapConfig::TproxyTcpResolver(opts) => Ok(Box::new(TcpResolver::new(opts.clone()))),
+            InMapConfig::TproxyTcpResolver(opts) => Ok(Box::new(TcpResolver::new(opts))),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
             InMapConfig::TproxyUdpListener {
@@ -679,7 +670,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 ext,
             } => Ok(Box::new(crate::map::tproxy::UDPListener {
                 listen_addr: net::Addr::from_network_addr_url(listen_addr),
-                sopt: sockopt.clone(),
+                sopt: sockopt,
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             })),
             #[cfg(feature = "smoltcp")]
@@ -699,29 +690,21 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 file_name,
                 handshake_function,
             } => {
-                let r = crate::utils::try_get_file_content("", Some(&file_name));
-                match r {
-                    Ok(lua_bytes) => Ok(Box::new(crate::map::lua::LuaMap {
-                        lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
-                        handshake_f_key: handshake_function.to_string(),
-                        ext_fields: Some(MapExtFields::default()),
-                        file_source: file_source.clone(),
-                    })),
-                    Err(e) => panic!("get lua file content err {e}"),
-                }
+                let lua_text = read_file_fn(file_name.into())?;
+
+                Ok(Box::new(crate::map::lua::LuaMap {
+                    lua_text,
+                    handshake_f_key: handshake_function.to_string(),
+                    ext_fields: Some(MapExtFields::default()),
+                    file_source,
+                }))
             }
             #[cfg(feature = "lwip")]
             InMapConfig::StackLwip => Ok(Box::new(tcp_ip_stack_lwip::Stack {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {
-                let sc = tls::server::TlsServerOptions {
-                    cert: PathBuf::from(c.cert.clone()),
-                    key: PathBuf::from(c.key.clone()),
-                    alpn: c.alpn.clone(),
-                };
-
-                let sc = ServerPEMOptions::from(&sc, read_file_fn)?;
+                let sc = ServerPEMOptions::from(&c, read_file_fn)?;
 
                 Ok(Box::new(ruci::map::tls::mitm::MITM {
                     sc,
@@ -756,15 +739,15 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
             OutMapConfig::Stdio(sc) => sc.try_into(),
             OutMapConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
-                    i_name: f.i.clone(),
-                    o_name: f.o.clone(),
+                    i_name: f.i,
+                    o_name: f.o,
                     sleep_interval: f.sleep_interval.map(Duration::from_millis),
                     bytes_per_turn: f.bytes_per_turn,
-                    ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
+                    ext_fields: f.ext.map(|e| e.to_ext_fields()),
                 };
                 Ok(Box::new(s))
             }
-            OutMapConfig::Blackhole => Ok(Box::<BlackHole>::default()),
+            OutMapConfig::Blackhole => Ok(BlackHole::boxed()),
 
             OutMapConfig::Direct(dc) => {
                 let mut m = Box::<Direct>::default();
@@ -777,21 +760,18 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
             OutMapConfig::BindDialer(dc) => dc.try_into(),
             OutMapConfig::Adder(i) => Ok(i.into()),
             OutMapConfig::Counter => Ok(Box::<counter::Counter>::default()),
-            OutMapConfig::Recorder(c) => Ok(Box::new(RecorderMap::new(c.clone()))),
+            OutMapConfig::Recorder(c) => Ok(c.into()),
 
-            OutMapConfig::TLS(c) => {
-                let a = tls::client::Client::new(c.clone());
-                Ok(Box::new(a))
-            }
+            OutMapConfig::TLS(c) => Ok(c.into()),
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             OutMapConfig::NativeTLS(c) => Ok(Box::new(crate::map::native_tls::Client {
-                config: c.clone(),
+                config: c,
                 ext_fields: Some(MapExtFields::default()),
             })),
-            OutMapConfig::Http => Ok(Box::new(http_proxy::Client::default())),
+            OutMapConfig::Http => Ok(http_proxy::Client::boxed()),
             OutMapConfig::Socks5(c) => {
-                let u = c.userpass.clone().unwrap_or_default();
+                let u = c.userpass.unwrap_or_default();
                 let mut a = socks5::client::Client {
                     up: if u.is_empty() {
                         None
@@ -811,7 +791,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                 Ok(Box::new(a))
             }
             OutMapConfig::WebSocket(c) => {
-                let client = ws::client::Client::new(c.clone());
+                let client = ws::client::Client::new(c);
 
                 Ok(Box::new(client))
             }
@@ -820,28 +800,24 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                 is_grpc,
             } => Ok(Box::new(crate::map::h2::client::SingleClient::new(
                 is_grpc.unwrap_or_default(),
-                config.clone(),
+                config,
             ))),
             OutMapConfig::H2Mux {
                 http_config: config,
                 is_grpc,
             } => {
-                let m = crate::map::h2::client::MuxClient::new(
-                    is_grpc.unwrap_or_default(),
-                    config.clone(),
-                );
+                let m = crate::map::h2::client::MuxClient::new(is_grpc.unwrap_or_default(), config);
 
                 Ok(Box::new(m))
             }
             #[cfg(feature = "quic")]
             OutMapConfig::Quic(c) => Ok(Box::new(
-                quic::client::Client::new(c.clone()).expect("legal quic client config"),
+                quic::client::Client::new(c).expect("legal quic client config"),
             )),
 
             #[cfg(feature = "quinn")]
             OutMapConfig::Quic(c) => Ok(Box::new(
-                crate::map::quinn::client::Client::new(c.clone())
-                    .expect("legal quic client config"),
+                crate::map::quinn::client::Client::new(c).expect("legal quic client config"),
             )),
 
             #[cfg(feature = "sockopt")]
@@ -850,7 +826,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                 more_num_of_files,
                 dns_client,
             } => Ok(Box::new(crate::map::opt_net::OptDirect::new(
-                sockopt.clone(),
+                sockopt,
                 more_num_of_files,
                 dns_client
                     .as_ref()
@@ -858,7 +834,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
             )?)),
             #[cfg(feature = "sockopt")]
             OutMapConfig::OptDialer(sopt) => {
-                Ok(Box::new(crate::map::opt_net::OptDialer::new(sopt.clone())?))
+                Ok(Box::new(crate::map::opt_net::OptDialer::new(sopt)?))
             }
 
             #[cfg(feature = "steganography")]
@@ -881,7 +857,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                         lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
-                        file_source: value.file_source.clone(),
+                        file_source: value.file_source,
                     })),
                     Err(_) => todo!(),
                 }
