@@ -40,16 +40,18 @@ chrono = "0.4.34"
 
 [features]
 default = ["lua", "route","geoip"]
+
+tun = ["ruci/tun"]
+trace = ["ruci/trace"]
+
 lua = ["mlua"]
 
 route = ["ipnet" ,"iprange" ,"regex"]
 
 geoip = ["maxminddb", "route"]
 
-tun = ["ruci/tun"]
 sockopt = ["libc", "socket2"]
 
-trace = ["ruci/trace"]
 
 [[example]]
 name = "chain"
