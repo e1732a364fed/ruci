@@ -125,18 +125,10 @@ impl Args {
             config_file_name: Some(self.config.clone()),
             config_file_content: "".to_string(),
             data_source: None,
-            in_memory: self.in_memory,
-            log_level: self.log_level,
-            log_file: self.log_file.clone(),
-            log_dir: self.log_dir.clone(),
             #[cfg(any(feature = "lua", feature = "lua54"))]
             infinite: self.infinite,
             #[cfg(feature = "trace")]
             trace: self.trace,
-            #[cfg(feature = "api_server")]
-            api_server: self.api_server,
-            #[cfg(feature = "api_server")]
-            api_addr: self.api_addr.clone(),
         }
     }
 }

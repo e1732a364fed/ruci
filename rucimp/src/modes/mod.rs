@@ -130,27 +130,6 @@ pub struct CoreArgs {
     #[serde(skip)]
     pub data_source: Option<Arc<DataSource>>,
 
-    /// If true, if the config is a download url, it will not store it in
-    /// file. Only valid when "utils" feature is on.
-    #[serde(default)]
-    pub in_memory: bool,
-
-    pub log_level: Option<LevelWrapper>,
-
-    /// Specify the log file prefix name.
-    ///
-    /// if empty string is given, no log file will be generated;
-    ///
-    /// if the flag is not given, log file will be generated with default name
-    pub log_file: Option<String>,
-
-    /// Specify the directory where log files would be in
-    ///
-    /// if empty string is given, log file will be generated in default folder
-    ///
-    /// if the flag is not given, log file will be generated in default folder
-    pub log_dir: Option<String>,
-
     /// Use infinite dynamic chain that is written in the lua config file (the "Infinite"
     /// global variable must exist)
     #[cfg(any(feature = "lua", feature = "lua54"))]
@@ -161,14 +140,6 @@ pub struct CoreArgs {
     #[cfg(feature = "trace")]
     #[serde(default)]
     pub trace: bool,
-
-    #[cfg(feature = "api_server")]
-    #[serde(default)]
-    pub api_server: bool,
-
-    /// Default is "127.0.0.1:40681"
-    #[cfg(feature = "api_server")]
-    pub api_addr: Option<String>,
 }
 
 /// blocking until engine loop stopped
