@@ -56,12 +56,12 @@ impl AdderConn {
 
         let r = self.base.as_mut().poll_read(cx, &mut rb);
 
-        let x = rb.filled().len();
-        self.r_buf.resize(x, 0);
+        let fl = rb.filled().len();
+        self.r_buf.resize(fl, 0);
 
-        let x: i16 = self.add as i16;
+        let to_add: i16 = self.add as i16;
         for a in self.r_buf.iter_mut() {
-            *a = (x + *a as i16) as u8;
+            *a = (to_add + *a as i16) as u8;
         }
 
         r
@@ -106,7 +106,7 @@ impl AsyncWrite for AdderConn {
         match self.direction {
             AddDirection::Read => self.base.as_mut().poll_write(cx, buf),
             _ => {
-                let x: i16 = self.add as i16;
+                let to_add: i16 = self.add as i16;
 
                 {
                     let a_buf = &mut self.w_buf;
@@ -114,7 +114,7 @@ impl AsyncWrite for AdderConn {
                     a_buf.extend_from_slice(buf);
 
                     for a in a_buf.iter_mut() {
-                        *a = (x + *a as i16) as u8;
+                        *a = (to_add + *a as i16) as u8;
                     }
                 }
                 self.write_by_w_buf(cx)

@@ -186,8 +186,8 @@ impl Engine {
 
         self.inbounds = Vec::from_iter(gi.into_iter().map(|(tag, g)| {
             let g = IndexInfinite::new(tag, Box::new(g));
-            let x: DMIterBox = Box::new(g);
-            x
+            let dmb: DMIterBox = Box::new(g);
+            dmb
         }));
 
         let mut first_o: Option<DMIterBox> = None;
@@ -196,11 +196,11 @@ impl Engine {
             .into_iter()
             .map(|(tag, g)| {
                 let g = IndexInfinite::new(tag.clone(), Box::new(g));
-                let x: DMIterBox = Box::new(g);
+                let dmb: DMIterBox = Box::new(g);
                 if first_o.is_none() {
-                    first_o = Some(x.clone());
+                    first_o = Some(dmb.clone());
                 }
-                (tag, x)
+                (tag, dmb)
             })
             .collect();
 

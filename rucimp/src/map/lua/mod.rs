@@ -320,8 +320,8 @@ impl UserData for RustConn {
 
             let cx = unsafe { &mut *(void as *mut Context<'_>) };
 
-            let x = this.conn.as_mut().poll_flush(cx);
-            Ok(EmptyPollResult(x))
+            let r = this.conn.as_mut().poll_flush(cx);
+            Ok(EmptyPollResult(r))
         });
 
         methods.add_method_mut("poll_close", |_, this, cx_ll: LuaLightUserData| {
@@ -330,8 +330,8 @@ impl UserData for RustConn {
 
             let cx = unsafe { &mut *(void as *mut Context<'_>) };
 
-            let x = this.conn.as_mut().poll_shutdown(cx);
-            Ok(EmptyPollResult(x))
+            let r = this.conn.as_mut().poll_shutdown(cx);
+            Ok(EmptyPollResult(r))
         });
 
         methods.add_method_mut(
@@ -342,8 +342,8 @@ impl UserData for RustConn {
 
                 let cx = unsafe { &mut *(cx_void as *mut Context<'_>) };
 
-                let x = this.conn.as_mut().poll_write(cx, &params.1);
-                Ok(WritePollResult(x))
+                let r = this.conn.as_mut().poll_write(cx, &params.1);
+                Ok(WritePollResult(r))
             },
         );
 
@@ -387,11 +387,11 @@ impl AsyncRead for LuaConn {
 
         let raw_ptr2 = buf as *mut ReadBuf<'_> as *mut c_void;
 
-        let x = read_f
+        let r = read_f
             .call::<i64>((LuaLightUserData(raw_ptr1), LuaLightUserData(raw_ptr2)))
             .unwrap();
 
-        match x {
+        match r {
             -1 => Poll::Pending,
             -2 => Poll::Ready(Err(io::Error::other("some err"))),
             _ => Poll::Ready(Ok(())),
@@ -409,11 +409,11 @@ impl AsyncWrite for LuaConn {
 
         let raw_ptr = cx as *mut Context<'_> as *mut c_void;
 
-        let x = wf
+        let r = wf
             .call::<i64>((LuaLightUserData(raw_ptr), BString::from(buf)))
             .unwrap();
 
-        match x {
+        match r {
             -1 => Poll::Pending,
             -2 => Poll::Ready(Err(io::Error::other("some err"))),
             n => Poll::Ready(Ok(n as usize)),

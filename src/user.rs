@@ -249,15 +249,15 @@ mod test {
         um.add_user(up);
         um.add_user(up2);
 
-        let x = um.auth_user_by_authstr("plaintext:u");
+        let o = um.auth_user_by_authstr("plaintext:u");
 
-        if x.is_some() {
+        if o.is_some() {
             bail!("shit,not none");
         }
 
-        let x = um.auth_user_by_authstr("plaintext:u2\np2");
+        let o = um.auth_user_by_authstr("plaintext:u2\np2");
 
-        if x.is_none() {
+        if o.is_none() {
             bail!("shit,none")
         } else {
             Ok(())

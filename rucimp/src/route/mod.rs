@@ -444,13 +444,17 @@ mod test {
         };
         let a = Addr::default();
         let opts = Vec::new();
-        let x = selector.select(false, &a, "listen1", &opts).await;
+        let o = selector.select(false, &a, "listen1", &opts).await;
 
-        println!("{:?}", x);
+        assert!(o.is_some());
 
-        let x = selector.select(false, &a, "listen2", &opts).await;
+        println!("{:?}", o);
 
-        println!("{:?}", x);
+        let o = selector.select(false, &a, "listen2", &opts).await;
+
+        assert!(o.is_some());
+
+        println!("{:?}", o);
 
         Ok(())
     }

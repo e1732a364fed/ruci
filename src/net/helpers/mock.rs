@@ -51,15 +51,15 @@ impl AsyncWrite for MockTcpStream {
         _: &mut Context,
         buf: &[u8],
     ) -> Poll<Result<usize, Error>> {
-        let mut x = Vec::from(buf);
+        let mut bv = Vec::from(buf);
 
         if let Some(swt) = &self.write_target {
             let mut v = swt.lock();
-            v.append(&mut x);
+            v.append(&mut bv);
         } else if self.write_data.is_empty() {
-            self.write_data = x;
+            self.write_data = bv;
         } else {
-            self.write_data.append(&mut x)
+            self.write_data.append(&mut bv)
         }
 
         Poll::Ready(Ok(buf.len()))

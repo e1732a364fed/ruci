@@ -99,21 +99,21 @@ fn get_io_bounds_by_config_and_selector_map(
     let ibs = c.get_inbounds(file_source.clone());
     let v: Vec<DMIterBox> = ibs
         .into_iter()
-        .map(|v| {
+        .map(|vec| {
             // 这里要求所有的 Map 的 get_chain_tag 均不为空
-            let tag = v.last().unwrap().get_chain_tag().to_string();
-            let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
+            let tag = vec.last().unwrap().get_chain_tag().to_string();
+            let inbound: Vec<_> = vec.into_iter().map(Arc::new).collect();
 
             //tracing::debug!("try remove from selector map: {} {:?}", tag, selector_map);
 
             let selector = Box::new(selector_map.remove(&tag).unwrap());
 
-            let x: DMIterBox = Box::new(Finite {
+            let b: DMIterBox = Box::new(Finite {
                 mb_vec: inbound,
                 current_index: -1,
                 selector,
             });
-            x
+            b
         })
         .collect();
 

@@ -150,7 +150,7 @@ impl Server {
                         }
                     };
                     let bs = bs.as_slice();
-                    let colon_index = match bs.iter().position(|x| *x == b':') {
+                    let colon_index = match bs.iter().position(|u| *u == b':') {
                         Some(i) => i,
                         None => {
                             let e1 = anyhow::anyhow!("http proxy: no colon, {}", &rh.value);

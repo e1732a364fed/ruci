@@ -65,14 +65,14 @@ pub fn match_grpc_request_header<'a, T: 'a>(r: &'a Request<T>) -> Result<(), Htt
     Ok(())
 }
 
-fn put_uvarint(buf: &mut [u8], mut x: usize) -> usize {
+fn put_uvarint(buf: &mut [u8], mut to_put: usize) -> usize {
     let mut i = 0;
-    while x >= 0x80 {
-        buf[i] = (x as u8) | 0x80;
-        x >>= 7;
+    while to_put >= 0x80 {
+        buf[i] = (to_put as u8) | 0x80;
+        to_put >>= 7;
         i += 1;
     }
-    buf[i] = x as u8;
+    buf[i] = to_put as u8;
     i + 1
 }
 
@@ -98,25 +98,25 @@ pub enum UVariantErr {
 
 /// Reads a variable-length integer from the buffer.
 pub fn read_uvarint(r: &mut BytesMut) -> (u64, Option<UVariantErr>) {
-    let mut x = 0u64;
+    let mut result = 0u64;
     let mut s = 0u8;
     for i in 0..MAX_VARINT_LEN64 {
         if r.is_empty() {
-            return (x, Some(UVariantErr::NoFB));
+            return (result, Some(UVariantErr::NoFB));
         }
         let b = r.get_u8();
 
         if b < 0x80 {
             if i == MAX_VARINT_LEN64 - 1 && b > 1 {
-                return (x, Some(UVariantErr::OverFlow));
+                return (result, Some(UVariantErr::OverFlow));
             }
-            return (x | (b as u64) << s, None);
+            return (result | (b as u64) << s, None);
         }
-        x |= ((b & 0x7f) as u64) << s;
+        result |= ((b & 0x7f) as u64) << s;
         s += 7;
     }
 
-    (x, Some(UVariantErr::OverFlow))
+    (result, Some(UVariantErr::OverFlow))
 }
 
 pub fn get_real_len(lp: usize) -> usize {

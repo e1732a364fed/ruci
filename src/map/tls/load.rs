@@ -128,9 +128,13 @@ pub fn load_key_from_pem(data: &[u8]) -> io::Result<PrivateKeyDer<'static>> {
             debug!("key type ECKey");
             Ok(PrivateKeyDer::Sec1(PrivateSec1KeyDer::from(data)))
         }
-        Ok(x) => Err(io::Error::new(
+        Ok(other_item) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("invalid key in {}, {:?}", String::from_utf8_lossy(data), x),
+            format!(
+                "invalid key in {}, {:?}",
+                String::from_utf8_lossy(data),
+                other_item
+            ),
         )),
         Err(e) => Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
     }

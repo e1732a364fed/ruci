@@ -400,7 +400,7 @@ impl Addr {
                 return ac
                     .lookup(n)
                     .await
-                    .map(|x| SocketAddr::new(x, *port))
+                    .map(|ipa| SocketAddr::new(ipa, *port))
                     .ok_or(anyhow!("resolve to empty socket_addr from {}", self));
             } else {
                 if tracing::enabled!(tracing::Level::DEBUG) {

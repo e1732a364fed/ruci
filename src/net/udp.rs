@@ -242,15 +242,15 @@ mod test {
         ) -> Poll<io::Result<usize>> {
             //debug!("MockUdp: write called");
 
-            let mut x = Vec::from(buf);
+            let mut bv = Vec::from(buf);
 
             if let Some(swt) = &self.write_target {
                 let mut v = swt.lock();
-                v.append(&mut x);
+                v.append(&mut bv);
             } else if self.write_data.is_empty() {
-                self.write_data = x;
+                self.write_data = bv;
             } else {
-                self.write_data.append(&mut x)
+                self.write_data.append(&mut bv)
             }
 
             Poll::Ready(Ok(buf.len()))
@@ -391,7 +391,7 @@ mod test {
             let ta = crate::net::Addr {
                 addr: NetAddr::Socket(
                     SocketAddr::from_str(ad2_str)
-                        .map_err(|x| io::Error::other(format!("{}", x)))?,
+                        .map_err(|e| io::Error::other(format!("{}", e)))?,
                 ),
                 network: Network::TCP,
             };

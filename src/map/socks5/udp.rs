@@ -169,8 +169,8 @@ mod test {
 
                 let r = ac.r.read(&mut buf).await;
                 println!("ok read");
-                let x = tx.send(r).await;
-                if x.is_err() {
+                let result = tx.send(r).await;
+                if result.is_err() {
                     break;
                 }
             }

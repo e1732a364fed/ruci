@@ -31,7 +31,7 @@ impl FileSource {
         file_name: &'a str,
     ) -> anyhow::Result<(Vec<u8>, Option<&'a str>)> {
         match self {
-            FileSource::Tar(v) => get_file_from_tar(file_name, v).map(|x| (x, None)),
+            FileSource::Tar(v) => get_file_from_tar(file_name, v).map(|data| (data, None)),
 
             FileSource::Folders(possible_addrs) => {
                 for dir in possible_addrs {

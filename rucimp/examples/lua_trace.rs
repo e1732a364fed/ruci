@@ -61,8 +61,8 @@ async fn main() -> anyhow::Result<()> {
 
         tokio::spawn(async move {
             loop {
-                let x = db_rx.recv().await;
-                match x {
+                let r = db_rx.recv().await;
+                match r {
                     Some(nc) => {
                         println!("db: {} {}", nc.0, nc.1)
                     }

@@ -178,8 +178,8 @@ impl StaticConfig {
         file_source: Arc<Option<crate::utils::FileSource>>,
     ) -> Option<Vec<RuleSet>> {
         let mut result = self.rule_route.clone().map(|rr| {
-            let x: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
-            x
+            let v: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
+            v
         });
         #[cfg(feature = "geoip")]
         {

@@ -125,8 +125,8 @@ async fn main() -> anyhow::Result<()> {
                 let api_server_args = args.api_server.clone();
                 let mut started = false;
                 for arg in api_server_args {
-                    let x = api::server::deal_args(arg, &args).await;
-                    if let Some(opts) = x {
+                    let oa = api::server::deal_args(arg, &args).await;
+                    if let Some(opts) = oa {
                         started = true;
                         start_engine(args.clone(), args.config.clone(), Some(opts)).await?;
                     }

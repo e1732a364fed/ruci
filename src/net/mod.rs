@@ -390,8 +390,8 @@ impl Stream {
         match self {
             Stream::Conn(conn) => conn.write(buf).await,
             Stream::AddrConn(ac) => {
-                let x = ac.default_write_to.as_ref();
-                match x {
+                let oa = ac.default_write_to.as_ref();
+                match oa {
                     Some(ta) => ac.w.write(buf, ta).await,
                     None => Err(std::io::Error::other(
                         "stream can't write udp directly without a target",
@@ -406,8 +406,8 @@ impl Stream {
         match self {
             Stream::Conn(conn) => conn.write_all(buf).await,
             Stream::AddrConn(ac) => {
-                let x = ac.default_write_to.as_ref();
-                match x {
+                let oa = ac.default_write_to.as_ref();
+                match oa {
                     Some(ta) => ac.w.write(buf, ta).await.map(|_| ()),
                     None => Err(std::io::Error::other(
                         "stream can't write udp directly without a target",

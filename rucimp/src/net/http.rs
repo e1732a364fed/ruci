@@ -73,7 +73,7 @@ pub fn match_request_http_header<'a, T: 'a + std::fmt::Debug>(
             let hh = r
                 .headers()
                 .get("host")
-                .map(|x| x.to_str().unwrap_or(""))
+                .map(|hv| hv.to_str().unwrap_or(""))
                 .unwrap();
 
             if hh != c.authority {

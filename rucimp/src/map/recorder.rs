@@ -39,10 +39,11 @@ impl From<&GlobalData> for SerializableGlobalData {
             read_handshake_timeout: gd.read_handshake_timeout,
             instance_start_time: gd.instance_start_time.map(|st| {
                 // chrono-0.4.38/src/offset/utc.rs
-                let x = st
+                let duration = st
                     .duration_since(time::UNIX_EPOCH)
                     .expect("system time before Unix epoch");
-                chrono::DateTime::from_timestamp(x.as_secs() as i64, x.subsec_nanos()).unwrap()
+                chrono::DateTime::from_timestamp(duration.as_secs() as i64, duration.subsec_nanos())
+                    .unwrap()
             }),
         }
     }
@@ -585,11 +586,9 @@ mod test {
         let sgd = SerializableGlobalData::from(&gd);
         println!("sgd {:?}  ", sgd.instance_start_time);
 
-        
         let gd2: GlobalData = (&sgd).into();
         println!("gd2   {:?}", gd2.instance_start_time);
 
-        
         let sgd2: SerializableGlobalData = SerializableGlobalData::from(&gd2);
         println!("sgd2   {:?}", sgd2.instance_start_time);
 
