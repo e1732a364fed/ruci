@@ -59,6 +59,8 @@ config = {
 
 要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 mapper (映射函数)
 
+rule_route 和 tag_route 同时出现时，程序只会采用 rule_route. 因为 rule_route 的内容涵盖了 tag_route 
+
 # 动态链
 
 演示动态链的基本用法：
@@ -80,7 +82,7 @@ selector 接受 this_index 和 data 作为输入, 返回一个新的index, index
 
 ---[[
 
--- 演示 动态链的 选择器用法
+-- 演示 有限动态链的 选择器用法
 
 
 function dyn_selectors(tag)

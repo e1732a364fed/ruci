@@ -72,7 +72,6 @@ impl route::OutSelector for RuleSetOutSelector {
             }
             None => self.default.clone(),
         }
-        //todo: add test
     }
 }
 
@@ -298,6 +297,8 @@ mod test {
 
     use std::net::Ipv4Addr;
 
+    use ruci::map::{acc::DynVecIterWrapper, math::Adder, MapperBox};
+
     use crate::COMMON_DIRS;
 
     use super::*;
@@ -328,7 +329,7 @@ mod test {
     }
 
     #[test]
-    fn tst_net() -> anyhow::Result<()> {
+    fn rs_net() -> anyhow::Result<()> {
         let mut rs = RuleSet::default();
 
         let mut nets = HashSet::new();
@@ -350,7 +351,7 @@ mod test {
 
     #[test]
     #[cfg(feature = "geoip")]
-    fn test_country() -> anyhow::Result<()> {
+    fn rs_country() -> anyhow::Result<()> {
         let mut rs = RuleSet::default();
         let mr = maxmind::open_mmdb("Country.mmdb", &COMMON_DIRS)?;
         rs.mmdb_reader = Some(Arc::new(mr));
@@ -372,6 +373,66 @@ mod test {
 
         let r = rs.is_in_ta_ip_countries(false, &a);
         assert!(r);
+
+        Ok(())
+    }
+
+    fn get_miter_ab() -> DMIterBox {
+        let mut a = Adder::default();
+        a.addnum = 1;
+        let a: MapperBox = Box::new(a);
+
+        let b = Adder::default();
+        let b: MapperBox = Box::new(b);
+
+        let v = vec![a, b];
+        let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
+        let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
+        m
+    }
+    fn get_miter_a() -> DMIterBox {
+        let mut a = Adder::default();
+        a.addnum = 2;
+        let a: MapperBox = Box::new(a);
+
+        let v = vec![a];
+        let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
+        let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
+
+        m
+    }
+
+    #[tokio::test]
+    async fn test_selector() -> anyhow::Result<()> {
+        let m: DMIterBox = get_miter_ab();
+        let m2: DMIterBox = get_miter_a();
+
+        let mut outbounds_map = HashMap::new();
+        outbounds_map.insert("d1".to_string(), m);
+        let outbounds_map = Arc::new(outbounds_map);
+
+        let mut rs = RuleSet::default();
+        rs.out_tag = "d1".to_string();
+        let mut hs = HashSet::new();
+        hs.insert("listen1".to_string());
+        rs.in_tags = Some(hs);
+
+        let rsv = vec![rs];
+
+        let rsos = RuleSetOutSelector {
+            outbounds_rules_vec: rsv,
+            outbounds_map,
+            default: m2,
+        };
+        let a = Addr::default();
+        let opts = Vec::new();
+        let x = rsos.select(&a, "listen1", &opts).await;
+
+        println!("{:?}", x);
+
+        let x = rsos.select(&a, "listen2", &opts).await;
+
+        println!("{:?}", x);
 
         Ok(())
     }

@@ -208,7 +208,6 @@ mod test {
 
         let v = vec![a, b];
         let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
-        // let m: DMIterBox = Box::new(DynMIterWrapper(Box::new(v.into_iter())));
         let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
         m
     }
@@ -219,7 +218,6 @@ mod test {
 
         let v = vec![a];
         let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
-        //let m: DMIterBox = Box::new(DynMIterWrapper(Box::new(v.into_iter())));
         let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
 
         m
@@ -287,7 +285,6 @@ mod test {
         };
 
         let u = PlainText::new("user".to_string(), "pass".to_string());
-        //let ub: Box<dyn User> = Box::new(u);
 
         let mut params: Vec<Option<Box<dyn Data>>> = Vec::new();
         params.push(Some(Box::new(u)));
