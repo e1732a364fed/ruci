@@ -10,8 +10,8 @@ pub mod ws;
 #[cfg(feature = "steganography")]
 pub mod steganography;
 
-#[cfg(feature = "quic")]
-pub mod quic;
+// #[cfg(feature = "quic")]
+// pub mod quic;
 
 #[cfg(feature = "quinn")]
 pub mod quinn;

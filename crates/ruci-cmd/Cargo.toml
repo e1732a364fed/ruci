@@ -51,7 +51,7 @@ lua = ["rucimp/lua"]
 lua54 = ["rucimp/lua54"]
 tun = ["rucimp/tun"]
 
-quic = ["rucimp/quic"]
+# quic = ["rucimp/quic"]
 quinn = ["rucimp/quinn"]
 
 api_server = ["chrono", "axum", "tower", "tower-http"]

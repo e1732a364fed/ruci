@@ -256,8 +256,8 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
         "lua54",
         #[cfg(feature = "quinn")]
         "quinn",
-        #[cfg(feature = "quic")]
-        "quic",
+        // #[cfg(feature = "quic")]
+        // "quic",
         #[cfg(feature = "tun")]
         "tun",
         #[cfg(feature = "smoltcp")]

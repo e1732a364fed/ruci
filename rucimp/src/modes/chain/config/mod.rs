@@ -20,8 +20,8 @@ pub mod dynamic;
 
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
-#[cfg(feature = "s2n-quic")]
-use crate::map::quic;
+// #[cfg(feature = "s2n-quic")]
+// use crate::map::quic;
 
 use bytes::BytesMut;
 use ruci::{
@@ -372,7 +372,8 @@ pub enum InMapConfig {
     WebSocket {
         http_config: Option<CommonConfig>,
     },
-    #[cfg(any(feature = "quic", feature = "quinn"))]
+    // #[cfg(any(feature = "quic", feature = "quinn"))]
+    #[cfg(any(feature = "quinn"))]
     Quic(crate::map::quic_common::ServerConfig),
 
     /// tcp/ip stack
@@ -436,7 +437,8 @@ pub enum OutMapConfig {
 
         http_config: Option<CommonConfig>,
     },
-    #[cfg(any(feature = "quic", feature = "quinn"))]
+    // #[cfg(any(feature = "quic", feature = "quinn"))]
+    #[cfg(any(feature = "quinn"))]
     Quic(crate::map::quic_common::ClientConfig),
 
     #[cfg(feature = "steganography")]
@@ -650,9 +652,8 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             } => Ok(Box::new(crate::map::h2::server::Server::new(
                 is_grpc, config,
             ))),
-            #[cfg(feature = "quic")]
-            InMapConfig::Quic(c) => Ok(Box::new(quic::server::Server::new(c))),
-
+            // #[cfg(feature = "quic")]
+            // InMapConfig::Quic(c) => Ok(Box::new(quic::server::Server::new(c))),
             #[cfg(feature = "quinn")]
             InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(
                 c,
@@ -838,11 +839,10 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
 
                 Ok(Box::new(m))
             }
-            #[cfg(feature = "quic")]
-            OutMapConfig::Quic(c) => Ok(Box::new(
-                quic::client::Client::new(c).expect("legal quic client config"),
-            )),
-
+            // #[cfg(feature = "quic")]
+            // OutMapConfig::Quic(c) => Ok(Box::new(
+            //     quic::client::Client::new(c).expect("legal quic client config"),
+            // )),
             #[cfg(feature = "quinn")]
             OutMapConfig::Quic(c) => Ok(Box::new(
                 crate::map::quinn::client::Client::new(c, &file_source)
