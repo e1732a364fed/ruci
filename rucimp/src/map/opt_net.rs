@@ -19,7 +19,7 @@ pub struct TcpOptListener {
 
 impl Name for TcpOptListener {
     fn name(&self) -> &'static str {
-        "listener"
+        "tcp_opt_listener"
     }
 }
 impl TcpOptListener {
