@@ -135,4 +135,53 @@ mod test {
         assert!(false == matches!(first_m, OutMapperConfig::Counter));
         Ok(())
     }
+
+    #[test]
+    fn testout2() -> Result<()> {
+        let lua = Lua::new();
+        let globals = lua.globals();
+
+        let text = r#"
+        listen = { Listener = { TcpListener = "0.0.0.0:1080" }  }
+        chain1 = {
+            listen,
+            { Socks5 = {   } },
+        }
+        
+        config = {
+            listen = {
+                {chain = chain1, tag = "listen1"}
+            },
+            dial = {
+                { 
+                    tag="dial1", chain = {
+                        { Dialer = { TcpDialer = "0.0.0.0:1080" }  }
+                    } 
+                }
+            }
+        }
+        "#;
+
+        let c: StaticConfig = load(text)?;
+
+        println!("{:#?}", c);
+        let dial = c.dial.unwrap();
+        let first_listen_group = dial.first().unwrap();
+        let last_m = first_listen_group.chain.last().unwrap();
+        assert!(matches!(InMapperConfig::Counter, last_m));
+
+        let first_m = first_listen_group.chain.first().unwrap();
+        let str = "0.0.0.0:1080".to_string();
+        assert!(matches!(
+            first_m,
+            OutMapperConfig::Dialer(Dialer::TcpDialer(str))
+        ));
+        let str2 = "0.0.0.0:1".to_string();
+        assert!(matches!(
+            first_m,
+            OutMapperConfig::Dialer(Dialer::TcpDialer(str2)) //won't match inner fields
+        ));
+        assert!(false == matches!(first_m, OutMapperConfig::Counter));
+        Ok(())
+    }
 }

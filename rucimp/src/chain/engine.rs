@@ -15,16 +15,17 @@ pub struct StaticEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<TransmissionInfo>,
 
-    pub config: StaticConfig,
-
+    //pub config: StaticConfig,
     servers: Vec<Vec<Box<dyn MapperSync>>>,
     clients: Vec<Vec<Box<dyn MapperSync>>>,
 }
 
 impl StaticEngine {
-    pub fn init(&mut self) {
-        self.servers = self.config.get_listens();
-        self.clients = self.config.get_dials();
+    pub fn init(&mut self, sc: StaticConfig) {
+        //self.config = sc;
+
+        self.servers = sc.get_listens();
+        self.clients = sc.get_dials();
     }
 
     pub fn server_count(&self) -> usize {
@@ -43,6 +44,23 @@ impl StaticEngine {
                 tokio::spawn(task.1);
             }
         })
+    }
+
+    /// blocking
+    pub async fn block_run(
+        &'static self,
+    ) -> io::Result<Vec<Result<io::Result<()>, tokio::task::JoinError>>> {
+        let mut hv = Vec::new();
+        self.start_with_tasks().await.map(|tasks| {
+            for task in tasks {
+                let h1 = tokio::spawn(task.0);
+                let h2 = tokio::spawn(task.1);
+                hv.push(h1);
+                hv.push(h2);
+            }
+        })?;
+        let r = futures::future::join_all(hv).await;
+        Ok(r)
     }
 
     pub async fn start_with_tasks(

@@ -394,6 +394,19 @@ impl Addr {
             },
         }
     }
+
+    //127.0.0.1:80
+    pub fn from_ip_addr_str(network: &'static str, s: String) -> io::Result<Self> {
+        let ns: Vec<_> = s.split(":").collect();
+        Addr::from_strs(
+            network,
+            "",
+            ns[0],
+            ns[1]
+                .parse::<u16>()
+                .map_err(|e| io::Error::other(format!("{}", e)))?,
+        )
+    }
 }
 
 /// 以 url 的格式 描述 Addr

@@ -10,9 +10,9 @@ use self::net::TransmissionInfo;
 
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TcpDialer {
-    addr: Option<net::Addr>,
+    pub addr: Option<net::Addr>,
 }
 
 impl Name for TcpDialer {
@@ -100,10 +100,10 @@ impl Mapper for TcpDialer {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TcpStreamGenerator {
-    addr: Option<net::Addr>,
-    oti: Option<Arc<TransmissionInfo>>,
+    pub addr: Option<net::Addr>,
+    pub oti: Option<Arc<TransmissionInfo>>,
 }
 
 impl Name for TcpStreamGenerator {

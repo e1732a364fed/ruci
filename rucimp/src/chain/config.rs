@@ -7,7 +7,10 @@ pub mod lua;
 
 use std::path::PathBuf;
 
-use ruci::map::{socks5, tls, trojan, MapperSync, ToMapper};
+use ruci::{
+    map::{socks5, tls, trojan, MapperSync, ToMapper},
+    net,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
@@ -132,7 +135,16 @@ pub struct TrojanIn {
 impl ToMapper for InMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            InMapperConfig::Listener(_) => todo!(),
+            InMapperConfig::Listener(lis) => match lis {
+                Listener::TcpListener(tcp_l_str) => {
+                    let a = net::Addr::from_ip_addr_str("tcp", tcp_l_str.to_string()).unwrap();
+                    Box::new(ruci::map::network::TcpStreamGenerator {
+                        addr: Some(a),
+                        oti: None,
+                    })
+                }
+                Listener::UnixListener(_) => todo!(),
+            },
             InMapperConfig::Adder(i) => i.to_mapper(),
             InMapperConfig::Counter => Box::new(ruci::map::counter::Counter),
             InMapperConfig::TLS(c) => tls::server::ServerOptions {
@@ -172,7 +184,13 @@ impl ToMapper for InMapperConfig {
 impl ToMapper for OutMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            OutMapperConfig::Dialer(_) => todo!(),
+            OutMapperConfig::Dialer(d) => match d {
+                Dialer::TcpDialer(td_str) => {
+                    let a = net::Addr::from_ip_addr_str("tcp", td_str.to_string()).unwrap();
+                    Box::new(ruci::map::network::TcpDialer { addr: Some(a) })
+                }
+                Dialer::UnixDialer(_) => todo!(),
+            },
             OutMapperConfig::Adder(i) => i.to_mapper(),
             OutMapperConfig::Counter => Box::new(ruci::map::counter::Counter),
             OutMapperConfig::TLS(c) => {
