@@ -18,7 +18,7 @@ use tracing::debug;
 // (MIT)
 // https://github.com/zephyrchien/midori/blob/master/src/transport/h2/stream.rs
 
-const BUFFER_CAP: usize = 0x1000; //todo: change this
+const BUFFER_CAP: usize = 0x4000; //todo: adjust this
 
 pub struct H2Stream {
     recv: RecvStream,
