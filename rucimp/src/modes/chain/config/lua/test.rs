@@ -409,9 +409,13 @@ fn test_rule_route() -> mlua::Result<()> {
     let c: StaticConfig = load_static(text, None)?;
 
     println!("{:#?}", c);
-    let tr = c.get_rule_route(&crate::utils::FileSource::default());
-    assert!(tr.is_some());
-    println!("{:#?}", tr);
+
+    #[cfg(feature = "route")]
+    {
+        let tr = c.get_rule_route(&crate::utils::FileSource::default());
+        assert!(tr.is_some());
+        println!("{:#?}", tr);
+    }
 
     //println!("{:#?}", c.get_default_and_outbounds_map());
 
