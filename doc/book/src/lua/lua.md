@@ -28,7 +28,6 @@ Config = {
     outbounds = {},
     fallback_route = {},
     tag_route = {},
-    rule_route = {},
 }
 ```
 

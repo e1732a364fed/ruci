@@ -5,7 +5,6 @@
 
 Config = {
     tag_route = {},
-    rule_route = {},
     fallback_route = {},
 }
 ```
@@ -49,48 +48,7 @@ fallback_route 是一个 字符串对 的列表。上面示例就是表示 inbou
 outbound chain "fallback_dial1" 中。listen1 和 fallback_dial1 是它们的 tag.
 
 
- 
-# rule_route
-
-首先给出 与上面的 [tag_route](#tag_route) 等价的 rule_route, 我们来对比学习：
-
-```lua
-rule_route = {
-    {
-        mode = "WhiteList",
-        out_tag = "d1",
-        in_tags = {"l1"}
-    }, {
-        mode = "WhiteList",
-        out_tag = "d2",
-        in_tags = {"l3","l2"}
-    }, {
-        mode = "WhiteList",
-        out_tag = "fallback_d",
-        in_tags = {"l1"},
-        is_fallback = true
-    }
-}
-```
-
-
-rule_route 和 tag_route 同时出现时, 程序只会采用 rule_route. 因为 rule_route 的内容涵盖了 tag_route 
-
-rule_route 的 mode 可为 WhiteList 或 BlackList
-
-WhiteList意思是, 给出的规则必须完全匹配, 才算通过.  
-BlackList 意思是, 给出的规则有任意一项匹配就算通过.
-一般BlackList 用于 路由到 BlackHole, 故名. 
-
-
-不过，上面的情况我们只给了一个 规则，那就是 in_tags, 只有一个规则时，WhiteList 和 BlackList 是一样的。
-
-is_fallback 若为 true, 则 相当于上面的 [fallback_route](#fallback_route) 模式。
-
-因此可以发现, rule_route 可以替换掉 tag_route 和 fallback_route, 属于更高级、更通用的 配置。
-
-
-下面是一个复杂的情况，有多个规则（rule_route 中 除了 out_tag，mode 以外，其它的项 都是规则）：
+下面是一个复杂的情况，有多个规则
 
 ```lua
 Config = {
@@ -100,34 +58,9 @@ Config = {
     outbounds = { tag = "d1", chain = { "Blackhole" } },
 
     tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  },
-
-    rule_route = { 
-        { 
-            out_tag = "dial1", 
-            mode = "WhiteList",
-
-            in_tags = { "listen1" } ,
-            is_fallback = false,
-             userset = {
-                { "plaintext:u0 p0", "trojan:mypassword" },
-                { "plaintext:u1 p1", "trojan:password1" },
-            },
-            ta_ip_countries = { "CN", "US" },
-            ta_networks = { "tcp", "udp" },
-            ta_ipv4 = { "192.168.1.0/24" },
-            ta_domain_matcher = {
-                domain_regex = {  "[a-z]+@[a-z]+",
-                "[a-z]+" },
-                domain_set = { "www.baidu.com" },
-            }
-        } 
-    }
 }
 ```
 
-这里 ta_ 开头的 四项 都是和 目标地址 有关的，它们是 通过请求网址 的 域名、ip地区 分流 的常见做法。
-
-userset 用于判断 在 InChain 中 那些需要 密码 的 Map 中 使用了 哪些 密码 的用户 属于本分流
 
 
 # 接下来

@@ -89,21 +89,6 @@ coroutine.yield， 这个就照抄就行。
 
 不难，习惯就好。
 
-
-# 其它
-
-
-## 有限动态链
-
-ruci 还有一个 有限动态链 的用法，其功能 完全介于 Infinite (完全动态链) 和 
-Config (静态链) 之间，请在 项目中搜索 Dyn_Selectors 以进行学习
-
-简单讲 有限动态链 就是 基于 Config 的 列表，动态返回 index. 因此虽然它是
-动态的，但却要预先定义好每一种可能，因此叫做 有限动态链 。
-
-因为其夹在 Config 和 Infinite 之间，并没有什么出彩的地方。但是其使用难度比
-Infinite 要低很多。
-
 # 接下来
 
 [lua自定义协议](user_defined_protocol.md)

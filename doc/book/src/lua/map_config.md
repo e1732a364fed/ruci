@@ -7,9 +7,10 @@
 
 在 Map说明的 首部标有 in, out 或 in/out 字样，表明可用于 InMapConfig 还是 OutMapConfig
 
-没有任何示例的Map 意为着其写法为 `"Name"`, 不 外加大括号，如 `"Echo"` , `"Blackhole"`
+配置的基本写法为 `{type = "Name"}`，内部还可能有其它项。
 
-其它的配置均要外加 大括号，如 `type = "Direct"` 意味着要 写为 `{type = "Direct"}`  才算一个完整的 table 
+没有任何示例的Map 意为着其写法仅为 `{type = "Name"}`，如 `{ type = "Echo"}` , `{type = "Blackhole"}`,  `{type = "Direct"}`  
+
 
 标有 ` --optional` 的项为可选项。
 
@@ -47,7 +48,7 @@ type = "Direct"
 
 
 ```lua
-Direct = {
+{
     dns_client = {
         --...
     }--optional
@@ -63,7 +64,7 @@ OptDirect 的出现是 为了给 Direct 添加 sockopt 选项。使用 tproxy �
 
 
 ```lua
-OptDirect = {
+{
     sockopt= {
         --...
     },
@@ -102,7 +103,7 @@ BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中至少�
 
 
 ```lua
- BindDialer = {
+{
     bind_addr = "",
     dial_addr = "",
 
@@ -155,7 +156,7 @@ ip 拨号是建立一个虚拟网卡，一般为 tun. 这个一般可以用于�
 in
 
 ```lua
-  OptDialer = {
+{
     dial_addr= "",
     sockopt= {}, --optional
     dns_client = {}, --optional
@@ -170,7 +171,7 @@ in
 in
 
 ```lua
-Listener = {
+{
     listen_addr ="",
     ext={},--optional
 }
@@ -181,7 +182,7 @@ Listener = {
 in
 
 ```lua
-TcpOptListener = {
+{
     listen_addr ="",
     sockopt={},
     ext={},--optional
@@ -197,7 +198,7 @@ TcpOptListener = {
 in/out
 
 ```lua
- Stdio = {
+{
     write_mode = "Bytes", --optional
     ext={},--optional
 }
@@ -212,7 +213,7 @@ in/out
 in/out
 
 ```lua
-  Fileio = {
+{
     i="",
     o="",
     sleep_interval=1, --optional, 正整数
@@ -239,38 +240,37 @@ tproxy 的配置要复杂一些，要分 tcp 和 udp 两部分配置，自动路
 
 ```lua
 local tproxy_tcp_listen = {
-    TcpOptListener = {
-        listen_addr = "0.0.0.0:12345",
-        sockopt = {
-            tproxy = true,
-        }
+    type = "TcpOptListener",
+    listen_addr = "0.0.0.0:12345",
+    sockopt = {
+        tproxy = true,
     }
 }
 
 local tproxy_listen_tcp_chain = {
     tproxy_tcp_listen, {
-        TproxyTcpResolver = {
-            port = 12345,
-            --auto_route_tcp = true, -- only set route for tcp
-            auto_route = true,         -- auto_route will set route for both tcp and udp at the appointed port
+        type = "TproxyTcpResolver",
+        port = 12345,
+        --auto_route_tcp = true, -- only set route for tcp
+        auto_route = true,         -- auto_route will set route for both tcp and udp at the appointed port
 
-            route_ipv6 = true,         -- 如果为true, 则  也会 对 ipv6 网段执行 自动路由
+        route_ipv6 = true,         -- 如果为true, 则  也会 对 ipv6 网段执行 自动路由
 
-            proxy_local_udp_53 = true, -- 如果为true, 则 udp 53 端口不会直连, 而是会流经 tproxy
+        proxy_local_udp_53 = true, -- 如果为true, 则 udp 53 端口不会直连, 而是会流经 tproxy
 
-            -- local_net4 = "192.168.0.0/16" -- 直连 ipv4 局域网段 不给出时, 默认即为 192.168.0.0/16
-        }
+        -- local_net4 = "192.168.0.0/16" -- 直连 ipv4 局域网段 不给出时, 默认即为 192.168.0.0/16
+        
     }
 }
 
 
 local tproxy_udp_listen = {
-    TproxyUdpListener = {
-        listen_addr = "udp://0.0.0.0:12345",
-        sockopt = {
-            tproxy = true,
-        }
+    type = "TproxyUdpListener",
+    listen_addr = "udp://0.0.0.0:12345",
+    sockopt = {
+        tproxy = true,
     }
+    
 }
 
 local tproxy_listen_inbounds = { 
@@ -291,7 +291,7 @@ local tproxy_listen_inbounds = {
 ### TproxyUdpListener
 
 ```lua
-TproxyUdpListener = {
+{
     listen_addr="",
     sockopt={},
     ext={}, --optional
@@ -307,7 +307,7 @@ TproxyUdpListener = {
 rucimp/src/map/tproxy/route/mod.rs
 
 ```lua
-TproxyTcpResolver= {
+{
     -- tproxy 监听的端口, 默认为 12345
     port=12345, --  正整数
     route_ipv6= false,
@@ -340,13 +340,13 @@ in/out
 ```lua
 type = "Socks5Http"
 type = "Socks5"
-Http = {}
+type = "Http"
 ```
 
 可选用户密码组合, 内容均为可选
 
 ```lua
-Socks5Http = { -- Socks5, Http
+{ -- Socks5, Http
     userpass: "username1 password1",
     more: { "username2 password2", "username3 password3"},
 }
@@ -359,7 +359,7 @@ Socks5Http = { -- Socks5, Http
 
 in:
 ```lua
-Trojan = {
+{
     password: "password1",
     more: { "password2", "password3"},
 }
@@ -380,7 +380,7 @@ in/out
 in:
 
 ```lua
- Tls = {
+{
     cert="c.crt",
     key="k.key",
     alpn = { "h2", "h3"},--optional
@@ -390,7 +390,7 @@ in:
 out:
 
 ```lua
- Tls = {
+{
     host="www.myhost.com",
     insecure=false,
     alpn = { "h2", "h3"},--optional
@@ -419,7 +419,7 @@ grpc 也是在 http2 配置中设置
 in
 
 ```lua
-H2 ={
+{
     is_grpc=false,--optional
     http_config={},--optional
 }
@@ -431,7 +431,7 @@ H2 ={
 out
 
 ```lua
-H2Single ={
+{
     is_grpc=false,--optional
     http_config={},--optional
 },
@@ -444,7 +444,7 @@ H2Single ={
 out
 
 ```lua
-H2Mux ={
+{
     is_grpc=false,--optional
     http_config={},--optional
 },
@@ -458,7 +458,7 @@ in/out
 in:
 
 ```lua
-WebSocket={
+{
     http_config = {
        --...
     } --optional
@@ -470,7 +470,7 @@ WebSocket={
 out:
 
 ```lua
-WebSocket={
+{
     --... optional
 }
 ```
@@ -488,7 +488,7 @@ quic 的 监听端 是直接接管 udp 层的, listen_addr 在这里指定, 而�
 
 
 ```lua
-Quic= {
+{
     key_path="",
     cert_path="",
     listen_addr="",
@@ -499,7 +499,7 @@ Quic= {
 out:
 
 ```lua
-Quic= {
+ {
     server_addr="",
     server_name="www.mytest.com",
     cert_path="",--optional
@@ -516,12 +516,12 @@ ruci 提供的 test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 l
 cert_path：可给出 服务端的 证书, 这样就算 insecure = false 也通过验证
 证书须为 真证书, 或真fullchain 证书, 或自签的根证书
 
-## spe1: Steganography Protocol Exmaple1
+## SPE1: Steganography Protocol Exmaple1
 
 隐写示例协议1
 
 ```lua
-SPE1 = { qa = { { "q1", "a1" }, { "q2", "a2" } } }
+{ qa = { { "q1", "a1" }, { "q2", "a2" } } }
 ```
 
 qa 中要为 2的偶数次幂个 问答对，问答的内容任意填。但是内容越真实，隐写效果越好。
@@ -530,14 +530,14 @@ qa 中要为 2的偶数次幂个 问答对，问答的内容任意填。但是�
 如果不给出qa，则协议会使用自己生成的问答对。
 
 ```lua
-SPE1 = {}
+ { type = "SPE1"}
 ```
 
 
-## lua自定义协议
+## Lua: lua自定义协议
 
 ```lua
-Lua = { file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" }
+{ file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" }
 ```
 
 lua自定义协议 的写法是高级用法，见  [lua自定义协议](user_defined_protocol.md)
@@ -552,10 +552,10 @@ in/out
 in/out
 
 ```lua
-Adder=3
+{value=3}
 ```
 
-给 输出 的信息 每字节都加 给定的数值。比如 输入abc, Adder=1, 则输出为 bcd
+给 输出 的信息 每字节都加 给定的数值。比如 输入abc, value=1, 则输出为 bcd
 
 ## Counter
 
@@ -567,7 +567,7 @@ in/out
 in
 
 ```lua
-HttpFilter={
+{
     --...
 }
 ```
