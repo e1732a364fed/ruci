@@ -413,10 +413,7 @@ pub async fn serve(
         .unwrap_or_else(|| String::from(DEFAULT_API_ADDR));
     info!("api server starting {addr}");
 
-    let mut app = Router::new().route(
-        "/api/engine/stop",
-        get(stop_engine).with_state(s.close_engine_tx.clone()),
-    );
+    let mut app = Router::new().route("/api/status", get(get_status));
 
     #[cfg(feature = "file_server")]
     {
@@ -424,7 +421,10 @@ pub async fn serve(
     }
 
     app = app
-        .route("/api/status", get(get_status))
+        .route(
+            "/api/engine/stop",
+            get(stop_engine).with_state(s.close_engine_tx.clone()),
+        )
         .route(
             "/api/engine/start",
             post(start_engine).with_state(start_core_opts),
