@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "tokio" ]
     paths-ignore: 
-      - '/doc/**'
+      - 'doc/**'
       - '**.md'
       - '.github/workflows/*.yml'
       - '**/Makefile'
