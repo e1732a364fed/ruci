@@ -1,7 +1,7 @@
 /*!
  * route 模块定义了一些 如何由inbound 的各种信息判断应该选哪个 outbound 作为出口 的方法
  */
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use crate::{
     map::{AnyData, MIterBox},
@@ -64,7 +64,13 @@ impl OutSelector for TagOutSelector {
 }
 
 pub struct RouteRule {
-    pub users: Box<dyn user::UserTrait>,
+    pub users: user::UserVec,
+}
+
+impl Hash for RouteRule {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.users.hash(state);
+    }
 }
 
 #[derive(Debug)]

@@ -1,21 +1,31 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use std::hash::Hash;
 use std::sync::Mutex;
-
 /// 用于用户鉴权
 pub trait UserTrait {
-    fn identity_str(&self) -> String; //每个user唯一，通过比较这个string 即可 判断两个User 是否相等。相当于 user name
+    fn identity_str(&self) -> String; //每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name
 
-    fn identity_bytes(&self) -> &[u8]; //与str类似; 对于程序来说,bytes更方便处理; 可以与str相同，也可以不同.
+    fn identity_bytes(&self) -> &[u8]; //与str类似; 对于程序来说,bytes更方便处理; 可以与str相同, 也可以不同.
 
     fn auth_str(&self) -> String; //AuthStr 可以识别出该用户 并验证该User的真实性。相当于 user name + password
 
-    fn auth_bytes(&self) -> &[u8]; //与 AuthStr 类似; 对于程序来说,bytes更方便处理; 可以与str相同，也可以不同.
+    fn auth_bytes(&self) -> &[u8]; //与 AuthStr 类似; 对于程序来说,bytes更方便处理; 可以与str相同, 也可以不同.
 }
 
 pub trait User: UserTrait + Clone {}
 impl<T: UserTrait + Clone> User for T {}
+
+pub struct UserVec(Vec<Box<dyn UserTrait>>);
+
+impl Hash for UserVec {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.iter().for_each(|b| {
+            b.identity_bytes().hash(state);
+        })
+    }
+}
 
 /// 用户鉴权的实际方法
 #[async_trait]
@@ -23,7 +33,7 @@ pub trait AsyncUserAuthenticator<T: User> {
     async fn auth_user_by_authstr(&self, authstr: &str) -> Option<T>;
 }
 
-/// 简单以字符串存储用户名和密码，实现User
+/// 简单以字符串存储用户名和密码, 实现User
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct UserPass {
     pub user: String,
