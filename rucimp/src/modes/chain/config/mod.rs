@@ -30,7 +30,7 @@ use ruci::{
         network::{echo::Echo, BlackHole, Direct},
         *,
     },
-    net::{self, http::CommonConfig},
+    net::{self, http::CommonConfig, tun},
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -202,7 +202,10 @@ pub struct OutMapConfigChain {
 pub struct DialerConfig {
     bind_addr: Option<String>,
     dial_addr: Option<String>,
-    auto_route: Option<bool>,
+
+    #[cfg(feature = "tun")]
+    auto_route: Option<tun::route::AutoRouteParams>,
+
     ext: Option<Ext>,
 }
 impl ToMapBox for DialerConfig {
@@ -220,7 +223,10 @@ impl ToMapBox for DialerConfig {
 
         d.dial_addr = opt_dial_a;
         d.bind_addr = opt_bind_a;
-        d.auto_route = self.auto_route.clone();
+        #[cfg(feature = "tun")]
+        {
+            d.auto_route = self.auto_route.clone();
+        }
         d.ext_fields = self.ext.as_ref().map(|e| e.to_ext_fields());
 
         Box::new(d)

@@ -524,7 +524,6 @@ local config_15_tun = {
             chain = { {
                 BindDialer = {
                     bind_addr = "ip://10.0.0.1:24#utun321",
-                    auto_route = true, -- 自动配置 系统路由 以 代理全局
                 }
             } },
             tag = "listen1"
@@ -532,7 +531,7 @@ local config_15_tun = {
     },
 
     --[[
-演示 inbound 是 ip, outbound 是stdio的情况,
+演示 inbound 是 ip, outbound 是stdio的情况, 即把 tun 收到的 ip 信息打印在命令行中
 
 此时需要注意, 该配置下 要用 sudo 运行, 且 rucimp 的 "tun" feature 是打开的
 
@@ -544,7 +543,38 @@ local config_15_tun = {
 }
 
 
-Config = config_3_tproxy2
+local config_16_tun = {
+
+    inbounds = {
+
+        {
+            chain = { {
+                BindDialer = {
+                    bind_addr = "ip://10.0.0.1:24#utun321",
+
+                    -- 自动配置 系统路由 以 代理全局
+                    auto_route = {
+                        tun_dev_name = "utun321",
+                        tun_gateway = "10.0.0.1",
+                        router_ip = "192.168.0.1",
+                        original_dev_name = "enp0s1",
+                        dns_list = { "1.1.1.1" }
+                    }
+                }
+            } },
+            tag = "listen1"
+        },
+    },
+
+    --[[
+和 config_15_tun 类似, 但 用了自动路由, 这样 全局的流量都会打印在 命令行中
+
+--]]
+
+    outbounds = { { tag = "dial1", chain = out_stdio_chain } }
+}
+
+Config = config_16_tun
 
 ---[[
 
@@ -567,9 +597,9 @@ end
 
 -- 完全动态链的基本演示
 
--- 完全动态链不使用 固定的列表 来预定义任何Maps, 它只给出一个函数
+-- 完全动态链不使用 固定的列表 来预定义任何Map, 它只给出一个函数
 -- generator, generator 根据参数内容来动态生成 [Map], 如果不想
--- 重复生成以前生成过的Map, 则可以返回一个已创建过的Map (参见其它包含 infinite 的配置文件中的示例)
+-- 重复生成以前生成过的Map, 则可以返回一个已创建过的Map (参见其它包含 Infinite 的配置文件中的示例)
 
 -- local inspect = require("inspect")
 

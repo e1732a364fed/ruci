@@ -13,7 +13,7 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 按顺序执行若干映射 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
 
-之所以叫加法, 是因为代理的映射只会增加信息（熵）, 不会减少信息
+之所以叫加法, 是因为代理的映射只会增加信息（熵）, 不会减少信息 (在ENCODE 时是如此. 在 DECODE 时正好反过来)
 
 按代理的方向, 逻辑上分 Encode 和 Decode 两种, 以 maps 方法的 behavior 参数加以区分.
 
@@ -273,7 +273,6 @@ pub type MapBox = Box<dyn MapSync>;
 
 /// Some helper fields.
 #[derive(Default, Clone, Debug)]
-
 pub struct MapExtFields {
     pub is_tail_of_chain: bool,
     pub chain_tag: String,

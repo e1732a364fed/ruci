@@ -6,6 +6,7 @@ pub mod accept;
 pub mod echo;
 
 use macro_map::*;
+use parking_lot::Mutex;
 use tokio::sync::mpsc::Receiver;
 use tracing::debug;
 use tracing::info;
@@ -105,10 +106,10 @@ impl Map for Direct {
 }
 
 #[derive(Clone, Debug, Default)]
-pub enum AutoRouteState {
+enum AutoRouteState {
     #[default]
     None,
-    Up,
+    Up(Option<Vec<String>>),
     Down,
 }
 
@@ -118,9 +119,11 @@ pub enum AutoRouteState {
 pub struct BindDialer {
     pub dial_addr: Option<net::Addr>,
     pub bind_addr: Option<net::Addr>,
-    pub auto_route: Option<bool>,
 
-    auto_route_state: AutoRouteState,
+    #[cfg(feature = "tun")]
+    pub auto_route: Option<tun::route::AutoRouteParams>,
+
+    auto_route_state: Arc<Mutex<AutoRouteState>>,
 }
 
 impl Name for BindDialer {
@@ -129,13 +132,38 @@ impl Name for BindDialer {
     }
 }
 
+#[cfg(feature = "tun")]
+impl Drop for BindDialer {
+    fn drop(&mut self) {
+        self.down_route();
+    }
+}
+
 impl BindDialer {
     pub fn new() -> Self {
-        Self {
-            ..Default::default()
+        Self::default()
+    }
+
+    #[cfg(feature = "tun")]
+
+    pub fn down_route(&mut self) {
+        debug!("BindDialer down route");
+        let mut mg = self.auto_route_state.lock();
+        match &*mg {
+            AutoRouteState::Up(opt_dns_list) => {
+                let mut params = self.auto_route.take().unwrap();
+                params.dns_list = opt_dns_list.to_owned();
+                let r = tun::route::down_route(&params);
+                debug!("BindDialer down route {r:?}");
+                if r.is_ok() {
+                    *mg = AutoRouteState::Down;
+                }
+            }
+            _ => {}
         }
     }
     pub async fn action(
+        &self,
         bind_a: Option<&net::Addr>,
         dial_a: Option<&net::Addr>,
 
@@ -143,13 +171,39 @@ impl BindDialer {
         pass_b: Option<BytesMut>,
         udp_fix_target_listen: Option<bool>,
     ) -> MapResult {
-        if let Some(a) = &bind_a {
-            if let Network::IP = a.network {}
-        }
         let r = net::Addr::bind_dial(bind_a, dial_a, udp_fix_target_listen).await;
 
         match r {
-            Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
+            Ok(c) => {
+                if let Some(a) = &bind_a {
+                    #[cfg(feature = "tun")]
+                    if let Network::IP = a.network {
+                        if let Some(c) = &self.auto_route {
+                            let mut mg = self.auto_route_state.lock();
+                            match &*mg {
+                                AutoRouteState::Up(_) => {
+                                    info!("BindDialer called after AutoRouteState::Up")
+                                }
+                                _ => {
+                                    let r = tun::route::auto_route(c);
+                                    match r {
+                                        Ok(opt_dns_list) => {
+                                            *mg = AutoRouteState::Up(opt_dns_list);
+                                        }
+                                        Err(e) => {
+                                            return MapResult::from_e(
+                                                e.context(format!("BindDialer auto_route failed")),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                MapResult::builder().c(c).a(pass_a).b(pass_b).build()
+            }
             Err(e) => MapResult::from_e(
                 e.context(format!("BindDialer dial {:?} {:?} failed", bind_a, dial_a)),
             ),
@@ -199,25 +253,27 @@ impl Map for BindDialer {
 
                 match d {
                     Some(a) => {
-                        return BindDialer::action(
-                            self.bind_addr.as_ref(),
-                            Some(&a),
-                            target_addr,
-                            params.b,
-                            udp_fix_target_listen,
-                        )
-                        .await;
+                        return self
+                            .action(
+                                self.bind_addr.as_ref(),
+                                Some(&a),
+                                target_addr,
+                                params.b,
+                                udp_fix_target_listen,
+                            )
+                            .await;
                     }
 
                     None => {
-                        return BindDialer::action(
-                            self.bind_addr.as_ref(),
-                            self.dial_addr.as_ref(),
-                            target_addr,
-                            params.b,
-                            udp_fix_target_listen,
-                        )
-                        .await;
+                        return self
+                            .action(
+                                self.bind_addr.as_ref(),
+                                self.dial_addr.as_ref(),
+                                target_addr,
+                                params.b,
+                                udp_fix_target_listen,
+                            )
+                            .await;
                     }
                 }
             }
