@@ -48,18 +48,28 @@ impl Map for Stack {
                 let (new_stream_tx, new_stream_rx) = mpsc::channel(1000);
 
                 tokio::spawn(async move {
-                    let (mut device, mut tcp_rx, mut udp_rx) =
+                    let (mut device, mut tcp_rx, mut udp_rx, mut device_write_r) =
                         SmoltcpDevice::new(cid, base_conn, new_stream_tx);
 
                     let mut iface = device::create_interface(&mut device);
 
                     loop {
+                        //info!("loop");
+
                         tokio::select! {
+                            ob = device_write_r.recv() =>{
+                                match ob {
+                                    Some(b) => device.write(b).await,
+                                    None => todo!(),
+                                }
+                            }
                             _ = &mut shutdown_rx =>{
                                 debug!("smoltcp got shutdown signal");
                                 break;
                             }
                             r = device.read() =>{
+                        //info!("device.read");
+
                                 match r {
                                     Err(e) => {
                                         tracing::warn!("SmoltcpDevice read got e {e}");
@@ -73,6 +83,8 @@ impl Map for Stack {
                                         });
 
                                         device.process_ingress();
+                        //info!("process_ingress end");
+
                                     },
 
                                 }
@@ -82,6 +94,9 @@ impl Map for Stack {
                                     Some((sh,_,b)) => {
                                         device.process_tcp_egress(sh, b);
 
+                        //info!("process_tcp_egress end");
+
+
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
                                         let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
@@ -89,6 +104,7 @@ impl Map for Stack {
                                         iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
                                             &mut *sockets
                                         });
+                                        //info!("process_tcp_egress end poll end");
 
                                     },
                                     None => {
@@ -101,6 +117,7 @@ impl Map for Stack {
                                 match r {
                                     Some((sh,d,b)) => {
                                         device.process_udp_egress(sh,d, b);
+                                        //info!("process_udp_egress end");
 
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
@@ -109,6 +126,7 @@ impl Map for Stack {
                                         iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
                                             &mut *sockets
                                         });
+                                        //info!("process_udp_egress end poll end");
 
                                     },
                                     None => {

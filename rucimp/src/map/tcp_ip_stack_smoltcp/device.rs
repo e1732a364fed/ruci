@@ -1,4 +1,4 @@
-use bytes::{Buf, BytesMut};
+use bytes::{Buf,   BytesMut};
 use parking_lot::Mutex;
 use smoltcp::iface::SocketHandle;
 use smoltcp::phy::{Device, RxToken, TxToken};
@@ -76,13 +76,18 @@ impl<'a> RxToken for MyRxToken<'a> {
     where
         F: FnOnce(&mut [u8]) -> R,
     {
-        f(self.data)
+        //debug!("rxt consume called");
+
+        let r = f(self.data);
+        //debug!("rxt consume ended");
+        r
     }
 }
 
 /// send msg，created by Device's transmit method.
 pub struct MyTxToken<'a> {
-    conn: &'a mut tokio::io::WriteHalf<ruci::net::Conn>,
+   // conn: &'a mut tokio::io::WriteHalf<ruci::net::Conn>,
+    tx: Sender<BytesMut>,
     traffic: &'a mut Traffic,
     buf: [u8;BUF_SIZE]
 }
@@ -91,11 +96,14 @@ impl<'a> TxToken for MyTxToken<'a> {
     where
         F: FnOnce(&mut [u8]) -> R,
     {
+        //debug!("txt consume called {len}");
+
         self.traffic.tx_bytes += len;
         let r = f(&mut self.buf[..len]);
-        //debug!("consume called {len}");
-        let _ = futures::executor::block_on( self.conn.write_all(&self.buf[..len]));
-        //debug!("consume finished {len}");
+        //debug!("txt consume called, f called");
+        //let _ = futures::executor::block_on( self.conn.write_all(&self.buf[..len]));
+        let _ = self.tx.try_send(BytesMut::from(&self.buf[..len]));
+        //debug!("txt consume finished {len}");
 
         r
     }
@@ -153,9 +161,7 @@ pub struct SmoltcpDevice  {
     /// only here to be cloned for new UdpStream
     udp_write_data_tx: Sender<(SocketHandle, IpEndpoint, BytesMut)>,
 
-    // receive tcp new write data from all the TcpStream
-   // pub tcp_write_data_rx: Receiver<(SocketHandle,SocketAddr, BytesMut)>,
-
+    device_sender: Sender<BytesMut>,
 }
 
 
@@ -184,7 +190,8 @@ impl  Device for SmoltcpDevice  {
 
                 let rx = MyRxToken { data };
                 let tx = MyTxToken {
-                    conn: &mut self.w,
+                    //conn: &mut self.w,
+                    tx: self.device_sender.clone(),
                     traffic: &mut self.traffic,
                     buf: [0u8;BUF_SIZE] 
                 };
@@ -195,8 +202,10 @@ impl  Device for SmoltcpDevice  {
     }
 
     fn transmit(&mut self, _timestamp: smoltcp::time::Instant) -> Option<Self::TxToken<'_>> {
-        debug!("transmit called");
-        Some(MyTxToken{ conn: &mut self.w, traffic: &mut self.traffic, buf: [0u8;BUF_SIZE] })
+        //debug!("transmit called");
+        Some(MyTxToken{ 
+           // conn: &mut self.w, 
+             tx: self.device_sender.clone(), traffic: &mut self.traffic, buf: [0u8;BUF_SIZE] })
     }
 
     fn capabilities(&self) -> smoltcp::phy::DeviceCapabilities {
@@ -217,16 +226,19 @@ fn is_tcp_client_hello(tcp_packet: &TcpPacket<&[u8]>) -> bool {
  
 impl  SmoltcpDevice {
 
-    /// 返回 SmoltcpDevice，和 接收 tcp 写新信息 的 Receiver
+    /// 返回 SmoltcpDevice，和 接收 tcp 写新信息 的 Receiver 和 接收 udp 写新信息 的 Receiver
     /// 
     ///  接受的 net_stream_tx 将被用于向外发送 从 base_conn 新解析出的 tcp/udp stream.
-    pub fn new(  cid: CID,  base_conn: ruci::net::Conn,new_stream_tx: tokio::sync::mpsc::Sender<MapResult>,)->(Self, Receiver<(SocketHandle, SocketAddr, BytesMut)>,Receiver<(SocketHandle, IpEndpoint, BytesMut)>){
+    pub fn new(  cid: CID,  base_conn: ruci::net::Conn,new_stream_tx: tokio::sync::mpsc::Sender<MapResult>,)->(Self, Receiver<(SocketHandle, SocketAddr, BytesMut)>,Receiver<(SocketHandle, IpEndpoint, BytesMut)>,Receiver<BytesMut>){
         let (r,w ) = tokio::io::split(base_conn);
 
         let (tcp_write_data_tx, tcp_write_data_rx) = mpsc::channel(100);
         let (udp_write_data_tx, udp_write_data_rx) = mpsc::channel(100);
 
-        (Self { 
+        let (txx, rxx) = mpsc::channel(10000);
+
+
+        let   d = Self { 
             cid, traffic: Traffic::new(), buf: Box::new([0;   u16::MAX as usize]), w, r, 
             sockets: smoltcp::iface::SocketSet::new([])        ,
              new_stream_tx, 
@@ -237,9 +249,11 @@ impl  SmoltcpDevice {
               udp_src_handle_map: Arc::new(Mutex::new(HashMap::new())), 
               tcp_write_data_tx,
               udp_write_data_tx,
-            //tcp_write_data_rx, 
+              device_sender: txx,
             state: Poll::Pending
-        }, tcp_write_data_rx,udp_write_data_rx)
+        };
+
+        (d, tcp_write_data_rx,udp_write_data_rx,rxx)
     }
 
     /// read the base_conn's ReadHalf part(`r`), data will be written in `buf`。
@@ -249,12 +263,31 @@ impl  SmoltcpDevice {
      pub async fn read(&mut self)->anyhow::Result<()>{
         let n = self.r.read(self.buf.as_mut()).await?;
        
-        debug!("smoltcp device read {n}");
+        //debug!("smoltcp device read {n}");
 
         self.state = Poll::Ready(n);
 
         Ok(())
     }
+
+    pub async fn write(&mut self,  b: BytesMut){
+        
+        let _ = self.w.write_all(&b).await;
+             
+     }
+
+     
+    // pub async fn write_loop(&mut self,mut rx:Receiver<BytesMut>){
+    //    loop {
+    //        let r = rx.recv().await;
+    //        match r {
+    //         Some(b) => {
+    //             let _ = self.w.write_all(&b).await;
+    //         },
+    //         None => return,
+    //        }
+    //    }
+    // }
 
 
     /// 被 Device trait 的 receive 方法调用, 检查 self.buf, 判断是否有新 tcp 产生，如有, 建立新 TcpStream 并 送入 new_stream_tx, 并创建新的 sockethandle 放入 sockets，
@@ -263,7 +296,7 @@ impl  SmoltcpDevice {
     ) {
         let data = & self.buf[..n];
 
-        debug!("check_read_buf_for_new_conn {n}");
+        //debug!("check_read_buf_for_new_conn {n}");
 
 
         let packet =
@@ -280,10 +313,10 @@ impl  SmoltcpDevice {
 
         match ip_packet.protocol() {
             IpProtocol::Icmp | IpProtocol::Icmpv6 => {
-                debug!("is icmp, {n} {}",ip_packet.payload().len())
+                //debug!("is icmp, {n} {}",ip_packet.payload().len())
             },
             IpProtocol::Tcp => {
-                debug!("is tcp, {n} {}",ip_packet.payload().len());
+                //debug!("is tcp, {n} {}",ip_packet.payload().len());
                 let tcp_packet = match TcpPacket::new_checked(ip_packet.payload()) {
                     Ok(p) => p,
                     Err(err) => {
@@ -349,13 +382,13 @@ impl  SmoltcpDevice {
                     let _ = self.new_stream_tx.try_send(MapResult::new_c(Box::new(tcp_stream)).a(Some(ta)).build());
 
                 }else{
-                    debug!("smoltcp got other tcp {is_hello} {contains}");
+                    //debug!("smoltcp got other tcp {is_hello} {contains}");
 
                 }
             }
             IpProtocol::Udp => {
               
-                debug!("is udp, {n} {}",ip_packet.payload().len());
+                //debug!("is udp, {n} {}",ip_packet.payload().len());
 
                 let packet = UdpPacket::new_checked(ip_packet.payload()).unwrap();
                 let src_port = packet.src_port();
@@ -415,8 +448,7 @@ impl  SmoltcpDevice {
         let mut tcp_src_to_remove = Vec::new();
         let mut udp_dst_to_remove = Vec::new();
 
-        debug!("process_ingress...");
-        
+        //debug!("process_ingress...");
 
         self.sockets.iter_mut().for_each(|(h,so)|{
             match so {
@@ -433,8 +465,6 @@ impl  SmoltcpDevice {
                     let dst = socket.endpoint();
                     let dst_ipe:IpEndpoint = IpEndpoint{addr: dst.addr.unwrap(), port: dst.port};
 
-
-                  
                     while socket.can_recv() {
                         let mut buffer = BytesMut::with_capacity(MTU);
                         unsafe {
@@ -560,7 +590,7 @@ impl  SmoltcpDevice {
     /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 base_conn(tun)
     pub fn process_tcp_egress(&mut self, sh: SocketHandle, mut data: BytesMut) {
         
-            debug!("process_egress tcp for {sh}, {}",data.len());
+            //debug!("process_egress tcp for {sh}, {}",data.len());
 
             let socket: &mut smoltcp::socket::tcp::Socket = self.sockets.get_mut(sh);
 
@@ -572,21 +602,36 @@ impl  SmoltcpDevice {
 
              while left_data>0 {
 
+                //debug!("while left_data>0, {left_data}");
+
                 let r = socket.send_slice(&data);
 
                 match r {
                    Ok(n) => {
-                        left_data -= n;
-                        data.advance(n);
+                        if n == 0 {
+                            //necessary
+                            
+                            //debug!("n == 0");
+                            socket.close();
+                            break;
+                        }else{
+                            left_data -= n;
+                            data.advance(n);
+                        }
+                        
                    },
-                   Err(_) => {socket.close();continue},
+                   Err(_) => {
+                    socket.close();
+                    break;
+                  },
                 }
              }
     }
 
+    /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 base_conn(tun)
     pub fn process_udp_egress(&mut self, sh: SocketHandle,src: IpEndpoint, data: BytesMut) {
         
-        debug!("process_egress udp for {sh}, {src}, {}, {}",data.len(),String::from_utf8_lossy(&data));
+        //debug!("process_egress udp for {sh}, {src}, {}",data.len());
 
         let socket: &mut smoltcp::socket::udp::Socket = self.sockets.get_mut(sh);
 

@@ -146,7 +146,7 @@ Config = {
         -- ]]
     },
 
-    --[[
+    ---[[
     -- 一般情况下 的 outbound 配置
 
     outbounds = { {
@@ -204,7 +204,7 @@ Config = {
 
 
     -- outbounds = { { tag="dial1", chain = out_stdio_chain  } }, --以命令行为出口
-    outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } },
+    --outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } },
 
     fallback_route = { { "listen1", "fallback_d" } }
 
