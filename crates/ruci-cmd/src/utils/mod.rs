@@ -3,6 +3,7 @@ use std::{fs, time::Duration};
 use super::*;
 use anyhow::{Context, Ok};
 use ruci::net;
+use rucimp::utils::FileSource;
 use tokio::sync::mpsc;
 use tracing::info;
 
@@ -48,6 +49,14 @@ pub enum Commands {
 
     /// print the QrCode of a string in the console.
     QR { str: String },
+
+    /// 转换配置文件格式，支持在 lua、toml、yaml 之间互相转换。输入格式将根据文件后缀自动识别
+    ConvertFormat {
+        /// 输入文件路径
+        input_file: String,
+        /// 输出格式 (toml/yaml)
+        output_format: String,
+    },
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -97,6 +106,44 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             let _ = rucimp::utils::wait_close_sig().await;
         }
         Commands::QR { str } => print_qrcode_of(&str),
+        Commands::ConvertFormat {
+            mut input_file,
+            output_format,
+        } => {
+            let (contents, file_source) = mode::get_file(&mut input_file, false)
+                .await
+                .context(format!("failed to read file: {}", input_file))?;
+
+            // 从文件名获取输入格式
+            let input_format = input_file
+                .rsplit('.')
+                .next()
+                .context("无法从文件名获取格式")?
+                .to_lowercase();
+
+            let output = convert_config(&contents, &input_format, &output_format, file_source)?;
+
+            let mut output_file = format!(
+                "{}.{}",
+                input_file.rsplit('.').nth(1).unwrap_or(&input_file),
+                output_format
+            );
+
+            // 如果文件已存在，则在文件名后添加数字
+            let mut counter = 1;
+            while fs::metadata(&output_file).is_ok() {
+                output_file = format!(
+                    "{}_{}.{}",
+                    input_file.rsplit('.').nth(1).unwrap_or(&input_file),
+                    counter,
+                    output_format
+                );
+                counter += 1;
+            }
+
+            fs::write(&output_file, output)?;
+            info!("配置已转换并保存至: {}", output_file);
+        }
     };
     Ok(())
 }
@@ -221,4 +268,59 @@ fn print_qrcode_of(str: &str) {
         .light_color(unicode::Dense1x2::Dark)
         .build();
     println!("{image}");
+}
+
+/// 在不同配置格式之间转换
+/// 支持的格式: lua, toml, yaml
+///
+/// # Arguments
+/// * `input` - 输入的配置文件内容
+/// * `input_format` - 输入格式 ("lua", "toml", "yaml")
+/// * `output_format` - 输出格式 ("lua", "toml", "yaml")
+pub fn convert_config(
+    input: &str,
+    input_format: &str,
+    output_format: &str,
+    file_source: FileSource,
+) -> anyhow::Result<String> {
+    use rucimp::modes::chain::config::StaticConfig;
+
+    // 首先将输入解析为 StaticConfig
+    let config: StaticConfig = match input_format.to_lowercase().as_str() {
+        "lua" => {
+            #[cfg(any(feature = "lua", feature = "lua54"))]
+            {
+                rucimp::modes::chain::config::lua::load_static(input, Some(&file_source))
+                    .context("init_lua_static failed")?
+            }
+            #[cfg(not(any(feature = "lua", feature = "lua54")))]
+            anyhow::bail!("lua feature not enabled")
+        }
+        "toml" => toml::from_str(input)?,
+        "yaml" | "yml" => serde_yaml::from_str(input)?,
+        _ => anyhow::bail!("unsupported input format: {}", input_format),
+    };
+
+    // 然后将 StaticConfig 转换为目标格式
+    match output_format.to_lowercase().as_str() {
+        "toml" => Ok(toml::to_string_pretty(&config)?),
+        "yaml" | "yml" => Ok(serde_yaml::to_string(&config)?),
+        "lua" => {
+            #[cfg(any(feature = "lua", feature = "lua54"))]
+            {
+                use rucimp::modes::chain::config::lua::mlua::{self, LuaSerdeExt};
+                let lua = mlua::Lua::new();
+                let lua_value = lua.to_value(&config)?;
+
+                let s = rucimp::modes::chain::config::lua::lua_value_to_string_with_prefix(
+                    &lua_value,
+                    "Config = ",
+                )?;
+                Ok(s)
+            }
+            #[cfg(not(any(feature = "lua", feature = "lua54")))]
+            anyhow::bail!("lua feature not enabled")
+        }
+        _ => anyhow::bail!("unsupported output format: {}", output_format),
+    }
 }

@@ -15,7 +15,6 @@ chrono = { version = "0.4.34", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.114"
 serde_cbor = "0.11.2"
-toml = { version = "0.8.19", optional = true }
 
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7.10", features = [] }
@@ -42,6 +41,9 @@ mlua = { version = "0.10.1", features = [
     "macros",
     'send',
 ], optional = true }
+
+serde-lua-table = { git = "https://github.com/Nerixyz/serde-lua-table.git", tag = "v0.1.2", optional = true }
+
 
 libc = { version = "0.2", optional = true }
 
@@ -98,7 +100,7 @@ zip = "2.2.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [features]
-default = ["route", "geoip", "sockopt", "toml"]
+default = ["route", "geoip", "sockopt"]
 steganography = []
 rustls21 = ["dep:rustls", "rustls-pemfile", "webpki-roots"]
 
@@ -108,8 +110,8 @@ quinn = ["rustls21", "dep:quinn"]
 tun = ["ruci/tun"]
 trace = ["ruci/trace"]
 
-lua = ["mlua/luau"]
-lua54 = ["mlua/lua54", "mlua/vendored"]
+lua = ["mlua/luau", "serde-lua-table"]
+lua54 = ["mlua/lua54", "mlua/vendored", "serde-lua-table"]
 repl = ["rustyline"]
 
 route = ["ipnet", "iprange", "regex"]
@@ -123,6 +125,7 @@ use-native-tls = ["native-tls", "tokio-native-tls"]
 native-tls-vendored = ["native-tls/vendored", "tokio-native-tls/vendored"]
 
 lwip = ["netstack-lwip"]
+
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52", features = [

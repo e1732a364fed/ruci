@@ -203,35 +203,35 @@ impl StaticConfig {
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct InMapConfigChain {
-    tag: Option<String>,
-    chain: Vec<InMapConfig>,
+    pub tag: Option<String>,
+    pub chain: Vec<InMapConfig>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct OutMapConfigChain {
-    tag: String, //每个 out chain 都必须有一个 tag
-    chain: Vec<OutMapConfig>,
+    pub tag: String, //每个 out chain 都必须有一个 tag
+    pub chain: Vec<OutMapConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct DirectConfig {
-    dns_client: Option<dns::ClientConfig>,
+    pub dns_client: Option<dns::ClientConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct BindDialerConfig {
-    bind_addr: Option<String>,
-    dial_addr: Option<String>,
+    pub bind_addr: Option<String>,
+    pub dial_addr: Option<String>,
 
-    dns_client: Option<dns::ClientConfig>,
-
-    #[cfg(feature = "tun")]
-    in_auto_route: Option<ruci::net::tun::route::InAutoRouteParams>,
+    pub dns_client: Option<dns::ClientConfig>,
 
     #[cfg(feature = "tun")]
-    out_auto_route: Option<ruci::net::tun::route::OutAutoRouteParams>,
+    pub in_auto_route: Option<ruci::net::tun::route::InAutoRouteParams>,
 
-    ext: Option<Ext>,
+    #[cfg(feature = "tun")]
+    pub out_auto_route: Option<ruci::net::tun::route::OutAutoRouteParams>,
+
+    pub ext: Option<Ext>,
 }
 impl ToMapBox for BindDialerConfig {
     fn to_map_box(&self) -> MapBox {
@@ -434,47 +434,47 @@ impl Ext {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FileConfig {
-    i: String,
-    o: String,
+    pub i: String,
+    pub o: String,
 
-    sleep_interval: Option<u64>,
-    bytes_per_turn: Option<usize>,
+    pub sleep_interval: Option<u64>,
+    pub bytes_per_turn: Option<usize>,
 
-    ext: Option<Ext>,
+    pub ext: Option<Ext>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TlsIn {
-    cert: String,
-    key: String,
-    alpn: Option<Vec<String>>,
+    pub cert: String,
+    pub key: String,
+    pub alpn: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TlsOut {
-    host: String,
-    insecure: Option<bool>,
-    alpn: Option<Vec<String>>,
+    pub host: String,
+    pub insecure: Option<bool>,
+    pub alpn: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlainTextSet {
-    userpass: Option<String>,
-    more: Option<Vec<String>>,
+    pub userpass: Option<String>,
+    pub more: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Socks5Out {
-    userpass: Option<String>,
-    early_data: Option<bool>,
+    pub userpass: Option<String>,
+    pub early_data: Option<bool>,
 
-    ext: Option<Ext>,
+    pub ext: Option<Ext>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TrojanPassSet {
-    password: Option<String>,
-    more: Option<Vec<String>>,
+    pub password: Option<String>,
+    pub more: Option<Vec<String>>,
 }
 
 pub trait AdvancedToMapBox {
@@ -803,54 +803,5 @@ impl AdvancedToMapBox for OutMapConfig {
                 }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-
-    #[allow(unused)]
-    use dns::ClientConfig;
-
-    use super::*;
-    #[test]
-    #[cfg(feature = "toml")]
-    fn serialize_toml() {
-        let sa = std::net::SocketAddr::V4("114.114.114.114:53".parse().unwrap());
-        let sc = StaticConfig {
-            inbounds: vec![InMapConfigChain {
-                tag: None,
-                chain: vec![
-                    InMapConfig::Listener {
-                        listen_addr: "0.0.0.0:1080".to_string(),
-                        ext: None,
-                    },
-                    InMapConfig::Counter,
-                    InMapConfig::Socks5(PlainTextSet {
-                        userpass: None,
-                        more: None,
-                    }),
-                ],
-            }],
-            outbounds: vec![OutMapConfigChain {
-                tag: String::from("todo!()"),
-                chain: vec![
-                    OutMapConfig::Direct(DirectConfig { dns_client: None }),
-                    OutMapConfig::Direct(DirectConfig {
-                        dns_client: Some(ClientConfig {
-                            dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
-                            ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
-                            static_pairs: HashMap::new(),
-                        }),
-                    }),
-                ],
-            }],
-            ..Default::default()
-        };
-        let toml = toml::to_string(&sc).expect("valid toml");
-        println!("{:#}", toml);
-
-        let toml: StaticConfig = toml::from_str(&toml).expect("valid toml");
-        println!("{:#?}", toml);
     }
 }

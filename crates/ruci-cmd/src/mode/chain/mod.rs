@@ -1,18 +1,16 @@
-use anyhow::bail;
 use rucimp::{
     modes::chain::{config::StaticConfig, engine::Engine},
-    utils::{wait_close_sig, wait_close_sig_with_closer, FileSource},
-    DEFAULT_LUA_CONFIG_FILE_NAME,
+    utils::{wait_close_sig, wait_close_sig_with_closer},
 };
 use tokio::sync::mpsc;
-use tracing::{debug, info};
+use tracing::info;
 
 #[cfg(feature = "api_server")]
 use crate::api;
 
 #[cfg(feature = "api_server")]
 use std::sync::Arc;
-use std::{io::Read, time::Duration};
+use std::time::Duration;
 
 ///blocking
 #[allow(unused)]
@@ -29,94 +27,7 @@ pub(crate) async fn run(
 
     let mut e = rucimp::modes::chain::engine::Engine::default();
 
-    use anyhow::Context;
-
-    let get_file_f = || -> anyhow::Result<_> {
-        rucimp::utils::try_get_file_content(DEFAULT_LUA_CONFIG_FILE_NAME, Some(&file_name))
-            .with_context(|| format!("run chain engine try get file {} failed", file_name))
-    };
-
-    //获取到文件的 bytes, 或通过下载 或读取文件. 若 in_memory 给出则下载的文件不持久化
-
-    let mut file_bytes_v = if file_name.starts_with("http://") || file_name.starts_with("https://")
-    {
-        #[cfg(feature = "utils")]
-        {
-            let url: String = file_name.to_string();
-
-            file_name = url.split('/').last().unwrap().to_string();
-
-            match args.in_memory {
-                true => crate::utils::dl_url(&url, None).await?.unwrap(),
-                false => {
-                    let _ = crate::utils::dl_url(&url, Some(&file_name)).await?;
-
-                    let mut v = vec![];
-
-                    let mut file = std::fs::File::open(&file_name)?;
-                    file.read_to_end(&mut v)?;
-
-                    v
-                }
-            }
-        }
-
-        #[cfg(not(feature = "utils"))]
-        {
-            get_file_f()?
-        }
-    } else {
-        get_file_f()?
-    };
-
-    // zip, tar, lua/toml 三种情况. zip 要解压
-    // 之后若为 tar, 则会将 Engine 的 FileSource 设为 该tar, 后续 Engine 访问文件都会只在该tar 中寻找
-
-    if file_name.ends_with(".zip") {
-        let real_fn = &file_name[..file_name.len() - 4];
-
-        file_bytes_v = rucimp::utils::extract_vec_from_zip(real_fn, file_bytes_v)?;
-
-        file_name = real_fn.to_string();
-    }
-
-    if file_name.ends_with(".tar") {
-        let tar_file_bytes_v = file_bytes_v;
-        let md5_s = format!(
-            "{:x}",
-            rucimp::utils::md5::compute(tar_file_bytes_v.as_slice())
-        );
-
-        let should_be = file_name.split_once('.').unwrap().0;
-
-        if should_be != md5_s {
-            bail!(
-                "md5 do not match: should be {}, but got {}",
-                should_be,
-                md5_s
-            );
-        } else {
-            debug!("md5 match")
-        }
-
-        //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua 或 local.toml
-        let mut real_file_bytes_r =
-            rucimp::utils::get_file_from_tar(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
-
-        if real_file_bytes_r.is_err() {
-            real_file_bytes_r = rucimp::utils::get_file_from_tar("local.toml", &tar_file_bytes_v);
-        }
-        let real_file_bytes = real_file_bytes_r?;
-
-        e.file_source = FileSource::Tar(tar_file_bytes_v);
-
-        file_bytes_v = real_file_bytes;
-
-        let real_fn = &file_name[..file_name.len() - 4];
-        file_name = real_fn.to_string();
-    }
-
-    let contents = String::from_utf8_lossy(file_bytes_v.as_slice()).to_string();
+    let (contents, file_source) = crate::mode::get_file(&mut file_name, args.in_memory).await?;
 
     if file_name.ends_with(".lua") {
         #[cfg(any(feature = "lua", feature = "lua54"))]
@@ -128,7 +39,10 @@ pub(crate) async fn run(
             }
         }
     } else if file_name.ends_with(".toml") {
-        let config: StaticConfig = rucimp::toml::from_str(&contents)?;
+        let config: StaticConfig = toml::from_str(&contents)?;
+        e.init_static(config);
+    } else if file_name.ends_with(".yml") || file_name.ends_with(".yaml") {
+        let config: StaticConfig = serde_yaml::from_str(&contents)?;
         e.init_static(config);
     }
 

@@ -10,6 +10,7 @@ pub mod finite;
 pub mod infinite;
 
 use super::*;
+pub use mlua;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Value};
 
@@ -42,4 +43,16 @@ pub fn save_static(c: &StaticConfig) -> mlua::Result<Lua> {
     let lua = Lua::new();
     lua.globals().set(CONFIG_KEY, lua.to_value(c)?)?;
     Ok(lua)
+}
+
+/// 将 Lua 值转换为格式化的 Lua 代码字符串
+pub fn lua_value_to_string(value: &Value) -> anyhow::Result<String> {
+    let s = serde_lua_table::to_string_pretty(&value)?;
+    Ok(s)
+}
+
+pub fn lua_value_to_string_with_prefix(value: &Value, prefix: &str) -> anyhow::Result<String> {
+    let mut s = lua_value_to_string(value)?;
+    s.insert_str(0, prefix);
+    Ok(s)
 }

@@ -2825,8 +2825,10 @@ dependencies = [
  "reqwest",
  "ruci",
  "rucimp",
+ "serde_yaml",
  "tokio",
  "tokio-util",
+ "toml",
  "tower",
  "tower-http",
  "tracing",
@@ -2872,6 +2874,7 @@ dependencies = [
  "s2n-quic",
  "s2n-quic-rustls",
  "serde",
+ "serde-lua-table",
  "serde_cbor",
  "serde_json",
  "smoltcp",
@@ -2882,7 +2885,6 @@ dependencies = [
  "tokio-native-tls",
  "tokio-tungstenite",
  "tokio-util",
- "toml",
  "tracing",
  "tracing-subscriber",
  "webpki-roots",
@@ -3234,6 +3236,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-lua-table"
+version = "0.1.2"
+source = "git+https://github.com/Nerixyz/serde-lua-table.git?tag=v0.1.2#4f3418164fa892cc70129fdfae04f6204e718a4c"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
+ "thiserror 1.0.63",
+]
+
+[[package]]
 name = "serde-value"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3305,6 +3318,19 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serde_yaml"
+version = "0.9.34+deprecated"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
 ]
 
 [[package]]
@@ -3999,6 +4025,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
 
 [[package]]
+name = "unsafe-libyaml"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
+
+[[package]]
 name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4441,9 +4473,9 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winnow"
-version = "0.6.20"
+version = "0.6.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36c1fec1a2bb5866f07c25f68c26e565c4c200aebb96d7e55710c19d3e8ac49b"
+checksum = "39281189af81c07ec09db316b302a3e67bf9bd7cbf6c820b50e35fee9c2fa980"
 dependencies = [
  "memchr",
 ]
