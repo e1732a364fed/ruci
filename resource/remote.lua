@@ -182,6 +182,8 @@ Config = {
                     -- out_auto_route 会自动配置路由表使得 utun321 中的流量走 enp0s1. 
                     -- 注意要确保开启了 ip_forward
 
+                    -- out_auto_route 目前只支持 linux
+
                     out_auto_route = {
                         tun_dev_name = "utun321",
                         original_dev_name = "enp0s1",

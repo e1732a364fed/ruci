@@ -7,6 +7,11 @@ use crate::{
     utils::{self, sync_run_command_list_no_stop, sync_run_command_list_stop},
 };
 
+const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
+const DEFAULT_ORIGINAL_DEV_NAME: &str = "enp0s1";
+const DEFAULT_TUN_DEV_NAME: &str = "utun321";
+const DEFAULT_TUN_GATEWAY: &str = "10.0.0.1";
+
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct InAutoRouteParams {
     pub tun_dev_name: Option<String>,
@@ -24,15 +29,35 @@ pub struct OutAutoRouteParams {
     pub router_ip: Option<String>,
 }
 
-const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
-const DEFAULT_ORIGINAL_DEV_NAME: &str = "enp0s1";
+#[cfg(target_os = "macos")]
+fn get_macos_route_str(tun_gateway: &str, is_delete: bool) -> Vec<String> {
+    let fp = tun_gateway.split('.').next().unwrap();
+    let mut list = format!(
+        r#"route add -net 1.0.0.0/8 {tun_gateway} -hopcount 1"
+route add -net 2.0.0.0/7 {tun_gateway} -hopcount 1"
+route add -net 4.0.0.0/6 {tun_gateway} -hopcount 1
+route add -net 8.0.0.0/5 {tun_gateway} -hopcount 1
+route add -net 16.0.0.0/4 {tun_gateway} -hopcount 1
+route add -net 32.0.0.0/3 {tun_gateway} -hopcount 1
+route add -net 64.0.0.0/2 {tun_gateway} -hopcount 1
+route add -net 128.0.0.0/1 {tun_gateway} -hopcount 1
+route add -net {fp}.0.0.0/15 {tun_gateway} -hopcount 1"#,
+    );
+    if is_delete {
+        list = list.replace("add", "delete")
+    }
+    list.split('\n').map(String::from).collect()
+}
 
 #[allow(unused)]
 pub fn out_auto_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
     {
         info!("tun up out auto route for linux...");
-        let tun_dev_name = params.tun_dev_name.as_deref().unwrap_or("utun321");
+        let tun_dev_name = params
+            .tun_dev_name
+            .as_deref()
+            .unwrap_or(DEFAULT_TUN_DEV_NAME);
         let original_dev_name = params
             .original_dev_name
             .as_deref()
@@ -67,7 +92,10 @@ pub fn out_down_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
     {
         info!("tun out down auto route for linux...");
 
-        let tun_dev_name = params.tun_dev_name.as_deref().unwrap_or("utun321");
+        let tun_dev_name = params
+            .tun_dev_name
+            .as_deref()
+            .unwrap_or(DEFAULT_TUN_DEV_NAME);
         let original_dev_name = params
             .original_dev_name
             .as_deref()
@@ -85,17 +113,44 @@ iptables -t nat -D POSTROUTING -o {original_dev_name} -j MASQUERADE"#,
 }
 
 pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<String>>> {
+    let tun_gateway = params.tun_gateway.as_deref().unwrap_or(DEFAULT_TUN_GATEWAY);
+
+    let tun_dev_name = params
+        .tun_dev_name
+        .as_deref()
+        .unwrap_or(DEFAULT_TUN_DEV_NAME);
+
+    let original_dev_name = params
+        .original_dev_name
+        .as_deref()
+        .unwrap_or(DEFAULT_ORIGINAL_DEV_NAME);
+
+    let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
+
+    #[cfg(target_os = "macos")]
+    {
+        info!("tun up auto route for macos...");
+
+        let mut list: Vec<_> = get_macos_route_str(tun_gateway, false);
+
+        if let Some(direct_list) = &params.direct_list {
+            for v in direct_list.iter() {
+                list.push(format!("route add -host {v} {router_ip}"))
+            }
+        }
+
+        let r = sync_run_command_list_stop(list.iter().map(String::as_str).collect());
+
+        if let Err(e) = r {
+            warn!("auto_route run command got e, will down_route: {}", e);
+
+            let _ = in_down_route(params);
+            return Err(e);
+        }
+    }
     #[cfg(target_os = "linux")]
     {
         info!("tun up auto route for linux...");
-
-        let tun_gateway = params.tun_gateway.as_deref().unwrap_or("10.0.0.1");
-        let tun_dev_name = params.tun_dev_name.as_deref().unwrap_or("utun321");
-        //let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
-        let original_dev_name = params
-            .original_dev_name
-            .as_deref()
-            .unwrap_or(DEFAULT_ORIGINAL_DEV_NAME);
 
         // 有些只有一个网卡的设备是没有 default 路由的, 此时 运行 下面命令会报错.
         //  因此该命令的成败不影响大局
@@ -137,11 +192,26 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
 }
 
 pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
+    let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
+
+    #[cfg(target_os = "macos")]
+    {
+        info!("tun down auto route for macos...");
+
+        let tun_gateway = params.tun_gateway.as_deref().unwrap_or(DEFAULT_TUN_GATEWAY);
+
+        let mut list: Vec<_> = get_macos_route_str(tun_gateway, true);
+
+        if let Some(direct_list) = &params.direct_list {
+            for v in direct_list.iter() {
+                list.push(format!("route delete -host {v} {router_ip}"))
+            }
+        }
+        sync_run_command_list_no_stop(list.iter().map(String::as_str).collect(), false)?;
+    }
     #[cfg(target_os = "linux")]
     {
         info!("tun down auto route for linux...");
-
-        let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
 
         let original_dev_name = params
             .original_dev_name

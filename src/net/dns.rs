@@ -13,13 +13,13 @@ nameserver 192.168.1.1
 
 */
 
-#[cfg(target_os = "linux")]
-const LINUX_DNS_FILE: &str = "/etc/resolv.conf";
+#[cfg(unix)]
+const UNIX_DNS_FILE: &str = "/etc/resolv.conf";
 
 pub fn get_sys_dns() -> Vec<String> {
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     {
-        let r = std::fs::read_to_string(LINUX_DNS_FILE);
+        let r = std::fs::read_to_string(UNIX_DNS_FILE);
         match r {
             Ok(s) => {
                 return s
@@ -47,7 +47,7 @@ pub fn set_sys_dns(list: Vec<&str>) -> std::io::Result<()> {
             s.push('\n')
         });
 
-        std::fs::write(LINUX_DNS_FILE, s.as_bytes())?;
+        std::fs::write(UNIX_DNS_FILE, s.as_bytes())?;
     }
 
     Ok(())
