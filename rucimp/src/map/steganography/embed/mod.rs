@@ -512,7 +512,10 @@ impl AsyncWrite for EmbedConn {
             debug!("EmbedConn::poll_write: cur_info: {:?}", cur_info);
 
             if !direction_match_write(self.behavior, cur_info.direction) {
-                debug!("write pending {:?} {}", self.behavior, cur_info.direction);
+                debug!(
+                    "embed write pending {:?} {}",
+                    self.behavior, cur_info.direction
+                );
                 return Poll::Pending;
             }
 
