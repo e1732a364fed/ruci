@@ -45,11 +45,10 @@ pub fn down_route(
     router_name: &str,
     direct_list: Vec<&str>,
 ) -> anyhow::Result<()> {
-    let mut list = vec![];
-
     #[cfg(target_os = "linux")]
     {
         info!("tun down auto route for linux...");
+        let mut list = vec![];
 
         for v in direct_list {
             list.push(format!(
