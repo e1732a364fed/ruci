@@ -152,18 +152,15 @@ impl Server {
                         String::from_utf8_lossy(&bs[colon_index + 1..n]).to_string(),
                     );
 
-                    match self
+                    if let Some(u) = self
                         .um
                         .as_ref()
                         .unwrap()
                         .auth_user_by_authstr(u.auth_strs())
                         .await
                     {
-                        Some(u) => {
-                            ok = true;
-                            authed_user = Some(u);
-                        }
-                        None => {}
+                        ok = true;
+                        authed_user = Some(u);
                     };
                     break;
                 }
@@ -208,7 +205,7 @@ impl Server {
                 }
             };
 
-            if !addr_str.contains(":") {
+            if !addr_str.contains(':') {
                 addr_str += ":80";
             }
         }
@@ -229,14 +226,14 @@ impl Server {
             base.write(CONNECT_REPLY_STR.as_bytes()).await?;
         }
 
-        return Ok(MapResult {
+        Ok(MapResult {
             a: Some(ta),
             b: if buf.len() > 0 { Some(buf) } else { None },
             c: map::Stream::TCP(base),
             d: authed_user.map_or(None, |up| Some(map::AnyData::B(Box::new(up)))), //将 该登录的用户信息 作为 额外信息 传回
             e: None,
             new_id: None,
-        });
+        })
     }
 }
 

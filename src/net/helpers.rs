@@ -241,12 +241,10 @@ impl AsyncWrite for MockTcpStream {
         if let Some(swt) = &self.write_target {
             let mut v = swt.lock();
             v.append(&mut x);
+        } else if self.write_data.len() == 0 {
+            self.write_data = x;
         } else {
-            if self.write_data.len() == 0 {
-                self.write_data = x;
-            } else {
-                self.write_data.append(&mut x)
-            }
+            self.write_data.append(&mut x)
         }
 
         Poll::Ready(Ok(buf.len()))

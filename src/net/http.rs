@@ -154,11 +154,9 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                 return request;
             }
         }
-    } else {
-        if bs[should_slash_index] != b'/' {
-            request.fail_reason = FailReason::NoSlash;
-            return request;
-        }
+    } else if bs[should_slash_index] != b'/' {
+        request.fail_reason = FailReason::NoSlash;
+        return request;
     }
 
     //一般请求样式类似 GET /sdfdsffs.html HTTP/1.1

@@ -270,12 +270,10 @@ impl Addr {
 
         let host = if host == String::new() {
             None
+        } else if host_is_ip {
+            None
         } else {
-            if host_is_ip {
-                None
-            } else {
-                Some(host.to_string())
-            }
+            Some(host.to_string())
         };
 
         Addr::from(network, host, ip, port)
