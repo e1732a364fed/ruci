@@ -1865,6 +1865,7 @@ dependencies = [
  "dyn-clone",
  "futures",
  "futures-lite",
+ "h2 0.4.2",
  "http 1.1.0",
  "ipnet",
  "iprange",
