@@ -11,7 +11,7 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::io::ReadBuf;
+use tokio::{io::ReadBuf, sync::oneshot};
 
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
 // 只是加了一个 Addr 参数. 这一部分比较难懂.
@@ -283,9 +283,12 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut r1: R1,
     mut w1: W1,
     no_timeout: bool,
+    shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<u64, Error> {
     let mut whole_write = 0;
 
+    let shutdown_rxf = shutdown_rx.fuse();
+    pin_mut!(shutdown_rxf);
     loop {
         let r1ref = &mut r1;
 
@@ -302,11 +305,17 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
             (r, buf0)
         }
         .fuse();
+
         pin_mut!(sleep_f, read_f);
 
         futures::select! {
             _ = sleep_f =>{
                 debug!("read addrconn timeout");
+
+                break;
+            }
+            _ = shutdown_rxf =>{
+                debug!("read addrconn got shutdown_rx");
 
                 break;
             }
@@ -370,9 +379,11 @@ pub async fn cp_between<
     opt: Option<Arc<GlobalTrafficRecorder>>,
     no_timeout: bool,
 ) -> Result<u64, Error> {
+    let (tx1, rx1) = oneshot::channel();
+    let (tx2, rx2) = oneshot::channel();
     let (c1_to_c2, c2_to_c1) = (
-        cp_addr(r1, w2, no_timeout).fuse(),
-        cp_addr(r2, w1, no_timeout).fuse(),
+        cp_addr(r1, w2, no_timeout, rx1).fuse(),
+        cp_addr(r2, w1, no_timeout, rx2).fuse(),
     );
     pin_mut!(c1_to_c2, c2_to_c1);
 
@@ -396,6 +407,7 @@ pub async fn cp_between<
                 }
 
             }
+            let _ = tx2.send(());
 
 
             let rst2 = c2_to_c1.await;
@@ -436,6 +448,7 @@ pub async fn cp_between<
                 }
 
             }
+            let _ = tx1.send(());
 
             let rst1 = c1_to_c2.await;
             if tracing::enabled!(tracing::Level::DEBUG)  {

@@ -205,6 +205,7 @@ impl AsyncReadAddr for MockStream {
 mod test {
     use futures::select;
     use futures_util::join;
+    use tokio::sync::oneshot;
 
     use super::*;
     use crate::net::addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt};
@@ -332,8 +333,9 @@ mod test {
 
             Ok::<(), io::Error>(())
         });
+        let (_, rx) = oneshot::channel();
 
-        let _ = crate::net::addr_conn::cp_addr(r2, ms, false).await;
+        let _ = crate::net::addr_conn::cp_addr(r2, ms, false, rx).await;
 
         let nv = buf_to_write.repeat(5);
 
