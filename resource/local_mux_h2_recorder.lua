@@ -80,8 +80,9 @@ Infinite = {
                 if Recorder == nil then
                     Recorder = Create_out_map({
                         Recorder = {
-                            label = "h2_trojans",
+                            -- label = "h2_trojans",
                             -- label = "h2_socks5s",
+                            label = "h2_https",
                             serialize_format = "cbor",
                             session_truncate = 2000,
                         }
@@ -102,11 +103,11 @@ Infinite = {
 
                 return 3, H2_out:clone()
             elseif state_index == 3 then
-                if Trojan_out == nil then
-                    Trojan_out = Create_out_map(trojan_out_config)
-                end
+                -- if Trojan_out == nil then
+                --     Trojan_out = Create_out_map(trojan_out_config)
+                -- end
 
-                return 4, Trojan_out:clone()
+                -- return 4, Trojan_out:clone()
                 -- if Socks5_out == nil then
                 --     Socks5_out = Create_out_map({
                 --         Socks5 = {
@@ -115,6 +116,12 @@ Infinite = {
                 -- end
 
                 -- return 4, Socks5_out:clone()
+
+                if Http_out == nil then
+                    Http_out = Create_out_map("Http")
+                end
+
+                return 4, Http_out:clone()
             else
                 return -1, {}
             end

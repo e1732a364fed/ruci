@@ -355,6 +355,7 @@ pub enum OutMapConfig {
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
     NativeTLS(TlsOut),
 
+    Http,
     Socks5(Socks5Out),
     Trojan(String),
     WebSocket(CommonConfig),
@@ -485,7 +486,7 @@ impl ToMapBox for InMapConfig {
             ),
 
             InMapConfig::Http(c) => {
-                let so = http_proxy::Config {
+                let so = http_proxy::ServerConfig {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
@@ -629,7 +630,7 @@ impl ToMapBox for OutMapConfig {
                 alpn: c.alpn.clone(),
                 ext_fields: Some(MapExtFields::default()),
             }),
-
+            OutMapConfig::Http => Box::new(http_proxy::Client::default()),
             OutMapConfig::Socks5(c) => {
                 let u = c.userpass.clone().unwrap_or_default();
                 let mut a = socks5::client::Client {

@@ -65,7 +65,7 @@ use self::{
 };
 
 /// the parameter for Map's maps method
-#[derive(Default, TypedBuilder)]
+#[derive(Default, Debug, TypedBuilder)]
 pub struct MapParams {
     ///target_addr
     #[builder(default, setter(strip_option))]
@@ -129,7 +129,7 @@ impl MapParams {
 /// if there's an error (e), if c (Stream) is also returned, then this marks
 /// the connection will be fallback.
 ///
-#[derive(TypedBuilder, Default)]
+#[derive(TypedBuilder, Default, Debug)]
 pub struct MapResult {
     #[builder(default)]
     pub a: Option<net::Addr>, //target_addr

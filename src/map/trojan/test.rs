@@ -30,7 +30,7 @@ fn test224_print() {
     println!("{}", str)
 }
 
-async fn new_3user_trojan_inadder() -> Server {
+async fn new_3user_trojan_server() -> Server {
     Server::new(Config {
         pass: Some("pass".to_string()),
         passes: Some(vec![
@@ -43,32 +43,29 @@ async fn new_3user_trojan_inadder() -> Server {
 
 #[tokio::test]
 async fn auth() -> std::io::Result<()> {
-    let a = new_3user_trojan_inadder().await;
+    let ser = new_3user_trojan_server().await;
     assert!(
-        a.um.auth_user_by_authstr(
-            "trojan:ccc9c73a37651c6b35de64c3a37858ccae045d285f57fffb409d251d"
-        )
-        .unwrap()
-        .plain_text_pass
+        ser.um
+            .auth_user_by_authstr("trojan:ccc9c73a37651c6b35de64c3a37858ccae045d285f57fffb409d251d")
+            .unwrap()
+            .plain_text_pass
             == "pass"
     );
     assert!(
-        a.um.auth_user_by_authstr(
-            "trojan:a2efc77b5d3c5e14ce7d0520115b32bba3426c1463d93d36a368fed7"
-        )
-        .unwrap()
-        .plain_text_pass
+        ser.um
+            .auth_user_by_authstr("trojan:a2efc77b5d3c5e14ce7d0520115b32bba3426c1463d93d36a368fed7")
+            .unwrap()
+            .plain_text_pass
             == "pass2"
     );
     assert!(
-        a.um.auth_user_by_authstr(
-            "trojan:aaae8f86690070b538d2fc141d6389dd9ce0e7d8e0a4d800384f9454"
-        )
-        .unwrap()
-        .plain_text_pass
+        ser.um
+            .auth_user_by_authstr("trojan:aaae8f86690070b538d2fc141d6389dd9ce0e7d8e0a4d800384f9454")
+            .unwrap()
+            .plain_text_pass
             == "pass3"
     );
-    assert!(a
+    assert!(ser
         .um
         .auth_user_by_authstr("trojan:aaae8f86690070b538d2fc141d6389dd9ce0e7d8e0a4d800384f9451")
         .is_none());
@@ -77,7 +74,7 @@ async fn auth() -> std::io::Result<()> {
 
 #[tokio::test]
 async fn auth_tcp_in_mem_earlydata() -> anyhow::Result<()> {
-    let a = new_3user_trojan_inadder().await;
+    let server = new_3user_trojan_server().await;
     let name = "www.b";
     let port: u16 = 43;
     let mut buf = BytesMut::with_capacity(100);
@@ -100,7 +97,7 @@ async fn auth_tcp_in_mem_earlydata() -> anyhow::Result<()> {
         write_target: Some(writev),
     };
 
-    let r = a
+    let r = server
         .maps(
             CID::default(),
             ProxyBehavior::DECODE,

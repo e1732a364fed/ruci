@@ -1,10 +1,10 @@
 /*!
-Implements a [`Map`] for http proxy.
+Implements a [`Map`] for http proxy by https://www.ietf.org/rfc/rfc2817.txt.
  */
 
 use std::cmp::min;
 
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use base64::prelude::*;
 use bytes::BytesMut;
 use futures::executor::block_on;
@@ -12,7 +12,7 @@ use macro_map::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
-use crate::map::{self, MapResult};
+use crate::map::{self, MapExt, MapResult};
 use crate::net::http::Method;
 use crate::net::CID;
 use crate::user::{self, AsyncUserAuthenticator};
@@ -30,7 +30,7 @@ pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
 pub const PROXY_AUTH_HEADER_STR: &str = "Proxy-Authorization ";
 
 #[map_ext_fields]
-#[derive(Debug, Clone, MapExt)]
+#[derive(Debug, Clone, Default, MapExt)]
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,
     pub only_connect: bool,
@@ -43,13 +43,13 @@ impl Name for Server {
 }
 
 #[derive(Default, Clone)]
-pub struct Config {
+pub struct ServerConfig {
     pub only_support_connect: bool,
     pub user_whitespace_pass: Option<String>,
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapBox for Config {
+impl ToMapBox for ServerConfig {
     fn to_map_box(&self) -> MapBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
@@ -57,7 +57,7 @@ impl ToMapBox for Config {
 }
 
 impl Server {
-    pub async fn new(option: Config) -> Self {
+    pub async fn new(option: ServerConfig) -> Self {
         let mut um = UsersMap::new();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
@@ -195,13 +195,6 @@ impl Server {
             };
 
             addr_str = url.authority().to_string();
-            // addr_str = match url.host() {
-            //     Some(h) => h.to_string(),
-            //     None => {
-            //         let e1 = anyhow::anyhow!("http proxy: no host in url: , {}", &r.path);
-            //         return Ok(MapResult::ebc(e1, buf, base));
-            //     }
-            // };
 
             if !addr_str.contains(':') {
                 addr_str += ":80";
@@ -266,5 +259,144 @@ impl Map for Server {
             }
             _ => MapResult::err_str("http proxy only support tcplike stream"),
         }
+    }
+}
+
+/// 使用 CONNECT
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt, Default)]
+pub struct Client {}
+
+impl Name for Client {
+    fn name(&self) -> &'static str {
+        "http_proxy_client"
+    }
+}
+impl Client {
+    pub async fn handshake(
+        &self,
+        _cid: CID,
+        mut base: net::Conn,
+        ta: net::Addr,
+        mut first_payload: Option<BytesMut>,
+    ) -> anyhow::Result<MapResult> {
+        //see rfc2817, 5.2 Requesting a Tunnel with CONNECT
+
+        let b = format!(
+            "CONNECT {} HTTP/1.1\r\nHost: {}\r\n\r\n",
+            ta.get_addr_str(),
+            ta.get_addr_str()
+        );
+        // println!("b {b}");
+        let b = b.as_bytes();
+        base.write_all(b).await?;
+        base.flush().await?;
+
+        let mut buf = BytesMut::zeroed(1024);
+
+        let n: usize = base.read(&mut buf).await?;
+        //buf.truncate(n);
+
+        if self.is_tail_of_chain() {
+            if let Some(b) = &first_payload {
+                if !b.is_empty() {
+                    let r = base.write_all(b).await;
+                    match r {
+                        Ok(_) => first_payload = None,
+                        Err(e) => return Ok(MapResult::from_e(e)),
+                    }
+
+                    //debug!("trojan client writing ed {}", bl);
+                }
+            }
+        }
+
+        if n == CONNECT_REPLY_STR.len() {
+            Ok(MapResult::new_c(base).b(first_payload).build())
+        } else {
+            Ok(MapResult::from_e(anyhow!("len != CONNECT_REPLY_STR.len")))
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl Map for Client {
+    async fn maps(
+        &self,
+        cid: CID,
+        _behavior: map::ProxyBehavior,
+        params: map::MapParams,
+    ) -> map::MapResult {
+        match params.c {
+            map::Stream::Conn(c) => {
+                if let Some(a) = params.a {
+                    let r = self.handshake(cid, c, a, params.b).await;
+                    MapResult::from_result(r)
+                } else {
+                    MapResult::err_str("http proxy client requires a target_addr, got None")
+                }
+            }
+            _ => MapResult::err_str("http proxy only support tcplike stream"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use std::time::Duration;
+
+    use tokio::net::{TcpListener, TcpStream};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn connect() -> anyhow::Result<()> {
+        let ser = Server::default();
+        let c = Client::default();
+
+        let listen_port = net::gen_random_higher_port();
+        let listen_host_str = "127.0.0.1";
+
+        let jh = tokio::spawn(async move {
+            let listener =
+                TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
+                    .await
+                    .unwrap();
+
+            let (nc, _raddr) = listener.accept().await.unwrap();
+
+            let r = ser.handshake(CID::default(), Box::new(nc), None).await;
+            // println!("server: {r:?}",)
+            match r {
+                Ok(r) => return r,
+                Err(e) => panic!("{e}"),
+            }
+        });
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        let cs = TcpStream::connect((listen_host_str, listen_port))
+            .await
+            .unwrap();
+
+        let ta = net::Addr::from_addr_str("tcp", "www.baidu.com:80").unwrap();
+
+        let r = c
+            .handshake(CID::default(), Box::new(cs), ta.clone(), None)
+            .await;
+
+        //println!("client: {r:?}",);
+
+        match r {
+            Ok(_cr) => {
+                let serr = jh.await.unwrap();
+                // println!("sera: {:?}", serr.a);
+                assert_eq!(serr.a.unwrap(), ta)
+            }
+            Err(e) => panic!("{e}"),
+        }
+
+        Ok(())
     }
 }

@@ -82,7 +82,7 @@ local ws_trojans_chain = { tcp, tls, http_filter, basic_ws, trojan_in }
 
 -- ws_trojans_chain = {tcp, tls, ws, trojan_in}
 
-local in_h2_trojans_chain = { tcp, tls, {
+local h2 = {
     H2 = {
         is_grpc = true,
         http_config = {
@@ -90,17 +90,15 @@ local in_h2_trojans_chain = { tcp, tls, {
             path = "/service1/Tun"
         }
     }
-}, trojan_in }
+}
 
-local in_h2_socks5s_chain = { tcp, tls, {
-    H2 = {
-        is_grpc = true,
-        http_config = {
-            authority = "myhost",
-            path = "/service1/Tun"
-        }
-    }
-}, socks5 }
+local in_h2_trojans_chain = { tcp, tls, h2, trojan_in }
+
+local in_h2_socks5s_chain = { tcp, tls, h2, socks5 }
+
+local in_h2_https_chain = { tcp, tls, h2, {
+    Http = {}
+} }
 
 
 local quic_in = {
@@ -140,7 +138,8 @@ Config = {
         -- { chain = trojans_chain, tag = "listen1" },
         -- { chain = ws_trojans_chain,  tag = "listen1"  }
         -- { chain = in_h2_trojans_chain, tag = "listen1" }
-        { chain = in_h2_socks5s_chain, tag = "listen1" }
+        -- { chain = in_h2_socks5s_chain, tag = "listen1" }
+        { chain = in_h2_https_chain, tag = "listen1" }
         -- { chain = in_quic_chain, tag = "listen1" }
         -- { chain = socks5http_chain, tag = "listen1"} ,
         -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
