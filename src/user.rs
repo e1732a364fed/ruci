@@ -268,8 +268,9 @@ impl<T: UserTrait + Clone> AsyncUserAuthenticator<T> for UsersMap<T> {
 
 #[cfg(test)]
 mod test {
+    use anyhow::*;
     use futures::executor::block_on;
-    use std::{collections::HashMap, io};
+    use std::collections::HashMap;
 
     use super::PlainText;
     use crate::user::{AsyncUserAuthenticator, UsersMap};
@@ -288,28 +289,24 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_users_map() -> std::io::Result<()> {
+    async fn test_users_map() -> Result<()> {
         let up = PlainText::new("u".into(), "p".into());
-        //println!("up: {:?}", up);
         let up2 = PlainText::new("u2".into(), "p2".into());
 
         let mut um: UsersMap<PlainText> = UsersMap::new();
         block_on(um.add_user(up));
         block_on(um.add_user(up2));
-        //println!("um: {:?}", um);
 
         let x = um.auth_user_by_authstr("plaintext:u").await;
-        //println!("x {:?}", x);
 
         if x != None {
-            return Err(io::Error::other("shit,not none"));
+            return Err(format_err!("shit,not none"));
         }
 
         let x = um.auth_user_by_authstr("plaintext:u2\np2").await;
-        //println!("x {:?}", x);
 
         if x == None {
-            Err(io::Error::other("shit,none"))
+            Err(format_err!("shit,none"))
         } else {
             Ok(())
         }
