@@ -92,7 +92,7 @@ pub struct CIDChain {
     pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
 }
 impl CIDChain {
-    pub fn to_short_str(&self) -> String {
+    pub fn str(&self) -> String {
         match (self.id_list).len() {
             0 => String::from("_"),
             1 => self
@@ -112,19 +112,19 @@ impl Display for CIDChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match (self.id_list).len() {
             0 => {
-                write!(f, "[ empty ]")
+                write!(f, "_")
             }
             1 => {
                 write!(
                     f,
-                    "[ cid: {} ]",
+                    "{}",
                     self.id_list.first().expect("get first element of cid")
                 )
             }
             _ => {
                 let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
                 let s = v.join("-");
-                write!(f, "[ cid: {} ]", s)
+                write!(f, "{}", s)
             }
         }
     }
@@ -148,7 +148,7 @@ impl Default for CID {
 impl Display for CID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CID::Unit(u) => write!(f, "[ cid: {u} ]"),
+            CID::Unit(u) => write!(f, "{u}"),
             CID::Chain(c) => Display::fmt(c, f),
         }
     }
@@ -167,11 +167,11 @@ impl std::str::FromStr for CID {
 }
 
 impl CID {
-    /// without "cid: ", show the number(s) only
-    pub fn short_str(&self) -> String {
+    /// show the number(s) only
+    pub fn str(&self) -> String {
         match self {
             CID::Unit(u) => u.to_string(),
-            CID::Chain(c) => c.to_short_str(),
+            CID::Chain(c) => c.str(),
         }
     }
     pub fn new_random() -> CID {

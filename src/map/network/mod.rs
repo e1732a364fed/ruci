@@ -24,7 +24,7 @@ impl Mapper for BlackHole {
     /// always consume the stream, ignore all params.
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.c.is_some() {
-            info!(cid = cid.short_str(), " consumed by blackhole");
+            info!(cid = %cid, " consumed by blackhole");
         }
         return MapResult::default();
     }
@@ -53,12 +53,14 @@ impl Mapper for Direct {
         };
 
         if tracing::enabled!(tracing::Level::DEBUG) {
+            let buf = params.b.as_ref().map(|b| b.len());
             debug!(
-                cid = cid.short_str(),
-                "direct dial,   {}, {:?} {:?}",
-                a,
-                behavior,
-                params.b.as_ref().map(|b| b.len())
+                cid = %cid,
+                addr = %a,
+                behavior = ?behavior,
+                buf = ?buf,
+                "direct dial",
+
             );
         }
 
@@ -209,7 +211,7 @@ impl Mapper for Listener {
         };
 
         if tracing::enabled!(tracing::Level::DEBUG) {
-            debug!("{}, start listen {}", cid, a)
+            debug!(cid = %cid, addr = %a, "start listen")
         }
 
         let r = match params.shutdown_rx {

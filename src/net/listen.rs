@@ -1,6 +1,6 @@
 use std::{fs::remove_file, path::PathBuf};
 
-use anyhow::{bail, Context, Ok};
+use anyhow::{bail, Context};
 use tokio::net::TcpListener;
 use tracing::warn;
 
@@ -11,6 +11,7 @@ use crate::net::{self, Stream};
 
 use super::Addr;
 
+#[derive(Debug)]
 pub enum Listener {
     TCP(TcpListener),
 
@@ -60,6 +61,26 @@ impl Listener {
             Listener::TCP(_) => net::Network::TCP,
             #[cfg(unix)]
             Listener::UNIX(_) => net::Network::Unix,
+        }
+    }
+
+    pub fn laddr(&self) -> String {
+        match self {
+            Listener::TCP(t) => {
+                let r = t.local_addr();
+                match r {
+                    Ok(a) => format!("{a}"),
+                    Err(e) => format!("no laddr, e:{e}"),
+                }
+            }
+            #[cfg(unix)]
+            Listener::UNIX(u) => {
+                let r = u.0.local_addr();
+                match r {
+                    Ok(a) => format!("{:?}", a),
+                    Err(e) => format!("no laddr, e:{e}"),
+                }
+            }
         }
     }
 

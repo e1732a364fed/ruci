@@ -18,15 +18,14 @@ pub async fn loop_accept(
 ) -> Receiver<MapResult> {
     let (tx, rx) = mpsc::channel(100);
 
-    let netw = listener.network();
-
     tokio::spawn(async move {
+        let laddr = listener.laddr();
         tokio::select! {
             r = real_loop_accept(listener,tx) =>{
                 r
             }
             _ = shutdown_rx => {
-                info!("terminating {} listen", netw);
+                info!(laddr=laddr, "terminating listen");
                 Ok(())
             }
         }
@@ -61,10 +60,10 @@ async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::
         };
         if tracing::enabled!(tracing::Level::DEBUG) {
             debug!(
-                "new accepted {}, raddr: {}, laddr: {}",
-                listener.network(),
-                raddr,
-                laddr
+                net = %listener.network(),
+                raddr = %raddr,
+                laddr = %laddr,
+                "new accepted",
             );
         }
         let data = map::RLAddr(raddr, laddr);

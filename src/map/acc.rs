@@ -188,7 +188,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
         };
 
         if tracing::enabled!(Level::DEBUG) {
-            debug!(cid = cid.short_str(), mapper = adder.name(), "acc:",)
+            debug!(cid = %cid, mapper = adder.name(), "acc:",)
         }
         last_r = adder
             .maps(
@@ -300,13 +300,13 @@ pub async fn accumulate_from_start(
         match &first_r.c {
             Stream::None => {
                 warn!(
-                    cid = in_cid.short_str(),
+                    cid = %in_cid,
                     "accumulate_from_start: no input stream, still trying to accumulate"
                 )
             }
             _ => {
                 debug!(
-                    cid = in_cid.short_str(),
+                    cid = %in_cid,
                     "accumulate_from_start: not a stream generator, will accumulate directly.",
                 );
             }
@@ -370,8 +370,8 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
 
         if tracing::enabled!(Level::DEBUG) {
             info!(
-                cid = cid.short_str(),
-                newcid = new_cid.short_str(),
+                cid = %cid,
+                new_cid = %new_cid,
                 "new accepted stream"
             );
         }
@@ -424,7 +424,7 @@ fn spawn_acc_forever(params: SpawnAccForeverParams) {
         if let Stream::Generator(rx) = r.c {
             let cid = r.id;
 
-            debug!("{cid} spawn_acc_forever recursive");
+            debug!(cid = %cid, "spawn_acc_forever recursive");
             in_iter_accumulate_forever(InIterAccumulateForeverParams {
                 cid,
 

@@ -6,6 +6,7 @@ the more info you want to access, the slower performance you would get
 
 use bytes::BytesMut;
 use tokio::io::AsyncReadExt;
+use tracing::trace;
 
 use super::*;
 
@@ -72,7 +73,12 @@ pub async fn cp_with_gr<C1: ConnTrait, C2: ConnTrait>(
     #[cfg(feature = "trace")] updater: OptUpdater,
 ) -> Result<u64, Error> {
     if tracing::enabled!(tracing::Level::DEBUG) {
-        debug!("cp start, {} c1: {}, c2: {}", cid, c1.name(), c2.name());
+        debug!(
+            cid = %cid,
+            c1 = c1.name(),
+            c2 = c2.name(),
+            "cp start",
+        );
     }
 
     let (mut c1_read, mut c1_write) = tokio::io::split(c1);
@@ -126,8 +132,8 @@ where
             if let Ok(n) = r1 {
                 let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
 
-                if tracing::enabled!(tracing::Level::DEBUG)  {
-                    debug!("cp, {}, u, ub, {}, {}",cid,n,tt+n);
+                if tracing::enabled!(tracing::Level::TRACE)  {
+                    trace!(cid = %cid,"cp, u, ub, {}, {}",n,tt+n);
                 }
             }
 
@@ -140,13 +146,13 @@ where
             if let Ok(n) = r2 {
                 let tt = tr.db.fetch_add(n, Ordering::Relaxed);
 
-                if tracing::enabled!(tracing::Level::DEBUG)  {
-                    debug!("cp, {}, u, db, {}, {}",cid, n,tt+n);
+                if tracing::enabled!(tracing::Level::TRACE)  {
+                    trace!(cid = %cid,"cp, u, db, {}, {}", n,tt+n);
                 }
             }
 
-            if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!("cp end u, {} ",cid);
+            if tracing::enabled!(tracing::Level::TRACE)  {
+                trace!(cid = %cid,"cp end u");
             }
 
             r1
@@ -156,8 +162,8 @@ where
             if let Ok(n) = r2 {
                 let tt = tr.db.fetch_add(n, Ordering::Relaxed);
 
-                if tracing::enabled!(tracing::Level::DEBUG)  {
-                    debug!("cp, {}, d, db, {}, {}",cid, n,tt+n);
+                if tracing::enabled!(tracing::Level::TRACE)  {
+                    trace!(cid = %cid,"cp, d, db, {}, {}", n,tt+n);
                 }
             }
 
@@ -166,13 +172,13 @@ where
             if let Ok(n) = r1 {
                 let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
 
-                if tracing::enabled!(tracing::Level::DEBUG)  {
-                    debug!("cp, {}, d, ub, {}, {}",cid,n,tt+n);
+                if tracing::enabled!(tracing::Level::TRACE)  {
+                    trace!(cid = %cid,"cp, d, ub, {}, {}",n,tt+n);
                 }
             }
 
-            if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!("cp end d, { } ",cid);
+            if tracing::enabled!(tracing::Level::TRACE)  {
+                trace!(cid = %cid,"cp end d");
             }
 
             r2

@@ -368,17 +368,17 @@ pub async fn cp_between<
         rst1 = c1_to_c2 =>{
 
             if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!("cp_addr end, u, {}",cid);
+                debug!( cid = %cid,"cp_addr end, u");
             }
 
             if let Some(ti) = opt.as_ref(){
                 match &rst1{
                     Ok(n) => {
                         let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
-                        debug!("{}, cp_addr_end, u, ub, {},{}",cid,n,tt+n);
+                        debug!(cid = %cid,"cp_addr_end, u, ub, {},{}",n,tt+n);
                     },
                     Err(e) => {
-                        debug!("{}, cp_addr_end with err, u, {}",cid,e);
+                        debug!(cid = %cid,"cp_addr_end with err, u, {}",e);
 
                     },
                 }
@@ -389,17 +389,17 @@ pub async fn cp_between<
             let rst2 = c2_to_c1.await;
 
             if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!("cp_addr end, d, {}",cid);
+                debug!(cid = %cid,"cp_addr end, d");
             }
 
             if let Some(ti) = opt{
                 match &rst2{
                     Ok(n) => {
                         let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
-                        debug!("{}, cp_addr_end, u ,db, {},{}",cid,n,tt+n);
+                        debug!(cid = %cid,"cp_addr_end, u ,db, {},{}",n,tt+n);
                     },
                     Err(e) => {
-                        debug!("{}, cp_addr_end with err, u, d, {}",cid,e);
+                        debug!(cid = %cid,"cp_addr_end with err, u, d, {}",e);
 
                     },
                 }
@@ -409,16 +409,16 @@ pub async fn cp_between<
         }
         rst2 = c2_to_c1 =>{
             if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!("cp_addr end, d, {}",cid);
+                debug!(cid = %cid,"cp_addr end, d");
             }
             if let Some(ti) = opt.as_ref(){
                 match &rst2{
                     Ok(n) => {
                         let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
-                        debug!("{}, cp_addr_end, d, db, {},{}",cid,n,tt+n);
+                        debug!(cid = %cid,"cp_addr_end, d, db, {},{}",n,tt+n);
                     },
                     Err(e) => {
-                        debug!("{}, cp_addr_end with err, d, d, {}",cid,e);
+                        debug!(cid = %cid,"cp_addr_end with err, d, d, {}",e);
 
                     },
                 }
@@ -427,17 +427,17 @@ pub async fn cp_between<
 
             let rst1 = c1_to_c2.await;
             if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!("cp_addr end, u, {}",cid);
+                debug!(cid = %cid,"cp_addr end, u, ");
             }
             if let Some(ti) = opt{
 
                 match &rst1{
                     Ok(n) => {
                         let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
-                        debug!("{}, cp_addr_end, d, ub, {},{}",cid,n,tt+n);
+                        debug!(cid = %cid,"cp_addr_end, d, ub, {},{}",n,tt+n);
                     },
                     Err(e) => {
-                        debug!("{}, cp_addr_end with err, d, u, {}",cid,e);
+                        debug!(cid = %cid,"cp_addr_end with err, d, u, {}",e);
 
                     },
                 }

@@ -235,7 +235,7 @@ impl Engine {
             let (atx, arx) = mpsc::channel(100); //todo: change this
 
             let cid = CID::Unit(index);
-            debug!("accumulate_from_start {index}");
+            debug!(inbound_index = index, "accumulate_from_start");
             let t1 = acc::accumulate_from_start(cid, atx, rx, miter.clone(), Some(self.ti.clone()));
             index += 1;
 
@@ -340,7 +340,7 @@ impl Engine {
         if let Some(v) = opt {
             let mut i = 0;
             v.into_iter().for_each(|shutdown_tx| {
-                debug!("sending close signal to inbound {}", i);
+                debug!(inbound = i, "sending close signal");
                 let _ = shutdown_tx.send(());
                 i += 1;
             });

@@ -93,7 +93,7 @@ impl Server {
             .await?;
 
         if let Some(e) = &r.e {
-            debug!("{cid} debug socks5http e, {}", e);
+            debug!(cid = %cid, "debug socks5http e, {}", e);
 
             if r.b.is_some() {
                 let c = match r.c {
@@ -101,7 +101,7 @@ impl Server {
 
                     _ => unimplemented!(),
                 };
-                debug!("{cid} try http proxy  ",);
+                debug!(cid = %cid, "try http proxy  ",);
 
                 let rr = self.http_s.handshake(cid, c, r.b).await?;
 

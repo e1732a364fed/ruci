@@ -46,7 +46,7 @@ pub fn cp_conn(
 }
 
 async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
-    debug!("{cid}, relay start");
+    debug!(cid = %cid, "relay start");
 
     let _ = net::copy(
         in_conn,
@@ -57,7 +57,7 @@ async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
         None,
     )
     .await;
-    debug!("{cid}, relay end",);
+    debug!(cid = %cid, "relay end",);
 }
 
 async fn ti_no_ed(
@@ -68,13 +68,13 @@ async fn ti_no_ed(
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
-    debug!("{cid}, relay start");
+    debug!(cid = %cid, "relay start");
 
     ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
 
     defer! {
         ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-        debug!("{cid}, relay end", );
+        debug!(cid = %cid, "relay end", );
     }
 
     let _ = net::copy(
@@ -95,24 +95,31 @@ async fn no_ti_ed(
     earlydata: bytes::BytesMut,
 ) {
     if tracing::enabled!(tracing::Level::DEBUG) {
-        debug!("{cid}, relay with earlydata, {}", earlydata.len());
+        debug!(
+            cid = %cid,
+            "relay with earlydata, {}",
+            earlydata.len()
+        );
     }
     let r = out_conn.write_all(&earlydata).await;
     match r {
         Ok(_) => {
             if tracing::enabled!(tracing::Level::DEBUG) {
-                debug!("{cid}, upload earlydata ok, ");
+                debug!(cid = %cid, "upload earlydata ok, ");
             }
             let r = out_conn.flush().await;
             if let Err(e) = r {
-                warn!("{cid}, upload early_data flush failed: {}", e);
+                warn!(
+                    cid = %cid,
+                    "upload early_data flush failed: {}", e
+                );
                 let _ = in_conn.shutdown().await;
                 let _ = out_conn.shutdown().await;
                 return;
             }
         }
         Err(e) => {
-            warn!("{cid}, upload early_data failed: {}", e);
+            warn!(cid = %cid, "upload early_data failed: {}", e);
 
             let _ = in_conn.shutdown().await;
             let _ = out_conn.shutdown().await;
@@ -143,19 +150,23 @@ async fn ti_ed(
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
     if tracing::enabled!(tracing::Level::DEBUG) {
-        debug!("{cid}, relay with earlydata, {}", earlydata.len());
+        debug!(
+            cid = %cid,
+            "relay with earlydata, {}",
+            earlydata.len()
+        );
     }
     let r = out_conn.write_all(&earlydata).await;
     match r {
         Ok(_) => {
             if tracing::enabled!(tracing::Level::DEBUG) {
-                debug!("{cid}, upload earlydata ok ");
+                debug!(cid = %cid, "upload earlydata ok ");
             }
 
             ti.ub.fetch_add(earlydata.len() as u64, Ordering::Relaxed);
         }
         Err(e) => {
-            warn!("{cid}, upload early_data failed: {}", e);
+            warn!(cid = %cid, "upload early_data failed: {}", e);
 
             let _ = in_conn.shutdown().await;
             let _ = out_conn.shutdown().await;
@@ -167,7 +178,7 @@ async fn ti_ed(
 
     defer! {
         ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-        debug!("{cid}, relay end");
+        debug!(cid = %cid, "relay end");
     }
 
     let _ = net::copy(

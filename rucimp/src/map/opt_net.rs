@@ -66,7 +66,7 @@ impl Mapper for TcpOptListener {
         };
 
         if tracing::enabled!(tracing::Level::DEBUG) {
-            debug!("{}, start listen {}", cid, a)
+            debug!(cid = %cid,addr= %a, "start listen")
         }
 
         let r = match params.shutdown_rx {

@@ -27,7 +27,7 @@ pub async fn cp_udp_tcp(
     first_target: Option<net::Addr>,
     ti: Option<Arc<net::GlobalTrafficRecorder>>,
 ) -> io::Result<u64> {
-    info!("{cid}, relay udp to tcp start",);
+    info!(cid = %cid, "relay udp to tcp start",);
 
     let tic = ti.clone();
     scopeguard::defer! {
@@ -36,7 +36,8 @@ pub async fn cp_udp_tcp(
             ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 
         }
-        info!("{cid},udp to tcp relay end", );
+        info!( cid = %cid,
+        "udp to tcp relay end", );
     }
     //might discard udp addr part
 

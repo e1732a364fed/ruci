@@ -64,7 +64,10 @@ pub async fn handle_in_stream(
     let listen_result = match listen_result {
         Ok(lr) => lr,
         Err(e) => {
-            warn!("{cid}, handshake inbound failed with io::Error, {e}");
+            warn!(
+                cid = %cid,
+                "handshake inbound failed with io::Error, {e}"
+            );
 
             return Err(e.into());
         }
@@ -100,22 +103,22 @@ pub async fn handle_in_accumulate_result(
             let return_e: anyhow::Error;
             match listen_result.e {
                 Some(err) => {
-                    return_e = anyhow!("{cid}, handshake inbound failed with Error: {:#?}", err);
+                    return_e = anyhow!("handshake inbound failed with Error: {:#?}", err);
 
-                    warn!("{}", return_e);
+                    warn!(cid = %cid, "{}", return_e);
                     let _ = listen_result.c.try_shutdown().await;
                     return Err(return_e);
                 }
                 None => match &listen_result.c {
                     Stream::None => {
-                        return_e = anyhow!("{cid}, handshake inbound ok and stream got consumed");
-                        info!("{}", return_e);
+                        return_e = anyhow!("handshake inbound ok and stream got consumed");
+                        info!(cid = %cid, "{}", return_e);
                         return Ok(());
                     }
                     _ => {
                         return_e =
-                            anyhow!("{cid}, handshake inbound succeed but got no target_addr, will use empty target_addr");
-                        warn!("{}", return_e);
+                            anyhow!( "handshake inbound succeed but got no target_addr, will use empty target_addr");
+                        warn!(cid = %cid, "{}", return_e);
                         Addr::default()
                     }
                 },
@@ -126,15 +129,17 @@ pub async fn handle_in_accumulate_result(
         match listen_result.b.as_ref() {
             Some(ed) => {
                 info!(
-                    "{cid}, handshake inbound succeed with ed, target_addr: {}, ed {}",
+                    cid = %cid,
+                    "handshake inbound succeed with ed, target_addr: {}, ed {}",
                     &target_addr,
                     ed.len()
                 )
             }
             None => {
                 info!(
-                    "{cid}, handshake inbound succeed, target_addr: {}",
-                    &target_addr,
+                    cid = %cid,
+                    target_addr = %target_addr,
+                    "handshake inbound succeed",
                 )
             }
         }
@@ -168,27 +173,34 @@ pub async fn handle_in_accumulate_result(
     let dial_result = match dial_result {
         Ok(d) => d,
         Err(e) => {
-            warn!("{cid}, dial out client timeout, {e}",);
+            warn!(cid = %cid, "dial out client timeout, {e}",);
             return Err(e.into());
         }
     };
     let cid = dial_result.id;
 
     if let Some(e) = dial_result.e {
-        warn!("{cid}, dial out client failed, {:#}", e);
+        warn!(cid = %cid, "dial out client failed, {:#}", e);
         return Err(e);
     }
     if let Stream::None = dial_result.c {
-        warn!("{cid}, dial out client stream got consumed ",);
+        warn!(
+            cid = %cid,
+            "dial out client stream got consumed ",
+        );
 
         return Ok(());
     }
 
     if let Some(rta) = &dial_result.a {
         if rta.eq(&Addr::default()) {
-            debug!("{cid}, dial out client succeed with empty target_addr left",);
+            debug!(
+                cid = %cid,
+                "dial out client succeed with empty target_addr left",
+            );
         } else {
-            debug!("{cid}, dial out client succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
+            debug!( cid = %cid,
+            "dial out client succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
         }
     }
 
@@ -269,7 +281,7 @@ pub async fn cp_udp(
     first_target: Option<net::Addr>,
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
 ) {
-    info!("{cid}, relay udp start",);
+    info!(cid = %cid, "relay udp start",);
 
     let tc = tr.clone();
     scopeguard::defer! {
@@ -278,7 +290,8 @@ pub async fn cp_udp(
             ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 
         }
-        info!("{cid},udp relay end" );
+        info!( cid = %cid,
+        "udp relay end" );
     }
 
     if let Some(real_ed) = ed {

@@ -45,7 +45,10 @@ pub(super) async fn udp_associate(
         .await
         .context("socks5 server udp handshake write new addr to client failed")?;
 
-    info!("{cid} socks5: listening a udp port for the user, port: {port}");
+    info!(
+        cid = %cid,
+        "socks5: listening a udp port for the user, port: {port}"
+    );
 
     let mut buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
 
