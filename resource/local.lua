@@ -88,10 +88,10 @@ quic_out_chain = {{
         -- cert_path = "test.crt", -- 若 is_insecure 为 false 则要给出 服务端的 证书 
         server_addr = "127.0.0.1:10801",
 
-        -- 若 is_insecure 为 false, 须给出 server_name, 
-        --  且须为 证书中所写的 CN, 我们提供的 test.crt中的 CN(CommonName) 为 www.mytest.com, 
+        -- 须给出 server_name, 
+        --  且 若 is_insecure 为 false, 须为 证书中所写的 CN, 我们提供的 test.crt中的 CN(CommonName) 为 www.mytest.com, 
 
-        -- server_name = "www.mytest.com",
+        server_name = "www.mytest.com",
 
         alpn = {"h3"} -- 若 is_insecure 为 true, 则要明确指定一下 alpn
     }

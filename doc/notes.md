@@ -10,6 +10,21 @@ tls 中,  native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前�
 
 而默认的 rustls 则支持得更广泛一些,pem格式的 x509证书（后缀可能为 pem, cer 或 crt）, key(rsa, pks8, ecc) 都支持 , 但不支持 pks12 (pfx) 格式
 
+生成 key 和 证书:
+
+```sh
+# ec key
+openssl ecparam -genkey -name prime256v1 -out cert.key
+openssl req -new -x509 -days 7305 -key cert.key -out cert.pem
+
+# rsa key
+openssl req -x509 -sha256 -newkey rsa:4096 -keyout test2.key -out test2.crt -days 7305
+openssl rsa -in test2.key -out test2.key
+```
+
+
+
+
 ### alpn 的行为
 
 
@@ -223,7 +238,7 @@ unexpected error: could not load any valid private keys
 加载正确的自签证书后，客户端连接时显示错误, 
 The connection was closed on the transport level with error unexpected error by the local endpoint
 
-似乎还是 tls 错误
+似乎还是 tls 错误. 也许是自签名证书的原因, 开启 is_insecure 后就不报错了
 
 ## 其它
 

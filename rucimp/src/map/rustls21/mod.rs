@@ -12,7 +12,7 @@ pub struct ClientOptions {
     pub alpn: Option<Vec<String>>,
 }
 
-pub fn insecure_cc(opt: ClientOptions) -> ClientConfig {
+pub(crate) fn cc(opt: ClientOptions) -> ClientConfig {
     let root_store = rustls::RootCertStore::empty();
     let mut cc = ClientConfig::builder()
         .with_safe_defaults()
@@ -30,7 +30,7 @@ pub fn insecure_cc(opt: ClientOptions) -> ClientConfig {
 }
 
 #[derive(Debug)]
-struct SuperDanVer {}
+pub struct SuperDanVer {}
 
 impl rustls::client::ServerCertVerifier for SuperDanVer {
     fn verify_server_cert(
