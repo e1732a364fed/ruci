@@ -303,7 +303,7 @@ fn test_config1() -> mlua::Result<()> {
                     ext: None,
                 },
                 InMapConfig::Counter,
-                InMapConfig::Socks5(PlainTextSet::default()),
+                InMapConfig::Socks5(PlainTextPassSet::default()),
             ],
         }],
         outbounds: vec![OutMapConfigChain {

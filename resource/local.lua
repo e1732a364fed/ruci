@@ -943,7 +943,7 @@ Infinite = {
                         -- print("lua: cid cache",inspect(my_cid_record))
 
                         local new_cid, newi, new_data = coroutine.yield(1, {
-                            Socks5 = {}
+                            Socks5Http = {}
                         })
                         return -1, {}
                     end

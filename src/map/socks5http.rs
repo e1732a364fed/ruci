@@ -105,7 +105,7 @@ impl Server {
 
                     _ => unimplemented!(),
                 };
-                debug!(cid = %cid, "try http proxy  ",);
+                debug!(cid = %cid, "trying http proxy  ",);
 
                 let rr = self.http_s.handshake(cid, c, r.b).await?;
 

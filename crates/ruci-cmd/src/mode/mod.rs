@@ -108,7 +108,7 @@ pub async fn get_file(
 #[cfg(test)]
 mod test {
     use ruci::net::dns::{self, ClientConfig};
-    use rucimp::modes::chain::config::PlainTextSet;
+    use rucimp::modes::chain::config::PlainTextPassSet;
     use rucimp::modes::chain::config::{
         DirectConfig, InMapConfig, InMapConfigChain, OutMapConfig, OutMapConfigChain, StaticConfig,
     };
@@ -126,7 +126,7 @@ mod test {
                         ext: None,
                     },
                     InMapConfig::Counter,
-                    InMapConfig::Socks5(PlainTextSet::default()),
+                    InMapConfig::Socks5(PlainTextPassSet::default()),
                 ],
             }],
             outbounds: vec![OutMapConfigChain {

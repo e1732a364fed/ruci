@@ -23,20 +23,11 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let bs = try_get_file_content(&default_fn, arg_f)?;
-
     let contents = String::from_utf8_lossy(bs.as_slice()).to_string();
 
-    let mut e = Engine::new();
-
-    e.init_lua_infinite_dynamic(contents)?;
-
-    let mut js = e.run().await?;
-
-    wait_close_sig().await?;
-
-    e.stop().await;
-
-    js.shutdown().await;
-
-    Ok(())
+    Engine::new_and_run(Box::new(move |e| {
+        e.set_default_file_source();
+        e.init_lua_infinite_dynamic(contents)
+    }))
+    .await
 }

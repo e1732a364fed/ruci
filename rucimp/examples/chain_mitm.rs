@@ -5,18 +5,14 @@
 */
 
 use ruci::map::tls::server::TlsServerOptions;
-use rucimp::{
-    modes::chain::{config::*, engine::Engine},
-    utils::FileSource,
-};
+use rucimp::modes::chain::{config::*, engine::Engine};
 
 mod shared;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     shared::print_env_version_and_init_log("example: chain mitm");
 
-    let fs = Some(FileSource::default());
-    tokio::spawn(run_engine_server_end(fs.clone()));
+    tokio::spawn(run_engine_server_end());
 
     let sc = StaticConfig {
         inbounds: vec![InMapConfigChain {
@@ -26,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
                     listen_addr: "127.0.0.1:10800".to_string(),
                     ext: None,
                 },
-                InMapConfig::Socks5Http(PlainTextSet::default()),
+                InMapConfig::Socks5Http(PlainTextPassSet::default()),
                 InMapConfig::MITM(TlsServerOptions {
                     cert: "resource/test_ca_cert.pem".into(),
                     key: "resource/test_ca_key.pem".into(),
@@ -55,10 +51,10 @@ async fn main() -> anyhow::Result<()> {
         rule_route: None,
     };
 
-    Engine::run_static_engine(sc, fs.clone()).await
+    Engine::new_and_run_static(sc).await
 }
 
-async fn run_engine_server_end(file_source: Option<FileSource>) -> anyhow::Result<()> {
+async fn run_engine_server_end() -> anyhow::Result<()> {
     let sc = StaticConfig {
         inbounds: vec![InMapConfigChain {
             tag: None,
@@ -92,5 +88,5 @@ async fn run_engine_server_end(file_source: Option<FileSource>) -> anyhow::Resul
         fallback_route: None,
         rule_route: None,
     };
-    Engine::run_static_engine(sc, file_source).await
+    Engine::new_and_run_static(sc).await
 }

@@ -285,10 +285,6 @@ pub trait Map: Name + Debug {
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult;
 }
 
-// pub trait ToMapBox {
-//     fn to_map_box(&self) -> anyhow::Result<MapBox>;
-// }
-
 /// 令 Map 实现 Send + Sync, 否则异步/多线程报错
 ///
 /// 且添加了 [`MapExt`]

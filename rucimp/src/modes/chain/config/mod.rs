@@ -273,21 +273,12 @@ impl TryFrom<BindDialerConfig> for MapBox {
     fn try_from(value: BindDialerConfig) -> Result<Self, Self::Error> {
         use anyhow::Context;
 
-        // let opt_bind_a = value
-        //     .bind_addr
-        //     .clone()
-        //     .map(|a| net::Addr::from_name_network_addr_url(&a).context("network_ip_addr invalid"));
-
         let opt_bind_a = match value.bind_addr {
             Some(a) => {
                 Some(net::Addr::from_name_network_addr_url(&a).context("network_ip_addr invalid")?)
             }
             None => None,
         };
-
-        // let opt_dial_a = value.dial_addr.clone().map(|a| {
-        //     net::Addr::from_name_network_addr_url(&a).context("network_ip_addr invalid")
-        // })?;
 
         let opt_dial_a = match value.dial_addr {
             Some(a) => {
@@ -381,9 +372,9 @@ pub enum InMapConfig {
         http_config: Option<CommonConfig>,
     },
 
-    Http(PlainTextSet),
-    Socks5(PlainTextSet),
-    Socks5Http(PlainTextSet),
+    Http(PlainTextPassSet),
+    Socks5(PlainTextPassSet),
+    Socks5Http(PlainTextPassSet),
     Trojan(TrojanPassSet),
     HttpFilter(Option<CommonConfig>),
     WebSocket {
@@ -501,7 +492,7 @@ pub struct FileConfig {
 
 /// 明文密码配置
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct PlainTextSet {
+pub struct PlainTextPassSet {
     pub userpass: Option<String>,
     pub more: Option<Vec<String>>,
     pub upgrade_to_h2: Option<bool>,

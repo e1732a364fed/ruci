@@ -80,6 +80,11 @@ impl Engine {
             ..Default::default()
         }
     }
+
+    pub fn set_default_file_source(&mut self) {
+        self.file_source = Arc::new(Some(FileSource::default()))
+    }
+
     /// 清空配置. reset 后 可以 接着调用 init_*
     ///
     /// 不会清空 file_source
@@ -409,10 +414,11 @@ impl Engine {
         info!("chain engine stopped");
     }
 
-    /// A helper function to start an engine with a static config, run it until it got shutdown signal, then stop it.
-    pub async fn run_static_engine(
-        sc: StaticConfig,
-        file_source: Option<FileSource>,
+    /// A helper function to start an engine, run it until it got shutdown signal, then stop it.
+    ///
+    /// use init_fn to modify the engine before it runs.
+    pub async fn new_and_run(
+        init_fn: Box<dyn Send + FnOnce(&mut Engine) -> anyhow::Result<()>>,
     ) -> anyhow::Result<()> {
         let mut e = Engine::new();
 
@@ -421,9 +427,7 @@ impl Engine {
             e.global_data.run_instance_id
         );
 
-        e.file_source = Arc::new(file_source);
-
-        e.init_static(sc)?;
+        init_fn(&mut e)?;
 
         let mut js = e.run().await?;
 
@@ -447,5 +451,16 @@ impl Engine {
         );
 
         Ok(())
+    }
+
+    /// A helper function to start an engine with a static config, run it until it got shutdown signal, then stop it.
+    pub async fn new_and_run_static(sc: StaticConfig) -> anyhow::Result<()> {
+        let f = move |e: &mut Engine| {
+            e.file_source = Arc::new(Some(FileSource::default()));
+
+            e.init_static(sc)
+        };
+
+        Engine::new_and_run(Box::new(f)).await
     }
 }
