@@ -5,7 +5,6 @@ Defines basic traits and helper structs for user authentication.
 use std::collections::{BTreeSet, HashMap};
 use std::fmt::Debug;
 
-use async_trait::async_trait;
 use dyn_clone::DynClone;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -97,9 +96,9 @@ impl Hash for UserVec {
 }
 
 /// 用户鉴权的实际方法
-#[async_trait]
+//#[async_trait]
 pub trait AsyncUserAuthenticator<T: User> {
-    async fn auth_user_by_authstr(&self, authstr: &str) -> Option<T>;
+    fn auth_user_by_authstr(&self, authstr: &str) -> Option<T>;
 }
 
 /// 简单以字符串存储用户名和密码, 实现User
@@ -205,25 +204,25 @@ impl<T: UserTrait + Clone> UsersMap<T> {
         }
     }
 
-    pub async fn add_user(&mut self, u: T) {
+    pub fn add_user(&mut self, u: T) {
         let uc = u.clone();
         let mut inner = self.m.lock();
         inner.id_map.insert(u.identity_str(), u);
         inner.a_map.insert(uc.auth_str(), uc);
     }
 
-    pub async fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.m.lock().id_map.len()
     }
 
-    pub async fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.m.lock().id_map.is_empty()
     }
 }
 
-#[async_trait]
+//#[async_trait]
 impl<T: UserTrait + Clone> AsyncUserAuthenticator<T> for UsersMap<T> {
-    async fn auth_user_by_authstr(&self, authstr: &str) -> Option<T> {
+    fn auth_user_by_authstr(&self, authstr: &str) -> Option<T> {
         let inner = self.m.lock();
         let s = authstr.to_string();
         inner.a_map.get(&s).cloned()
@@ -233,7 +232,6 @@ impl<T: UserTrait + Clone> AsyncUserAuthenticator<T> for UsersMap<T> {
 #[cfg(test)]
 mod test {
     use anyhow::*;
-    use futures::executor::block_on;
     use std::collections::HashMap;
 
     use super::PlainText;
@@ -258,16 +256,16 @@ mod test {
         let up2 = PlainText::new("u2".into(), "p2".into());
 
         let mut um: UsersMap<PlainText> = UsersMap::new();
-        block_on(um.add_user(up));
-        block_on(um.add_user(up2));
+        um.add_user(up);
+        um.add_user(up2);
 
-        let x = um.auth_user_by_authstr("plaintext:u").await;
+        let x = um.auth_user_by_authstr("plaintext:u");
 
         if x != None {
             return Err(anyhow!("shit,not none"));
         }
 
-        let x = um.auth_user_by_authstr("plaintext:u2\np2").await;
+        let x = um.auth_user_by_authstr("plaintext:u2\np2");
 
         if x == None {
             Err(anyhow!("shit,none"))

@@ -256,8 +256,12 @@ config = {
     tag_route = {{"listen1", "out"}, {"listen_udp1", "out"}},
 
     --[[
-这个 config 块是演示 inbound 是 tproxy, outbound 是  trojan
+这个 config 块是演示 inbound 是 tproxy, outbound 是  trojan out 的情况
 透明代理tproxy 只能在 linux 上使用.
+
+另外, 如果在 listen tproxy 的同一主机上 监听 trojan ,即同一电脑上运行 remote.lua 中的 对应配置,
+
+对应配置中是不需要再用 "TcpOptListener" 的, 直接正常监听就行, 但其direct 要为 OptDialer 并给出 somark
 
 --]]
 

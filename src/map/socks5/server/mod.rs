@@ -72,7 +72,7 @@ impl Server {
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
             let u = PlainText::from(user_whitespace_pass);
             if u.strict_valid() {
-                um.add_user(u).await;
+                um.add_user(u);
             }
         }
 
@@ -89,13 +89,13 @@ impl Server {
         if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
             while let Some(u) = a.pop() {
                 let uup = user::PlainText::new(u.user, u.pass);
-                um.add_user(uup).await;
+                um.add_user(uup);
             }
         }
 
         Server {
             support_udp: option.support_udp,
-            um: if um.len().await > 0 { Some(um) } else { None },
+            um: if um.len() > 0 { Some(um) } else { None },
             ext_fields: Some(MapperExtFields::default()),
         }
     }
@@ -284,7 +284,7 @@ impl Server {
                     `failure' (STATUS value other than X'00') status, it MUST close the connection.
                     */
                     if let Some(um) = &self.um {
-                        if um.auth_user_by_authstr(this_up.auth_str()).await.is_some() {
+                        if um.auth_user_by_authstr(this_up.auth_str()).is_some() {
                             authed = true;
                             opt_e = None;
 

@@ -53,7 +53,7 @@ impl Server {
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
             let u = PlainText::from(user_whitespace_pass);
             if u.strict_valid() {
-                um.add_user(u).await;
+                um.add_user(u);
             }
         }
 
@@ -61,12 +61,12 @@ impl Server {
         if let Some(vu) = opt_user_passes.as_mut().filter(|vu| !vu.is_empty()) {
             while let Some(u) = vu.pop() {
                 let uup = user::PlainText::new(u.user, u.pass);
-                um.add_user(uup).await;
+                um.add_user(uup);
             }
         }
 
         let mut oum: Option<UsersMap<PlainText>> = None;
-        if um.len().await > 0 {
+        if um.len() > 0 {
             oum = Some(um);
         }
 

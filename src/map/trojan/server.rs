@@ -37,17 +37,17 @@ impl Server {
 
         if let Some(u) = option.pass {
             let u = User::new(&u);
-            um.add_user(u).await;
+            um.add_user(u);
         }
 
         let mut cu = option.passes.clone();
         if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
             while let Some(u) = a.pop() {
                 let uup = User::new(&u);
-                um.add_user(uup).await;
+                um.add_user(uup);
             }
         }
-        if um.len().await == 0 {
+        if um.len() == 0 {
             panic!("can't init a trojan server without any password");
         }
 
@@ -134,7 +134,7 @@ impl Server {
         let mut trojan_hash = String::from("trojan:");
         trojan_hash.push_str(&hash_str);
 
-        let opt_user = self.um.auth_user_by_authstr(&trojan_hash).await;
+        let opt_user = self.um.auth_user_by_authstr(&trojan_hash);
 
         if opt_user.is_none() {
             return Ok(MapResult::ebc(

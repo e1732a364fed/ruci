@@ -61,7 +61,6 @@ async fn auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
         a.um.as_ref()
             .expect("a as um")
             .auth_user_by_authstr("plaintext:u1\np1")
-            .await
             .expect("auth success")
             .pass
             == "p1"
@@ -71,7 +70,6 @@ async fn auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
         a.um.as_ref()
             .expect("a as um")
             .auth_user_by_authstr("plaintext:u0\np0")
-            .await
             .expect("auth success")
             .pass
             == "p0"

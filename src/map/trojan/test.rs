@@ -48,7 +48,6 @@ async fn auth() -> std::io::Result<()> {
         a.um.auth_user_by_authstr(
             "trojan:ccc9c73a37651c6b35de64c3a37858ccae045d285f57fffb409d251d"
         )
-        .await
         .unwrap()
         .plain_text_pass
             == "pass"
@@ -57,7 +56,6 @@ async fn auth() -> std::io::Result<()> {
         a.um.auth_user_by_authstr(
             "trojan:a2efc77b5d3c5e14ce7d0520115b32bba3426c1463d93d36a368fed7"
         )
-        .await
         .unwrap()
         .plain_text_pass
             == "pass2"
@@ -66,7 +64,6 @@ async fn auth() -> std::io::Result<()> {
         a.um.auth_user_by_authstr(
             "trojan:aaae8f86690070b538d2fc141d6389dd9ce0e7d8e0a4d800384f9454"
         )
-        .await
         .unwrap()
         .plain_text_pass
             == "pass3"
@@ -74,7 +71,6 @@ async fn auth() -> std::io::Result<()> {
     assert!(a
         .um
         .auth_user_by_authstr("trojan:aaae8f86690070b538d2fc141d6389dd9ce0e7d8e0a4d800384f9451")
-        .await
         .is_none());
     Ok(())
 }

@@ -63,7 +63,7 @@ impl Server {
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
             let u = PlainText::from(user_whitespace_pass);
             if u.strict_valid() {
-                um.add_user(u).await;
+                um.add_user(u);
             }
         }
 
@@ -71,13 +71,13 @@ impl Server {
         if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
             while let Some(u) = a.pop() {
                 let uup = user::PlainText::new(u.user, u.pass);
-                um.add_user(uup).await;
+                um.add_user(uup);
             }
         }
 
         Server {
             only_connect: option.only_support_connect,
-            um: if um.len().await > 0 { Some(um) } else { None },
+            um: if um.len() > 0 { Some(um) } else { None },
             ext_fields: Some(MapperExtFields::default()),
         }
     }
@@ -157,7 +157,7 @@ impl Server {
                     );
 
                     if let Some(um) = &self.um {
-                        if let Some(u) = um.auth_user_by_authstr(u.auth_str()).await {
+                        if let Some(u) = um.auth_user_by_authstr(u.auth_str()) {
                             ok = true;
                             authed_user = Some(u);
                         };
