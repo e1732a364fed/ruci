@@ -1,5 +1,6 @@
-use super::*;
+use tokio::sync::Mutex;
 
+use super::*;
 
 #[derive(Default)]
 struct UdpMap {
@@ -10,7 +11,7 @@ struct UdpMap {
 // 这是移植自 verysimple 上的实现，对未发送过数据的新远程地址 使用 新的端口 发送
 // 但是这存在问题. 它是基于一个假设：客户端只使用一次 UDP ASSOCIATE。
 
-所以为了使用不同端口，它内部使用了一个映射表，每个远程目标都有一个自己的对应的 udpsocket 
+所以为了使用不同端口，它内部使用了一个映射表，每个远程目标都有一个自己的对应的 udpsocket
 和它的读写循环，这种实现增加了复杂性，而且会造成大量端口的占用。
 
 实际的使用情况是，如果有需要，用户会对需要新udp拨号端口的远程目标地址使用一次UDP ASSOCIATE

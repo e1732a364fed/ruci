@@ -7,6 +7,11 @@
 */
 
 use bytes::{BufMut, BytesMut};
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpListener;
+use tokio::net::TcpStream;
+use tokio::sync::Mutex;
 
 use crate::map;
 use crate::map::socks5::server::*;
@@ -47,7 +52,7 @@ async fn new_noauth_socks5_inadder() -> Server {
 }
 
 /// 从toml配置创建socks5的adder后，在内存中模拟连接 socks5 服务
-#[async_test]
+#[tokio::test]
 async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
     let a = new_3user_socks5_inadder().await;
     //println!("{:?}", a);
@@ -141,7 +146,7 @@ async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
 }
 
 /// 从earlydata中读
-#[async_test]
+#[tokio::test]
 async fn auth_tcp_handshake_in_mem_earlydata() -> std::io::Result<()> {
     let a = new_3user_socks5_inadder().await;
 
@@ -241,7 +246,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> std::io::Result<()> {
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn auth_tcp_handshake_local() -> std::io::Result<()> {
     let ps = net::gen_random_higher_port();
 
@@ -361,7 +366,7 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io::Result<()> {
     let ps = net::gen_random_higher_port();
 
@@ -464,7 +469,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io::Result<()> {
     let ps = net::gen_random_higher_port();
 
@@ -565,7 +570,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
     let a = new_noauth_socks5_inadder().await;
 
@@ -636,7 +641,7 @@ async fn no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
 }
 
 /// 在握手数据后连上一个客户数据hello一起发送(earlydata)
-#[async_test]
+#[tokio::test]
 async fn no_auth_tcp_handshake_in_mem_stick_hello() -> std::io::Result<()> {
     let a = new_noauth_socks5_inadder().await;
     let writev = Arc::new(Mutex::new(Vec::new()));
@@ -704,9 +709,9 @@ async fn no_auth_tcp_handshake_in_mem_stick_hello() -> std::io::Result<()> {
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 #[should_panic]
-async fn wrong0_no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
+async fn wrong0_no_auth_tcp_handshake_in_mem() {
     //在下面客户端write的数据中，version不为5，server理应返回error
     std::env::set_var("RUST_BACKTRACE", "0");
 
@@ -746,17 +751,14 @@ async fn wrong0_no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
             assert!(r.a.unwrap().get_name().unwrap() == name);
         }
         Some(e) => {
-            println!("{:?}", e);
-            return Err(e);
+            panic!("{:?}", e);
         }
     }
-
-    Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 #[should_panic]
-async fn wrong1_no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
+async fn wrong1_no_auth_tcp_handshake_in_mem() {
     //在下面客户端write的数据中，没有给出port，服务端理应返回error
     std::env::set_var("RUST_BACKTRACE", "0");
 
@@ -796,15 +798,12 @@ async fn wrong1_no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
             assert!(r.a.unwrap().get_name().unwrap() == name);
         }
         Some(e) => {
-            println!("{:?}", e);
-            return Err(e);
+            panic!("{:?}", e);
         }
     }
-
-    Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn batch_random_bytes_request_no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
     std::env::set_var("RUST_BACKTRACE", "0");
     for n in 0..1000 {
@@ -860,7 +859,7 @@ async fn random_bytes_request_no_auth_tcp_handshake_in_mem() -> std::io::Result<
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn batch_random_bytes_request_auth_userpass_tcp_handshake_in_mem() -> std::io::Result<()> {
     std::env::set_var("RUST_BACKTRACE", "0");
     for n in 0..1000 {

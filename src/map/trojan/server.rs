@@ -7,6 +7,7 @@ use crate::{
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use std::io::{self};
+use tokio::io::AsyncReadExt;
 
 #[derive(Default)]
 pub struct Config {

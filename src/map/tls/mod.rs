@@ -8,10 +8,11 @@ mod test;
 
 use async_trait::async_trait;
 use bytes::BytesMut;
-use futures::AsyncWriteExt;
 use log::debug;
 use rustls::{client::ServerCertVerifier, ClientConfig, OwnedTrustAnchor};
-use std::{fmt, sync::Arc};
+use std::{fmt, io, sync::Arc};
+use tokio::io::AsyncWriteExt;
+use tokio_rustls::{TlsAcceptor, TlsConnector};
 
 use crate::{
     map,
@@ -176,10 +177,28 @@ impl Client {
         let connector = if self.is_insecure {
             TlsConnector::from(self.client_config.clone())
         } else {
-            TlsConnector::default()
+            let mut root_certs = rustls::RootCertStore::empty();
+            root_certs.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
+                OwnedTrustAnchor::from_subject_spki_name_constraints(
+                    ta.subject,
+                    ta.spki,
+                    ta.name_constraints,
+                )
+            }));
+            let config = ClientConfig::builder()
+                .with_safe_defaults()
+                .with_root_certificates(root_certs)
+                .with_no_client_auth();
+
+            TlsConnector::from(Arc::new(config))
         };
 
-        let mut new_c = connector.connect(&self.domain, conn).await?;
+        let mut new_c = connector
+            .connect(
+                rustls::ServerName::try_from(self.domain.as_str()).unwrap(),
+                conn,
+            )
+            .await?;
 
         if let Some(ed) = b {
             new_c.write_all(&ed).await?;

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use tokio::sync::Mutex;
 
 /// 用于用户鉴权
 pub trait User: Clone {
@@ -129,6 +130,7 @@ impl<T: User + Send> AsyncUserAuthenticator<T> for UsersMap<T> {
 
 #[cfg(test)]
 mod test {
+    use futures::executor::block_on;
     use std::{collections::HashMap, io};
 
     use super::UserPass;
@@ -147,14 +149,13 @@ mod test {
         assert_eq!(map.get("1"), Some(&"a"));
     }
 
-    #[async_test]
+    #[tokio::test]
     async fn test_users_map() -> std::io::Result<()> {
         let up = UserPass::new("u".into(), "p".into());
         //println!("up: {:?}", up);
         let up2 = UserPass::new("u2".into(), "p2".into());
 
         let mut um: UsersMap<UserPass> = UsersMap::new();
-
         block_on(um.add_user(up));
         block_on(um.add_user(up2));
         //println!("um: {:?}", um);

@@ -1,7 +1,9 @@
 use super::*;
 use log::{info, log_enabled, warn};
+use std::io;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::net::TcpStream;
 
 use crate::map::*;
 use crate::net;
@@ -27,23 +29,24 @@ pub async fn handle_tcp<'a>(
     outc_iterator: impl Iterator<Item = &'a MapperBox>,
     outc_addr: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
-) {
+) -> io::Result<()> {
     let mut state = State::new("tcp");
     state.ins_name = ins_name.to_string();
     state.cached_in_raddr = in_tcp.peer_addr().unwrap().to_string();
 
     let cid = state.cid;
 
-    let intcpc = in_tcp.clone();
+    //let intcpc = in_tcp.clone();
 
-    let listen_result = io::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-        type DummyType = std::vec::IntoIter<OptData>;
-        Ok(
-            TcpInAccumulator::accumulate::<_, DummyType>(cid, Box::new(intcpc), ins_iterator, None)
-                .await,
-        )
-    })
-    .await;
+    let listen_result =
+        tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
+            type DummyType = std::vec::IntoIter<OptData>;
+            //Ok::<AccumulateResult, E>(
+            TcpInAccumulator::accumulate::<_, DummyType>(cid, Box::new(in_tcp), ins_iterator, None)
+                .await
+            //)
+        })
+        .await;
 
     let mut listen_result = match listen_result {
         Ok(lr) => lr,
@@ -52,8 +55,9 @@ pub async fn handle_tcp<'a>(
                 "{}, handshake in server failed with io::Error, {}",
                 state, e
             );
-            let _ = in_tcp.shutdown(std::net::Shutdown::Both);
-            return;
+            //let _ = in_tcp.shutdown();
+
+            return Err(e.into());
         }
     };
 
@@ -64,8 +68,10 @@ pub async fn handle_tcp<'a>(
                 "{}, handshake in server succeed but got no target_addr",
                 state
             );
-            let _ = in_tcp.shutdown(std::net::Shutdown::Both);
-            return;
+            //let _ = in_tcp.shutdown();
+            return Err(io::Error::other(
+                "handshake in server succeed but got no target_addr",
+            ));
         }
     };
 
@@ -96,8 +102,8 @@ pub async fn handle_tcp<'a>(
                 "{}, parse target addr failed, {} , {}",
                 state, real_target_addr, e
             );
-            let _ = in_tcp.shutdown(std::net::Shutdown::Both);
-            return;
+            //let _ = in_tcp.shutdown();
+            return Err(e);
         }
     };
 
@@ -105,17 +111,17 @@ pub async fn handle_tcp<'a>(
         Ok(tcp) => tcp,
         Err(e) => {
             warn!("{}, handshake in server failed: {}", state, e);
-            let _ = in_tcp.shutdown(std::net::Shutdown::Both);
-            return;
+            //let _ = in_tcp.shutdown();
+            return Err(e);
         }
     };
-    let out_conn = Box::new(out_tcp.clone());
+    let out_conn = Box::new(out_tcp);
 
     if is_direct {
         cp_tcp::cp_tcp(
             cid,
-            in_tcp,
-            out_tcp,
+            // in_tcp,
+            // out_tcp,
             listen_result.c.take().unwrap(),
             out_conn,
             listen_result.b.take(),
@@ -123,24 +129,33 @@ pub async fn handle_tcp<'a>(
         )
         .await;
     } else {
-        let dial_result = io::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            TcpOutAccumulator::accumulate(
-                cid,
-                out_conn,
-                outc_iterator,
-                Some(target_addr),
-                listen_result.b.take(),
-            )
-            .await
-        })
-        .await;
+        let dial_result =
+            tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
+                TcpOutAccumulator::accumulate(
+                    cid,
+                    out_conn,
+                    outc_iterator,
+                    Some(target_addr),
+                    listen_result.b.take(),
+                )
+                .await
+            })
+            .await;
 
         if let Err(e) = dial_result {
-            warn!("{}, dial out client failed, {}", state, e);
-            let _ = in_tcp.shutdown(std::net::Shutdown::Both);
-            let _ = out_tcp.shutdown(std::net::Shutdown::Both);
-            return;
+            warn!("{}, dial out client timeout, {}", state, e);
+            //let _ = in_tcp.shutdown();
+            //let _ = out_tcp.shutdown();
+            return Err(e.into());
         }
+        let dial_result = dial_result.unwrap();
+        if let Err(e) = dial_result {
+            warn!("{}, dial out client failed, {}", state, e);
+            //let _ = in_tcp.shutdown();
+            //let _ = out_tcp.shutdown();
+            return Err(e);
+        }
+
         let (out_conn, remain_target_addr, _extra_out_data_vec) = dial_result.unwrap();
         if let Some(rta) = remain_target_addr {
             warn!(
@@ -150,8 +165,8 @@ pub async fn handle_tcp<'a>(
         }
         cp_tcp::cp_tcp(
             cid,
-            in_tcp,
-            out_tcp,
+            //in_tcp,
+            //out_tcp,
             listen_result.c.take().unwrap(),
             out_conn,
             None,
@@ -160,5 +175,5 @@ pub async fn handle_tcp<'a>(
         .await;
     }
 
-    return;
+    Ok(())
 }

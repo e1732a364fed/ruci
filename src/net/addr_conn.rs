@@ -1,12 +1,11 @@
 use super::*;
 
-use bytes::{Buf, BytesMut};
-use futures::io::Error;
 use std::{
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
 };
+use tokio::io::ReadBuf;
 
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
 // 只是加了一个 Addr 参数. 这一部分比较难懂。
@@ -178,30 +177,42 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut w1: W1,
 ) -> Result<u64, Error> {
     const CAP: usize = 1500;
-    let mut buf: BytesMut = BytesMut::with_capacity(CAP);
+    //let mut buf: BytesMut = BytesMut::with_capacity(CAP);
+    let mut buf0 = [0u8; CAP];
+    let mut buf = ReadBuf::new(&mut buf0);
     let mut whole_write = 0;
+
     loop {
-        buf.resize(CAP, 0);
-        let r = r1.read(&mut buf).await;
-        if r.is_err() {
-            break;
-        }
-        let (m, ad) = r.unwrap();
-        if m > 0 {
-            buf.truncate(m);
-            loop {
-                let r = w1.write(&mut buf, ad.clone()).await;
-                if r.is_err() {
-                    break;
-                }
-                let n = r.unwrap();
-                buf.advance(n);
-                if buf.len() == 0 {
-                    break;
+        //buf.resize(CAP, 0);
+        buf.clear();
+
+        let r = r1.read(buf.initialized_mut()).await;
+
+        {
+            match r {
+                Err(_) => break,
+                Ok((m, ad)) => {
+                    if m > 0 {
+                        //buf.truncate(m);
+                        //let (frist_mb, _) = buf.filled_mut().split_at_mut(m);
+                        //let mut buf = ReadBuf::new(frist_mb);
+
+                        loop {
+                            let r = w1.write(buf.filled(), ad.clone()).await;
+                            if r.is_err() {
+                                break;
+                            }
+                            let n = r.unwrap();
+                            buf.advance(n);
+                            if buf.filled().len() == 0 {
+                                break;
+                            }
+                        }
+                    }
+                    whole_write += m;
                 }
             }
         }
-        whole_write += m;
     }
 
     Ok(whole_write as u64)

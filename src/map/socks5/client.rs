@@ -1,10 +1,9 @@
 use bytes::BufMut;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use self::map::{MapParams, ProxyBehavior};
 use super::*;
-use crate::{net, map::MapResult};
-use futures::AsyncReadExt;
-use futures::AsyncWriteExt;
+use crate::{map::MapResult, net};
 
 #[derive(Debug)]
 pub struct Client {

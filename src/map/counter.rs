@@ -5,6 +5,7 @@
 
 use super::*;
 use std::{
+    io,
     pin::Pin,
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -15,8 +16,8 @@ use std::{
 
 use crate::net;
 use async_trait::async_trait;
-use futures::{AsyncRead, AsyncWrite};
 use log::{debug, log_enabled};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 /// 持有上层Conn的所有权，用于计数
 pub struct CounterConn {
@@ -36,11 +37,13 @@ impl AsyncRead for CounterConn {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        let previous_len = buf.filled().len();
         let r = self.base.as_mut().poll_read(cx, buf);
-        if let Poll::Ready(Ok(d)) = &r {
-            let db = self.data.db.fetch_add(*d as u64, Ordering::Relaxed);
+        let n = buf.filled().len() - previous_len;
+        if let Poll::Ready(Ok(())) = &r {
+            let db = self.data.db.fetch_add(n as u64, Ordering::Relaxed);
             if log_enabled!(log::Level::Debug) {
                 debug!("counter: db: {}, cid: {}", db, self.data.cid);
             }
@@ -73,11 +76,11 @@ impl AsyncWrite for CounterConn {
         self.base.as_mut().poll_flush(cx)
     }
 
-    fn poll_close(
+    fn poll_shutdown(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<io::Result<()>> {
-        self.base.as_mut().poll_close(cx)
+        self.base.as_mut().poll_shutdown(cx)
     }
 }
 

@@ -8,13 +8,18 @@ use crate::{
     user::{self, AsyncUserAuthenticator, UserPass, UsersMap},
 };
 use bytes::{Buf, BytesMut};
-use futures::{select, AsyncWriteExt};
+use futures::select;
 use log::{debug, log_enabled, warn};
 use std::{
     collections::HashMap,
     io::{self, Error},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     sync::Arc,
+};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::UdpSocket,
+    task,
 };
 
 async fn server_udp_associate(

@@ -1,12 +1,13 @@
 use crate::map::{MapParams, Mapper};
 use crate::net::helpers::MockTcpStream;
 
-use futures::AsyncWriteExt;
 use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
+use tokio::sync::Mutex;
 
 use super::ProxyBehavior;
 
-#[async_test]
+#[tokio::test]
 async fn test_adder1() -> std::io::Result<()> {
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();
@@ -51,7 +52,7 @@ async fn test_adder1() -> std::io::Result<()> {
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn test_counter1() -> std::io::Result<()> {
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();

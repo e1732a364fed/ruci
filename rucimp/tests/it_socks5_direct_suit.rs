@@ -20,6 +20,8 @@ use ruci::map::{socks5, MappersVec};
 use ruci::{map::Mapper, net, user::UserPass};
 use rucimp::suit::config::Config;
 use rucimp::{load_in_adder_by_str, load_out_adder_by_str, suit::*, SuitEngine};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 
 const WAITSECS: u64 = ruci::relay::READ_HANDSHAKE_TIMEOUT + 2;
 const WAITID: i32 = 10101;
@@ -321,7 +323,7 @@ async fn get_socks5_inadder(lsuit: &SuitStruct) -> socks5::server::Server {
 
 /// 基本测试. 百度在遇到非http请求后会主动断开连接，其对于长挂起请求最多60秒后断开连接。
 /// 其对请求中不含\n 时会视为挂起
-#[async_test]
+#[tokio::test]
 async fn socks5_direct_and_request() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
@@ -385,7 +387,7 @@ async fn socks5_direct_and_request() -> std::io::Result<()> {
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn socks5_direct_and_outadder() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
@@ -438,7 +440,7 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
 }
 
 /// 不监视原始流量，性能会高一些
-#[async_test]
+#[tokio::test]
 async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
@@ -492,7 +494,7 @@ async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()>
 ///
 /// 注：这里就体现了链式代理的特点。可以里一层counter 外一层counter 如 counter - socks5 - counter 来分别记录原始流量
 /// 和实际流量
-#[async_test]
+#[tokio::test]
 async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
@@ -547,7 +549,7 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
@@ -603,10 +605,10 @@ async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
 
 //因为太耗时，所以test被注释掉
 /// 每次write前等待 ruci::proxy::READ_HANDSHAKE_TIMEOUT + 2 秒
-#[async_test]
+#[tokio::test]
 #[should_panic]
 #[allow(dead_code)]
-async fn socks5_direct_longwait_write_and_request() -> std::io::Result<()> {
+async fn socks5_direct_longwait_write_and_request() {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
     set_var("RUST_BACKTRACE", "0");
@@ -658,12 +660,10 @@ async fn socks5_direct_longwait_write_and_request() -> std::io::Result<()> {
     }
 
     thread::sleep(Duration::from_secs(2));
-
-    Ok(())
 }
 
 /// 对 block_run 和 non_block run 各测一次
-#[async_test]
+#[tokio::test]
 async fn suit_engine_socks5_direct_and_request() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
@@ -735,7 +735,7 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Result<()> {
     let even = true;
 
@@ -798,7 +798,7 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
 }
 
 // 同时发起两个请求的情况
-#[async_test]
+#[tokio::test]
 async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();

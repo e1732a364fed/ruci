@@ -9,20 +9,22 @@ use log::Level::Debug;
 use log::{debug, info, log_enabled, warn};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
+use tokio::task;
 
 //non-blocking
 pub async fn cp_tcp(
     cid: u32,
-    raw_intcp: TcpStream,
-    raw_out_tcp: TcpStream,
+    //mut raw_intcp: TcpStream,
+    //mut raw_out_tcp: TcpStream,
     in_conn: net::Conn,
     out_conn: net::Conn,
     pre_read_data: Option<bytes::BytesMut>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
     let cf = move || {
-        let _ = raw_intcp.shutdown(std::net::Shutdown::Both);
-        let _ = raw_out_tcp.shutdown(std::net::Shutdown::Both);
+        //let _ = raw_intcp.shutdown();
+        //let _ = raw_out_tcp.shutdown();
     };
 
     info!("cid: {}, relay start", cid);
@@ -35,7 +37,7 @@ pub async fn cp_tcp(
     };
 }
 
-async fn no_ti_no_ed(cid: u32, in_conn: net::Conn, out_tcp: net::Conn, cf: impl Fn()) {
+async fn no_ti_no_ed(cid: u32, in_conn: net::Conn, out_tcp: net::Conn, cf: impl FnMut()) {
     let _ = net::cp(in_conn, out_tcp, cid, cf, None).await;
     info!("cid: {}, relay end", cid);
 }
@@ -44,7 +46,7 @@ async fn ti_no_ed(
     cid: u32,
     in_conn: net::Conn,
     out_conn: net::Conn,
-    cf: impl Fn(),
+    cf: impl FnMut(),
     ti: Arc<TransmissionInfo>,
 ) {
     ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
@@ -57,7 +59,7 @@ async fn no_ti_ed(
     cid: u32,
     in_conn: net::Conn,
     mut out_conn: net::Conn,
-    cf: impl Fn(),
+    mut cf: impl FnMut(),
     earlydata: bytes::BytesMut,
 ) {
     if log_enabled!(Debug) {
@@ -87,7 +89,7 @@ async fn ti_ed(
     cid: u32,
     in_conn: net::Conn,
     mut out_conn: net::Conn,
-    cf: impl Fn(),
+    mut cf: impl FnMut(),
     ti: Arc<TransmissionInfo>,
     earlydata: bytes::BytesMut,
 ) {

@@ -7,6 +7,11 @@ use ruci::{
 };
 use rucimp::{load_in_adder_by_str, load_out_adder_by_str, suit::config::Config, SuitEngine};
 use std::{env::set_var, io};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
+    task,
+};
 
 const TARGET_PORT: u16 = 80;
 const TARGET_NAME: &str = "www.baidu.com";
@@ -93,7 +98,7 @@ async fn f_dial_future_tls_out_adder(
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();

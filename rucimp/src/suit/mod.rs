@@ -10,11 +10,12 @@ mod test;
 
 use crate::tls;
 use async_trait::async_trait;
-use futures::stream::StreamExt;
 use log::Level::Debug;
 use log::{debug, info, log_enabled};
 use ruci::relay;
 use std::sync::Arc;
+use tokio::io;
+use tokio::net::TcpListener;
 
 use ruci::map::*;
 use ruci::net::{self, Addr};
@@ -223,51 +224,50 @@ async fn listen_tcp(
     outc: Arc<dyn Suit>,
     oti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
-    let laddr = ins.addr_str();
+    let laddr = ins.addr_str().to_string();
     info!("start listen tcp {}", laddr);
 
-    let listener = TcpListener::bind(laddr).await?;
+    let listener = TcpListener::bind(laddr.clone()).await?;
 
-    let clone_oti = || oti.clone();
-    let insc = || ins.clone();
-    let outcc = || outc.clone();
+    let clone_oti = move || oti.clone();
+    let insc = move || ins.clone();
+    let outcc = move || outc.clone();
 
-    /// todo: 目前 async_std 中没有很好的关闭 tcp_listener 的办法
-    /// 所以这里也没有关闭方法。
+    // todo: 目前 async_std 中没有很好的关闭 tcp_listener 的办法
+    // 所以这里也没有关闭方法。
+    // const LIMIT: usize = 100; //todo: 修改这里
+    // listener
+    //     .incoming()
+    //     .for_each_concurrent(
+    //         LIMIT,
+    //         |tcpstream: Result<TcpStream, std::io::Error>|,
+    //     )
+    //     .await;
+    loop {
+        let (tcpstream, raddr) = listener.accept().await?;
 
-    const LIMIT: usize = 100; //todo: 修改这里
-    listener
-        .incoming()
-        .for_each_concurrent(
-            LIMIT,
-            |tcpstream: Result<TcpStream, std::io::Error>| async move {
-                let tcpstream = tcpstream.unwrap();
+        let laddr = laddr.clone();
+        let ti = clone_oti();
+        let ins = insc();
+        let outc = outcc();
 
-                if log_enabled!(Debug) {
-                    debug!(
-                        "new tcp in, laddr:{}, raddr: {:?}",
-                        laddr,
-                        tcpstream.peer_addr()
-                    );
-                }
+        tokio::spawn(async move {
+            if log_enabled!(Debug) {
+                debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
+            }
 
-                let ti = clone_oti();
-                let ins = insc();
-                let outc = outcc();
+            let r = relay::tcp::handle_tcp(
+                tcpstream,
+                ins.whole_name(),
+                outc.whole_name(),
+                ins.get_mappers_vec().iter(),
+                outc.get_mappers_vec().iter(),
+                outc.addr(),
+                ti,
+            )
+            .await;
+        });
+    }
 
-                relay::tcp::handle_tcp(
-                    tcpstream,
-                    ins.whole_name(),
-                    outc.whole_name(),
-                    ins.get_mappers_vec().iter(),
-                    outc.get_mappers_vec().iter(),
-                    outc.addr(),
-                    ti,
-                )
-                .await;
-            },
-        )
-        .await;
-
-    Ok(())
+    //Ok(())
 }

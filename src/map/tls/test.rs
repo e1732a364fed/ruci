@@ -2,6 +2,12 @@ use std::{env::set_var, sync::Arc, thread, time::Duration};
 
 use futures::{join, FutureExt};
 use log::info;
+use tokio::{
+    io::AsyncReadExt,
+    net::{TcpListener, TcpStream},
+    sync::Mutex,
+    task,
+};
 
 use crate::{
     map::{tls, MapParams, Mapper},
@@ -11,13 +17,12 @@ use crate::{
 use super::*;
 
 #[should_panic]
-#[async_test]
-async fn tls_in_mem() -> std::io::Result<()> {
+#[tokio::test]
+async fn tls_in_mem() {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
     let writev = Arc::new(Mutex::new(Vec::new()));
-    //let writevc = writev.clone();
     let client_tcps = MockTcpStream {
         read_data: vec![111, 222, 123],
         write_data: Vec::new(),
@@ -25,7 +30,7 @@ async fn tls_in_mem() -> std::io::Result<()> {
     };
 
     let a = tls::Client::new("www.baidu.com", true);
-    let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?;
+    let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443).unwrap();
     println!("will out, {}", ta);
 
     //should panic here , as the data 111,222,123 is not cool for a server tls response.
@@ -45,11 +50,9 @@ async fn tls_in_mem() -> std::io::Result<()> {
         .unwrap();
 
     let mut buf = [0u8; 1024];
-    let n = r.read(&mut buf[..]).await?;
+    let n = r.read(&mut buf[..]).await.unwrap();
 
     println!("{}, {:?}", n, &buf[..n]);
-
-    Ok(())
 }
 
 async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result<()> {
@@ -135,7 +138,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> std::io::Resu
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn tls_local_loopback() -> std::io::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();

@@ -36,13 +36,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     let contents = fs::read_to_string("config.toml").expect("no config.toml");
-
+    println!("{}", contents);
     // let mut se = SuitEngine::new(load_in_adder_by_str, load_out_adder_by_str);
 
     // se.load_config_from_str(&contents);
     // let r = se.block_run().await;
 
-    info!("r {:?}", r);
+    //info!("r {:?}", r);
 
     Ok(())
 }

@@ -2,6 +2,7 @@ use std::io;
 
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
+use tokio::io::AsyncWriteExt;
 
 use crate::{
     map::{self, MapResult, Mapper},

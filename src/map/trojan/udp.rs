@@ -5,7 +5,7 @@ use std::{
 };
 
 use bytes::{Buf, BufMut, BytesMut};
-use futures_util::io::{ReadHalf, WriteHalf};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf, ReadHalf, WriteHalf};
 
 use crate::net::{
     self,
@@ -14,8 +14,6 @@ use crate::net::{
 };
 
 use super::*;
-use futures::AsyncRead;
-use futures::AsyncWrite;
 
 const CAP: usize = 256 * 256; //todo: change this
 
@@ -28,9 +26,11 @@ impl AsyncReadAddr for Reader {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
+        mut buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        let mut buf2 = BytesMut::with_capacity(CAP);
+        //let mut buf2 = BytesMut::with_capacity(CAP);
+        let mut inner = [0u8; CAP];
+        let mut buf2 = ReadBuf::new(&mut inner[..]);
 
         let r = self.base.as_mut().poll_read(cx, &mut buf2);
 
@@ -38,6 +38,8 @@ impl AsyncReadAddr for Reader {
             Poll::Ready(re) => {
                 match re {
                     Ok(_) => {
+                        let mut buf2 = BytesMut::from(buf2.filled());
+
                         let x = helpers::socks5_bytes_to_addr(&mut buf2);
                         match x {
                             Ok(ad) => {
@@ -60,7 +62,7 @@ impl AsyncReadAddr for Reader {
                                 }
                                 buf2.truncate(l);
 
-                                buf2.copy_to_slice(buf);
+                                buf.put(buf2);
 
                                 Poll::Ready(Ok((l, ad)))
                             }
@@ -104,13 +106,12 @@ impl AsyncWriteAddr for Writer {
     }
 
     fn poll_close_addr(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        self.base.as_mut().poll_close(cx)
+        self.base.as_mut().poll_shutdown(cx)
     }
 }
 
 pub fn split_conn_to_trojan_udp_rw(c: net::Conn) -> net::addr_conn::AddrConn {
-    use futures::AsyncReadExt;
-    let (r, w) = c.split();
+    let (r, w) = tokio::io::split(c);
 
     let ar = Reader { base: Box::pin(r) };
     let aw = Writer { base: Box::pin(w) };
@@ -121,13 +122,14 @@ pub fn split_conn_to_trojan_udp_rw(c: net::Conn) -> net::addr_conn::AddrConn {
 #[allow(unused)]
 #[cfg(test)]
 mod test {
-    use futures_util::AsyncReadExt;
+
+    use tokio::net::TcpStream;
 
     use self::net::addr_conn::AsyncWriteAddrExt;
 
     use super::*;
 
-    //#[async_test]
+    //#[tokio::test]
     async fn test1() -> std::io::Result<()> {
         let ps = net::gen_random_higher_port();
         let listen_host = "127.0.0.1";
@@ -139,7 +141,7 @@ mod test {
 
         let conn: net::Conn = Box::new(cs);
 
-        let (r, w) = conn.split();
+        let (r, w) = tokio::io::split(conn);
 
         let mut ar = Reader { base: Box::pin(r) };
 

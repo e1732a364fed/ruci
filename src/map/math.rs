@@ -1,8 +1,8 @@
 use crate::net;
 use async_trait::async_trait;
 use bytes::BytesMut;
-use futures::{AsyncRead, AsyncWrite};
-use std::{pin::Pin, task::Poll};
+use std::{io, pin::Pin, task::Poll};
+use tokio::io::{AsyncRead, AsyncWrite};
 
 use super::*;
 
@@ -36,8 +36,8 @@ impl AsyncRead for AdderConn {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         let r = self.base.as_mut().poll_read(cx, buf);
         if let Poll::Ready(Ok(_)) = &r {}
         r
@@ -68,11 +68,11 @@ impl AsyncWrite for AdderConn {
         self.base.as_mut().poll_flush(cx)
     }
 
-    fn poll_close(
+    fn poll_shutdown(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<io::Result<()>> {
-        self.base.as_mut().poll_close(cx)
+        self.base.as_mut().poll_shutdown(cx)
     }
 }
 

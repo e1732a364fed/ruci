@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+use bytes::{BufMut, BytesMut};
+use tokio::sync::Mutex;
+
 use crate::map::{MapParams, Mapper, ProxyBehavior};
 use crate::net::{self, Addr};
 use crate::user::AsyncUserAuthenticator;
@@ -34,7 +37,7 @@ async fn new_3user_trojan_inadder() -> Server {
     .await
 }
 
-#[async_test]
+#[tokio::test]
 async fn auth() -> std::io::Result<()> {
     let a = new_3user_trojan_inadder().await;
     assert!(
@@ -66,7 +69,7 @@ async fn auth() -> std::io::Result<()> {
     Ok(())
 }
 
-#[async_test]
+#[tokio::test]
 async fn auth_tcp_in_mem_earlydata() -> std::io::Result<()> {
     let a = new_3user_trojan_inadder().await;
     let name = "www.b";

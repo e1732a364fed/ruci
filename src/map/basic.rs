@@ -1,3 +1,5 @@
+use tokio::net::TcpStream;
+
 use super::*;
 
 pub struct TcpDialer {

@@ -36,10 +36,12 @@ use crate::net::{self, addr_conn::AddrConn};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
+use tokio::{net::TcpStream, sync::Mutex};
 
 use std::{
     any::Any,
     fmt::{Debug, Display},
+    io,
     sync::Arc,
 };
 
@@ -87,7 +89,7 @@ impl State {
 pub enum Connection {
     TcpConnection(TcpStream),
     #[cfg(unix)]
-    UnixConnection(async_std::os::unix::net::UnixStream),
+    UnixConnection(tokio::net::UnixStream),
     UdpConnection,
 }
 
@@ -468,7 +470,6 @@ impl<'a> TcpOutAccumulator<'a> {
         };
 
         // 与 InAccumulator 相反, early_data 在传入第一层后就会消失
-        use futures::AsyncWriteExt;
         let first_adder = outmappers.next();
 
         match first_adder {
@@ -514,6 +515,7 @@ impl<'a> TcpOutAccumulator<'a> {
             }
             None => {
                 if let Some(ed) = last_r.b {
+                    use tokio::io::AsyncWriteExt;
                     last_r.c.as_mut().unwrap().write(&ed).await?;
                 }
                 return Ok((last_r.c.unwrap(), last_r.a, extra_data_vec));

@@ -2,7 +2,8 @@ use std::{net::Ipv4Addr, pin::Pin, task::Poll};
 
 use super::*;
 use bytes::{Buf, BufMut, BytesMut};
-use futures::{AsyncRead, AsyncWrite};
+use tokio::io::ReadBuf;
+use tokio::sync::Mutex;
 
 use super::ConnTrait;
 
@@ -139,21 +140,22 @@ impl AsyncRead for EarlyDataWrapper {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         match self.ed.as_mut() {
             None => self.base.as_mut().poll_read(cx, buf),
 
             Some(ed) => {
                 let el = ed.len();
                 if el > 0 {
-                    let m = min(el, buf.len());
-                    buf[..m].copy_from_slice(&ed[..m]);
+                    let m = min(el, buf.initialized().len());
+                    //buf.set_filled(m);
+                    buf.put(&ed[..m]);
                     ed.advance(m);
                     if ed.len() == 0 {
                         self.ed = None;
                     }
-                    Poll::Ready(Ok(m))
+                    Poll::Ready(Ok(()))
                 } else {
                     self.ed = None;
                     self.base.as_mut().poll_read(cx, buf)
@@ -179,11 +181,11 @@ impl AsyncWrite for EarlyDataWrapper {
         self.base.as_mut().poll_flush(cx)
     }
 
-    fn poll_close(
+    fn poll_shutdown(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<io::Result<()>> {
-        self.base.as_mut().poll_close(cx)
+        self.base.as_mut().poll_shutdown(cx)
     }
 }
 
@@ -195,26 +197,27 @@ pub struct MockTcpStream {
     pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
 }
 impl Unpin for MockTcpStream {}
-impl Read for MockTcpStream {
+impl AsyncRead for MockTcpStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
         _: &mut Context,
-        buf: &mut [u8],
-    ) -> Poll<Result<usize, Error>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         debug!("MockTcp: read called");
-        let size: usize = min(self.read_data.len(), buf.len());
-        buf[..size].copy_from_slice(&self.read_data[..size]);
+        let size: usize = min(self.read_data.len(), buf.initialized().len());
+        //buf[..size].copy_from_slice(&self.read_data[..size]);
+        buf.put(&self.read_data[..size]);
 
         let new_len = self.read_data.len() - size;
 
         self.read_data.copy_within(size.., 0);
         self.read_data.truncate(new_len);
 
-        Poll::Ready(Ok(size))
+        Poll::Ready(Ok(()))
     }
 }
 
-impl Write for MockTcpStream {
+impl AsyncWrite for MockTcpStream {
     fn poll_write(
         mut self: Pin<&mut Self>,
         _: &mut Context,
@@ -240,7 +243,7 @@ impl Write for MockTcpStream {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(self: Pin<&mut Self>, _: &mut Context) -> Poll<Result<(), Error>> {
+    fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context) -> Poll<Result<(), Error>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -250,8 +253,9 @@ mod test {
     use super::*;
 
     use bytes::BufMut;
+    use tokio::{io::AsyncReadExt, sync::Mutex};
 
-    #[async_test]
+    #[tokio::test]
     async fn test_ed_wrapper() -> std::io::Result<()> {
         let writev = Arc::new(Mutex::new(Vec::new()));
 
@@ -282,7 +286,7 @@ mod test {
         Ok(())
     }
 
-    #[async_test]
+    #[tokio::test]
     async fn test_ed_wrapper2() -> std::io::Result<()> {
         let writev = Arc::new(Mutex::new(Vec::new()));
         //let writevc = writev.clone();

@@ -8,18 +8,20 @@
 pub mod addr_conn;
 pub mod udp;
 
+use futures::pin_mut;
 use futures::select;
-use futures::AsyncReadExt;
 use futures::{io::Error, FutureExt};
-use futures::{pin_mut, AsyncRead, AsyncWrite};
 use log::{debug, log_enabled};
 use rand::Rng;
+use std::io;
 use std::{fmt::Debug, net::Ipv4Addr};
 use std::{
     fmt::{Display, Formatter},
     net::{IpAddr, Ipv6Addr, SocketAddr},
     sync::Arc,
 };
+use tokio::io::AsyncRead;
+use tokio::io::AsyncWrite;
 
 pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
     match ip_addr {
@@ -334,85 +336,25 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync> ConnTrait for T {}
 /// 一个方便的 对 ConnTrait 的包装
 pub type Conn = Box<dyn ConnTrait>;
 
-/// 功能没有 cp 多
-pub async fn copy_between_tcp(
-    c1: TcpStream,
-    c2: TcpStream,
-    opt: Option<Arc<TransmissionInfo>>,
-) -> Result<u64, Error> {
-    let c1c = c1.clone();
-    let c2c = c2.clone();
-
-    let (c1_read, c1_write) = c1.split();
-    let (c2_read, c2_write) = c2.split();
-
-    let (half1, half2) = (
-        io::copy(c1_read, c2_write).fuse(),
-        io::copy(c2_read, c1_write).fuse(),
-    );
-
-    pin_mut!(half1, half2);
-
-    select! {
-        r1 = half1 => {
-            if let Some(ref info) = opt {
-                if let Ok(n) = r1 {
-                    info.ub.fetch_add(n, Ordering::Relaxed);
-                }
-            }
-            let _ = c1c.shutdown(std::net::Shutdown::Both);
-            let _ = c2c.shutdown(std::net::Shutdown::Both);
-
-
-            let r2 = half2.await;
-            if let Some(info) = opt {
-                if let Ok(n) = r2 {
-                    info.db.fetch_add(n, Ordering::Relaxed);
-                }
-            }
-            r1
-        },
-        r2 = half2 => {
-            if let Some(ref info) = opt {
-                if let Ok(n) = r2 {
-                    info.db.fetch_add(n, Ordering::Relaxed);
-                }
-            }
-            let _ = c1c.shutdown(std::net::Shutdown::Both);
-            let _ = c2c.shutdown(std::net::Shutdown::Both);
-
-
-            let r1 = half1.await;
-            if let Some(ref info) = opt {
-                if let Ok(n) = r1 {
-                    info.ub.fetch_add(n, Ordering::Relaxed);
-                }
-            }
-
-            r2
-        },
-    }
-}
-
 /// may log debug or do other side-effect stuff with id.
 /// shutdown_f 用于同时关闭 c1 和 c2 对应的两个底层连接。
-pub async fn cp<F: Fn() -> (), C1: ConnTrait, C2: ConnTrait>(
+pub async fn cp<F: FnMut() -> (), C1: ConnTrait, C2: ConnTrait>(
     c1: C1,
     c2: C2,
     id: u32,
-    shutdown_f: F,
+    mut shutdown_f: F,
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     if log_enabled!(log::Level::Debug) {
         debug!("cp start, id: {} ", id);
     }
 
-    let (c1_read, c1_write) = c1.split();
-    let (c2_read, c2_write) = c2.split();
+    let (mut c1_read, mut c1_write) = tokio::io::split(c1);
+    let (mut c2_read, mut c2_write) = tokio::io::split(c2);
 
     let (c1_to_c2, c2_to_c1) = (
-        io::copy(c1_read, c2_write).fuse(),
-        io::copy(c2_read, c1_write).fuse(),
+        tokio::io::copy(&mut c1_read, &mut c2_write).fuse(),
+        tokio::io::copy(&mut c2_read, &mut c1_write).fuse(),
     );
 
     pin_mut!(c1_to_c2, c2_to_c1);

@@ -8,8 +8,9 @@ use std::{
     task::{Context, Poll},
 };
 
-use bytes::{Buf, BytesMut};
+use bytes::{BufMut, BytesMut};
 use futures_util::Future;
+use tokio::{io::ReadBuf, net::UdpSocket};
 
 use self::addr_conn::{AddrConn, AddrReadTrait, AddrWriteTrait, AsyncReadAddr, AsyncWriteAddr};
 
@@ -80,7 +81,7 @@ impl AsyncReadAddr for Reader {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
+        mut buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
         let mut fut = if let Some(fut) = self.fut.take() {
             fut
@@ -96,13 +97,16 @@ impl AsyncReadAddr for Reader {
         };
 
         match Pin::new(&mut fut).poll(cx) {
-            Poll::Ready(mut res) => {
+            Poll::Ready(res) => {
                 let ad = Addr {
                     addr: NetAddr::Socket(res.0),
                     network: Network::UDP,
                 };
                 let mut len = buf.len();
-                res.1.copy_to_slice(buf);
+
+                //res.1.copy_to_slice(buf);
+                buf.put(res.1);
+
                 len -= buf.len();
 
                 Poll::Ready(Ok((len, ad)))
@@ -137,25 +141,28 @@ use crate::net::addr_conn::AsyncWriteAddrExt;
 
 pub async fn cp_reader_to_w<W1: AddrWriteTrait>(mut r1: Reader, mut w1: W1) -> Result<u64, Error> {
     const CAP: usize = 1500;
-    let mut buf: BytesMut = BytesMut::with_capacity(CAP);
+    //let mut buf: BytesMut = BytesMut::with_capacity(CAP);
+    let mut inner = [0u8; CAP];
+    let mut buf = ReadBuf::new(&mut inner);
     let mut whole_write = 0;
     loop {
-        buf.resize(CAP, 0);
-        let r = r1.read(&mut buf).await;
+        //buf.resize(CAP, 0);
+        buf.clear();
+        let r = r1.read(buf.initialized_mut()).await;
         if r.is_err() {
             break;
         }
         let (m, ad) = r.unwrap();
         if m > 0 {
-            buf.truncate(m);
+            //buf.truncate(m);
             loop {
-                let r = w1.write(&mut buf, ad.clone()).await;
+                let r = w1.write(&mut buf.filled(), ad.clone()).await;
                 if r.is_err() {
                     break;
                 }
                 let n = r.unwrap();
                 buf.advance(n);
-                if buf.len() == 0 {
+                if buf.filled().len() == 0 {
                     break;
                 }
             }
@@ -168,25 +175,29 @@ pub async fn cp_reader_to_w<W1: AddrWriteTrait>(mut r1: Reader, mut w1: W1) -> R
 
 pub async fn cp_r_to_writer<R1: AddrReadTrait>(mut r1: R1, mut w1: Writer) -> Result<u64, Error> {
     const CAP: usize = 1500;
-    let mut buf: BytesMut = BytesMut::with_capacity(CAP);
+    //let mut buf: BytesMut = BytesMut::with_capacity(CAP);
+    let mut inner = [0u8; CAP];
+    let mut buf = ReadBuf::new(&mut inner);
+
     let mut whole_write = 0;
     loop {
-        buf.resize(CAP, 0);
-        let r = r1.read(&mut buf).await;
+        //buf.resize(CAP, 0);
+        buf.clear();
+        let r = r1.read(buf.initialized_mut()).await;
         if r.is_err() {
             break;
         }
         let (m, ad) = r.unwrap();
         if m > 0 {
-            buf.truncate(m);
+            //buf.truncate(m);
             loop {
-                let r = w1.write(&mut buf, ad.clone()).await;
+                let r = w1.write(buf.filled_mut(), ad.clone()).await;
                 if r.is_err() {
                     break;
                 }
                 let n = r.unwrap();
                 buf.advance(n);
-                if buf.len() == 0 {
+                if buf.filled().len() == 0 {
                     break;
                 }
             }
@@ -249,12 +260,13 @@ mod test {
 
         let (r, w) = get_rw(u);
 
-        let mut buf = BytesMut::zeroed(CAP);
-
+        //let mut buf = BytesMut::zeroed(CAP);
+        let mut x = [0u8; CAP];
+        let mut buf = ReadBuf::new(&mut x);
         //futures::pin_mut!(r);
         use std::pin::pin;
         let mut r = pin!(r);
-        r.read(&mut buf);
+        r.read(buf.initialized_mut());
 
         unimplemented!()
     }
