@@ -122,3 +122,6 @@ trace 还会将每条连接的 ub, db 信息记录下来
 再比如，要用 ok_or_else, 而不是 ok_or
 
 使用 mlua 跨线程时要用 `Arc<parking_lot::Mutex<Lua>>`, 否则mac 上报错会类似 zsh: trace trap 
+
+上传和下载的缩写代码中使用了 ub, db, 而不是 tx, rx, 是为了简单地与 channel 的Sender和 Receiver的缩写加以区分,
+而且还能看出是以字节为单位

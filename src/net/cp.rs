@@ -12,8 +12,8 @@ use super::*;
 ///   bytes increment for CID
 pub type UpdateSender = tokio::sync::mpsc::Sender<(CID, u64)>;
 
-pub type Updater = (UpdateSender, UpdateSender);
 /// ub, db
+pub type Updater = (UpdateSender, UpdateSender);
 pub type OptUpdater = Option<Updater>;
 
 /// may log debug or do other side-effect stuff with id.
