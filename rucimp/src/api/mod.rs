@@ -63,6 +63,7 @@ impl Server {
         start_core_opts: Opts,
         api_extensions: Option<ApiExtensionMap>,
         extension_api_doc: Option<utoipa::openapi::OpenApi>,
+        #[cfg(feature = "file_server")] file_server_tar_data_source_base64: Option<String>,
     ) -> (Self, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>) {
         let (tx, rx) = mpsc::channel(10);
 
@@ -87,6 +88,8 @@ impl Server {
             global_traffic.clone(),
             start_core_opts,
             extension_api_doc,
+            #[cfg(feature = "file_server")]
+            file_server_tar_data_source_base64,
         )
         .await;
         (server, rx, global_traffic)
@@ -434,6 +437,8 @@ pub async fn serve(
     global_traffic: Arc<ruci::net::GlobalTrafficRecorder>,
     start_core_opts: Opts,
     extension_api_doc: Option<utoipa::openapi::OpenApi>,
+
+    #[cfg(feature = "file_server")] file_server_tar_data_source_base64: Option<String>,
 ) {
     let addr = s
         .listen_addr
@@ -445,7 +450,23 @@ pub async fn serve(
 
     #[cfg(feature = "file_server")]
     {
-        app = app.nest_service("/dist", tower_http::services::ServeDir::new("dist"));
+        match file_server_tar_data_source_base64 {
+            Some(file_server_tar_data_source_base64) => {
+                use base64::Engine;
+                use data_source::file_server::*;
+                use data_source::DataSource;
+                let data = base64::engine::GeneralPurpose::new(
+                    &base64::alphabet::URL_SAFE,
+                    base64::engine::general_purpose::NO_PAD,
+                )
+                .decode(file_server_tar_data_source_base64)
+                .unwrap();
+
+                let data_source = DataSource::TarInMemory(data);
+                app = register_data_source_route(app, "/files/*path", data_source);
+            }
+            None => app = app.nest_service("/dist", tower_http::services::ServeDir::new("dist")),
+        }
     }
 
     app = app

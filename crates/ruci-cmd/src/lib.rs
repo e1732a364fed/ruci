@@ -116,6 +116,10 @@ pub struct Args {
     #[arg(long)]
     pub api_addr: Option<String>,
 
+    #[cfg(feature = "file_server")]
+    #[serde(default)]
+    pub file_server_tar_data_source_base64: Option<String>,
+
     #[command(subcommand)]
     pub sub_cmds: Option<SubCommands>,
 }
@@ -341,7 +345,7 @@ pub mod android {
 }
 
 /// blocking
-pub async fn run_main_with_args(args: Args) -> anyhow::Result<()> {
+pub async fn run_main_with_args(mut args: Args) -> anyhow::Result<()> {
     CORE_STATE.get_or_init(|| Arc::new(parking_lot::Mutex::new(State::default())));
 
     let _g = log_setup(args.clone());
@@ -361,11 +365,9 @@ pub async fn run_main_with_args(args: Args) -> anyhow::Result<()> {
 
                 let epots = std::sync::Arc::new(Mutex::new(None));
 
-                // 创建API扩展映射
                 let api_extensions =
                     std::sync::Arc::new(RwLock::new(std::collections::HashMap::new()));
 
-                // 注册Command API
                 #[cfg(feature = "utils")]
                 {
                     if let Err(e) = utils::register_command_apis(&mut api_extensions.clone()) {
@@ -382,6 +384,8 @@ pub async fn run_main_with_args(args: Args) -> anyhow::Result<()> {
                         Some(<utils::ApiDoc as utoipa::OpenApi>::openapi()),
                         #[cfg(not(feature = "utils"))]
                         None,
+                        #[cfg(feature = "file_server")]
+                        args.file_server_tar_data_source_base64.take(),
                     )
                     .await;
                     api_server_started = true;

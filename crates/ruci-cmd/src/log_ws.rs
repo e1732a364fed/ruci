@@ -38,6 +38,7 @@ impl WebsocketLogger {
                 .await
                 .expect("Failed to bind websocket logger port");
             info!("Websocket logger listening on {}", addr);
+            println!("Websocket logger listening on {}", addr);
             axum::serve(listener, app)
                 .await
                 .expect("Failed to start websocket logger server");

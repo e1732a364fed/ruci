@@ -904,17 +904,21 @@ checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 [[package]]
 name = "data-source"
 version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "899aadeec5013dd9281625b5566937a24cc846e196a9232cae40ea8b482461f9"
+source = "git+https://github.com/e1732a364fed/data-source.git?rev=2eafe58d36d43080a8f8c2f241e7200b9735257b#2eafe58d36d43080a8f8c2f241e7200b9735257b"
 dependencies = [
  "astral-tokio-tar",
  "async-trait",
+ "axum",
  "futures",
+ "futures-util",
+ "http-body-util",
  "log 0.4.26",
+ "mime_guess",
  "reqwest",
  "tar",
  "thiserror 2.0.11",
  "tokio",
+ "tower 0.4.13",
 ]
 
 [[package]]
