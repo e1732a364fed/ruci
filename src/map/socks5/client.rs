@@ -55,8 +55,9 @@ impl Client {
 
         if n != 2 || buf[0] != VERSION5 || buf[1] != adopted_method {
             return Err(anyhow!(
-                "{}, socks5 client handshake,protocol err, {}",
+                "{}, socks5 client handshake,protocol err, n: {}, buf[1]: {}",
                 cid,
+                n,
                 buf[1]
             ));
         }

@@ -1,4 +1,4 @@
-use anyhow::Ok;
+use anyhow::{Context, Ok};
 use macro_mapper::NoMapperExt;
 
 use crate::map::{MapperBox, ToMapper};
@@ -62,7 +62,11 @@ impl Server {
             conn = Box::new(nc);
         }
 
-        let c = self.ta.accept(conn).await?;
+        let c = self
+            .ta
+            .accept(conn)
+            .await
+            .context("TLS server handshake failed")?;
 
         Ok(MapResult::newc(Box::new(c))
             .a(a)

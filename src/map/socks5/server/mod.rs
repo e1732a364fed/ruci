@@ -19,7 +19,7 @@ use crate::{
     user::{self, AsyncUserAuthenticator, PlainText, User, UsersMap},
     Name,
 };
-use anyhow::Ok;
+use anyhow::{Context, Ok};
 use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
 use log::{debug, log_enabled, warn};
@@ -353,9 +353,11 @@ impl Server {
             buf.advance(n - remainn);
             n = remainn;
         } else {
-            n = base.read(&mut buf).await?;
+            n = base
+                .read(&mut buf)
+                .await
+                .context("socks5 server read client cmd msg failed")?;
         }
-
         if n < 7 {
             let e = anyhow!("{}, socks5: read cmd part failed, msgTooShort: {}", cid, n);
 

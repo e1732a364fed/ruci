@@ -53,7 +53,7 @@ pub async fn handle_in_stream(
     let listen_result = match listen_result {
         Ok(lr) => lr,
         Err(e) => {
-            warn!("{cid}, handshake in server failed with io::Error, {e}");
+            warn!("{cid}, handshake inbound failed with io::Error, {e}");
 
             return Err(e.into());
         }
@@ -74,27 +74,33 @@ pub async fn handle_in_accumulate_result(
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {
-            let e = anyhow!(
-                "{cid}, handshake in server succeed but got no target_addr, e: {:?}",
-                listen_result.e
-            );
-            warn!("{}", e);
+            let return_e: anyhow::Error;
+            match listen_result.e {
+                Some(err) => {
+                    return_e = anyhow!("{cid}, handshake inbound failed with Error: {:#?}", err);
+                }
+                None => {
+                    return_e = anyhow!("{cid}, handshake inbound succeed but got no target_addr");
+                }
+            }
+
+            warn!("{}", return_e);
             let _ = listen_result.c.try_shutdown().await;
-            return Err(e);
+            return Err(return_e);
         }
     };
     if log_enabled!(log::Level::Info) {
         match listen_result.b.as_ref() {
             Some(ed) => {
                 info!(
-                    "{cid}, handshake in server succeed with ed, target_addr: {}, ed {}",
+                    "{cid}, handshake inbound succeed with ed, target_addr: {}, ed {}",
                     &target_addr,
                     ed.len()
                 )
             }
             None => {
                 info!(
-                    "{cid}, handshake in server succeed, target_addr: {}",
+                    "{cid}, handshake inbound succeed, target_addr: {}",
                     &target_addr,
                 )
             }
