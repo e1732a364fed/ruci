@@ -91,6 +91,7 @@ where
             loop {
                 let r = r.read(&mut bs).await;
                 if let Ok(n) = r {
+                    // tracing::trace!("stack got b {}", n);
                     let r = stack_sink.send((bs[..n]).to_vec()).await;
                     r.unwrap();
                 } else {

@@ -93,6 +93,8 @@ clash_rules = "rules:\n  - DOMAIN-SUFFIX,ip6-localhost,Direct"
 ```
 geosite_gfw = {
     api_url = "http://127.0.0.1:5134/check",
+    proxy = "127.0.0.1:10800",
+    only_proxy = false,
     ok_ban_out_tag = { "Direct", "Reject"}
 }
 ```
@@ -101,7 +103,14 @@ geosite_gfw 是一个 人工智能 gfw项目，它用过机器学习训练出的
 
 主要用于 local 本地端进行分流。
 
-目前的运行方式
+proxy 选项若给出，则 geosite_gfw 会在访问不到目标地址时，使用 proxy 再访问一次。
+而 若 only_proxy = true, 则 geosite_gfw 第一次方问目标地址就会使用 该 proxy.
+
+注意，如果您配置 geosite_gfw 的 proxy 又指向回 我们的 ruci 的监听端口的话，要确保按上文的 
+tag_route 把该端口的监听强制导向某 outbound, 避免再次进竹 geosite_gfw 环节 造成 回环。
+
+
+目前的geosite_gfw 的运行方式:
 
 ```sh
 git clone https://github.com/e1732a364fed/geosite-gfw/

@@ -1,5 +1,6 @@
 /*! see https://github.com/e1732a364fed/geosite-gfw
 */
+use anyhow::{bail, Context};
 use async_trait::async_trait;
 use ruci::map::fold::DMIterBox;
 use ruci::map::Data;
@@ -11,7 +12,6 @@ use tracing::debug;
 
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct GeositeGfwConfig {
@@ -80,10 +80,7 @@ pub struct CheckResponse {
 }
 
 /// 异步访问 API
-pub async fn check_api(
-    config: &GeositeGfwConfig,
-    domain: &str,
-) -> Result<CheckResponse, Box<dyn Error>> {
+pub async fn check_api(config: &GeositeGfwConfig, domain: &str) -> anyhow::Result<CheckResponse> {
     let client = Client::new();
 
     let request_data = CheckRequest {
@@ -96,9 +93,22 @@ pub async fn check_api(
         .post(&config.api_url)
         .json(&request_data)
         .send()
-        .await?
-        .json::<CheckResponse>()
-        .await?;
+        .await
+        .context("send failed")?;
+
+    let full_body = response.bytes().await?;
+
+    let response = serde_json::from_slice(&full_body);
+
+    let response = match response {
+        Ok(r) => r,
+        Err(e) => {
+            bail!(
+                "parse body err: {e}, body is {}",
+                String::from_utf8_lossy(&full_body)
+            )
+        }
+    };
 
     debug!("geosite_gfw got response: {:?}", response);
     Ok(response)

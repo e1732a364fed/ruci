@@ -33,4 +33,4 @@ rules:
   - DOMAIN-SUFFIX,zte.home,Direct
   - DOMAIN-SUFFIX,tplogin.cn,Direct
   - DOMAIN-SUFFIX,wifi.cmcc,Direct
-  - DOMAIN-KEYWORD,baidu,Reject
+  - DOMAIN-KEYWORD,afdfdasfdsa,Reject
