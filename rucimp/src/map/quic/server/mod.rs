@@ -118,7 +118,7 @@ impl Map for Server {
                 Err(e) => MapResult::from_e(e.context("quic_server maps failed")),
             }
         } else {
-            MapResult::err_str("quic_server only support None stream")
+            MapResult::from_err_str("quic_server only support None stream")
         }
     }
 }

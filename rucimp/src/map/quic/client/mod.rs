@@ -101,7 +101,7 @@ impl Map for Client {
                 Err(e) => MapResult::from_e(e.context("quic_client maps failed")),
             }
         } else {
-            MapResult::err_str("quic_client only support None stream")
+            MapResult::from_err_str("quic_client only support None stream")
         }
     }
 }
