@@ -25,96 +25,6 @@ where
     fn set_cached_in_raddr(&mut self, str: String);
 }
 
-/// 实现 State, 其没有 parent
-#[derive(Debug, Default, Clone)]
-pub struct RootState {
-    pub cid: u32, //固定十进制位数的数
-    pub network: &'static str,
-    pub ins_name: String,        // 入口名称
-    pub outc_name: String,       // 出口名称
-    pub cached_in_raddr: String, // 进入程序时的 连接 的远端地址
-}
-
-impl RootState {
-    /// new with random id
-    pub fn new(network: &'static str) -> RootState {
-        RootState {
-            cid: net::new_rand_cid(),
-            network,
-            ..Default::default()
-        }
-    }
-
-    /// new with ordered id
-    pub fn new_ordered(network: &'static str, lastid: &std::sync::atomic::AtomicU32) -> RootState {
-        let li = lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        RootState {
-            cid: li + 1,
-            network,
-            ..Default::default()
-        }
-    }
-}
-
-impl Display for RootState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.outc_name() == "" {
-            write!(
-                f,
-                "[ {}, {}://{}, listener: {}, ]  ",
-                self.cid(),
-                self.network(),
-                self.cached_in_raddr(),
-                self.ins_name()
-            )
-        } else {
-            write!(
-                f,
-                "[ {}, {}://{}, route from: {}, to: {} ]  ",
-                self.cid(),
-                self.network(),
-                self.cached_in_raddr(),
-                self.ins_name(),
-                self.outc_name(),
-            )
-        }
-    }
-}
-
-impl State<u32> for RootState {
-    fn cid(&self) -> CID {
-        CID::Unit(self.cid)
-    }
-
-    fn network(&self) -> &'static str {
-        self.network
-    }
-
-    fn ins_name(&self) -> String {
-        self.ins_name.clone()
-    }
-
-    fn outc_name(&self) -> String {
-        self.outc_name.clone()
-    }
-
-    fn cached_in_raddr(&self) -> String {
-        self.cached_in_raddr.clone()
-    }
-
-    fn set_ins_name(&mut self, str: String) {
-        self.ins_name = str
-    }
-
-    fn set_outc_name(&mut self, str: String) {
-        self.outc_name = str
-    }
-
-    fn set_cached_in_raddr(&mut self, str: String) {
-        self.cached_in_raddr = str
-    }
-}
-
 /// 阻塞监听 ins。
 ///
 /// 确保调用 listen_ser 前, ins 和 outc 的
@@ -232,14 +142,9 @@ pub async fn handle_conn<'a>(
     outc_addr: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
-    let mut state = match ti.as_ref() {
-        Some(ti) => RootState::new_ordered(network_str, &ti.last_connection_id),
-        None => RootState::new(network_str),
-    };
-    state.set_ins_name(ins_name.to_string());
-    state.set_cached_in_raddr(in_raddr);
+    let cid = CID::new_by_opti(ti.clone());
 
-    let cid = state.cid();
+    info!("{cid}, new tcp in,{network_str} {in_raddr}, {ins_name} -> {outc_name}");
 
     let cidc = cid.clone();
     let listen_result =
@@ -257,7 +162,7 @@ pub async fn handle_conn<'a>(
     let mut listen_result = match listen_result {
         Ok(lr) => lr,
         Err(e) => {
-            warn!("{state}, handshake in server failed with io::Error, {e}");
+            warn!("{cid}, handshake in server failed with io::Error, {e}");
 
             return Err(e.into());
         }
@@ -266,7 +171,7 @@ pub async fn handle_conn<'a>(
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {
-            warn!("{state}, handshake in server succeed but got no target_addr",);
+            warn!("{cid}, handshake in server succeed but got no target_addr",);
             let _ = listen_result.c.try_shutdown().await;
             return Err(io::Error::other(
                 "handshake in server succeed but got no target_addr",
@@ -276,7 +181,7 @@ pub async fn handle_conn<'a>(
 
     if log_enabled!(log::Level::Info) {
         info!(
-            "{state}, handshake in server succeed, target_addr: {}",
+            "{cid}, handshake in server succeed, target_addr: {}",
             &target_addr
         )
     }
@@ -294,14 +199,12 @@ pub async fn handle_conn<'a>(
         }
     };
 
-    state.set_outc_name(outc_name.to_string());
-
     //todo: DNS 功能
 
     let out_stream = match real_target_addr.try_dial().await {
         Ok(t) => t,
         Err(e) => {
-            warn!("{state}, parse target addr failed, {real_target_addr} , {e}",);
+            warn!("{cid}, parse target addr failed, {real_target_addr} , {e}",);
             let _ = listen_result.c.try_shutdown().await;
             return Err(e);
         }
@@ -333,23 +236,23 @@ pub async fn handle_conn<'a>(
         let dial_result = match dial_result {
             Ok(r) => r,
             Err(e) => {
-                warn!("{state}, dial out client timeout, {e}",);
+                warn!("{cid}, dial out client timeout, {e}",);
                 return Err(e.into());
             }
         };
 
         if let Some(e) = dial_result.e {
-            warn!("{state}, dial out client failed, {e}",);
+            warn!("{cid}, dial out client failed, {e}",);
             return Err(e);
         }
         if let Stream::None = dial_result.c {
-            warn!("{state}, dial out client stream got consumed ",);
+            warn!("{cid}, dial out client stream got consumed ",);
 
             return Ok(());
         }
 
         if let Some(rta) = dial_result.a {
-            warn!("{state}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
+            warn!("{cid}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
         }
         cp_stream(cid, listen_result.c, dial_result.c, None, ti);
     }

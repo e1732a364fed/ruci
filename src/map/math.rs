@@ -28,7 +28,7 @@ pub struct AdderConn {
     rbuf: BytesMut,
 }
 
-//todo: 考虑使用 simd 或 rayon; 可以在其它impl包中实现, 也可在此实现
+//todo: 考虑使用 simd 或 rayon; 可以在rucimp包中实现
 
 #[derive(Clone, Copy, Debug, Default)]
 pub enum AddDirection {
