@@ -219,6 +219,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> std::io::Result<()> {
                 a: None,
                 b: Some(earlybuf),
                 d: None,
+                shutdown_rx: None,
             },
         )
         .await;

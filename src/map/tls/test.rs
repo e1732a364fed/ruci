@@ -42,6 +42,7 @@ async fn dial_tls_in_mem() {
                 a: Some(ta),
                 b: None,
                 d: None,
+                shutdown_rx: None,
             },
         )
         .await
@@ -77,6 +78,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result
                 a: Some(ta),
                 b: None,
                 d: None,
+                shutdown_rx: None,
             },
         )
         .await

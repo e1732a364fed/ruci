@@ -156,17 +156,10 @@ async fn f_dial_future_out_adder(
         .maps(
             CID::default(),
             ruci::map::ProxyBehavior::ENCODE,
-            ruci::map::MapParams {
-                c: ruci::net::Stream::TCP(Box::new(cs)),
-                a: Some(net::Addr::from_strs(
-                    "tcp",
-                    the_target_name,
-                    "",
-                    the_target_port,
-                )?),
-                b: None,
-                d: None,
-            },
+            ruci::map::MapParams::ca(
+                Box::new(cs),
+                net::Addr::from_strs("tcp", the_target_name, "", the_target_port)?,
+            ),
         )
         .await
         .c;

@@ -108,7 +108,10 @@ impl Name for TcpStreamGenerator {
     }
 }
 impl TcpStreamGenerator {
-    pub async fn listen_addr(a: &net::Addr) -> io::Result<Receiver<net::Stream>> {
+    pub async fn listen_addr(
+        a: &net::Addr,
+        shutdown_rx: oneshot::Receiver<()>,
+    ) -> io::Result<Receiver<net::Stream>> {
         let r = TcpListener::bind(a.clone().get_socket_addr().unwrap()).await;
 
         match r {
@@ -116,20 +119,35 @@ impl TcpStreamGenerator {
                 let (tx, rx) = mpsc::channel(100); //todo: change this
 
                 tokio::spawn(async move {
-                    loop {
-                        let r = listener.accept().await;
+                    tokio::select! {
+                        r = async{
+                            let mut lastr = Ok::<_, io::Error>(());
+                            loop {
+                                let r = listener.accept().await;
 
-                        if r.is_err() {
-                            break;
+                                if r.is_err() {
+                                    break;
+                                }
+                                let (tcpstream, raddr) = r.unwrap();
+                                info!("new accepted tcp, raddr: {}", raddr);
+
+                                let r = tx.send(Stream::TCP(Box::new(tcpstream))).await;
+                                if let Err(e) = r {
+                                    info!("loop tcp ended: {}", e);
+                                    lastr = Err(io::Error::other(format!("{}",e)));
+                                    break;
+                                }
+                            }
+
+                            lastr
+
+                        } =>{
+                            r
                         }
-                        let (tcpstream, raddr) = r.unwrap();
-                        info!("new accepted tcp, raddr: {}", raddr);
 
-                        let r = tx.send(Stream::TCP(Box::new(tcpstream))).await;
-                        if r.is_err() {
-                            info!("loop tcp ended: {}", r.unwrap_err());
-
-                            break;
+                        _ = shutdown_rx => {
+                            info!("terminating accept loop");
+                            Ok(())
                         }
                     }
                 });
@@ -142,13 +160,14 @@ impl TcpStreamGenerator {
 
 #[async_trait]
 impl Mapper for TcpStreamGenerator {
+    /// generate new CID, regardless of cid passed in and any  params.c
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
             None => self.addr.as_ref().unwrap(),
         };
 
-        let r = TcpStreamGenerator::listen_addr(a).await;
+        let r = TcpStreamGenerator::listen_addr(a, params.shutdown_rx.unwrap()).await;
         match r {
             Ok(rx) => match self.oti.as_ref() {
                 Some(ti) => MapResult::gs(rx, CID::new_ordered(&ti.last_connection_id)),

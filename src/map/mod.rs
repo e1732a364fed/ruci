@@ -37,7 +37,10 @@ use crate::net::{self, addr_conn::AddrConn, Stream, CID};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
-use tokio::{net::TcpStream, sync::Mutex};
+use tokio::{
+    net::TcpStream,
+    sync::{oneshot, Mutex},
+};
 
 use std::{
     any::Any,
@@ -192,6 +195,9 @@ pub struct MapParams {
     pub b: Option<BytesMut>,
 
     pub d: Option<InputData>,
+
+    /// if Stream is a Generator, shutdown_rx should be provided
+    pub shutdown_rx: Option<oneshot::Receiver<()>>,
 }
 
 impl MapParams {
@@ -201,6 +207,7 @@ impl MapParams {
             a: None,
             b: None,
             d: None,
+            shutdown_rx: None,
         }
     }
 
@@ -210,6 +217,7 @@ impl MapParams {
             a: Some(target_addr),
             b: None,
             d: None,
+            shutdown_rx: None,
         }
     }
 }
@@ -497,6 +505,7 @@ where
                             a: last_r.a,
                             b: last_r.b,
                             d: input_data,
+                            shutdown_rx: None,
                         },
                     )
                     .await;
