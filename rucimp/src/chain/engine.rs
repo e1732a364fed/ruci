@@ -1,5 +1,5 @@
 use futures::Future;
-use log::debug;
+use log::{debug, info};
 use parking_lot::Mutex;
 use ruci::{map::*, net::TransmissionInfo};
 use std::{io, sync::Arc};
@@ -72,4 +72,26 @@ impl StaticEngine {
         return Ok(tasks);
     }
      */
+
+    /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
+    pub async fn stop(&self) {
+        info!("stop called");
+        let mut running = self.running.lock();
+        let opt = running.take();
+
+        if let Some(v) = opt {
+            let mut i = 0;
+            v.into_iter().for_each(|shutdown_tx| {
+                debug!("sending close signal to listener {}", i);
+                let _ = shutdown_tx.send(());
+                i += 1;
+            });
+        }
+
+        // let ss = self.servers.as_slice();
+        // for s in ss {
+        //     s.stop();
+        // }
+        info!("stopped");
+    }
 }
