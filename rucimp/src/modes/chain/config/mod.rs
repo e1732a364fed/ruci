@@ -208,14 +208,16 @@ pub enum InMapperConfig {
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
     TcpOptListener {
+        listen_addr: String,
         sockopt: crate::net::so2::SockOpt,
-        ext: Ext,
+        ext: Option<Ext>,
     },
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
     TproxyUdpListener {
+        listen_addr: String,
         sockopt: crate::net::so2::SockOpt,
-        ext: Ext,
+        ext: Option<Ext>,
     },
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
@@ -469,12 +471,16 @@ impl ToMapperBox for InMapperConfig {
             InMapperConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapperConfig::TcpOptListener { sockopt, ext } => {
-                Box::new(crate::map::opt_net::TcpOptListener {
-                    sopt: sockopt.clone(),
-                    ext_fields: Some(ext.to_ext_fields()),
-                })
-            }
+            InMapperConfig::TcpOptListener {
+                listen_addr,
+                sockopt,
+                ext,
+            } => Box::new(crate::map::opt_net::TcpOptListener {
+                listen_addr: net::Addr::from_network_addr_str(&listen_addr)
+                    .expect("listen_addr ok"),
+                sopt: sockopt.clone(),
+                ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
+            }),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
             InMapperConfig::TproxyTcpResolver(opts) => {
@@ -482,12 +488,16 @@ impl ToMapperBox for InMapperConfig {
             }
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapperConfig::TproxyUdpListener { sockopt, ext } => {
-                Box::new(crate::map::tproxy::UDPListener {
-                    sopt: sockopt.clone(),
-                    ext_fields: Some(ext.to_ext_fields()),
-                })
-            }
+            InMapperConfig::TproxyUdpListener {
+                listen_addr,
+                sockopt,
+                ext,
+            } => Box::new(crate::map::tproxy::UDPListener {
+                listen_addr: net::Addr::from_network_addr_str(&listen_addr)
+                    .expect("listen_addr ok"),
+                sopt: sockopt.clone(),
+                ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
+            }),
         }
     }
 }

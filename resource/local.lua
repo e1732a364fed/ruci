@@ -15,22 +15,18 @@ l3 = {
 
 tproxy_tcp_listen = {
     TcpOptListener = {
+        listen_addr = "0.0.0.0:12345",
         sockopt = {
             tproxy = true,
-        },
-        ext = {
-            fixed_target_addr = "0.0.0.0:12345"
         }
     }
 }
 
 tproxy_udp_listen = {
     TproxyUdpListener = {
+        listen_addr = "udp://0.0.0.0:12345",
         sockopt = {
             tproxy = true,
-        },
-        ext = {
-            fixed_target_addr = "udp://0.0.0.0:12345"
         }
     }
 }

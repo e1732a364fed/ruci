@@ -19,6 +19,7 @@ use crate::net::so2::{self, SockOpt};
 #[mapper_ext_fields]
 #[derive(MapperExt, Clone, Debug, Default)]
 pub struct TcpOptListener {
+    pub listen_addr: net::Addr,
     pub sopt: SockOpt,
 }
 
@@ -61,10 +62,7 @@ impl Mapper for TcpOptListener {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
-            None => self
-                .configured_target_addr()
-                .as_ref()
-                .expect("tcp_opt_listener always has a fixed_target_addr"),
+            None => &self.listen_addr,
         };
 
         let r = match params.shutdown_rx {

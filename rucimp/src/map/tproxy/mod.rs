@@ -136,6 +136,7 @@ impl Mapper for TcpResolver {
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
 pub struct UDPListener {
+    pub listen_addr: net::Addr,
     pub sopt: SockOpt,
 }
 
@@ -220,10 +221,7 @@ impl Mapper for UDPListener {
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::None => {
-                if let Some(configured_dial_a) = &self.configured_target_addr() {
-                    return self.listen(configured_dial_a, params.shutdown_rx.expect("tproxy_udp_listener requires a shutdown_rx to support graceful shutdown")).await;
-                }
-                return MapResult::err_str("tproxy_udp_listener can't dial without an address");
+                return self.listen(&self.listen_addr, params.shutdown_rx.expect("tproxy_udp_listener requires a shutdown_rx to support graceful shutdown")).await;
             }
 
             _ => {
