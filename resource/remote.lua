@@ -17,9 +17,9 @@ local opt_direct_chain = { {
     OptDirect = {
         sockopt = {
             so_mark = 255,
-            bind_to_device = "enp0s1"
+            bind_to_device = "wlp3s0" --"enp0s1"
         },
-        more_num_of_files = true, -- auto run system call to increase NOFILE to prevent Too many of files, root required
+        more_num_of_files = true,     -- auto run system call to increase NOFILE to prevent Too many of files, root required
     }
 } }
 
@@ -164,7 +164,7 @@ Config = {
         -- { chain = lua_example2, tag = "listen1" },
     },
 
-    ---[[
+    --[[
     -- 一般情况下 的 outbound 配置
 
     outbounds = { {
@@ -181,7 +181,7 @@ Config = {
     -- ]]
 
 
-    --[[
+    ---[[
     -- 对应 local.lua 使用 tproxy 的 outbound 配置
     -- 如果 用 tproxy 时 direct 不用 opt_direct 设置 somark, 将造成无限回环, 无法联网
 

@@ -1,6 +1,5 @@
 use std::{
     cmp::min,
-    collections::HashMap,
     io,
     os::fd::AsRawFd,
     pin::Pin,
@@ -10,15 +9,13 @@ use std::{
 };
 
 use bytes::{Buf, BytesMut};
-use futures::{channel::oneshot, Future};
+use dashmap::DashMap;
+use futures::channel::oneshot;
 use ruci::{
     net::{self, MTU},
     Name,
 };
-use tokio::sync::{
-    mpsc::{self, Receiver, Sender},
-    Mutex,
-};
+use tokio::sync::mpsc::{self, Receiver, Sender};
 use tracing::{debug, warn};
 
 use crate::net::{
@@ -146,7 +143,7 @@ struct ConnInfo {
 }
 
 /// 修改 ConnMap 类型定义
-type ConnMap = Arc<Mutex<HashMap<(Addr, Addr), ConnInfo>>>;
+type ConnMap = Arc<DashMap<(Addr, Addr), ConnInfo>>;
 
 impl Listener {
     pub async fn new(listen_a: Addr, sopt: SockOpt) -> anyhow::Result<Self> {
@@ -164,7 +161,7 @@ impl Listener {
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
         let (new_ac_tx, new_ac_rx) = mpsc::channel(4096);
 
-        let conn_map: ConnMap = Arc::new(Mutex::new(HashMap::new()));
+        let conn_map: ConnMap = Arc::new(DashMap::new());
 
         // 添加清理任务
         {
@@ -173,16 +170,14 @@ impl Listener {
                 let mut interval = tokio::time::interval(Duration::from_secs(60));
                 loop {
                     interval.tick().await;
-
-                    let mut map = cleanup_map.lock().await;
                     let now = Instant::now();
-                    let timeout = Duration::from_secs(300); // 5分钟超时
+                    let timeout = Duration::from_secs(300);
 
-                    // 删除超时连接
-                    map.retain(|k, conn_info| {
+                    // 使用 retain 方法清理过期连接
+                    cleanup_map.retain(|_, conn_info| {
                         let is_active = now.duration_since(conn_info.last_active) < timeout;
                         if !is_active {
-                            debug!("Removing inactive UDP connection: {:?}", k);
+                            debug!("Removing inactive UDP connection");
                         }
                         is_active
                     });
@@ -191,7 +186,7 @@ impl Listener {
         }
 
         tokio::spawn(async move {
-            let conn_map: ConnMap = Arc::new(Mutex::new(HashMap::new()));
+            let conn_map: ConnMap = Arc::new(DashMap::new());
             loop {
                 tokio::select! {
                     _ = &mut shutdown_rx => {
@@ -214,18 +209,23 @@ impl Listener {
                         };
                         let buf = &b[lb..rb];
 
-                        let mut map_mg = conn_map.lock().await;
+
+
                         let k = (dst.clone(),src.clone());
 
-                        if let Some(conn_info) = map_mg.get_mut(&k) {
+                        debug!("new with {:?}",k);
+
+                        let now = Instant::now();
+
+                        if let Some(mut entry) = conn_map.get_mut(&k) {
                             // 更新已存在连接的最后活动时间
-                            conn_info.last_active = Instant::now();
+                            entry.last_active = now;
 
                             let new_buf = BytesMut::from(buf);
-                            let r = conn_info.tx.send(new_buf).await;
+                            let r = entry.tx.send(new_buf).await;
                             if let Err(e) = r {
                                 debug!("tproxy UdpListener tx send got e: {e}");
-                                map_mg.remove(&k);
+                                conn_map.remove(&k);
                                 continue;
                             }
                         } else {
@@ -234,10 +234,10 @@ impl Listener {
                             // 创建新的连接信息
                             let conn_info = ConnInfo {
                                 tx: msg_tx,
-                                last_active: Instant::now(),
+                                last_active: now,
                             };
 
-                            map_mg.insert(k.clone(), conn_info);
+                            conn_map.insert(k.clone(), conn_info);
                             let first_buf = BytesMut::from(buf);
 
                             let ac = new_addr_conn(
@@ -344,35 +344,21 @@ impl AsyncWriteAddr for Writer {
         dst: &Addr,
     ) -> Poll<io::Result<usize>> {
         // 更新连接的最后活动时间
-        if let Ok(mut map) = self.conn_map.try_lock() {
-            if let Some(conn_info) = map.get_mut(&(self.dst.clone(), self.src.clone())) {
-                conn_info.last_active = Instant::now();
-            }
+        if let Some(mut entry) = self.conn_map.get_mut(&(self.dst.clone(), self.src.clone())) {
+            entry.last_active = Instant::now();
         }
 
+        debug!("will write {}", buf.len());
         let us = so2::connect_tproxy_udp(dst, &self.src).unwrap();
         let r = us.send(buf);
+        debug!("  write got {r:?}",);
+
         Poll::Ready(r)
     }
 
-    fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        let lock_future = self.conn_map.lock();
-
-        match std::pin::pin!(lock_future).poll(cx) {
-            Poll::Ready(mut map) => {
-                map.remove(&(self.dst.clone(), self.src.clone()));
-                //debug!("tproxy_udp_w got closed, removed from conn map {}", self.src);
-
-                // 移除 tx 后 (drop了), Reader 端的 rx 也会自动失效
-
-                Poll::Ready(Ok(()))
-            }
-            Poll::Pending => {
-                debug!("tproxy_udp_w got closed, pending lock");
-
-                Poll::Pending
-            }
-        }
+    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        self.conn_map.remove(&(self.dst.clone(), self.src.clone()));
+        Poll::Ready(Ok(()))
     }
 }
 
@@ -421,7 +407,10 @@ impl AsyncReadAddr for Reader {
                     }
                 }
                 ReadState::Rx => {
+                    debug!("will read rx");
                     let r = self.rx.poll_recv(cx);
+                    debug!("  read rx got {r:?}");
+
                     match std::task::ready!(r) {
                         Some(b) => {
                             //debug!("tproxy_udp r read got {}", b.len());
