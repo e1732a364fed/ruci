@@ -7,11 +7,9 @@ use ipnet::{Ipv4Net, Ipv6Net};
 use iprange::IpRange;
 use itertools::Itertools;
 use regex::RegexSet;
-use ruci::{
-    net::Network,
-    user::{UserBox, UserVec},
-};
+use ruci::net::Network;
 use serde::{Deserialize, Serialize};
+use user_trait::{UserBox, UserVec};
 
 use crate::user::str_to_userbox;
 

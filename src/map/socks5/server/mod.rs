@@ -10,7 +10,6 @@ use super::*;
 use crate::{
     map::{self, MapBox, MapExtFields, MapResult, ProxyBehavior, CID},
     net::{Addr, Conn},
-    user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
     utils::{buf_to_ob, io_error},
 };
 use anyhow::Context;
@@ -27,6 +26,7 @@ use std::{
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::debug;
+use user_trait::{PlainText, UserAuthenticator, UsersMap};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -66,11 +66,11 @@ impl Display for Server {
 
 impl Server {
     pub async fn new(option: Config) -> Self {
-        let mut um = UsersMap::new();
+        let mut um = UsersMap::default();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
-            let u = PlainText::from(user_whitespace_pass);
-            if u.strict_valid() {
+            let u = PlainText::from(user_whitespace_pass.as_str());
+            if u.password_non_empty() {
                 um.add_user(u);
             }
         }
@@ -87,7 +87,7 @@ impl Server {
         let mut cu = option.user_passes.clone();
         if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
             while let Some(u) = a.pop() {
-                let uup = user::PlainText::new(u.user, u.pass);
+                let uup = user_trait::PlainText::new(u.user, u.pass);
                 um.add_user(uup);
             }
         }

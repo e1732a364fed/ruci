@@ -7,6 +7,7 @@ use std::{mem, time};
 use super::*;
 
 use bitflags::bitflags;
+use user_trait::{PlainText, User};
 
 pub const DEFAULT_READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间.
 

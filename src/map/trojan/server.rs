@@ -2,7 +2,6 @@ use super::*;
 use crate::{
     map::{self, Data, Map, MapBox, MapExtFields, MapResult, CID},
     net::{self, helpers, Network},
-    user::{AsyncUserAuthenticator, UsersMap},
     utils,
 };
 use anyhow::{anyhow, bail, Context};
@@ -13,6 +12,7 @@ use futures::executor::block_on;
 use macro_map::*;
 use tokio::io::AsyncReadExt;
 use tracing::{debug, warn};
+use user_trait::{UserAuthenticator, UsersMap};
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -40,7 +40,7 @@ impl Display for Server {
 
 impl Server {
     pub async fn new(option: Config) -> Self {
-        let mut um = UsersMap::new();
+        let mut um = UsersMap::default();
 
         if let Some(u) = option.password {
             let u = User::new(&u);

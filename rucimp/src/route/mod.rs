@@ -22,8 +22,8 @@ use ruci::{
     map::{fold::DMIterBox, Data},
     net::{self, *},
     relay::route::{self, *},
-    user::*,
 };
+use user_trait::UserVec;
 
 /// This is a [`ruci::relay::route::OutSelector`] implementation which is more useful than the weaker one [`ruci::relay::route::InboundInfoOutSelector`].
 ///

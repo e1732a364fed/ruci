@@ -6,7 +6,7 @@ use std::{fmt, mem};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
 
-use crate::user;
+// use crate::user;
 
 use super::{Data, DataFlags};
 
@@ -94,12 +94,12 @@ impl User {
 
 #[typetag::serde]
 impl Data for User {
-    fn get_user(&self) -> Option<Box<dyn user::User>> {
+    fn get_user(&self) -> Option<Box<dyn user_trait::User>> {
         let ub = Box::new(self.clone());
         Some(ub)
     }
 
-    fn take_user(&mut self) -> Option<Box<dyn user::User>> {
+    fn take_user(&mut self) -> Option<Box<dyn user_trait::User>> {
         let ub = Box::new(mem::take(self));
         Some(ub)
     }
@@ -109,17 +109,17 @@ impl Data for User {
 }
 
 #[typetag::serde]
-impl crate::user::UserTrait for User {
-    fn identity_str(&self) -> String {
-        self.hex.clone()
+impl user_trait::UserTrait for User {
+    fn identity_str(&self) -> &str {
+        self.hex.as_str()
     }
 
     fn identity_bytes(&self) -> &[u8] {
         self.hex.as_bytes()
     }
 
-    fn auth_str(&self) -> String {
-        self.astr.clone()
+    fn auth_str(&self) -> &str {
+        self.astr.as_str()
     }
 
     fn auth_bytes(&self) -> &[u8] {

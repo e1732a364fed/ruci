@@ -7,6 +7,8 @@ edition = "2021"
 ruci = { path = ".." }
 macro_map = { path = "../crates/macro_map" }
 ruci-tls = { path = "../crates/ruci-tls" }
+user_trait = "0.1.1"
+
 
 bytes = "1"
 tracing = "0.1"

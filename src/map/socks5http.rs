@@ -11,15 +11,11 @@ use macro_map::*;
 use map::Stream;
 use tracing::debug;
 
-use crate::map::{self, MapResult};
-use crate::net::CID;
-use crate::user::{self};
-use crate::{
-    net::Conn,
-    user::{PlainText, UsersMap},
-};
-
 use super::{http_proxy, socks5, Map, MapBox, MapExtFields};
+use crate::map::{self, MapResult};
+use crate::net::Conn;
+use crate::net::CID;
+use user_trait::{PlainText, UsersMap};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -49,11 +45,11 @@ impl Display for Server {
 
 impl Server {
     pub async fn new(option: Config) -> Self {
-        let mut um = UsersMap::new();
+        let mut um = UsersMap::default();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
-            let u = PlainText::from(user_whitespace_pass);
-            if u.strict_valid() {
+            let u = PlainText::from(user_whitespace_pass.as_str());
+            if u.password_non_empty() {
                 um.add_user(u);
             }
         }
@@ -61,7 +57,7 @@ impl Server {
         let mut opt_user_passes = option.user_passes.clone();
         if let Some(vu) = opt_user_passes.as_mut().filter(|vu| !vu.is_empty()) {
             while let Some(u) = vu.pop() {
-                let uup = user::PlainText::new(u.user, u.pass);
+                let uup = user_trait::PlainText::new(u.user, u.pass);
                 um.add_user(uup);
             }
         }

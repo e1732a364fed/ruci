@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 use crate::map::{Map, MapParams, ProxyBehavior, CID};
 use crate::net::addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt};
 use crate::net::{self, helpers, Addr};
-use crate::user::AsyncUserAuthenticator;
+use user_trait::UserAuthenticator;
 
 use super::server::*;
 use super::*;

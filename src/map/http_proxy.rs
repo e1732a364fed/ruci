@@ -16,16 +16,14 @@ use futures::executor::block_on;
 use macro_map::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
+use user_trait::{PlainText, UserAuthenticator, UsersMap};
 
 use crate::map::{self, MapExt, MapResult};
 use crate::net::http::Method;
 use crate::net::CID;
-use crate::user::{self, AsyncUserAuthenticator};
+// use crate::user::{self, AsyncUserAuthenticator};
+use crate::net::{self, Conn};
 use crate::utils::buf_to_ob;
-use crate::{
-    net::{self, Conn},
-    user::{PlainText, UsersMap},
-};
 
 use super::{Map, MapBox, MapExtFields, Stream};
 
@@ -62,11 +60,11 @@ impl From<ServerConfig> for MapBox {
 
 impl Server {
     pub async fn new(option: ServerConfig) -> Self {
-        let mut um = UsersMap::new();
+        let mut um = UsersMap::default();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
-            let u = PlainText::from(user_whitespace_pass);
-            if u.strict_valid() {
+            let u = PlainText::from(user_whitespace_pass.as_str());
+            if u.password_non_empty() {
                 um.add_user(u);
             }
         }
@@ -74,7 +72,7 @@ impl Server {
         let mut cu = option.user_passes.clone();
         if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
             while let Some(u) = a.pop() {
-                let uup = user::PlainText::new(u.user, u.pass);
+                let uup = user_trait::PlainText::new(u.user, u.pass);
                 um.add_user(uup);
             }
         }
@@ -158,7 +156,7 @@ impl Server {
                         }
                     };
 
-                    let u = user::PlainText::new(
+                    let u = user_trait::PlainText::new(
                         String::from_utf8_lossy(&bs[..colon_index]).to_string(),
                         String::from_utf8_lossy(&bs[colon_index + 1..n]).to_string(),
                     );

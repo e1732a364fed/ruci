@@ -25,7 +25,7 @@ use anyhow::{bail, Ok};
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt, Default)]
 pub struct Client {
-    pub up: Option<PlainText>, //todo: make sure len <= 255
+    pub up: Option<user_trait::PlainText>, //todo: make sure len <= 255
 
     pub use_earlydata: bool, //todo: implement this.
 }

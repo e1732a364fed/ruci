@@ -2972,6 +2972,7 @@ dependencies = [
  "typed-builder",
  "typetag",
  "url",
+ "user_trait",
 ]
 
 [[package]]
@@ -3089,6 +3090,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
+ "user_trait",
  "webpki-roots",
  "windows-sys 0.52.0",
  "wiremock",
@@ -4207,6 +4209,17 @@ dependencies = [
  "idna",
  "percent-encoding",
  "serde",
+]
+
+[[package]]
+name = "user_trait"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a43c9e0076ba42975dd833598fbffdeacf3f7101b54264bfefef1d6ca7b2956"
+dependencies = [
+ "dyn-clone",
+ "serde",
+ "typetag",
 ]
 
 [[package]]

@@ -57,11 +57,7 @@ use std::{
     sync::{atomic::AtomicU64, Arc},
 };
 
-use self::{
-    addr_conn::AddrConn,
-    user::{PlainText, User},
-    utils::buf_to_ob,
-};
+use self::{addr_conn::AddrConn, utils::buf_to_ob};
 
 /// the parameter for Map's maps method
 #[derive(Default, Debug, TypedBuilder)]

@@ -6,7 +6,7 @@ use fold::OVOD;
 use infinite::load_infinite_io;
 use mlua::{Error, ErrorContext, Lua, LuaSerdeExt};
 use ruci::map;
-use ruci::user::PlainText;
+use user_trait::PlainText;
 //https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua
 pub const INSPECT: &str = include_str!("../../../../../../dev_res/inspect.lua");
 

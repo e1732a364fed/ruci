@@ -21,7 +21,6 @@ mod test;
 use crate::{
     map,
     net::{self},
-    user::PlainText,
 };
 use anyhow::{anyhow, bail, Context};
 use bytes::{Buf, BufMut, BytesMut};

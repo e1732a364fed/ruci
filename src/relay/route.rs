@@ -18,12 +18,9 @@ use std::{
 };
 
 use async_trait::async_trait;
+use user_trait::UserVec;
 
-use crate::{
-    map::fold::DMIterBox,
-    net,
-    user::{self, UserVec},
-};
+use crate::{map::fold::DMIterBox, net};
 
 use super::Data;
 
@@ -54,7 +51,7 @@ pub async fn get_user_from_opt_data(adv: &[Option<Box<dyn Data>>]) -> Option<Use
 
     for d in adv.iter().flatten() {
         if let Some(u) = d.get_user() {
-            v.0.push(user::UserBox(u.clone()));
+            v.0.push(user_trait::UserBox(u.clone()));
         }
     }
     if v.0.is_empty() {
@@ -234,7 +231,7 @@ mod test {
     use crate::map::math::*;
     use crate::map::*;
     use crate::net::Addr;
-    use crate::user::PlainText;
+    use user_trait::PlainText;
 
     use self::fold::DynVecIterWrapper;
 

@@ -2,18 +2,16 @@
 Provides some `user` related helper functions.
  */
 
-use ruci::{
-    map::trojan,
-    user::{PlainText, UserBox},
-};
+use ruci::map::trojan;
 use tracing::warn;
+use user_trait::{PlainText, UserBox};
 
 #[test]
 fn test() {
     str_to_userbox("plaintext:u0\n p2");
 }
 
-/// Convert string with certain prefix to [`ruci::user::UserBox`]
+/// Convert string with certain prefix to [`user_trait::UserBox`]
 ///
 /// support plaintext:xxx, trojan:xxx
 ///

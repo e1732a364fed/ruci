@@ -21,10 +21,10 @@ use crate::map::MapParams;
 use crate::map::ProxyBehavior;
 use crate::map::CID;
 use crate::net;
-use crate::user::AsyncUserAuthenticator;
-use crate::user::PlainText;
 use futures::executor::block_on;
 use futures::join;
+use user_trait::PlainText;
+use user_trait::UserAuthenticator;
 
 use std::net::IpAddr;
 use std::sync::Arc;

@@ -605,7 +605,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                     user_whitespace_pass: c.userpass,
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
-                            .map(|up| ruci::user::PlainText::from(up.to_string()))
+                            .map(|up| user_trait::PlainText::from(up.as_str()))
                             .collect::<Vec<_>>()
                     }),
                     ..Default::default()
@@ -619,7 +619,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                     user_whitespace_pass: c.userpass,
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
-                            .map(|up| ruci::user::PlainText::from(up.to_string()))
+                            .map(|up| user_trait::PlainText::from(up.as_str()))
                             .collect::<Vec<_>>()
                     }),
                 };
@@ -631,7 +631,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                     user_whitespace_pass: c.userpass,
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
-                            .map(|up| ruci::user::PlainText::from(up.to_string()))
+                            .map(|up| user_trait::PlainText::from(up.as_str()))
                             .collect::<Vec<_>>()
                     }),
                 };
@@ -809,7 +809,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                     up: if u.is_empty() {
                         None
                     } else {
-                        Some(ruci::user::PlainText::from(u))
+                        Some(user_trait::PlainText::from(u.as_str()))
                     },
                     use_earlydata: c.early_data.unwrap_or_default(),
                     ..Default::default()
