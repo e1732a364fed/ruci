@@ -177,7 +177,7 @@ impl Suit for SuitStruct {
                     let a = net::Addr::from_network_addr_str(self.addr_str())
                         .expect("self addr str ok");
                     let dialer = network::Dialer {
-                        dial_addr: a,
+                        dial_addr: Some(a),
                         ..Default::default()
                     };
                     self.push_mapper(Arc::new(Box::new(dialer)));

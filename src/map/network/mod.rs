@@ -104,11 +104,12 @@ impl Mapper for Direct {
     }
 }
 
-/// Dialer can dial tcp, udp or unix domain socket
+/// Dialer can dial ip, tcp, udp or unix domain socket
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
 pub struct Dialer {
-    pub dial_addr: net::Addr,
+    pub dial_addr: Option<net::Addr>,
+    pub bind_addr: Option<net::Addr>,
 }
 
 impl Name for Dialer {
@@ -118,16 +119,20 @@ impl Name for Dialer {
 }
 
 impl Dialer {
-    pub async fn dial_addr(
-        dial_a: &net::Addr,
+    pub async fn action(
+        bind_a: Option<&net::Addr>,
+        dial_a: Option<&net::Addr>,
+
         pass_a: Option<net::Addr>,
         pass_b: Option<BytesMut>,
     ) -> MapResult {
-        let r = dial_a.try_dial().await;
+        let r = net::Addr::bind_dial(bind_a, dial_a).await;
 
         match r {
             Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
-            Err(e) => MapResult::from_e(e.context(format!("Dialer dial {} failed", dial_a))),
+            Err(e) => MapResult::from_e(
+                e.context(format!("Dialer dial {:?} {:?} failed", bind_a, dial_a)),
+            ),
         }
     }
 }
@@ -161,16 +166,28 @@ impl Mapper for Dialer {
 
                 match d {
                     Some(a) => {
-                        return Dialer::dial_addr(&a, target_addr, params.b).await;
+                        return Dialer::action(
+                            self.bind_addr.as_ref(),
+                            Some(&a),
+                            target_addr,
+                            params.b,
+                        )
+                        .await;
                     }
 
                     None => {
-                        return Dialer::dial_addr(&self.dial_addr, target_addr, params.b).await;
+                        return Dialer::action(
+                            self.bind_addr.as_ref(),
+                            self.dial_addr.as_ref(),
+                            target_addr,
+                            params.b,
+                        )
+                        .await;
                     }
                 }
             }
 
-            _ => return MapResult::err_str("Dialer can't dial when a stream already exists"),
+            _ => return MapResult::err_str("Dialer can't map when a stream already exists"),
         }
     }
 }

@@ -10,7 +10,7 @@ use ruci::{
 };
 use tokio::sync::mpsc;
 
-use tracing::warn;
+use tracing::{info, warn};
 
 use crate::map::h2::grpc::GRPC_CONTENT_TYPE;
 
@@ -69,7 +69,9 @@ impl Server {
                         // 如果客户端发来的请求uri不带正确的 authority, h2
                         // 会在debug 中报 malformed headers: malformed authority
                         // 并对 accept 返回 None
-                        warn!(cid = %cid, "h2 accept got None, will break");
+
+                        // 如果客户端正常关闭了主连接, 这里也是 None
+                        info!(cid = %cid, "h2 accept got None, will break");
                         break;
                     }
                 };

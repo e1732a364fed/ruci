@@ -405,7 +405,67 @@ impl Addr {
         }
     }
 
-    pub async fn bind_dial(bind_a: Option<Self>, dial_a: Option<Self>) -> Result<Stream> {
+    /// dial tcp/udp/unix_domain_socket
+    ///
+    /// can dial ip if feature "tun" is enabled
+    ///
+    /// ## udp:
+    ///
+    /// Addr 的 try_dial 中的 udp 其实是 listen, 它会bind到Addr
+    ///
+    pub async fn try_dial(&self) -> Result<Stream> {
+        match self.network {
+            #[cfg(feature = "tun")]
+            Network::IP => {
+                debug!("Addr dialing IP {}", self);
+                let (tun_name, dial_addr, netmask) = self
+                    .to_name_ip_netmask()
+                    .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
+                let c = tun::create_bind(tun_name, dial_addr, netmask)
+                    .await
+                    .context("Addr::try_dial tun, dial failed")?;
+                Ok(Stream::Conn(Box::new(c)))
+            }
+            Network::TCP => {
+                let so = self.get_socket_addr_or_resolve()?;
+
+                let c = TcpStream::connect(so).await?;
+                Ok(Stream::Conn(Box::new(c)))
+            }
+            Network::UDP => {
+                let so = self.get_socket_addr_or_resolve()?;
+
+                let u = UdpSocket::bind(so).await?;
+                let u = udp::new(u, None);
+                Ok(Stream::AddrConn(u))
+            }
+            #[cfg(unix)]
+            Network::Unix => {
+                let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
+                Ok(Stream::Conn(Box::new(u)))
+            }
+            #[cfg(not(feature = "tun"))]
+            _ => bail!("try_dial failed, not supported network: {}", self.network),
+        }
+    }
+
+    /// bind_dial 避免了 try_dial 对 bind 和 connect 地址的混淆
+    ///
+    /// ## bind_a
+    ///
+    /// 对于 ip, bind_a 须提供, 否则将报错
+    ///
+    /// 对于 tcp/udp, 如果 bind_a 不提供, 将采用 随机端口
+    ///
+    /// 对于 uds, bind_a 无意义
+    ///
+    /// ## dial_a
+    ///
+    /// 对于 ip, dial_a 无意义
+    ///
+    /// 对于 tcp/uds, dial_a 须提供，否则将报错
+    ///
+    pub async fn bind_dial(bind_a: Option<&Self>, dial_a: Option<&Self>) -> Result<Stream> {
         if bind_a.is_none() && dial_a.is_none() {
             bail!("bind_dial: bind_a and dial_a are both none");
         }
@@ -459,23 +519,22 @@ impl Addr {
                 Ok(Stream::Conn(Box::new(c)))
             }
             Network::UDP => {
-                let bind_a = match bind_a {
-                    Some(a) => a,
-                    None => bail!("bind_dial: udp must provide bind_a "),
+                let bind_so = match bind_a {
+                    Some(a) => a.get_socket_addr_or_resolve()?,
+                    None => Self::default().get_socket_addr_or_resolve()?,
                 };
-
-                let bind_so = bind_a.get_socket_addr_or_resolve()?;
 
                 let u = UdpSocket::bind(bind_so).await?;
                 let u = match dial_a {
+                    None => udp::new(u, None),
+
                     Some(dial_a) => {
                         let dial_so = dial_a.get_socket_addr_or_resolve()?;
 
                         u.connect(dial_so).await?;
 
-                        udp::new(u, Some(dial_a))
+                        udp::new(u, Some(dial_a.clone()))
                     }
-                    None => udp::new(u, None),
                 };
                 Ok(Stream::AddrConn(u))
             }
@@ -490,51 +549,7 @@ impl Addr {
                 Ok(Stream::Conn(Box::new(u)))
             }
             #[cfg(not(feature = "tun"))]
-            _ => bail!("bind_dial failed, not supported network: {}", self.network),
-        }
-    }
-
-    /// dial tcp/udp/unix_domain_socket
-    ///
-    /// can dial ip if feature "tun" is enabled
-    ///
-    /// ## udp:
-    ///
-    /// Addr 的 try_dial 中的 udp 其实是 listen, 它会bind到Addr
-    ///
-    pub async fn try_dial(&self) -> Result<Stream> {
-        match self.network {
-            #[cfg(feature = "tun")]
-            Network::IP => {
-                debug!("Addr dialing IP {}", self);
-                let (tun_name, dial_addr, netmask) = self
-                    .to_name_ip_netmask()
-                    .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
-                let c = tun::create_bind(tun_name, dial_addr, netmask)
-                    .await
-                    .context("Addr::try_dial tun, dial failed")?;
-                Ok(Stream::Conn(Box::new(c)))
-            }
-            Network::TCP => {
-                let so = self.get_socket_addr_or_resolve()?;
-
-                let c = TcpStream::connect(so).await?;
-                Ok(Stream::Conn(Box::new(c)))
-            }
-            Network::UDP => {
-                let so = self.get_socket_addr_or_resolve()?;
-
-                let u = UdpSocket::bind(so).await?;
-                let u = udp::new(u, None);
-                Ok(Stream::AddrConn(u))
-            }
-            #[cfg(unix)]
-            Network::Unix => {
-                let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
-                Ok(Stream::Conn(Box::new(u)))
-            }
-            #[cfg(not(feature = "tun"))]
-            _ => bail!("try_dial failed, not supported network: {}", self.network),
+            _ => bail!("bind_dial failed, not supported network: {:?}", network),
         }
     }
 

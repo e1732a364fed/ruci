@@ -3,10 +3,14 @@ print("this is a lua config file")
 -- lua 的好处有很多, 你可以定义很多变量
 
 tcp = {
-    Listener = { listen_addr = "0.0.0.0:10801"}
+    Listener = {
+        listen_addr = "0.0.0.0:10801"
+    }
 }
 unix = {
-    Listener = { listen_addr = "unix://file1"}
+    Listener = {
+        listen_addr = "unix://file1"
+    }
 }
 
 opt_direct_chain = {{
@@ -110,38 +114,41 @@ out_stdio_chain = {{
 direct_out_chain = {"Direct"}
 
 config = {
-    inbounds = {
-    --  { chain = trojan_chain,  tag = "listen1"}
+    inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
     -- { chain = trojans_chain, tag = "listen1"} ,
     -- { chain = ws_trojans_chain,  tag = "listen1"  } 
-    -- { chain = in_h2_trojans_chain, tag = "listen1" } 
-     { chain = in_quic_chain, tag = "listen1" } 
+     { chain = in_h2_trojans_chain, tag = "listen1" } 
+    -- { chain = in_quic_chain, tag = "listen1" } 
     -- { chain = socks5http_chain, tag = "listen1"} ,
     -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
-    --[[ 
+        --[[ 
         {
             chain = {{
                 Dialer = {
-                    dial_addr = "udp://127.0.0.1:20800"
+                    bind_addr = "udp://127.0.0.1:20800"
                 }
             }, "Echo"},
             tag = "udp_echo"
-        }
-        --]] },
-   
-    ---[[
-        -- 一般情况下 的 outbound 配置
 
-        outbounds = {{
-            tag = "dial1",
-            chain = direct_out_chain
-        }, {
-            tag = "fallback_d",
-            chain = {{
-                Dialer = { dial_addr = "tcp://0.0.0.0:80" }
-            }}
-        }},
-     --]]
+        } 
+        -- ]] 
+    },
+
+    ---[[
+    -- 一般情况下 的 outbound 配置
+
+    outbounds = {{
+        tag = "dial1",
+        chain = direct_out_chain
+    }, {
+        tag = "fallback_d",
+        chain = {{
+            Dialer = {
+                dial_addr = "tcp://0.0.0.0:80"
+            }
+        }}
+    }},
+    -- ]]
 
     --[[
         -- 对应 local.lua 使用 tproxy 的 outbound 配置

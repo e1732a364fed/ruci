@@ -198,15 +198,39 @@ pub struct OutMapperConfigChain {
     chain: Vec<OutMapperConfig>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DialerConfig {
+    bind_addr: Option<String>,
+    dial_addr: Option<String>,
+    ext: Option<Ext>,
+}
+impl ToMapperBox for DialerConfig {
+    fn to_mapper_box(&self) -> MapperBox {
+        let opt_bind_a = self
+            .bind_addr
+            .clone()
+            .map(|a| net::Addr::from_name_network_addr_str(&a).expect("network_ip_addr is valid"));
+
+        let opt_dial_a = self
+            .dial_addr
+            .clone()
+            .map(|a| net::Addr::from_name_network_addr_str(&a).expect("network_ip_addr is valid"));
+        let d = ruci::map::network::Dialer {
+            dial_addr: opt_dial_a,
+            bind_addr: opt_bind_a,
+            ext_fields: self.ext.as_ref().map(|e| e.to_ext_fields()),
+        };
+
+        Box::new(d)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
-    Echo,         //单流消耗器
-    Stdio(Ext),   //单流发生器
-    Fileio(File), //单流发生器
-    Dialer {
-        dial_addr: String,
-        ext: Option<Ext>,
-    }, //单流发生器
+    Echo,                 //单流消耗器
+    Stdio(Ext),           //单流发生器
+    Fileio(FileConfig),   //单流发生器
+    Dialer(DialerConfig), //单流发生器
     Listener {
         listen_addr: String,
         ext: Option<Ext>,
@@ -254,14 +278,11 @@ pub enum InMapperConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapperConfig {
-    Blackhole,    //单流消耗器
-    Direct,       //单流发生器
-    Stdio(Ext),   //单流发生器
-    Fileio(File), //单流发生器
-    Dialer {
-        dial_addr: String,
-        ext: Option<Ext>,
-    }, //单流发生器
+    Blackhole,            //单流消耗器
+    Direct,               //单流发生器
+    Stdio(Ext),           //单流发生器
+    Fileio(FileConfig),   //单流发生器
+    Dialer(DialerConfig), //单流发生器
     Adder(i8),
     Counter,
     TLS(TlsOut),
@@ -312,7 +333,7 @@ impl Ext {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct File {
+pub struct FileConfig {
     i: String,
     o: String,
 
@@ -377,16 +398,7 @@ impl ToMapperBox for InMapperConfig {
                 };
                 Box::new(s)
             }
-            InMapperConfig::Dialer { dial_addr, ext } => {
-                let a = net::Addr::from_name_network_addr_str(dial_addr)
-                    .expect("network_ip_addr is valid");
-                let d = ruci::map::network::Dialer {
-                    dial_addr: a,
-                    ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
-                };
-
-                Box::new(d)
-            }
+            InMapperConfig::Dialer(dc) => dc.to_mapper_box(),
             InMapperConfig::Listener { listen_addr, ext } => {
                 let a =
                     net::Addr::from_network_addr_str(listen_addr).expect("network_addr is valid");
@@ -540,16 +552,7 @@ impl ToMapperBox for OutMapperConfig {
             OutMapperConfig::Blackhole => Box::<BlackHole>::default(),
 
             OutMapperConfig::Direct => Box::<Direct>::default(),
-            OutMapperConfig::Dialer { dial_addr, ext } => {
-                let a = net::Addr::from_name_network_addr_str(dial_addr)
-                    .expect("network_ip_addr is valid");
-                let d = ruci::map::network::Dialer {
-                    dial_addr: a,
-                    ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
-                };
-
-                Box::new(d)
-            }
+            OutMapperConfig::Dialer(dc) => dc.to_mapper_box(),
             OutMapperConfig::Adder(i) => i.to_mapper_box(),
             OutMapperConfig::Counter => Box::<counter::Counter>::default(),
             OutMapperConfig::TLS(c) => {

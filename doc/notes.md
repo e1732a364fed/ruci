@@ -115,6 +115,14 @@ Listener的原理是 listen  然后 accept  出 子流，而udp 是不会分出�
 
 所以 udp 监听要用的是 Dialer
 
+监听 udp 本地 20800 端口:
+
+```lua
+
+Dialer = {
+    bind_addr = "udp://127.0.0.1:20800"
+}
+```
 
 ### 报错示例: socks5 client only support tcplike stream, got NoStream
 

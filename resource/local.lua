@@ -334,7 +334,7 @@ config = {
 
 --]=]
 
---[=[
+---[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },
@@ -345,7 +345,7 @@ config = {
 
 --]=]
 
----[=[
+--[=[
 config = {
     inbounds = {{
         chain = listen_socks5http,
@@ -549,7 +549,7 @@ config = {
         --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
         -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
-        {chain = { { Dialer= { dial_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
+        {chain = { { Dialer= { bind_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
     },
 
 --[[

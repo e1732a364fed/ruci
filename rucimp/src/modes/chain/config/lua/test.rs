@@ -110,18 +110,20 @@ fn test_out() -> mlua::Result<()> {
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::Dialer {
+        OutMapperConfig::Dialer(DialerConfig {
+            bind_addr: None,
             dial_addr: str,
             ext: None
-        }
+        })
     ));
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::Dialer {
+        OutMapperConfig::Dialer(DialerConfig {
+            bind_addr: None,
             dial_addr: str2,
             ext: None
-        } //won't match inner fields
+        }) //won't match inner fields
     ));
     assert!(!matches!(first_m, OutMapperConfig::Counter));
     Ok(())
@@ -162,18 +164,20 @@ fn test_out2() -> mlua::Result<()> {
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::Dialer {
+        OutMapperConfig::Dialer(DialerConfig {
+            bind_addr: None,
             dial_addr: str,
             ext: None
-        }
+        })
     ));
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::Dialer {
+        OutMapperConfig::Dialer(DialerConfig {
+            bind_addr: None,
             dial_addr: str2,
             ext: None
-        } //won't match inner fields
+        }) //won't match inner fields
     ));
     assert!(!matches!(first_m, OutMapperConfig::Counter));
     Ok(())
