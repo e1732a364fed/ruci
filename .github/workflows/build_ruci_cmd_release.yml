@@ -7,12 +7,17 @@ on:
         description: 'Release Tag'
         required: true
         type: string
+      without_cross:
+        required: false
+        default: 'false'
+        description: "by default it will build with cross. Set it to true to build without cross"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build-cross:
+    if: ${{ inputs.without_cross == 'false' }}
     permissions: write-all
     uses: ./.github/workflows/build_ruci_cmd_cross.yml
 
