@@ -110,18 +110,18 @@ local listen_trojan = { listen, trojan_in }
 
 local dial = {
     BindDialer = {
-        dial_addr = "tcp://0.0.0.0:10801"
+        dial_addr = "tcp://127.0.0.1:10801"
     }
 }
 
 --[[
 -- 在本示例中 tproxy 是单机自连测试, 因此没有用到 OptDialer
 -- 在实际使用中, 如果是dial 一个真实的远程服务器, 需要用 OptDialer
-加 so_mark 和 bind_to_device
+-- 加 so_mark 和 bind_to_device
 
 local opt_dial = {
     OptDialer = {
-        dial_addr = "tcp://0.0.0.0:10801",
+        dial_addr = "tcp://127.0.0.1:10801",
         sockopt = {
             so_mark = 255,
             bind_to_device = "enp0s1"
@@ -481,7 +481,7 @@ local config_13_route = {
     }, {
         tag = "fallback_d",
         chain = { {
-            BindDialer = { dial_addr = "tcp://0.0.0.0:80" }
+            BindDialer = { dial_addr = "tcp://127.0.0.1:80" }
         } }
     } },
 
@@ -633,7 +633,8 @@ local config_16_tun = {
 
                     -- enp0s1(linux 的一般情况)
                     -- en0  (macos 的情况)
-                    -- WLAN( windows, 用wifi联网的情况)
+                    -- WLAN( windows, 英文系统 用wifi联网的情况) (windows中的网卡信息使用 ipconfig 查看)
+                    -- 以太网( windows, 中文系统 用网线联网的情况)
                 }
             }
         }, tlsout, websocket_out }
@@ -786,7 +787,7 @@ local config_19_recorder_trojans = {
             chain = {
                 {
                     BindDialer = {
-                        dial_addr = "tcp://0.0.0.0:10801"
+                        dial_addr = "tcp://127.0.0.1:10801"
                     }
                 },
 
