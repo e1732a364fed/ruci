@@ -1,7 +1,7 @@
 use macro_mapper::DefaultMapperExt;
 use rustls::{
     client::danger::ServerCertVerified,
-    pki_types::{CertificateDer, Der, ServerName, TrustAnchor, UnixTime},
+    pki_types::{CertificateDer, ServerName, UnixTime},
     server::WebPkiClientVerifier,
     ClientConfig,
 };
@@ -23,22 +23,15 @@ impl<IO> crate::Name for tokio_rustls::client::TlsStream<IO> {
     }
 }
 
+fn defaultcc() -> ClientConfig {
+    ClientConfig::builder()
+        .with_root_certificates(defaultrcs())
+        .with_no_client_auth()
+}
+
 impl Client {
     pub fn new(domain: &str, is_insecure: bool) -> Self {
-        let mut root_certs = rustls::RootCertStore::empty();
-        root_certs.extend(
-            webpki_roots::TLS_SERVER_ROOTS
-                .0
-                .iter()
-                .map(|ta| TrustAnchor {
-                    subject: ta.subject.into(),
-                    subject_public_key_info: ta.spki.into(),
-                    name_constraints: ta.name_constraints.map(Der::from),
-                }),
-        );
-        let mut config = ClientConfig::builder()
-            .with_root_certificates(root_certs)
-            .with_no_client_auth();
+        let mut config = defaultcc();
 
         if is_insecure {
             config
@@ -92,17 +85,7 @@ impl rustls::client::danger::ServerCertVerifier for SuperDanVer {
     }
 
     fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        let mut root_certs = rustls::RootCertStore::empty();
-        root_certs.extend(
-            webpki_roots::TLS_SERVER_ROOTS
-                .0
-                .iter()
-                .map(|ta| TrustAnchor {
-                    subject: ta.subject.into(),
-                    subject_public_key_info: ta.spki.into(),
-                    name_constraints: ta.name_constraints.map(Der::from_slice),
-                }),
-        );
+        let root_certs = defaultrcs();
 
         WebPkiClientVerifier::builder(Arc::new(root_certs))
             .build()
