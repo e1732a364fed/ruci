@@ -265,7 +265,8 @@ impl Name for UdpR {
     }
 }
 
-pub type DataDstSrc = (BytesMut, net::Addr, net::Addr);
+// (buf_index, left_bound, right_bound)
+pub type DataDstSrc = ((usize, usize, usize), net::Addr, net::Addr);
 
 /// 将 外来 的udp 数据 写回 本机
 impl AsyncWriteAddr for UdpW {
@@ -348,8 +349,10 @@ impl AsyncReadAddr for UdpR {
 
         match r {
             Poll::Ready(r) => match r {
-                Some(mut ad) => {
-                    let data_l = ad.0.len();
+                Some(ad) => {
+                    let (current_using_i, left_bound, right_bound) = ad.0;
+
+                    let data_l = right_bound - left_bound;
                     let bl = buf.len();
                     let len_to_cp = min(bl, data_l);
                     if data_l != len_to_cp {
@@ -358,7 +361,17 @@ impl AsyncReadAddr for UdpR {
                             data_l, len_to_cp
                         );
                     }
-                    ad.0.copy_to_slice(&mut buf[..len_to_cp]);
+
+                    let b = unsafe {
+                        if current_using_i == 0 {
+                            &mut VEC
+                        } else {
+                            &mut VEC2
+                        }
+                    };
+                    let mut buf2 = &b[left_bound..right_bound];
+
+                    buf2.copy_to_slice(&mut buf[..len_to_cp]);
 
                     let dst = ad.1;
 
@@ -378,18 +391,27 @@ impl AsyncReadAddr for UdpR {
     }
 }
 
-// impl Drop for UdpR {
-//     fn drop(&mut self) {
-//         debug!("UdpR Dropped!")
-//     }
-// }
+use ruci::net::addr_conn::MAX_DATAGRAM_SIZE;
+
+static mut VEC: [u8; MAX_DATAGRAM_SIZE] = [0u8; MAX_DATAGRAM_SIZE];
+static mut VEC2: [u8; MAX_DATAGRAM_SIZE] = [0u8; MAX_DATAGRAM_SIZE];
 
 /// blocking
 fn loop_accept_udp(us: Socket, tx: mpsc::Sender<DataDstSrc>) {
-    loop {
-        let mut buf = BytesMut::zeroed(1500);
+    let mut current_using_i = 0;
+    let mut last_i = 0;
 
-        let r = tproxy_recv_from_with_destination(&us, &mut buf);
+    loop {
+        let b = unsafe {
+            if current_using_i == 0 {
+                &mut VEC
+            } else {
+                &mut VEC2
+            }
+        };
+        let buf = &mut b[last_i..last_i + 1500];
+
+        let r = tproxy_recv_from_with_destination(&us, buf);
         let r = match r {
             Ok(r) => r,
             Err(e) => {
@@ -402,7 +424,6 @@ fn loop_accept_udp(us: Socket, tx: mpsc::Sender<DataDstSrc>) {
         let (n, src, dst) = r;
 
         if n != 0 {
-            buf.truncate(n);
             let dst_a = Addr {
                 addr: NetAddr::Socket(dst),
                 network: Network::UDP,
@@ -412,7 +433,15 @@ fn loop_accept_udp(us: Socket, tx: mpsc::Sender<DataDstSrc>) {
                 network: Network::UDP,
             };
 
-            let r = tx.try_send((buf, dst_a, src_a));
+            let r = tx.try_send(((current_using_i, last_i, last_i + n), dst_a, src_a));
+            last_i += n;
+            if last_i + 1500 > MAX_DATAGRAM_SIZE {
+                last_i = 0;
+                current_using_i += 1;
+                if current_using_i >= 2 {
+                    current_using_i = 0
+                }
+            }
 
             if let Err(e) = r {
                 warn!("tproxy loop_accept_udp tx.send got err {e}");
