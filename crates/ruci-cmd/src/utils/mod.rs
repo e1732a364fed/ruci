@@ -278,8 +278,7 @@ fn write_file(v: Vec<u8>, name: String) -> anyhow::Result<()> {
 }
 
 fn calcu_trojan_hash_fn(plain_text: &str) -> String {
-    let h = ruci::map::trojan::sha224_hex_string_lower_case(plain_text);
-    h
+    ruci::map::trojan::sha224_hex_string_lower_case(plain_text)
 }
 
 fn print_calcu_trojan_hash(plain_text: &str) {
@@ -502,8 +501,7 @@ pub fn register_command_apis(
                 let r = generate_ca_certificate(vec![name], None, None);
                 format!("{r:?}")
             },
-        )
-        .into(),
+        ),
     );
 
     extensions.insert(
@@ -513,8 +511,7 @@ pub fn register_command_apis(
                 let r = generate_certificate(vec![name]);
                 format!("{r:?}")
             },
-        )
-        .into(),
+        ),
     );
 
     extensions.insert(
@@ -522,8 +519,7 @@ pub fn register_command_apis(
         get(|| async {
             let r = download_wintun().await;
             format!("{r:?}")
-        })
-        .into(),
+        }),
     );
 
     extensions.insert(
@@ -531,29 +527,25 @@ pub fn register_command_apis(
         get(|| async {
             let r = download_mmdb().await;
             format!("{r:?}")
-        })
-        .into(),
+        }),
     );
 
     extensions.insert(
         "/api/utils/trojan_hash/{password}".to_string(),
         get(
             |axum::extract::Path(password): axum::extract::Path<String>| async move {
-                let h = calcu_trojan_hash_fn(&password);
-                h
+                calcu_trojan_hash_fn(&password)
             },
-        )
-        .into(),
+        ),
     );
 
     extensions.insert(
         "/api/utils/qr/{text}".to_string(),
         get(
             |axum::extract::Path(text): axum::extract::Path<String>| async move {
-                format!("{}", qrcode_of(&text))
+                qrcode_of(&text).to_string()
             },
-        )
-        .into(),
+        ),
     );
 
     #[derive(Deserialize)]
@@ -576,8 +568,7 @@ pub fn register_command_apis(
                 let r = convert_format(input_file, output_format).await;
                 format!("{r:?}")
             },
-        )
-        .into(),
+        ),
     );
 
     #[derive(Deserialize)]
@@ -603,7 +594,7 @@ pub fn register_command_apis(
                 format!("{r:?}")
             },
         )
-        .into(),
+        ,
     );
 
     info!("utils: Registered {} command APIs", extensions.len());

@@ -18,17 +18,17 @@ pub const DEFAULT_API_ADDR: &str = "127.0.0.1:40681";
 type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, (DateTime<Utc>, NewConnInfo)>>>;
 
 /// 缓存 某cid的 某时间点的流量
-#[cfg(all(feature = "trace"))]
+#[cfg(feature = "trace")]
 type FluxCache = Arc<tinyufo::TinyUfo<CID, Vec<(tokio::time::Instant, u64)>>>;
-#[cfg(all(feature = "trace"))]
+#[cfg(feature = "trace")]
 fn new_cache() -> FluxCache {
     Arc::new(tinyufo::TinyUfo::new(100, 100))
 }
 
-#[cfg(all(feature = "trace"))]
+#[cfg(feature = "trace")]
 use std::sync::atomic::AtomicBool;
 
-#[cfg(all(feature = "trace"))]
+#[cfg(feature = "trace")]
 pub struct TracePart {
     pub is_monitoring: Arc<AtomicBool>,
 
@@ -93,7 +93,6 @@ impl Server {
         (status = 200, description = "Get monitoring status", body = String)
     )
 )]
-#[cfg(feature = "trace")]
 async fn is_monitoring_flux(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> String {
     format!("{}", is_monitoring_flux.load(Ordering::Relaxed))
 }
@@ -377,7 +376,7 @@ async fn start_engine(
         Ok((mut e, r)) => {
             let id = e.global_data.run_instance_id;
             tokio::spawn(async move { e.run_with_close_rx(r, false).await });
-            return id.to_string();
+            id.to_string()
         }
         Err(r) => format!("{:?}", r),
     }
@@ -474,8 +473,7 @@ pub async fn serve(
         );
 
     // 添加扩展API
-    let extensions = s.api_extensions.read();
-    for (path, handler) in extensions.iter() {
+    for (path, handler) in s.api_extensions.read().iter() {
         app = app.route(path, handler.clone());
         info!("Added extension API: {}", path);
     }
@@ -644,8 +642,6 @@ async fn setup_trace_flux_for_chain_engine(
 
 use serde::{Deserialize, Serialize};
 use utoipa::OpenApi;
-
-/// Response for status endpoint
 
 /// Connection information response
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]
