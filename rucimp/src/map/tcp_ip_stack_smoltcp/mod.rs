@@ -48,14 +48,18 @@ impl Map for Stack {
                 let (new_stream_tx, new_stream_rx) = mpsc::channel(1000);
 
                 tokio::spawn(async move {
-                    let (mut device, mut tcp_rx, mut udp_rx, mut device_write_r) =
-                        SmoltcpDevice::new(cid, base_conn, new_stream_tx);
+                    let device::DeviceAndReceivers {
+                        mut device,
+                        mut tcp_rx,
+                        mut udp_rx,
+                        mut device_write_rx,
+                    } = SmoltcpDevice::create(cid, base_conn, new_stream_tx);
 
                     let mut iface = device::create_interface(&mut device);
 
                     loop {
                         tokio::select! {
-                            ob = device_write_r.recv() =>{
+                            ob = device_write_rx.recv() =>{
                                 match ob {
                                     Some(b) => {
                                         match device.write(b).await {

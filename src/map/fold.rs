@@ -209,7 +209,6 @@ pub async fn fold(params: FoldParams) -> FoldResult {
                     b: last_r.b,
                     d: calculated_output_vec.clone(),
                     shutdown_rx: last_r.shutdown_rx,
-                    ..Default::default()
                 },
             )
             .await;

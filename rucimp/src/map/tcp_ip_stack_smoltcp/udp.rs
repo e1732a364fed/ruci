@@ -115,7 +115,7 @@ impl<'a> AsyncWriteAddr for Conn<'a> {
                 let r = u.send_slice(
                     buf,
                     UdpMetadata {
-                        endpoint: smoltcp::wire::IpEndpoint::from(ed),
+                        endpoint: ed,
                         meta: PacketMeta::default(),
                     },
                 );
@@ -145,7 +145,7 @@ impl<'a> AsyncReadAddr for Conn<'a> {
     ) -> Poll<io::Result<(usize, Addr)>> {
         let x = futures::Future::poll(std::pin::pin!(self.u.lock()), cx);
         match x {
-            Poll::Pending => return Poll::Pending,
+            Poll::Pending => Poll::Pending,
 
             Poll::Ready(mut u) => {
                 if !u.can_recv() {

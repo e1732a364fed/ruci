@@ -24,7 +24,7 @@ pub struct TcpReadHalf {
 
 impl TcpReadHalf {
     pub fn peer_addr(&self) -> SocketAddr {
-        self.peer_addr.clone()
+        self.peer_addr
     }
     pub fn close(&mut self) {
         self.rx.close();
@@ -55,15 +55,15 @@ impl TcpStream {
         Self {
             r: TcpReadHalf {
                 rx,
-                peer_addr: peer_addr.clone(),
+                peer_addr,
                 buf: BytesMut::new(),
             },
             w: TcpWriteHalf {
                 h,
                 tx: PollSender::new(tx),
-                local_addr: local_addr.clone(),
+                local_addr,
             },
-            local_addr: local_addr.clone(),
+            local_addr,
             peer_addr,
         }
     }
@@ -73,11 +73,11 @@ impl TcpStream {
     }
 
     pub fn local_addr(&self) -> SocketAddr {
-        self.local_addr.clone()
+        self.local_addr
     }
 
     pub fn peer_addr(&self) -> SocketAddr {
-        self.peer_addr.clone()
+        self.peer_addr
     }
 }
 
@@ -112,7 +112,7 @@ impl AsyncWrite for TcpWriteHalf {
     ) -> Poll<Result<usize, Error>> {
         let me = self.get_mut();
         if ready!(me.tx.poll_reserve(cx)).is_ok() {
-            if let Err(err) = me.tx.send_item((me.h, me.local_addr.clone(), buf.into())) {
+            if let Err(err) = me.tx.send_item((me.h, me.local_addr, buf.into())) {
                 tracing::warn!("tcp send response failed: {}", err);
             } else {
                 return Poll::Ready(Ok(buf.len()));

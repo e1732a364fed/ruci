@@ -32,13 +32,13 @@ pub struct R {
     rx: Receiver<(IpEndpoint, BytesMut)>,
 }
 
-impl<'a> ruci::Name for R {
+impl ruci::Name for R {
     fn name(&self) -> &str {
         "smoltcp_udp(r)"
     }
 }
 
-impl<'a> ruci::Name for W {
+impl ruci::Name for W {
     fn name(&self) -> &str {
         "smoltcp_udp(w)"
     }
@@ -100,7 +100,7 @@ fn ip_end_point_to_addr(a: &IpEndpoint) -> Addr {
     }
 }
 
-impl<'a> AsyncWriteAddr for W {
+impl AsyncWriteAddr for W {
     fn poll_write_addr(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -131,7 +131,7 @@ impl<'a> AsyncWriteAddr for W {
     }
 }
 
-impl<'a> AsyncReadAddr for R {
+impl AsyncReadAddr for R {
     fn poll_read_addr(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
