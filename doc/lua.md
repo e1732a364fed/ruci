@@ -26,9 +26,32 @@ end
 config = {
     inbounds = {
         {chain = chain1, tag = "listen1"}
+    },
+    outbounds = { tag = "d1", chain = { "Blackhole" } },
+
+    tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  },
+
+    rule_route = { 
+        { 
+            out_tag = "dial1", 
+            mode = "WhiteList",
+            in_tags = { "listen1" } ,
+            ta_ip_countries = { "CN", "US" },
+            ta_networks = { "tcp", "udp" },
+            ta_ipv4 = { "192.168.1.0/24" },
+            ta_domain_matcher = {
+                domain_regex = {  "[a-z]+@[a-z]+",
+                "[a-z]+" },
+                domain_set = { "www.baidu.com" },
+            }
+        } 
     }
 }
 ```
 
-要求每一条链都要有一个 tag
+要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 mapper (映射函数)
+
+
+
+
 

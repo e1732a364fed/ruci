@@ -173,17 +173,17 @@ pub struct OutMapperConfigChain {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
+    Echo,             //单流消耗器
     Stdio(Ext),       //单流发生器
     Dialer(String),   //单流发生器
     Listener(String), //多流发生器
-    Echo,             //单流消耗器
     Adder(i8),
     Counter,
     TLS(TlsIn),
-    Http(UserPassField),
-    Socks5(UserPassField),
-    Socks5Http(UserPassField),
-    Trojan(TrojanIn),
+    Http(PlainTextSet),
+    Socks5(PlainTextSet),
+    Socks5Http(PlainTextSet),
+    Trojan(TrojanPassSet),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -231,7 +231,7 @@ pub struct TlsOut {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UserPassField {
+pub struct PlainTextSet {
     userpass: Option<String>,
     more: Option<Vec<String>>,
 }
@@ -245,7 +245,7 @@ pub struct Socks5Out {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TrojanIn {
+pub struct TrojanPassSet {
     password: Option<String>,
     more: Option<Vec<String>>,
 }
@@ -392,7 +392,7 @@ mod test {
                 chain: vec![
                     InMapperConfig::Listener("0.0.0.0:1080".to_string()),
                     InMapperConfig::Counter,
-                    InMapperConfig::Socks5(UserPassField {
+                    InMapperConfig::Socks5(PlainTextSet {
                         userpass: None,
                         more: None,
                     }),
