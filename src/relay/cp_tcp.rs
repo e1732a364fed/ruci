@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, warn};
 
-//non-blocking, spawns new task to do actual relay
+/// non-blocking, spawns new task to do actual relay
 pub fn cp_conn(
     cid: CID,
     in_conn: net::Conn,
@@ -22,8 +22,8 @@ pub fn cp_conn(
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
     match (pre_read_data, gtr) {
-        (None, None) => tokio::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
-        (None, Some(t)) => tokio::spawn(ti_no_ed(
+        (None, None) => tokio::spawn(no_gtr_no_ed(cid, in_conn, out_conn)),
+        (None, Some(t)) => tokio::spawn(gtr_no_ed(
             cid,
             in_conn,
             out_conn,
@@ -31,8 +31,8 @@ pub fn cp_conn(
             #[cfg(feature = "trace")]
             updater,
         )),
-        (Some(ed), None) => tokio::spawn(no_ti_ed(cid, in_conn, out_conn, ed)),
-        (Some(ed), Some(t)) => tokio::spawn(ti_ed(
+        (Some(ed), None) => tokio::spawn(no_gtr_ed(cid, in_conn, out_conn, ed)),
+        (Some(ed), Some(t)) => tokio::spawn(gtr_ed(
             cid,
             in_conn,
             out_conn,
@@ -44,7 +44,7 @@ pub fn cp_conn(
     };
 }
 
-async fn no_ti_no_ed(cid: CID, mut in_conn: net::Conn, mut out_conn: net::Conn) {
+async fn no_gtr_no_ed(cid: CID, mut in_conn: net::Conn, mut out_conn: net::Conn) {
     debug!(cid = %cid, "relay start");
 
     let _ = net::copy(
@@ -59,7 +59,7 @@ async fn no_ti_no_ed(cid: CID, mut in_conn: net::Conn, mut out_conn: net::Conn) 
     debug!(cid = %cid, "relay end",);
 }
 
-async fn ti_no_ed(
+async fn gtr_no_ed(
     cid: CID,
     mut in_conn: net::Conn,
     mut out_conn: net::Conn,
@@ -87,7 +87,7 @@ async fn ti_no_ed(
     .await;
 }
 
-async fn no_ti_ed(
+async fn no_gtr_ed(
     cid: CID,
     mut in_conn: net::Conn,
     mut out_conn: net::Conn,
@@ -139,7 +139,7 @@ async fn no_ti_ed(
     debug!("{}, relay end", cid);
 }
 
-async fn ti_ed(
+async fn gtr_ed(
     cid: CID,
     mut in_conn: net::Conn,
     mut out_conn: net::Conn,

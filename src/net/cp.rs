@@ -6,7 +6,6 @@ the more info you want to access, the slower performance you would get
 
 use bytes::BytesMut;
 use tokio::io::AsyncReadExt;
-use tracing::trace;
 
 use super::*;
 
@@ -18,34 +17,36 @@ pub type Updater = (UpdateSender, UpdateSender);
 pub type OptUpdater = Option<Updater>;
 
 /// may log debug or do other side-effect stuff with id.
+///
+/// will add to gtr.ub for bytes copied from local_c to remote_c.
+///
+/// will add to gtr.db for bytes copied from remote_c to local_c.
+#[allow(unused)]
 pub async fn copy<C1: NamedConn, C2: NamedConn>(
-    c1: &mut C1,
-    c2: &mut C2,
+    local_c: &mut C1,
+    remote_c: &mut C2,
     cid: &CID,
     gtr: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")] updater: OptUpdater,
-) -> Result<u64, Error> {
-    match gtr {
-        Some(tr) => {
-            cp_with_gr(
-                c1,
-                c2,
-                cid,
-                tr,
-                #[cfg(feature = "trace")]
-                updater,
-            )
-            .await
+) -> Result<(u64, u64), Error> {
+    let r = {
+        #[cfg(feature = "trace")]
+        {
+            cp_with_updater(local_c, remote_c, cid, updater).await
         }
-        None => {
-            let r = cp(c1, c2).await;
-            match r {
-                Ok((u, _u2)) => Ok(u),
-                Err(e) => Err(e),
-            }
+
+        #[cfg(not(feature = "trace"))]
+        cp(local_c, remote_c).await
+    };
+    if let Ok((u, d)) = r {
+        if let Some(gtr) = gtr {
+            gtr.ub.fetch_add(u, Ordering::Relaxed);
+            gtr.db.fetch_add(d, Ordering::Relaxed);
         }
     }
+
+    r
 }
 
 /// pure copy without any side effect
@@ -54,34 +55,16 @@ pub async fn cp<C1: AsyncConn, C2: AsyncConn>(
     c2: &mut C2,
 ) -> Result<(u64, u64), Error> {
     tokio::io::copy_bidirectional(c1, c2).await
-    // let (mut c1_read, mut c1_write) = tokio::io::split(c1);
-    // let (mut c2_read, mut c2_write) = tokio::io::split(c2);
-
-    // let (c1_to_c2, c2_to_c1) = (
-    //     tokio::io::copy(&mut c1_read, &mut c2_write).fuse(),
-    //     tokio::io::copy(&mut c2_read, &mut c1_write).fuse(),
-    // );
-
-    // pin_mut!(c1_to_c2, c2_to_c1);
-
-    // futures::select! {
-    //     r1 = c1_to_c2 => {
-    //         r1
-    //     },
-    //     r2 = c2_to_c1 => {
-    //         r2
-    //     },
-    // }
 }
 
-pub async fn cp_with_gr<C1: NamedConn, C2: NamedConn>(
+#[cfg(feature = "trace")]
+pub async fn cp_with_updater<C1: NamedConn, C2: NamedConn>(
     c1: &mut C1,
     c2: &mut C2,
     cid: &CID,
-    tr: Arc<GlobalTrafficRecorder>,
 
-    #[cfg(feature = "trace")] updater: OptUpdater,
-) -> Result<u64, Error> {
+    updater: OptUpdater,
+) -> Result<(u64, u64), Error> {
     if tracing::enabled!(tracing::Level::DEBUG) {
         debug!(
             cid = %cid,
@@ -91,43 +74,27 @@ pub async fn cp_with_gr<C1: NamedConn, C2: NamedConn>(
         );
     }
 
-    let (mut c1_read, mut c1_write) = tokio::io::split(c1);
-    let (mut c2_read, mut c2_write) = tokio::io::split(c2);
-
-    #[cfg(feature = "trace")]
     match updater {
         Some(updater) => {
+            let (mut c1_read, mut c1_write) = tokio::io::split(c1);
+            let (mut c2_read, mut c2_write) = tokio::io::split(c2);
+
             let (c1_to_c2, c2_to_c1) = (
                 cp_rw_with_updater(cid, &mut c1_read, &mut c2_write, updater.0).fuse(),
                 cp_rw_with_updater(cid, &mut c2_read, &mut c1_write, updater.1).fuse(),
             );
-            select_f(cid, c1_to_c2, c2_to_c1, tr).await
+            select_f(cid, c1_to_c2, c2_to_c1).await
         }
-        _ => {
-            let (c1_to_c2, c2_to_c1) = (
-                tokio::io::copy(&mut c1_read, &mut c2_write).fuse(),
-                tokio::io::copy(&mut c2_read, &mut c1_write).fuse(),
-            );
-            select_f(cid, c1_to_c2, c2_to_c1, tr).await
-        }
-    }
-
-    #[cfg(not(feature = "trace"))]
-    {
-        let (c1_to_c2, c2_to_c1) = (
-            tokio::io::copy(&mut c1_read, &mut c2_write).fuse(),
-            tokio::io::copy(&mut c2_read, &mut c1_write).fuse(),
-        );
-        select_f(cid, c1_to_c2, c2_to_c1, tr).await
+        _ => tokio::io::copy_bidirectional(c1, c2).await,
     }
 }
 
+#[cfg(feature = "trace")]
 async fn select_f<A, B>(
     cid: &CID,
     c1_to_c2: futures::future::Fuse<A>,
     c2_to_c1: futures::future::Fuse<B>,
-    tr: Arc<GlobalTrafficRecorder>,
-) -> Result<u64, Error>
+) -> Result<(u64, u64), Error>
 where
     A: futures::future::Future<Output = Result<u64, Error>>,
     B: futures::future::Future<Output = Result<u64, Error>>,
@@ -136,14 +103,18 @@ where
 
     // 一个方向停止后, 关闭连接, 如果 opt 不为空, 则等待另一个方向关闭, 以获取另一方向的流量信息。
 
+    use tracing::trace;
+
     futures::select! {
         r1 = c1_to_c2 => {
 
+            let mut n1 :u64 = 0;
+
             if let Ok(n) = r1 {
-                let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
+                n1 = n;
 
                 if tracing::enabled!(tracing::Level::TRACE)  {
-                    trace!(cid = %cid,"cp, u, ub, {}, {}",n,tt+n);
+                    trace!(cid = %cid,"cp, u, ub, {}, {}",n, n);
                 }
             }
 
@@ -151,13 +122,16 @@ where
             // when it's dropped.
             // during the tests we can prove it's dropped.
 
+            let mut n2 :u64 = 0;
+
             let r2 = c2_to_c1.await;
 
             if let Ok(n) = r2 {
-                let tt = tr.db.fetch_add(n, Ordering::Relaxed);
+                n2 = n;
+
 
                 if tracing::enabled!(tracing::Level::TRACE)  {
-                    trace!(cid = %cid,"cp, u, db, {}, {}", n,tt+n);
+                    trace!(cid = %cid,"cp, u, db, {}, {}", n, n);
                 }
             }
 
@@ -165,25 +139,29 @@ where
                 trace!(cid = %cid,"cp end u");
             }
 
-            r1
+            Ok((n1,n2))
         },
         r2 = c2_to_c1 => {
+            let mut n1 :u64 = 0;
 
             if let Ok(n) = r2 {
-                let tt = tr.db.fetch_add(n, Ordering::Relaxed);
+                n1 = n;
+
 
                 if tracing::enabled!(tracing::Level::TRACE)  {
-                    trace!(cid = %cid,"cp, d, db, {}, {}", n,tt+n);
+                    trace!(cid = %cid,"cp, d, db, {}, {}", n, n);
                 }
             }
 
             let r1 = c1_to_c2.await;
+            let mut n2 :u64 = 0;
 
             if let Ok(n) = r1 {
-                let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
+                n2 = n;
+
 
                 if tracing::enabled!(tracing::Level::TRACE)  {
-                    trace!(cid = %cid,"cp, d, ub, {}, {}",n,tt+n);
+                    trace!(cid = %cid,"cp, d, ub, {}, {}",n, n);
                 }
             }
 
@@ -191,7 +169,7 @@ where
                 trace!(cid = %cid,"cp end d");
             }
 
-            r2
+            Ok((n1,n2))
         },
     }
 }
