@@ -62,8 +62,9 @@ use self::addr_conn::AddrConn;
 pub enum AnyData {
     A(AnyArc),
     B(AnyBox),
-    Addr(net::Addr),           //store raddr
-    User(Box<dyn user::User>), //store authed user
+    Addr(net::Addr),                //store raddr
+    RLAddr((net::Addr, net::Addr)), //store raddr and laddr
+    User(Box<dyn user::User>),      //store authed user
 }
 
 pub type OptData = Option<AnyData>;

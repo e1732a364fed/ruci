@@ -1,8 +1,5 @@
-use anyhow::Ok;
 use log::debug;
-// use futures::StreamExt;
-// use packet::ip::Packet;
-// use tokio::io::AsyncReadExt;
+
 use tun2::{AsyncDevice, IntoAddress};
 
 use crate::Name;
@@ -39,15 +36,6 @@ where
 
     let dev = tun2::create_as_async(&config).unwrap();
 
-    // let mut stream = dev.into_framed();
-
-    // println!("tun loop");
-    // while let Some(packet) = stream.next().await {
-    //     match packet {
-    //         Ok(pkt) => println!("pkt: {:#?}", Packet::unchecked(pkt.get_bytes())),
-    //         Err(err) => panic!("Error: {:?}", err),
-    //     }
-    // }
     debug!("tun: dial succeed");
 
     Ok(Box::new(dev))

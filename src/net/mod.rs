@@ -472,6 +472,27 @@ impl Addr {
         }
     }
 
+    #[cfg(unix)]
+    pub fn from_unix(unix_soa: tokio::net::unix::SocketAddr) -> Self {
+        if unix_soa.is_unnamed() {
+            Addr {
+                addr: NetAddr::Name("".to_string(), 0),
+                network: Network::Unix,
+            }
+        } else {
+            let p = unix_soa
+                .as_pathname()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
+
+            Addr {
+                addr: NetAddr::Name(p, 0),
+                network: Network::Unix,
+            }
+        }
+    }
+
     pub fn set_name(self, n: &str) -> Self {
         match self.addr {
             NetAddr::Socket(so) => Addr {

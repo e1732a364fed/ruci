@@ -9,6 +9,8 @@ use tokio::net::UnixListener;
 
 use crate::net::{self, Stream};
 
+use super::Addr;
+
 pub enum Listener {
     TCP(TcpListener),
 
@@ -78,41 +80,32 @@ impl Listener {
         }
     }
 
-    pub async fn accept(&self) -> anyhow::Result<(Stream, net::Addr)> {
+    /// returns stream, raddr, laddr
+    pub async fn accept(&self) -> anyhow::Result<(Stream, net::Addr, net::Addr)> {
         match self {
             Listener::TCP(tl) => {
                 let (tcp_stream, tcp_soa) = tl.accept().await?;
 
-                let a = net::Addr {
+                let ra = net::Addr {
                     addr: net::NetAddr::Socket(tcp_soa),
                     network: net::Network::TCP,
                 };
-                return Ok((Stream::Conn(Box::new(tcp_stream)), a));
+
+                let la = net::Addr {
+                    addr: net::NetAddr::Socket(tcp_stream.local_addr()?),
+                    network: net::Network::TCP,
+                };
+                return Ok((Stream::Conn(Box::new(tcp_stream)), ra, la));
             }
             #[cfg(unix)]
             Listener::UNIX((ul, _)) => {
                 let (unix_stream, unix_soa) = ul.accept().await?;
 
                 //debug!("unix got {:?}", unix_soa); //listen unix will get unnamed
-                let a = if unix_soa.is_unnamed() {
-                    net::Addr {
-                        addr: net::NetAddr::Name("".to_string(), 0),
-                        network: net::Network::Unix,
-                    }
-                } else {
-                    let p = unix_soa
-                        .as_pathname()
-                        .unwrap()
-                        .to_string_lossy()
-                        .to_string();
+                let ra = Addr::from_unix(unix_soa);
+                let la = Addr::from_unix(unix_stream.local_addr()?);
 
-                    net::Addr {
-                        addr: net::NetAddr::Name(p, 0),
-                        network: net::Network::Unix,
-                    }
-                };
-
-                return Ok((Stream::Conn(Box::new(unix_stream)), a));
+                return Ok((Stream::Conn(Box::new(unix_stream)), ra, la));
             }
         }
     }
