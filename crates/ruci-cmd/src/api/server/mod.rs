@@ -11,6 +11,7 @@ use std::{
 use parking_lot::RwLock;
 use ruci::{net::CID, relay::NewConnInfo};
 use tinyufo::TinyUfo;
+use tokio::sync::mpsc;
 
 use super::*;
 
@@ -23,7 +24,7 @@ pub enum Commands {
     FileServer,
 }
 
-pub async fn deal_cmds(cmd: Commands) -> Option<Server> {
+pub async fn deal_cmds(cmd: Commands) -> Option<(Server, mpsc::Receiver<()>)> {
     match cmd {
         Commands::Run => return Some(Server::new().await),
         Commands::FileServer => folder_serve::serve_static().await,
@@ -32,13 +33,6 @@ pub async fn deal_cmds(cmd: Commands) -> Option<Server> {
 }
 
 type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, NewConnInfo>>>;
-
-pub struct Server {
-    pub newconn_info: NewConnInfoMap,
-
-    #[cfg(feature = "trace")]
-    pub flux_trace: TracePart,
-}
 
 /// 缓存 某时间点的流量
 type FluxCache = Arc<TinyUfo<CID, Vec<(tokio::time::Instant, u64)>>>;
@@ -57,10 +51,21 @@ pub struct TracePart {
     pub d_cache: FluxCache,
 }
 
+pub struct Server {
+    pub close_tx: mpsc::Sender<()>,
+
+    pub newconn_info: NewConnInfoMap,
+
+    #[cfg(feature = "trace")]
+    pub flux_trace: TracePart,
+}
+
 impl Server {
     /// non-blocking, init the server and run it
-    pub async fn new() -> Self {
+    pub async fn new() -> (Self, mpsc::Receiver<()>) {
+        let (tx, rx) = mpsc::channel(10);
         let s = Server {
+            close_tx: tx,
             newconn_info: Arc::new(RwLock::new(BTreeMap::new())),
 
             #[cfg(feature = "trace")]
@@ -71,7 +76,7 @@ impl Server {
             },
         };
         serve(&s).await;
-        s
+        (s, rx)
     }
 }
 
@@ -101,6 +106,30 @@ async fn get_conn_infos(State(allconn): State<NewConnInfoMap>) -> String {
         s.push('\n')
     }
     s
+}
+
+async fn get_conn_infos_range(
+    Path(cid): Path<String>,
+    State(allconn): State<NewConnInfoMap>,
+) -> String {
+    let cid = CID::from_str(&cid);
+    let cid = match cid {
+        Some(c) => c,
+        None => return String::from("None"),
+    };
+
+    let mut s = String::new();
+    let m = allconn.read();
+    for i in m.range(cid..) {
+        let x = i.1.to_string();
+        s.push_str(&x);
+        s.push('\n')
+    }
+    s
+}
+
+async fn get_conn_count(State(allconn): State<NewConnInfoMap>) -> String {
+    format!("{}", allconn.read().len())
 }
 
 async fn get_conn_info(Path(cid): Path<String>, State(allconn): State<NewConnInfoMap>) -> String {
@@ -151,15 +180,32 @@ fn instant_data_tostr(v: Vec<(tokio::time::Instant, u64)>) -> String {
     s
 }
 
+/// stop rucimp core
+async fn stop_core(State(tx): State<mpsc::Sender<()>>) -> String {
+    let r = tx.try_send(());
+    format!("{:?}", r)
+}
+
 /// non-blocking
 pub async fn serve(s: &Server) {
     let addr = "0.0.0.0:3000";
     info!("api server starting {addr}");
 
-    let mut app = Router::new();
+    let mut app = Router::new().route("/stop_core", get(stop_core).with_state(s.close_tx.clone()));
 
     app = app
-        .route("/c", get(get_conn_infos).with_state(s.newconn_info.clone()))
+        .route(
+            "/allc",
+            get(get_conn_infos).with_state(s.newconn_info.clone()),
+        )
+        .route(
+            "/cr/:cid",
+            get(get_conn_infos_range).with_state(s.newconn_info.clone()),
+        )
+        .route(
+            "/cc",
+            get(get_conn_count).with_state(s.newconn_info.clone()),
+        )
         .route(
             "/c/:cid",
             get(get_conn_info).with_state(s.newconn_info.clone()),

@@ -16,9 +16,22 @@ RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run
 
 api:
 
-/c
+/stop_core
+
+    stop rucimp core
+
+/allc
 
     get all connection's info
+    (might be too long, try use cc and cr instead)
+
+/cc
+
+    connections number
+
+/cr/3
+
+    get infos for all connections whose cid is after cid: 3
 
 /c/1
 

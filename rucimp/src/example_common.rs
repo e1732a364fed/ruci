@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::anyhow;
 use log::{debug, info, log_enabled, Level};
-use tokio::signal::{self};
+use tokio::signal;
 
 use crate::COMMON_DIRS;
 
@@ -104,6 +104,49 @@ pub async fn wait_close_sig() -> anyhow::Result<()> {
     let terminate2 = std::future::pending::<()>();
 
     tokio::select! {
+        _ = ctrl_c => info!("got ctrl_c"),
+        _ = terminate => info!("got terminate"),
+        _ = terminate2 => info!("got interrupt"),
+    }
+
+    info!("signal received, starting graceful shutdown...");
+
+    Ok(())
+}
+
+pub async fn wait_close_sig_with_closer(
+    mut c: tokio::sync::mpsc::Receiver<()>,
+) -> anyhow::Result<()> {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(unix)]
+    let terminate2 = async {
+        signal::unix::signal(signal::unix::SignalKind::interrupt())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    #[cfg(not(unix))]
+    let terminate2 = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = c.recv() => info!("GOT user close"),
         _ = ctrl_c => info!("got ctrl_c"),
         _ = terminate => info!("got terminate"),
         _ = terminate2 => info!("got interrupt"),

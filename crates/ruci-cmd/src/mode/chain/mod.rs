@@ -1,15 +1,16 @@
 use anyhow::Context;
 use rucimp::{
-    example_common::{try_get_filecontent, wait_close_sig},
+    example_common::{try_get_filecontent, wait_close_sig, wait_close_sig_with_closer},
     modes::chain::{config::lua, engine::Engine},
 };
+use tokio::sync::mpsc;
 
 use crate::api;
 
 ///blocking
 pub(crate) async fn run(
     f: &str,
-    #[cfg(feature = "api_server")] opts: &mut Option<api::server::Server>,
+    #[cfg(feature = "api_server")] opts: Option<(api::server::Server, mpsc::Receiver<()>)>,
 ) -> anyhow::Result<()> {
     let contents = try_get_filecontent("local.lua", Some(f))
         .context(format!("run chain engine try get file {} failed", f))?;
@@ -22,8 +23,18 @@ pub(crate) async fn run(
     let mut se = Box::new(se);
 
     #[cfg(feature = "api_server")]
-    if let Some(s) = opts {
-        setup_api_server(&mut se, s).await
+    {
+        if let Some(mut s) = opts {
+            setup_api_server_with_chain_engine(&mut se, &mut s.0).await;
+
+            se.run().await?;
+
+            wait_close_sig_with_closer(s.1).await?;
+
+            se.stop().await;
+
+            return Ok(());
+        }
     }
 
     se.run().await?;
@@ -31,16 +42,15 @@ pub(crate) async fn run(
     wait_close_sig().await?;
 
     se.stop().await;
+
     Ok(())
 }
 
-async fn setup_api_server(se: &mut Engine, s: &mut api::server::Server) {
+async fn setup_api_server_with_chain_engine(se: &mut Engine, s: &mut api::server::Server) {
     setup_record_newconn_info(se, s).await;
     #[cfg(feature = "trace")]
     setup_trace_flux(se, s).await;
 }
-
-use tokio::sync::mpsc;
 
 async fn setup_record_newconn_info(se: &mut Engine, s: &mut api::server::Server) {
     let (nci_tx, mut nci_rx) = mpsc::channel(100);

@@ -79,12 +79,12 @@ async fn main() -> anyhow::Result<()> {
         None => {
             #[cfg(feature = "api_server")]
             {
-                let mut opts = match args.api_server {
+                let opts = match args.api_server {
                     Some(s) => api::server::deal_cmds(s).await,
                     None => None,
                 };
 
-                start_engine(args.mode, args.config, &mut opts).await?;
+                start_engine(args.mode, args.config, opts).await?;
             }
             #[cfg(not(feature = "api_server"))]
             start_engine(args.mode, args.config).await?;
@@ -139,7 +139,10 @@ pub fn print_env_version() {
 async fn start_engine(
     m: Mode,
     f: String,
-    #[cfg(feature = "api_server")] opts: &mut Option<api::server::Server>,
+    #[cfg(feature = "api_server")] opts: Option<(
+        api::server::Server,
+        tokio::sync::mpsc::Receiver<()>,
+    )>,
 ) -> anyhow::Result<()> {
     match m {
         Mode::C => {
