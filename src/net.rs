@@ -74,6 +74,19 @@ pub enum CID {
     Chain(InStreamCID),
 }
 
+impl CID {
+    ///random
+    pub fn new() -> CID {
+        CID::Unit(new_rand_cid())
+    }
+
+    /// new with ordered id
+    pub fn new_ordered(lastid: &std::sync::atomic::AtomicU32) -> CID {
+        let li = lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        CID::Unit(li + 1)
+    }
+}
+
 impl Default for CID {
     fn default() -> Self {
         CID::Unit(0)

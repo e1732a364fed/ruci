@@ -6,6 +6,8 @@ use tokio::{
 
 use crate::Name;
 
+use self::net::TransmissionInfo;
+
 use super::*;
 
 #[derive(Clone)]
@@ -15,7 +17,7 @@ pub struct TcpDialer {
 
 impl Name for TcpDialer {
     fn name(&self) -> &'static str {
-        "[tcp dialer]"
+        "tcp dialer"
     }
 }
 
@@ -97,15 +99,16 @@ impl Mapper for TcpDialer {
 #[derive(Clone)]
 pub struct TcpStreamGenerator {
     addr: Option<net::Addr>,
+    oti: Option<Arc<TransmissionInfo>>,
 }
 
 impl Name for TcpStreamGenerator {
     fn name(&self) -> &'static str {
-        "[tcp listener]"
+        "tcp listener"
     }
 }
 impl TcpStreamGenerator {
-    pub async fn listen_addr(a: &net::Addr) -> io::Result<Receiver<TcpStream>> {
+    pub async fn listen_addr(a: &net::Addr) -> io::Result<Receiver<net::Stream>> {
         let r = TcpListener::bind(a.clone().get_socket_addr().unwrap()).await;
 
         match r {
@@ -122,7 +125,7 @@ impl TcpStreamGenerator {
                         let (tcpstream, raddr) = r.unwrap();
                         info!("new accepted tcp, raddr: {}", raddr);
 
-                        let r = tx.send(tcpstream).await;
+                        let r = tx.send(Stream::TCP(Box::new(tcpstream))).await;
                         if r.is_err() {
                             info!("loop tcp ended: {}", r.unwrap_err());
 
@@ -139,19 +142,20 @@ impl TcpStreamGenerator {
 
 #[async_trait]
 impl Mapper for TcpStreamGenerator {
-    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        match params.a {
-            Some(_) => todo!(),
-            None => {
-                let r = TcpStreamGenerator::listen_addr(self.addr.as_ref().unwrap()).await;
-                // match r {
-                //     Ok(rx) => todo!(),
-                //     Err(e) => MapResult::from_err(e),
-                // }
+    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        let a = match params.a.as_ref() {
+            Some(a) => a,
+            None => self.addr.as_ref().unwrap(),
+        };
 
-                unimplemented!()
-            }
-        }
+        let r = TcpStreamGenerator::listen_addr(a).await;
+        match r {
+            Ok(rx) => match self.oti.as_ref() {
+                Some(ti) => MapResult::gs(rx, CID::new_ordered(&ti.last_connection_id)),
+                None => MapResult::gs(rx, CID::new()),
+            },
+            Err(e) => MapResult::from_err(e),
+        };
 
         unimplemented!()
     }
