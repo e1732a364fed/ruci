@@ -7,7 +7,7 @@ use ruci::map::*;
 
 use super::LDConfig;
 
-/// 将所有在 in_mapper 从 名称映射到 MapperBox.
+/// 将所有 in_mapper 从 名称映射到 MapperBox.
 ///
 /// 可作为 SuitEngine::new 的参数
 pub fn load_in_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<MapperBox> {
@@ -47,7 +47,7 @@ pub fn load_in_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mappe
     }
 }
 
-/// 将所有在本包中实现的 out_mapper 从 名称映射到 MapperBox.
+/// 将所有  out_mapper 从 名称映射到 MapperBox.
 ///
 /// 可作为 SuitEngine::new 的参数
 pub fn load_out_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<MapperBox> {

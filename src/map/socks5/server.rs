@@ -198,7 +198,7 @@ pub struct Config {
     pub user_passes: Option<Vec<UserPass>>,
 }
 
-/// InServer  未实现bind 命令。
+/// Server  未实现bind 命令。
 ///  support_udp开关udp associate的支持
 ///
 /// 支持 AuthNone和 AuthUserPass

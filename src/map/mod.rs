@@ -116,7 +116,8 @@ pub struct InputData {
 }
 
 pub enum Stream {
-    TCP(net::Conn), // 传播 tcp / unix domain socket 数据
+    ///  tcp / unix domain socket 等 目标 Addr 唯一的 情况
+    TCP(net::Conn),
     UDP(AddrConn),
     None,
 }
