@@ -37,7 +37,7 @@ impl Name for Client {
 impl Client {
     pub fn new(
         c: quic_common::ClientConfig,
-        read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+        read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
     ) -> anyhow::Result<Self> {
         let cc = {
             let cc = rustls21::cc(

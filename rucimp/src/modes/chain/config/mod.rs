@@ -537,14 +537,21 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
     fn try_from(value: InMapConfigWithFileSource) -> Result<Self, Self::Error> {
         let file_source = value.file_source;
 
-        let read_file_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>> = {
+        let read_file_fn: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> = {
             let fc = file_source.clone();
 
             let f = move |s: PathBuf| match fc.as_ref() {
                 Some(fs) => fs
                     .get_file_content(&s.to_string_lossy())
                     .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
-                    .map_err(std::io::Error::other),
+                    .map_err(|e| {
+                        tracing::debug!(
+                            "get file content failed, file: {}, error: {}",
+                            s.to_string_lossy(),
+                            e
+                        );
+                        std::io::Error::other(e)
+                    }),
                 None => {
                     let r = std::fs::read_to_string(s);
 
@@ -587,14 +594,14 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::Recorder(c) => Ok(c.into()),
 
             InMapConfig::TLS(sc) => {
-                let sc = ServerPEMOptions::from(&sc, read_file_fn)?;
+                let sc = ServerPEMOptions::from(&sc, &read_file_fn)?;
 
                 Ok(sc.into())
             }
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             InMapConfig::NativeTLS(c) => Ok(Box::new(
-                crate::map::native_tls::Server::from(&c, read_file_fn)
+                crate::map::native_tls::Server::from(&c, &read_file_fn)
                     .expect("native_tls server config valid"),
             )),
 
@@ -659,7 +666,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             #[cfg(feature = "quinn")]
             InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(
                 c,
-                read_file_fn,
+                &read_file_fn,
             )?)),
 
             #[cfg(feature = "sockopt")]
@@ -717,7 +724,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {
-                let sc = ServerPEMOptions::from(&c, read_file_fn)?;
+                let sc = ServerPEMOptions::from(&c, &read_file_fn)?;
 
                 Ok(Box::new(ruci::map::tls::mitm::MITM {
                     sc,
@@ -752,7 +759,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
 
         let file_source = value.file_source;
 
-        let read_file_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>> = {
+        let read_file_fn: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> = {
             let fc = file_source.clone();
 
             let f = move |s: PathBuf| match fc.as_ref() {
@@ -848,7 +855,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
 
             #[cfg(feature = "quinn")]
             OutMapConfig::Quic(c) => Ok(Box::new(
-                crate::map::quinn::client::Client::new(c, read_file_fn)
+                crate::map::quinn::client::Client::new(c, &read_file_fn)
                     .context("load quic client config failed")?,
             )),
 

@@ -1,3 +1,4 @@
+use anyhow::Context;
 use quinn::{Endpoint, ServerConfig};
 
 use std::path::PathBuf;
@@ -38,7 +39,7 @@ impl Name for Server {
 impl Server {
     pub fn new(
         c: quic_common::ServerConfig,
-        read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+        read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
     ) -> anyhow::Result<Self> {
         let tls_server_config = rustls21::sc(
             rustls21::ServerOptions {
@@ -47,7 +48,8 @@ impl Server {
                 key_path: c.key_path.clone(),
             },
             read_fn,
-        )?;
+        )
+        .context("rustls21::sc failed")?;
 
         Ok(Self {
             // tls_key_path: c.key_path,

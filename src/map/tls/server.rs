@@ -22,7 +22,7 @@ pub struct TlsServerOptions {
 impl ServerPEMOptions {
     pub fn from(
         opts: &TlsServerOptions,
-        read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+        read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
     ) -> std::io::Result<Self> {
         Ok(Self {
             cert: read_fn(opts.cert.clone())?,

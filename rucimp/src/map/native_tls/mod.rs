@@ -20,7 +20,7 @@ use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
 pub fn load(
     cert_path: PathBuf,
     key_path: PathBuf,
-    read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+    read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
 ) -> anyhow::Result<Identity> {
     let cert_file = read_fn(cert_path)?;
 
@@ -34,7 +34,7 @@ pub fn load(
 impl Server {
     pub fn from(
         sc: &ruci::map::tls::server::TlsServerOptions,
-        read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+        read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
     ) -> anyhow::Result<Server> {
         let id =
             load(sc.cert.clone(), sc.key.clone(), read_fn).context("load cert or key failed")?;
