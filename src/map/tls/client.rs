@@ -1,16 +1,18 @@
-use macro_mapper::DefaultMapperExt;
+use macro_mapper::{common_mapper_field, CommonMapperExt};
 use rustls::{
     client::danger::ServerCertVerified,
     pki_types::{CertificateDer, ServerName, UnixTime},
     server::WebPkiClientVerifier,
     ClientConfig,
 };
+use tokio::io::AsyncWriteExt;
 
 use self::map::CID;
 
 use super::*;
 
-#[derive(Debug, Clone, DefaultMapperExt)]
+#[common_mapper_field]
+#[derive(Debug, Clone, CommonMapperExt)]
 pub struct Client {
     pub domain: String,
     pub is_insecure: bool,
@@ -43,6 +45,9 @@ impl Client {
             domain: domain.to_string(),
             is_insecure,
             client_config: Arc::new(config),
+            is_tail_of_chain: false,
+            fixed_target_addr: None,
+            chain_tag: String::new(),
         }
     }
 }
@@ -61,7 +66,7 @@ impl rustls::client::danger::ServerCertVerifier for SuperDanVer {
     ) -> Result<ServerCertVerified, rustls::Error> {
         debug!("superdanver called");
         //if !server_name.eq(&self.domain) {}//server_name是client自己提供的，
-        //在不验证cert的情况下，没有必要和自己比较
+        //因为不验证cert，所以没有必要和自己比较
 
         Ok(ServerCertVerified::assertion())
     }
@@ -99,7 +104,6 @@ pub struct ClientTLSConnDescriber {}
 impl Client {
     async fn handshake(
         &self,
-        _cid: CID,
         conn: net::Conn,
         b: Option<BytesMut>,
         a: Option<net::Addr>,
@@ -113,18 +117,21 @@ impl Client {
             )
             .await?;
 
-        // if let Some(ed) = b {
-        //     new_c.write_all(&ed).await?;
-        //     new_c.flush().await?;
-        // }
+        let mrb = MapResult::builder()
+            .a(a)
+            .d(map::AnyData::B(Box::new(ClientTLSConnDescriber {})));
 
-        Ok(MapResult {
-            a,
-            b,
-            c: map::Stream::TCP(Box::new(new_c)),
-            d: Some(map::AnyData::B(Box::new(ClientTLSConnDescriber {}))),
-            ..Default::default()
-        })
+        let mut bc = Box::new(new_c);
+
+        if self.is_tail_of_chain {
+            if let Some(ed) = b {
+                bc.write_all(&ed).await?;
+                bc.flush().await?;
+            }
+            Ok(mrb.c(net::Stream::TCP(bc)).build())
+        } else {
+            Ok(mrb.b(b).c(net::Stream::TCP(bc)).build())
+        }
     }
 }
 
@@ -137,13 +144,13 @@ impl Name for Client {
 impl map::Mapper for Client {
     async fn maps(
         &self,
-        cid: CID,
+        _cid: CID,
         _behavior: ProxyBehavior,
         params: map::MapParams,
     ) -> map::MapResult {
         let conn = params.c;
         if let map::Stream::TCP(conn) = conn {
-            let r = self.handshake(cid, conn, params.b, params.a).await;
+            let r = self.handshake(conn, params.b, params.a).await;
             match r {
                 Ok(r) => r,
                 Err(e) => MapResult::from_e(e),
