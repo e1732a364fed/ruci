@@ -1,15 +1,12 @@
-use std::{fs::remove_file, path::PathBuf};
-
 use anyhow::{bail, Context};
 use tokio::net::TcpListener;
-use tracing::{info, warn};
 
 #[cfg(unix)]
 use tokio::net::UnixListener;
 
 use crate::net::{self, Stream};
 
-use super::{udp_fixed_listen::FixedTargetAddrUDPListener, Addr};
+use super::udp_fixed_listen::FixedTargetAddrUDPListener;
 
 #[derive(Debug)]
 pub enum Listener {
@@ -49,7 +46,7 @@ pub async fn listen(
         #[cfg(unix)]
         net::Network::Unix => {
             let file_n = laddr.get_name().context("listen unix but has no name")?;
-            let p = PathBuf::from(file_n.clone());
+            let p = std::path::PathBuf::from(file_n.clone());
 
             remove_unix(&p, true)?;
             let r = UnixListener::bind(p).context("listen unix failed")?;
@@ -60,16 +57,17 @@ pub async fn listen(
     }
 }
 
-fn remove_unix(p: &PathBuf, warn: bool) -> anyhow::Result<()> {
+#[cfg(unix)]
+fn remove_unix(p: &std::path::PathBuf, warn: bool) -> anyhow::Result<()> {
     // is_file returns false for unix domain socket
 
     if p.exists() && !p.is_dir() && !p.is_file() {
         if warn {
-            warn!("unix: previous {:?} exists, will remove it!", p);
+            tracing::warn!("unix: previous {:?} exists, will remove it!", p);
         } else {
-            info!("removing unix: {:?}", p);
+            tracing::info!("removing unix: {:?}", p);
         }
-        remove_file(p.clone()).context("unix try remove previous file failed")?;
+        std::fs::remove_file(p.clone()).context("unix try remove previous file failed")?;
     }
     Ok(())
 }
@@ -120,7 +118,7 @@ impl Listener {
                 let p = PathBuf::from(file_n.clone());
                 let r = remove_unix(&p, false);
                 if let Err(e) = r {
-                    warn!("{}", e)
+                    tracing::warn!("{}", e)
                 }
             }
 
@@ -150,8 +148,8 @@ impl Listener {
                 let (unix_stream, unix_soa) = ul.accept().await?;
 
                 //debug!("unix got {:?}", unix_soa); //listen unix will get unnamed
-                let ra = Addr::from_unix(unix_soa);
-                let la = Addr::from_unix(unix_stream.local_addr()?);
+                let ra = net::Addr::from_unix(unix_soa);
+                let la = net::Addr::from_unix(unix_stream.local_addr()?);
 
                 Ok((Stream::Conn(Box::new(unix_stream)), ra, la))
             }
