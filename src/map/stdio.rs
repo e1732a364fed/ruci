@@ -1,5 +1,5 @@
 /*!
-* write, read 到 stdio (标准输入输出，即命令行). 理解上, stdio 和 tcp_dialer 类似,
+* write, read 到 stdio (标准输入输出，即命令行). 理解上, stdio 和 dialer 类似,
   都是 一种 【 单流发生器 】
 */
 
