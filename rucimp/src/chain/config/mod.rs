@@ -133,13 +133,13 @@ pub struct OutMapperConfigChain {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
     Stdio(String),
-    Listener(Listener),
+    Listener(String),
     Adder(i8),
     Counter,
     TLS(TlsIn),
-    Http(UserPass),
-    Socks5(UserPass),
-    Socks5Http(UserPass),
+    Http(UserPassField),
+    Socks5(UserPassField),
+    Socks5Http(UserPassField),
     Trojan(TrojanIn),
 }
 
@@ -162,11 +162,11 @@ pub enum OutMapperConfig {
 //     UnixDialer(String),
 // }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum Listener {
-    TcpListener(String),
-    UnixListener(String),
-}
+// #[derive(Debug, Serialize, Deserialize, Clone)]
+// pub enum Listener {
+//     TcpListener(String),
+//     UnixListener(String),
+// }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TlsIn {
@@ -181,7 +181,7 @@ pub struct TlsOut {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UserPass {
+pub struct UserPassField {
     userpass: Option<String>,
     more: Option<Vec<String>>,
 }
@@ -204,16 +204,12 @@ impl ToMapper for InMapperConfig {
             InMapperConfig::Stdio(s) => {
                 ruci::map::stdio::Stdio::from(s).expect("s is a  network addr str")
             }
-            InMapperConfig::Listener(lis) => match lis {
-                Listener::TcpListener(tcp_l_str) => {
-                    let a =
-                        net::Addr::from_ip_addr_str("tcp", tcp_l_str).expect("ip_addr is valid");
-                    let mut g = ruci::map::network::TcpStreamGenerator::default();
-                    g.set_configured_target_addr(Some(a));
-                    Box::new(g)
-                }
-                Listener::UnixListener(_) => todo!(),
-            },
+            InMapperConfig::Listener(l_str) => {
+                let a = net::Addr::from_ip_addr_str("tcp", l_str).expect("ip_addr is valid");
+                let mut g = ruci::map::network::StreamGenerator::default();
+                g.set_configured_target_addr(Some(a));
+                Box::new(g)
+            }
             InMapperConfig::Adder(i) => i.to_mapper(),
             InMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),
             InMapperConfig::TLS(c) => tls::server::ServerOptions {
@@ -323,9 +319,9 @@ mod test {
             inbounds: vec![InMapperConfigChain {
                 tag: None,
                 chain: vec![
-                    InMapperConfig::Listener(Listener::TcpListener("0.0.0.0:1080".to_string())),
+                    InMapperConfig::Listener("0.0.0.0:1080".to_string()),
                     InMapperConfig::Counter,
-                    InMapperConfig::Socks5(UserPass {
+                    InMapperConfig::Socks5(UserPassField {
                         userpass: None,
                         more: None,
                     }),

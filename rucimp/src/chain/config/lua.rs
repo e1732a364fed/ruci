@@ -67,14 +67,11 @@ mod test {
 
         let first_m = first_listen_group.chain.first().unwrap();
         let str = "0.0.0.0:1080".to_string();
-        assert!(matches!(
-            first_m,
-            InMapperConfig::Listener(Listener::TcpListener(str))
-        ));
+        assert!(matches!(first_m, InMapperConfig::Listener(str)));
         let str2 = "0.0.0.0:1".to_string();
         assert!(matches!(
             first_m,
-            InMapperConfig::Listener(Listener::TcpListener(str2)) //won't match inner fields
+            InMapperConfig::Listener(str2) //won't match inner fields
         ));
         assert!(!matches!(first_m, InMapperConfig::Counter));
         Ok(())

@@ -2,9 +2,9 @@ print("this is a lua config file")
 
 -- lua 的好处有很多，你可以定义很多变量
 
-listen = { Listener = { TcpListener = "0.0.0.0:10800" }  }
-l2 = { Listener = { TcpListener = "0.0.0.0:20800" }  }
-l3 = { Listener = { TcpListener = "0.0.0.0:30800" }  }
+listen = { Listener =  "0.0.0.0:10800"   }
+l2 = { Listener =   "0.0.0.0:20800"   }
+l3 = { Listener =   "0.0.0.0:30800"   }
 
 listen_socks5 = { listen, { Socks5 = {} }, }
 listen_http = { listen, { Http = {} }, }

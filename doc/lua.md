@@ -3,7 +3,7 @@ config 是 提供给 rucimp 的项，静态示例如下
 
 ```lua
 tls = { TLS = {  cert = "test.cert", key = "test.key" } }
-listen = { Listener = { TcpListener = "0.0.0.0:1080" }  }
+listen = { Listener   "0.0.0.0:1080" }
 c = "Counter"
 chain1 = {
     listen,

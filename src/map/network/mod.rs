@@ -176,17 +176,17 @@ impl Mapper for Dialer {
     }
 }
 
-/// 不命名为TcpListener 只是因为不希望有重名
+/// StreamGenerator can listen tcp and unix domain socket
 #[mapper_ext_fields]
 #[derive(MapperExt, Clone, Debug, Default)]
-pub struct TcpStreamGenerator {}
+pub struct StreamGenerator {}
 
-impl Name for TcpStreamGenerator {
+impl Name for StreamGenerator {
     fn name(&self) -> &'static str {
-        "tcp_listener"
+        "listener"
     }
 }
-impl TcpStreamGenerator {
+impl StreamGenerator {
     pub async fn listen_addr(
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
@@ -212,14 +212,14 @@ impl TcpStreamGenerator {
 }
 
 #[async_trait]
-impl Mapper for TcpStreamGenerator {
+impl Mapper for StreamGenerator {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
             None => self
                 .configured_target_addr()
                 .as_ref()
-                .expect("TcpStreamGenerator always has a fixed_target_addr"),
+                .expect("StreamGenerator always has a fixed_target_addr"),
         };
 
         if log_enabled!(log::Level::Debug) {
@@ -227,8 +227,8 @@ impl Mapper for TcpStreamGenerator {
         }
 
         let r = match params.shutdown_rx {
-            Some(rx) => TcpStreamGenerator::listen_addr(a, rx).await,
-            None => TcpStreamGenerator::listen_addr_forever(a).await,
+            Some(rx) => StreamGenerator::listen_addr(a, rx).await,
+            None => StreamGenerator::listen_addr_forever(a).await,
         };
 
         match r {
