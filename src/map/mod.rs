@@ -153,6 +153,16 @@ impl MapResult {
             new_id: None,
         }
     }
+    pub fn oac(a: Option<net::Addr>, c: net::Conn) -> Self {
+        MapResult {
+            a: a,
+            b: None,
+            c: Stream::TCP(c),
+            d: None,
+            e: None,
+            new_id: None,
+        }
+    }
 
     /// will set b to None if b.len() == 0
     pub fn abc(a: net::Addr, b: BytesMut, c: net::Conn) -> Self {
@@ -328,8 +338,6 @@ pub trait Mapper: crate::Name + DynClone {
     }
 }
 
-dyn_clone::clone_trait_object!(MapperSync);
-
 pub trait ToMapper {
     fn to_mapper(&self) -> MapperBox;
 }
@@ -337,6 +345,7 @@ pub trait ToMapper {
 //令 Mapper 实现 Send + Sync, 否则异步/多线程报错
 pub trait MapperSync: Mapper + Send + Sync + Debug {}
 impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
+dyn_clone::clone_trait_object!(MapperSync);
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
 
