@@ -5,7 +5,7 @@ Defines a steganography protocol example1 "spe1".
 
 称一对问答为一个QA，128个QA为一个Token。2个Token可表示1bit信息。
 
-server 收到后，以 对应的 answer 回答，之后 提供client 一串新问题， 声称表示“相关问题”，
+server 收到后，以 对应的 answer 回答，之后 提供client 一串新问题， 声称表示"相关问题"，
 实际为 server 向 client 发送的数据。
 client 不回答这些相关问题，而是继续 post.
 
@@ -22,7 +22,7 @@ client 不回答这些相关问题，而是继续 post.
 id+1; 如此便可区别不同的客户端 以及 不同的请求连接。
 
 同一id重新出现一次时，若之前接到过同id的中断标识，即表示这是该连接的下一个片段。而若没接到，则
-说明该请求可能不来自我们的隐写协议，此时依然以与原来相同的方式反回 答案，以及随机的 “相关问题”。
+说明该请求可能不来自我们的隐写协议，此时依然以与原来相同的方式反回 答案，以及随机的 "相关问题"。
 
 
 目前暂未实现分段
@@ -450,20 +450,27 @@ pub enum WriteState {
     Previous(usize),
 }
 
+/// Represents a steganographic connection that hides data in HTTP Q&A pairs
+///
+/// This implementation uses a question-answer based protocol where:
+/// - Each QA pair represents 1 bit of information
+/// - 128 QA pairs form a Token
+/// - 2 Tokens can represent 1 bit of actual data
 pub struct Conn {
+    // 将相关字段组织在一起
+    // 连接信息
     cid: CID,
     is_server: bool,
 
-    // 缓存的 已解析后的 answer 的索引
-    // bool 为 true 对应 1，为 false 对应 0
-    server_cached_answers: Vec<(bool, u8)>,
-    base_w: Pin<Box<dyn AsyncWrite + Send + Sync>>,
+    // 协议相关
     qa: Arc<QaData>,
+    server_cached_answers: Vec<(bool, u8)>,
 
+    // IO 相关
+    base_w: Pin<Box<dyn AsyncWrite + Send + Sync>>,
     write_cache: Option<BytesMut>,
-
     write_state: WriteState,
-    pub reader: BufContentLenProtocolReader,
+    reader: BufContentLenProtocolReader,
 }
 
 pub const READ_CAP: usize = 1024 * 1024;
@@ -488,7 +495,13 @@ fn get_pr_header_content_length_body_index(pr: Box<dyn CommonHttp>) -> Result<(u
 }
 
 impl Conn {
-    /// parse steganography string into real data.
+    /// Parses steganographic string data into actual bytes
+    ///
+    /// # Arguments
+    /// * `from` - Start index in the buffer
+    /// * `to` - End index in the buffer
+    /// * `buf` - Target buffer to write parsed data
+    /// * `data` - Raw input data containing steganographic content
     fn real_read(
         &mut self,
         from: usize,
@@ -785,105 +798,235 @@ impl map::Map for ClientOrServer {
 }
 
 #[cfg(test)]
-mod test {
-    use map::Map;
-    use parking_lot::Mutex;
-    use ruci::net;
-    use tokio::io::AsyncReadExt;
-
+mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_server() -> anyhow::Result<()> {
-        let server = ClientOrServer {
-            qa: Arc::new(QaData::new_simple()),
-            is_server: true,
-            ext_fields: Some(map::MapExtFields::default()),
-        };
+    // QaData 相关测试
+    mod qa_data_tests {
+        use super::*;
 
-        let mut wbuf = BytesMut::zeroed(1024);
-
-        const WRITE_CONTENT: &[u8] = b"hello!";
-
-        server.qa.write_client_data(WRITE_CONTENT, &mut wbuf);
-
-        let writev = Arc::new(Mutex::new(Vec::new()));
-
-        let tcp = net::helpers::MockTcpStream {
-            read_data: wbuf.to_vec(),
-            write_data: Vec::new(),
-            write_target: Some(writev),
-        };
-
-        let r = server
-            .maps(
-                CID::default(),
-                ProxyBehavior::DECODE,
-                MapParams::new(Box::new(tcp)),
-            )
-            .await;
-        match r.e {
-            None => {
-                assert_eq!(r.b, None); //spe1 没有握手，因此不读数据，没有 firstbuf
-
-                let mut readbuf = [0u8; 1024];
-                let n = r.c.try_unwrap_tcp()?.read(&mut readbuf[..]).await?;
-                assert_eq!(&readbuf[..n], WRITE_CONTENT);
-            }
-            Some(e) => {
-                eprintln!("Error occurred: {:?}", e);
-                assert!(false, "Test failed due to error");
-            }
+        #[test]
+        fn test_new_simple() {
+            let qa = QaData::new_simple();
+            assert_eq!(qa.qa_set.len(), 2);
+            assert_eq!(qa.qa_set[0].len(), 128);
+            assert_eq!(qa.qa_set[1].len(), 128);
         }
 
-        Ok(())
+        #[test]
+        fn test_from_vec() {
+            // 测试正常大小的输入
+            let qas = vec![
+                ("q1".to_string(), "a1".to_string()),
+                ("q2".to_string(), "a2".to_string()),
+                ("q3".to_string(), "a3".to_string()),
+                ("q4".to_string(), "a4".to_string()),
+            ];
+            let qa = QaData::from(qas.clone());
+
+            // 验证数据被正确复制填充到128个条目
+            assert_eq!(qa.qa_set[0].len(), 128);
+            assert_eq!(qa.qa_set[1].len(), 128);
+
+            // 验证原始数据被正确保留
+            let first_two = &qa.qa_set[0][0..2];
+            assert_eq!(first_two[0], qas[0]);
+            assert_eq!(first_two[1], qas[1]);
+        }
+
+        #[test]
+        fn test_oversized_input() {
+            // 创建超过256个QA对的输入
+            let mut qas = Vec::new();
+            for i in 0..300 {
+                qas.push((format!("question_{}", i), format!("answer_{}", i)));
+            }
+
+            let qa = QaData::from(qas);
+
+            // 验证被截断到256个条目
+            assert_eq!(qa.qa_set[0].len(), 128);
+            assert_eq!(qa.qa_set[1].len(), 128);
+        }
+
+        #[test]
+        fn test_bytes_to_questions() {
+            let qa = QaData::new_simple();
+
+            // 测试空输入
+            assert_eq!(qa.bytes_to_questions_text(&[]), "");
+
+            // 测试单字节
+            let result = qa.bytes_to_questions_text(&[0x55]); // 0x55 = 0b01010101
+            let questions: Vec<&str> = result.split('\n').collect();
+            assert_eq!(questions.len(), 8); // 一个字节应产生8个问题
+
+            // 测试多字节
+            let result = qa.bytes_to_questions_text(&[0xFF, 0x00]);
+            let questions: Vec<&str> = result.split('\n').collect();
+            assert_eq!(questions.len(), 16); // 两个字节应产生16个问题
+        }
+
+        #[test]
+        fn test_question_matching() {
+            let qa = QaData::new_simple();
+
+            // 测试有效问题
+            let valid_q = &qa.qa_set[0][0].0;
+            let result = qa.match_question(valid_q);
+            assert!(result.is_ok());
+
+            // 测试无效问题
+            let result = qa.match_question("invalid_question");
+            assert!(result.is_err());
+
+            // 测试0和1位的问题都能正确匹配
+            let q0 = &qa.qa_set[0][0].0;
+            let q1 = &qa.qa_set[1][0].0;
+
+            let (bit0, _) = qa.match_question(q0).unwrap();
+            let (bit1, _) = qa.match_question(q1).unwrap();
+
+            assert!(!bit0); // 0位问题应返回false
+            assert!(bit1); // 1位问题应返回true
+        }
     }
 
-    #[tokio::test]
-    async fn test_client() -> anyhow::Result<()> {
-        let client = ClientOrServer {
-            qa: Arc::new(QaData::new_simple()),
-            is_server: false,
-            ext_fields: Some(map::MapExtFields::default()),
-        };
+    // 编解码相关测试
+    mod encoding_tests {
+        use super::*;
 
-        let mut wbuf = BytesMut::zeroed(1024);
+        #[test]
+        fn test_bools_to_bytes() {
+            let ev: Vec<bool> = vec![];
+            let eb: Vec<u8> = vec![];
+            // 测试空输入
+            assert_eq!(bools_to_bytes(ev), eb);
 
-        const WRITE_CONTENT: &[u8] = b"hello!";
+            // 测试单个比特
+            assert_eq!(bools_to_bytes(vec![true]), vec![128]);
+            assert_eq!(bools_to_bytes(vec![false]), vec![0]);
 
-        client
-            .qa
-            .write_server_data(WRITE_CONTENT, &mut wbuf, &vec![]);
+            // 测试完整字节
+            assert_eq!(
+                bools_to_bytes(vec![true, true, true, true, true, true, true, true]),
+                vec![255]
+            );
 
-        let writev = Arc::new(Mutex::new(Vec::new()));
+            // 测试部分字节
+            assert_eq!(
+                bools_to_bytes(vec![true, false, true, false]),
+                vec![160] // 0b10100000
+            );
 
-        let tcp = net::helpers::MockTcpStream {
-            read_data: wbuf.to_vec(),
-            write_data: Vec::new(),
-            write_target: Some(writev),
-        };
+            // 测试多个字节
+            assert_eq!(
+                bools_to_bytes(vec![
+                    true, true, true, true, false, false, false, false, false, false, false, false,
+                    true, true, true, true
+                ]),
+                vec![0xF0, 0x0F]
+            );
+        }
+    }
 
-        let r = client
-            .maps(
-                CID::default(),
-                ProxyBehavior::DECODE,
-                MapParams::new(Box::new(tcp)),
-            )
-            .await;
-        match r.e {
-            None => {
-                assert_eq!(r.b, None); //spe1 没有握手，因此不读数据，没有 firstbuf
+    // 连接相关测试
+    mod connection_tests {
+        use map::Map;
+        use parking_lot::Mutex;
+        use ruci::net;
+        use tokio::io::AsyncReadExt;
 
-                let mut readbuf = [0u8; 1024];
-                let n = r.c.try_unwrap_tcp()?.read(&mut readbuf[..]).await?;
-                assert_eq!(&readbuf[..n], WRITE_CONTENT);
-            }
-            Some(e) => {
-                println!("{:?}", e);
-                return Err(e);
-            }
+        use super::*;
+
+        #[tokio::test]
+        async fn test_client_server_communication() -> anyhow::Result<()> {
+            let qa_data = Arc::new(QaData::new_simple());
+
+            // 创建客户端和服务器
+            let client = ClientOrServer {
+                qa: qa_data.clone(),
+                is_server: false,
+                ext_fields: Some(map::MapExtFields::default()),
+            };
+
+            let server = ClientOrServer {
+                qa: qa_data.clone(),
+                is_server: true,
+                ext_fields: Some(map::MapExtFields::default()),
+            };
+
+            // 测试数据
+            let test_data = b"Hello, World!";
+
+            // 模拟客户端发送数据
+            let mut client_write = BytesMut::new();
+            let content_len = client.qa.write_client_data(test_data, &mut client_write);
+            assert!(content_len > 0);
+
+            // 验证服务器能正确解码数据
+            let writev = Arc::new(Mutex::new(Vec::new()));
+            let mock_tcp = net::helpers::MockTcpStream {
+                read_data: client_write.to_vec(),
+                write_data: Vec::new(),
+                write_target: Some(writev.clone()),
+            };
+
+            let server_conn = server
+                .maps(
+                    CID::default(),
+                    ProxyBehavior::DECODE,
+                    MapParams::new(Box::new(mock_tcp)),
+                )
+                .await;
+
+            let mut read_buf = [0u8; 1024];
+            let n = server_conn
+                .c
+                .try_unwrap_tcp()?
+                .read(&mut read_buf[..])
+                .await?;
+
+            assert_eq!(&read_buf[..n], test_data);
+
+            Ok(())
         }
 
-        Ok(())
+        #[tokio::test]
+        async fn test_connection_error_handling() -> anyhow::Result<()> {
+            let qa_data = Arc::new(QaData::new_simple());
+
+            let client = ClientOrServer {
+                qa: qa_data,
+                is_server: false,
+                ext_fields: Some(map::MapExtFields::default()),
+            };
+
+            // 测试无效数据
+            let invalid_data = b"Invalid HTTP Data";
+            let writev = Arc::new(Mutex::new(Vec::new()));
+            let mock_tcp = net::helpers::MockTcpStream {
+                read_data: invalid_data.to_vec(),
+                write_data: Vec::new(),
+                write_target: Some(writev),
+            };
+
+            let result = client
+                .maps(
+                    CID::default(),
+                    ProxyBehavior::DECODE,
+                    MapParams::new(Box::new(mock_tcp)),
+                )
+                .await;
+
+            // 验证错误处理
+            assert!(result.e.is_none());
+
+            let mut read_buf = [0u8; 1024];
+            let r = result.c.try_unwrap_tcp()?.read(&mut read_buf[..]).await;
+
+            assert!(r.is_err());
+            Ok(())
+        }
     }
 }

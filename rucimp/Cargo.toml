@@ -98,6 +98,7 @@ zip = "2.2.2"
 [dev-dependencies]
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+criterion = "0.5"
 
 [features]
 default = ["route", "geoip", "sockopt"]
@@ -152,3 +153,7 @@ required-features = ["lua", "route"]
 [[example]]
 name = "shared"
 crate-type = ["lib"]
+
+[[bench]]
+name = "spe1_benchmark"
+harness = false

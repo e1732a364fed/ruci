@@ -51,8 +51,7 @@ async fn test_adder_r() -> anyhow::Result<()> {
         return Err(e);
     }
 
-    let r = r.c;
-    let mut r = r.try_unwrap_tcp()?;
+    let mut r = r.c.try_unwrap_tcp()?;
     {
         let buf = [1u8, 2, 3];
         r.write_all(&buf).await?;
