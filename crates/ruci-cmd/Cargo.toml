@@ -27,9 +27,7 @@ tower = { version = "0.4", features = ["util"] , optional = true}
 tower-http = { version = "0.5.0", features = ["fs", "trace","cors"] , optional = true}
 
 TinyUFO = {version = "0.1.0", optional = true }
-reqwest = { version = "0.11",default-features = false, features = ["json", "stream"] , optional = true}
-
-openssl = { version = "0.10",features = ["vendored"], optional = true }
+reqwest = { version = "0.11",default-features = false, features = ["json", "stream","native-tls-vendored"] , optional = true}
 
 [features]
 default = ["lua"]
@@ -40,6 +38,4 @@ api_client = ["reqwest"]
 utils = ["reqwest"]
 trace = ["rucimp/trace","TinyUFO"]
 
-reqwest-default-tls = ["reqwest/default-tls"]
-
-native-tls-vendored = ["openssl","rucimp/native-tls-vendored", "reqwest/native-tls-vendored"]
+native-tls-vendored = ["rucimp/native-tls-vendored"]
