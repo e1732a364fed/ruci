@@ -411,7 +411,7 @@ impl ToMapperBox for InMapperConfig {
                 is_grpc,
             } => Box::new(crate::map::h2::server::Server {
                 http_config: config.clone(),
-                is_grpc: is_grpc.clone(),
+                is_grpc: *is_grpc,
             }),
         }
     }

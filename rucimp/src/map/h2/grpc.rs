@@ -19,7 +19,7 @@ pub fn build_grpc_request_from(c: &CommonConfig) -> Request<()> {
         .header("user-agent", USER_AGENT)
         .header("Te", "trailers");
 
-    if c.host == "" {
+    if c.host.is_empty() {
         request = request.uri(&c.path)
     } else {
         request = request.header("Host", c.host.as_str()).uri(
