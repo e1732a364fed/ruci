@@ -23,6 +23,7 @@ use rucimp::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
 use rucimp::suit::config::Config;
+use rucimp::suit::engine::relay::listen_ser;
 use rucimp::suit::engine::SuitEngine;
 use rucimp::suit::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};

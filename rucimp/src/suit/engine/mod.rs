@@ -1,3 +1,5 @@
+pub mod relay;
+
 use std::{io, sync::Arc};
 
 use crate::suit::*;
@@ -170,7 +172,7 @@ where
         self.servers.iter().for_each(|s| {
             let (tx, rx) = oneshot::channel();
 
-            let task = listen_ser((*s).clone(), defaultc.clone(), Some(self.ti.clone()), rx);
+            let task = relay::listen_ser((*s).clone(), defaultc.clone(), Some(self.ti.clone()), rx);
             tasks.push(task);
             shutdown_tx_vec.push(tx);
         });

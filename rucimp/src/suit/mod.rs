@@ -16,14 +16,12 @@ pub mod engine2;
 mod test;
 
 use async_trait::async_trait;
+use log::log_enabled;
 use log::Level::Debug;
-use log::{debug, info, log_enabled};
 use ruci::map::tls;
 use ruci::relay;
-use std::sync::Arc;
 use tokio::io;
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
 
 use ruci::map::*;
 use ruci::net::{self, Addr};
@@ -199,180 +197,6 @@ impl Suit for SuitStruct {
                 }
             }
             ProxyBehavior::UNSPECIFIED => {}
-        }
-    }
-}
-
-/// 阻塞监听 ins。
-///
-/// 确保调用 listen_ser 前, ins 和 outc 的
-/// generate_upper_mappers 方法被调用过了
-pub async fn listen_ser(
-    ins: Arc<dyn Suit>,
-    outc: Arc<dyn Suit>,
-    oti: Option<Arc<net::TransmissionInfo>>,
-    shutdown_rx: oneshot::Receiver<()>,
-) -> io::Result<()> {
-    let n = ins.network();
-    match n {
-        "tcp" => {
-            if outc.network() != "tcp" {
-                panic!(
-                    "not implemented for dialing network other than tcp: {}",
-                    outc.network()
-                )
-            }
-            listen_tcp(ins, outc, oti, shutdown_rx).await
-        }
-        _ => Err(io::Error::other(format!(
-            "such network not supported: {}",
-            n
-        ))),
-    }
-}
-
-pub async fn listen_ser2(
-    ins: &'static dyn Suit,
-    outc: &'static dyn Suit,
-    oti: Option<Arc<net::TransmissionInfo>>,
-    shutdown_rx: oneshot::Receiver<()>,
-) -> io::Result<()> {
-    let n = ins.network();
-    match n {
-        "tcp" => {
-            if outc.network() != "tcp" {
-                panic!(
-                    "not implemented for dialing network other than tcp: {}",
-                    outc.network()
-                )
-            }
-            listen_tcp2(ins, outc, oti, shutdown_rx).await
-        }
-        _ => Err(io::Error::other(format!(
-            "such network not supported: {}",
-            n
-        ))),
-    }
-}
-
-/// 阻塞监听 ins tcp。
-async fn listen_tcp(
-    ins: Arc<dyn Suit>,
-    outc: Arc<dyn Suit>,
-    oti: Option<Arc<net::TransmissionInfo>>,
-    shutdown_rx: oneshot::Receiver<()>,
-) -> io::Result<()> {
-    let laddr = ins.addr_str().to_string();
-    let wn = ins.whole_name().to_string();
-    info!("start listen tcp {}, {}", laddr, wn);
-
-    let listener = TcpListener::bind(laddr.clone()).await?;
-
-    let clone_oti = move || oti.clone();
-    let insc = move || ins.clone();
-    let outcc = move || outc.clone();
-
-    tokio::select! {
-        r = async {
-            loop {
-                let r = listener.accept().await;
-                if r.is_err(){
-
-                    break;
-                }
-                let (tcpstream, raddr) = r.unwrap();
-
-                let laddr = laddr.clone();
-                let ti = clone_oti();
-                let ins = insc();
-                let outc = outcc();
-
-                tokio::spawn(async move {
-                    if log_enabled!(Debug) {
-                        debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
-                    }
-
-                    let _ = relay::conn::handle_conn(
-                        Box::new(tcpstream),
-                        ins.whole_name(),
-                        outc.whole_name(),
-                        raddr.to_string(),
-                        "tcp",
-                        ins.get_mappers_vec().iter(),
-                        outc.get_mappers_vec().iter(),
-                        outc.addr(),
-                        ti,
-                    )
-                    .await;
-                });
-
-            }
-
-            Ok::<_, io::Error>(())
-        } => {
-            r
-
-        }
-        _ = shutdown_rx => {
-            info!("terminating accept loop, {}",wn);
-            Ok(())
-        }
-    }
-}
-
-/// blocking loop listen ins tcp。calls handle_conn_clonable inside the loop.
-async fn listen_tcp2(
-    ins: &'static dyn Suit,
-    outc: &'static dyn Suit,
-    oti: Option<Arc<net::TransmissionInfo>>,
-    shutdown_rx: oneshot::Receiver<()>,
-) -> io::Result<()> {
-    let laddr = ins.addr_str().to_string();
-    let wn = ins.whole_name().to_string();
-    info!("start listen tcp {}, {}", laddr, wn);
-
-    let listener = TcpListener::bind(laddr.clone()).await?;
-
-    let clone_oti = move || oti.clone();
-
-    let selector = relay::conn::FixedOutSelector {
-        mappers: outc.get_mappers_vec().iter(),
-    };
-    let selector = Box::new(selector);
-    let selector = Box::leak(selector);
-
-    tokio::select! {
-        r = async {
-            loop {
-                let r = listener.accept().await;
-                if r.is_err(){
-
-                    break;
-                }
-                let (tcpstream, raddr) = r.unwrap();
-
-                let ti = clone_oti();
-                if log_enabled!(Debug) {
-                    debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
-                }
-
-                tokio::spawn( relay::conn::handle_conn_clonable(
-                        Box::new(tcpstream),
-                        ins.get_mappers_vec().iter(),
-                        selector,
-                        ti,
-                    )
-                );
-            }
-
-            Ok::<_, io::Error>(())
-        } => {
-            r
-
-        }
-        _ = shutdown_rx => {
-            info!("terminating accept loop, {} ",wn );
-            Ok(())
         }
     }
 }
