@@ -13,16 +13,11 @@ outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不�
 ## 常见配置问题
 
 
-### 1
-socks5 client only support tcplike stream, got NoStream
+### 报错示例: socks5 client only support tcplike stream, got NoStream
+
 
 注意几乎所有的 outbound 都要先有一个 Dialer, 如果直接是 socks5/trojan 的话，
 没有远程地址, 是无法建立任何连接的
-
-### 2
-
-使用 Stdio 作为 inbound 时注意要加 -s 参数, 否则程序会直接退出
-
 
 
 # lib note
