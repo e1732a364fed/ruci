@@ -16,6 +16,8 @@ use tokio::io::{AsyncRead, AsyncWrite};
 // (MIT)
 // https://github.com/zephyrchien/midori/blob/master/src/transport/h2/stream.rs
 
+const BUFFER_CAP: usize = 0x1000; //todo: change this
+
 pub struct H2Stream {
     recv: RecvStream,
     send: SendStream<Bytes>,
@@ -28,7 +30,7 @@ impl H2Stream {
         H2Stream {
             recv,
             send,
-            buffer: BytesMut::with_capacity(0x1000), //todo: change this
+            buffer: BytesMut::with_capacity(BUFFER_CAP),
         }
     }
 }

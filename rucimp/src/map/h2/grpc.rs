@@ -149,7 +149,7 @@ impl Stream {
         Stream {
             recv,
             send,
-            buffer: BytesMut::with_capacity(0x1000), //todo: change this
+            buffer: BytesMut::with_capacity(super::BUFFER_CAP),
             next_data_len: 0,
         }
     }
