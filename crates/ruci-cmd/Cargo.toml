@@ -34,6 +34,7 @@ lua = ["rucimp/lua"]
 
 lua54 = ["rucimp/lua54"]
 
+quic = ["rucimp/s2n-quic"]
 
 api_server = ["chrono","axum", "tower", "tower-http"]
 api_client = ["reqwest"]

@@ -19,6 +19,9 @@ pub mod dynamic;
 
 use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 
+#[cfg(feature = "s2n-quic")]
+use crate::map::quic;
+
 use bytes::BytesMut;
 use ruci::{
     map::{
@@ -32,7 +35,8 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{quic, ws};
+use crate::map::ws;
+
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
 
@@ -217,6 +221,7 @@ pub enum InMapperConfig {
     WebSocket {
         http_config: Option<CommonConfig>,
     },
+    #[cfg(feature = "s2n-quic")]
     Quic(quic::server::Config),
 }
 
@@ -247,7 +252,7 @@ pub enum OutMapperConfig {
 
         http_config: Option<CommonConfig>,
     },
-
+    #[cfg(feature = "s2n-quic")]
     Quic(quic::client::Config),
 }
 
@@ -432,6 +437,7 @@ impl ToMapperBox for InMapperConfig {
                 *is_grpc,
                 config.clone(),
             )),
+            #[cfg(feature = "s2n-quic")]
             InMapperConfig::Quic(c) => Box::new(quic::server::Server::new(c.clone())),
         }
     }
@@ -528,6 +534,7 @@ impl ToMapperBox for OutMapperConfig {
 
                 Box::new(m)
             }
+            #[cfg(feature = "s2n-quic")]
             OutMapperConfig::Quic(c) => {
                 Box::new(quic::client::Client::new(c.clone()).expect("legal quic client config"))
             }

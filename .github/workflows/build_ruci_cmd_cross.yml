@@ -51,7 +51,7 @@ jobs:
       - name: Build ${{ matrix.target }}
         run: |
 
-          compile_features="-f api_server -f api_client -f utils -f native-tls-vendored -f lua54"
+          compile_features="-f api_server -f api_client -f utils -f quic -f native-tls-vendored -f lua54"
 
           cd crates/ruci-cmd
           ./build_cross.sh -v ${{ inputs.tag || github.ref_name }} -t ${{ matrix.target }} $compile_features

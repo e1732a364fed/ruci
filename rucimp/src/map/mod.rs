@@ -13,4 +13,5 @@ pub mod h2;
 pub mod native_tls;
 pub mod ws;
 
+#[cfg(feature = "s2n-quic")]
 pub mod quic;

@@ -202,6 +202,24 @@ trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来, 这
 因为 tungstenite (websocket包) 对错误请求是自行返回 http 响应的, 而我们为了回落到其它 Mapper , 
 就要 绕过 tungstenite 的处理
 
+## quic 
+
+使用了 s2n-quic 包
+
+使用 quic 会给 ruci-cmd release 加 3-4MB 大小左右
+
+### tls
+
+它默认用的是 s2n-tls, 没问题. 但试图用 rustls 如:
+
+```toml
+s2n-quic = {version = "1",default-features = false, features = ["provider-address-token-default", "provider-tls-rustls"]}
+```
+
+加载 ec key 时，会报错:
+
+unexpected error: could not load any valid private keys
+
 
 ## 其它
 

@@ -22,11 +22,11 @@ cargo run -F lua -F api_server -F api_client -F utils -F use-native-tls --releas
 
 debug:
 ```
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls  -- --log-file ""
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quic -- --log-file ""
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls  -- --log-file "" -c remote.lua
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quic  -- --log-file "" -c remote.lua
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls  -- --log-file "" -c local_mux2_h2.lua --infinite
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quic  -- --log-file "" -c local_mux2_h2.lua --infinite
 
 RUST_LOG=debug cargo run -F lua -F api_server -F api_client -F utils -F trace -- -a run --trace
 
