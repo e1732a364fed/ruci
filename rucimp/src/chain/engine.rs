@@ -106,13 +106,13 @@ impl Engine {
         let mut running = m.lock();
         if running.is_none() {
         } else {
-            return Err(anyhow::format_err!("already started!"));
+            return Err(anyhow::anyhow!("already started!"));
         }
         if self.inbounds_count() == 0 {
-            return Err(anyhow::format_err!("no inbound"));
+            return Err(anyhow::anyhow!("no inbound"));
         }
         if self.outbounds_count() == 0 {
-            return Err(anyhow::format_err!("no outbound"));
+            return Err(anyhow::anyhow!("no outbound"));
         }
 
         let mut tasks = Vec::new();

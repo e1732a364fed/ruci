@@ -5,7 +5,7 @@ use crate::{
     user::{self, AsyncUserAuthenticator, UsersMap},
     Name,
 };
-use anyhow::format_err;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
@@ -81,10 +81,7 @@ impl Server {
             //根据下面回答，HTTP的最小长度恰好是16字节，但是是0.9版本。1.0是18字节，1.1还要更长。总之 可以直接不回落
             //https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089
 
-            return Err(format_err!(
-                "fallback, msg too short, {}",
-                previous_read_len
-            ));
+            return Err(anyhow!("fallback, msg too short, {}", previous_read_len));
         }
 
         if previous_read_len < PASS_LEN + 8 + 1 {

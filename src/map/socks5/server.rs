@@ -114,7 +114,7 @@ impl Server {
         }
 
         if n < 3 {
-            let e1 = format_err!("{}, socks5: failed to read hello, too short: {}", cid, n);
+            let e1 = anyhow!("{}, socks5: failed to read hello, too short: {}", cid, n);
 
             return Err(e1);
         }
@@ -123,7 +123,7 @@ impl Server {
         let v = buf[0];
         if v != VERSION5 {
             if log_enabled!(log::Level::Debug) {
-                let e2 = format_err!(
+                let e2 = anyhow!(
                     "{}, socks5: unsupported version: {}, buf as str: {}",
                     cid,
                     v,
@@ -133,7 +133,7 @@ impl Server {
                 buf.truncate(n);
                 return Ok(MapResult::ebc(e2, buf, base));
             } else {
-                let e2 = format_err!("{}, socks5: unsupported version: {}", cid, v);
+                let e2 = anyhow!("{}, socks5: unsupported version: {}", cid, v);
 
                 buf.truncate(n);
                 return Ok(MapResult::ebc(e2, buf, base));
@@ -148,7 +148,7 @@ impl Server {
             buf[1] = AUTH_NO_ACCEPTABLE;
             base.write_all(&buf[..2]).await?;
 
-            let e3 = format_err!(
+            let e3 = anyhow!(
                 "{}, socks5: nmethods==0||n < 2+nmethods: {}, n={}",
                 cid,
                 nm,
@@ -296,7 +296,7 @@ impl Server {
                         .await;
 
                     buf.truncate(n);
-                    let e = format_err!("{}, socks5: auth failed, {}", cid, thisup.auth_strs());
+                    let e = anyhow!("{}, socks5: auth failed, {}", cid, thisup.auth_strs());
                     return Ok(MapResult::ebc(e, buf, base));
                 }
                 _ => {} //忽视其它的 auth method
@@ -308,7 +308,7 @@ impl Server {
             buf[1] = AUTH_NO_ACCEPTABLE;
             let _ = base.write(&buf[..2]).await;
 
-            let e4 = format_err!("{}, socks5: not authed:  {:?}", cid, opt_e);
+            let e4 = anyhow!("{}, socks5: not authed:  {:?}", cid, opt_e);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e4, buf, base));
@@ -344,13 +344,13 @@ impl Server {
         }
 
         if n < 7 {
-            let e = format_err!("{}, socks5: read cmd part failed, msgTooShort: {}", cid, n);
+            let e = anyhow!("{}, socks5: read cmd part failed, msgTooShort: {}", cid, n);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e, buf, base));
         }
         if buf[0] != VERSION5 {
-            let e = format_err!("{}, socks5: stage2, wrong verson, {}", cid, buf[0]);
+            let e = anyhow!("{}, socks5: stage2, wrong verson, {}", cid, buf[0]);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e, buf, base));
@@ -358,14 +358,14 @@ impl Server {
 
         let cmd = buf[1];
         if cmd == CMD_BIND {
-            let e = format_err!("{}, socks5: unsuppoted command CMD_BIND", cid);
+            let e = anyhow!("{}, socks5: unsuppoted command CMD_BIND", cid);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e, buf, base));
         }
 
         if cmd != CMD_UDPASSOCIATE && cmd != CMD_CONNECT {
-            let e = format_err!("{}, socks5: unsuppoted command, {}", cid, cmd);
+            let e = anyhow!("{}, socks5: unsuppoted command, {}", cid, cmd);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e, buf, base));
@@ -398,7 +398,7 @@ impl Server {
                 is_name = true;
             }
             _ => {
-                let e = format_err!("{}, socks5: unknown address type: {}", cid, buf[3]);
+                let e = anyhow!("{}, socks5: unknown address type: {}", cid, buf[3]);
 
                 buf.truncate(n);
                 return Ok(MapResult::ebc(e, buf, base));
@@ -413,7 +413,7 @@ impl Server {
         let remain = n as i32 - end as i32;
 
         if remain < 0 {
-            let e = format_err!("{}, socks5: stage2, short of [port] part {}", cid, n);
+            let e = anyhow!("{}, socks5: stage2, short of [port] part {}", cid, n);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e, buf, base));
@@ -480,7 +480,7 @@ impl Server {
             b: if buf.is_empty() { None } else { Some(buf) },
             c: map::Stream::TCP(base),
             d: None,
-            e: Some(format_err!("socks5: not supported cmd, {}", cmd)),
+            e: Some(anyhow!("socks5: not supported cmd, {}", cmd)),
             new_id: None,
         })
     }

@@ -3,7 +3,7 @@ use self::route2::OutSelector;
 
 use super::*;
 
-use anyhow::format_err;
+use anyhow::anyhow;
 use log::{info, log_enabled, warn};
 use std::sync::Arc;
 use std::time::Duration;
@@ -67,7 +67,7 @@ pub async fn handle_in_accumulate_result(
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {
-            let e = format_err!(
+            let e = anyhow!(
                 "{cid}, handshake in server succeed but got no target_addr, e: {:?}",
                 listen_result.e
             );

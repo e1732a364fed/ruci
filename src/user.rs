@@ -300,13 +300,13 @@ mod test {
         let x = um.auth_user_by_authstr("plaintext:u").await;
 
         if x != None {
-            return Err(format_err!("shit,not none"));
+            return Err(anyhow!("shit,not none"));
         }
 
         let x = um.auth_user_by_authstr("plaintext:u2\np2").await;
 
         if x == None {
-            Err(format_err!("shit,none"))
+            Err(anyhow!("shit,none"))
         } else {
             Ok(())
         }

@@ -20,7 +20,7 @@ use crate::{
     net::{self},
     user::PlainText,
 };
-use anyhow::format_err;
+use anyhow::anyhow;
 use bytes::{Buf, BufMut, BytesMut};
 
 // socks5 version number.
@@ -55,14 +55,11 @@ lazy_static! {
 //todo: 支持 fragment
 pub fn decode_udp_diagram(buf: &mut BytesMut) -> anyhow::Result<net::Addr> {
     if buf.len() < 11 {
-        return Err(format_err!("udp diagram lenth wrong, {}", buf.len()));
+        return Err(anyhow!("udp diagram lenth wrong, {}", buf.len()));
     }
     let first2bytes = buf.get_u16();
     if first2bytes != 0 {
-        return Err(format_err!(
-            "udp diagram first2bytes wrong, {}",
-            first2bytes
-        ));
+        return Err(anyhow!("udp diagram first2bytes wrong, {}", first2bytes));
     }
     let _frag = buf.get_u8();
 

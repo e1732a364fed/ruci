@@ -5,6 +5,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use self::map::{MapParams, ProxyBehavior, CID};
 use super::*;
 use crate::{map::MapResult, net};
+use anyhow::anyhow;
 
 #[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Client {
@@ -39,7 +40,7 @@ impl Client {
         let mut n = base.read(&mut buf).await?;
 
         if n != 2 || buf[0] != VERSION5 || buf[1] != adopted_method {
-            return Err(format_err!(
+            return Err(anyhow!(
                 "{}, socks5 client handshake,protocol err, {}",
                 cid,
                 buf[1]
@@ -64,7 +65,7 @@ impl Client {
             n = base.read(&mut buf).await?;
 
             if n != 2 || buf[0] != 1 || buf[1] != 0 {
-                return Err(format_err!(
+                return Err(anyhow!(
                     "{}, socks5 client handshake,auth failed, {}",
                     cid,
                     buf[1]
@@ -80,7 +81,7 @@ impl Client {
         n = base.read(&mut buf).await?;
 
         if n < 10 || buf[0] != 5 || buf[1] != 0 || buf[2] != 0 {
-            return Err(format_err!(
+            return Err(anyhow!(
                 "{}, socks5 client handshake failed when reading response",
                 cid
             ));

@@ -12,7 +12,8 @@ pub mod udp;
 
 #[cfg(test)]
 mod test;
-use anyhow::{format_err, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use futures::pin_mut;
 use futures::{io::Error, FutureExt};
 use log::{debug, log_enabled};
@@ -177,7 +178,7 @@ impl Network {
             "udp" => Ok(Network::UDP),
             #[cfg(unix)]
             "unix" => Ok(Network::Unix),
-            _ => Err(format_err!("not supported network string: {}", s)),
+            _ => Err(anyhow!("not supported network string: {}", s)),
         }
     }
 
@@ -246,7 +247,7 @@ impl Addr {
             }
             None => Ok(Addr {
                 addr: NetAddr::Socket(SocketAddr::new(
-                    ip.ok_or(format_err!("neither of ip or host provided"))?,
+                    ip.ok_or(anyhow!("neither of ip or host provided"))?,
                     port,
                 )),
                 network: n,
@@ -289,7 +290,7 @@ impl Addr {
         match ns.len() {
             1 => Addr::from_addr_str("tcp", s),
             2 => Addr::from_addr_str(ns[0], ns[1]),
-            _ => Err(format_err!(
+            _ => Err(anyhow!(
                 "Addr::from_network_addr_str, split :// got len!=2 && len!=1",
             )),
         }
@@ -299,9 +300,9 @@ impl Addr {
     pub fn from_addr_str(network: &str, s: &str) -> Result<Self> {
         let ns: Vec<_> = s.split(':').collect();
         if ns.len() != 2 {
-            return Err(format_err!("Addr::from_addr_str, split colon got len!=2",));
+            return Err(anyhow!("Addr::from_addr_str, split colon got len!=2",));
         }
-        let port = ns[1].parse::<u16>().map_err(|e| format_err!("{}", e))?;
+        let port = ns[1].parse::<u16>().map_err(|e| anyhow!("{}", e))?;
 
         let x = ns[0].parse::<IpAddr>();
         match x {
@@ -370,12 +371,9 @@ impl Addr {
         } else if let NetAddr::Name(n, port) = &self.addr {
             let so = (format!("{}:{}", n, port)).to_socket_addrs();
             so?.next()
-                .ok_or(format_err!("resolve to empty socket_addr from {}", self))
+                .ok_or(anyhow!("resolve to empty socket_addr from {}", self))
         } else {
-            Err(format_err!(
-                "not possible convert to socket_addr from {}",
-                self
-            ))
+            Err(anyhow!("not possible convert to socket_addr from {}", self))
         }
     }
 
@@ -431,15 +429,13 @@ impl Addr {
     pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
         let ns: Vec<_> = s.split(':').collect();
         if ns.len() != 2 {
-            return Err(format_err!(
-                "Addr::from_ip_addr_str, split colon got len!=2",
-            ));
+            return Err(anyhow!("Addr::from_ip_addr_str, split colon got len!=2",));
         }
         Addr::from_strs(
             network,
             "",
             ns[0],
-            ns[1].parse::<u16>().map_err(|e| format_err!("{}", e))?,
+            ns[1].parse::<u16>().map_err(|e| anyhow!("{}", e))?,
         )
     }
 }
@@ -526,21 +522,21 @@ impl Stream {
         if let Stream::TCP(t) = self {
             return Ok(t);
         }
-        Err(format_err!("not tcp"))
+        Err(anyhow!("not tcp"))
     }
 
     pub fn try_unwrap_tcp_ref(&self) -> Result<&Conn> {
         if let Stream::TCP(t) = self {
             return Ok(t);
         }
-        Err(format_err!("not tcp"))
+        Err(anyhow!("not tcp"))
     }
 
     pub fn try_unwrap_udp(self) -> Result<AddrConn> {
         if let Stream::UDP(t) = self {
             return Ok(t);
         }
-        Err(format_err!("not udp"))
+        Err(anyhow!("not udp"))
     }
 }
 

@@ -101,7 +101,7 @@ impl Server {
         let r = net::http::parse_h1_request(&buf[..n], true);
         if r.fail_reason != FailReason::None {
             if log_enabled!(log::Level::Debug) {
-                let e1 = anyhow::format_err!(
+                let e1 = anyhow::anyhow!(
                     "{cid}, http proxy: get method/path failed: {:?}, buf as str: {}",
                     r.fail_reason,
                     String::from_utf8_lossy(&buf[..min(n, 256)])
@@ -109,7 +109,7 @@ impl Server {
 
                 return Ok(MapResult::ebc(e1, buf, base));
             } else {
-                let e1 = anyhow::format_err!(
+                let e1 = anyhow::anyhow!(
                     "{cid}, http proxy: get method/path failed: {:?}",
                     r.fail_reason
                 );
@@ -125,7 +125,7 @@ impl Server {
             for rh in r.headers.iter() {
                 if rh.head == PROXY_AUTH_HEADER_STR {
                     if !rh.value.starts_with(BASIC_AUTH_VALUE_PREFIX) {
-                        let e1 = anyhow::format_err!(
+                        let e1 = anyhow::anyhow!(
                             "{cid}, http proxy: auth value not start with BASIC_AUTH_VALUE_PREFIX: , {}",
                             &rh.value
                         );
@@ -136,7 +136,7 @@ impl Server {
                     let bs = match bsr {
                         Ok(b) => b,
                         Err(e) => {
-                            let e1 = anyhow::format_err!(
+                            let e1 = anyhow::anyhow!(
                                 "{cid}, http proxy: base64 decode err: {e}, {}",
                                 &rh.value
                             );
@@ -147,8 +147,7 @@ impl Server {
                     let colon_index = match bs.iter().position(|x| *x == b':') {
                         Some(i) => i,
                         None => {
-                            let e1 =
-                                anyhow::format_err!("{cid}, http proxy: no colon, {}", &rh.value);
+                            let e1 = anyhow::anyhow!("{cid}, http proxy: no colon, {}", &rh.value);
                             return Ok(MapResult::ebc(e1, buf, base));
                         }
                     };
@@ -170,7 +169,7 @@ impl Server {
             } //for header
 
             if !ok {
-                let e1 = anyhow::format_err!("{cid}, http proxy: auth failed ,{:?}", &r);
+                let e1 = anyhow::anyhow!("{cid}, http proxy: auth failed ,{:?}", &r);
                 return Ok(MapResult::ebc(e1, buf, base));
             }
         }
@@ -182,7 +181,7 @@ impl Server {
             addr_str = r.path;
         } else {
             if self.only_connect {
-                let e = anyhow::format_err!(
+                let e = anyhow::anyhow!(
                     "{cid}, http proxy: non-connect method not supported by config",
                 );
 
@@ -193,8 +192,7 @@ impl Server {
             let url = match ur {
                 Ok(u) => u,
                 Err(e) => {
-                    let e1 =
-                        anyhow::format_err!("{cid}, http proxy: invalid url: {e}, {}", &r.path);
+                    let e1 = anyhow::anyhow!("{cid}, http proxy: invalid url: {e}, {}", &r.path);
                     return Ok(MapResult::ebc(e1, buf, base));
                 }
             };
@@ -202,8 +200,7 @@ impl Server {
             addr_str = match url.host() {
                 Some(h) => h.to_string(),
                 None => {
-                    let e1 =
-                        anyhow::format_err!("{cid}, http proxy: no host in url: , {}", &r.path);
+                    let e1 = anyhow::anyhow!("{cid}, http proxy: no host in url: , {}", &r.path);
                     return Ok(MapResult::ebc(e1, buf, base));
                 }
             };
@@ -217,7 +214,7 @@ impl Server {
         let ta = match ta {
             Ok(a) => a,
             Err(e) => {
-                let e1 = anyhow::format_err!(
+                let e1 = anyhow::anyhow!(
                     "{cid}, http proxy: invalid url, can't convert to Addr: {e}, {}",
                     &addr_str
                 );

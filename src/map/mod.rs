@@ -47,7 +47,7 @@ use crate::{
     },
     AnyArc, AnyBox,
 };
-use anyhow::format_err;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
@@ -275,7 +275,7 @@ impl MapResult {
     }
 
     pub fn err_str(estr: &str) -> Self {
-        MapResult::from_e(format_err!("{}", estr))
+        MapResult::from_e(anyhow!("{}", estr))
     }
 
     pub fn from_result(e: anyhow::Result<MapResult>) -> Self {
@@ -306,7 +306,7 @@ impl MapResult {
         }
     }
     pub fn buf_err_str(buf: BytesMut, estr: &str) -> Self {
-        MapResult::buf_err(buf, format_err!("{}", estr))
+        MapResult::buf_err(buf, anyhow!("{}", estr))
     }
 }
 
