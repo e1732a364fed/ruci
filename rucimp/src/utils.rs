@@ -188,6 +188,8 @@ pub fn lua_repl() {
     }
 }
 
+pub use md5;
+
 pub fn tar_folder_and_compute_md5<P: AsRef<std::path::Path>>(
     src_dir: P,
 ) -> std::io::Result<(BytesMut, String)> {
@@ -255,7 +257,7 @@ pub fn get_file_from_tar(b: BytesMut, file_name: &str) -> anyhow::Result<Vec<u8>
         .entries()
         .unwrap()
         .find(|a| a.as_ref().is_ok_and(|b| b.path().is_ok_and(|c| c == tp)))
-        .ok_or_else(|| anyhow!("can't find the file"))??;
+        .ok_or_else(|| anyhow!("get_file_from_tar: can't find the file, {}", file_name))??;
 
     let mut v = vec![];
     use std::io::Read;

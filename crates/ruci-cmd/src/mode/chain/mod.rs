@@ -1,3 +1,4 @@
+use anyhow::bail;
 use rucimp::{
     modes::chain::engine::Engine,
     utils::{wait_close_sig, wait_close_sig_with_closer},
@@ -5,7 +6,7 @@ use rucimp::{
 };
 use tokio::sync::mpsc;
 use tokio_util::bytes::BytesMut;
-use tracing::info;
+use tracing::{debug, info};
 
 #[cfg(feature = "api_server")]
 use crate::api;
@@ -74,10 +75,25 @@ pub(crate) async fn run(
 
         //zip, tar, lua 三种情况
 
-        let contents = if file_name.ends_with(".zip") {
+        let contents = if file_name.ends_with(".tar.zip") {
             todo!()
         } else if file_name.ends_with(".tar") {
             let b = BytesMut::from(file_bytes_v.as_slice());
+
+            let md5_s = format!("{:x}", rucimp::utils::md5::compute(&b));
+
+            let should_be = file_name.split_once('.').unwrap().0;
+
+            if should_be != md5_s {
+                bail!(
+                    "md5 do not match: should be {}, but got {}",
+                    should_be,
+                    md5_s
+                );
+            } else {
+                debug!("md5 match")
+            }
+
             let bs = rucimp::utils::get_file_from_tar(b, DEFAULT_CONFIG_FILE_NAME)?;
             String::from_utf8_lossy(bs.as_slice()).to_string()
         } else {
