@@ -238,6 +238,13 @@ pub trait AsyncWriteAddrExt: AsyncWriteAddr {
     {
         shutdown(self)
     }
+
+    fn flush(&mut self) -> Flush<'_, Self>
+    where
+        Self: Unpin,
+    {
+        flush(self)
+    }
 }
 impl<T: AsyncWriteAddr + ?Sized> AsyncWriteAddrExt for T {}
 
@@ -259,6 +266,45 @@ impl<T: AsyncWriteAddr + Unpin + ?Sized> futures::Future for WriteFuture<'_, T> 
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         self.poll_w(cx)
+    }
+}
+
+pin_project_lite::pin_project! {
+    /// A future used to fully flush an I/O object.
+    ///
+    /// Created by the [`AsyncWriteExt::flush`][flush] function.
+    ///
+    /// [flush]: crate::io::AsyncWriteExt::flush
+    #[derive(Debug)]
+    #[must_use = "futures do nothing unless you `.await` or poll them"]
+    pub struct Flush<'a, A: ?Sized> {
+        a: &'a mut A,
+        // Make this future `!Unpin` for compatibility with async trait methods.
+        #[pin]
+        _pin: std::marker::PhantomPinned,
+    }
+}
+
+/// Creates a future which will entirely flush an I/O object.
+pub fn flush<A>(a: &mut A) -> Flush<'_, A>
+where
+    A: AsyncWriteAddr + Unpin + ?Sized,
+{
+    Flush {
+        a,
+        _pin: std::marker::PhantomPinned,
+    }
+}
+
+impl<A> futures::Future for Flush<'_, A>
+where
+    A: AsyncWriteAddr + Unpin + ?Sized,
+{
+    type Output = io::Result<()>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let me = self.project();
+        Pin::new(&mut *me.a).poll_flush_addr(cx)
     }
 }
 
@@ -330,7 +376,15 @@ async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
                     if m > 0 {
                         //写udp 是不会卡住的, 但addr_conn底层可能不是 udp
 
-                        let fut = tokio::time::timeout(Duration::from_secs(1),w1.write(&buf[..m], &ad)).await;
+                        let fut = tokio::time::timeout(Duration::from_secs(1),async {
+                            let r = w1.write(&buf[..m], &ad).await;
+                            let r2 = w1.flush().await;
+                            if let Err(e) = r2{
+                                Err(e)
+                            }else{
+                                r
+                            }
+                        }).await;
                         match fut{
                             Ok(r) => match r {
                                 Ok(n) => {
