@@ -1,5 +1,5 @@
 use anyhow::Ok;
-use macro_mapper::DefaultMapperExt;
+use macro_mapper::NoMapperExt;
 
 use crate::map::{MapperBox, ToMapper};
 
@@ -22,7 +22,7 @@ impl ToMapper for ServerOptions {
 }
 
 // todo: 添加 alpn 和 tls_minv
-#[derive(Clone, DefaultMapperExt)]
+#[derive(Clone, NoMapperExt)]
 pub struct Server {
     pub option_cache: ServerOptions,
     ta: TlsAcceptor,

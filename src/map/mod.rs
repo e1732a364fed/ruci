@@ -291,10 +291,10 @@ pub struct MapperExtFields {
 ///
 /// ```plaintext
 /// use macro_mapper::*;
-/// #[common_mapper_field]
-/// #[derive(CommonMapperExt)]
+/// #[mapper_ext_fields]
+/// #[derive(MapperExt)]
 ///
-/// or #[derive(DefaultMapperExt)]
+/// or #[derive(NoMapperExt)]
 /// ```
 /// to auto impl MapperExt
 ///

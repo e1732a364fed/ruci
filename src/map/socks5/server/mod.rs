@@ -23,7 +23,7 @@ use anyhow::Ok;
 use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
 use log::{debug, log_enabled, warn};
-use macro_mapper::DefaultMapperExt;
+use macro_mapper::NoMapperExt;
 use map::Stream;
 use std::{
     cmp::min,
@@ -55,7 +55,7 @@ impl ToMapper for Config {
 ///  support_udp开关udp associate的支持
 ///
 /// 支持 AuthNone和 AuthUserPass
-#[derive(Debug, Clone, DefaultMapperExt)]
+#[derive(Debug, Clone, NoMapperExt)]
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,
     pub support_udp: bool,

@@ -2,7 +2,7 @@ use anyhow::bail;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use log::debug;
-use macro_mapper::{common_mapper_field, CommonMapperExt};
+use macro_mapper::{mapper_ext_fields, MapperExt};
 use tokio::io::AsyncWriteExt;
 
 use crate::{
@@ -13,8 +13,8 @@ use crate::{
 
 use super::*;
 
-#[common_mapper_field]
-#[derive(Debug, Clone, CommonMapperExt, Default)]
+#[mapper_ext_fields]
+#[derive(Debug, Clone, MapperExt, Default)]
 pub struct Client {
     pub u: User,
 }

@@ -34,12 +34,12 @@ early data 必须由最末端的 outbound 传递
 
 不过，我们可以在静态配置情况下做些操作，给末端代理一个标记，这样就能使用 earydata 功能了.
 
-通过使用 CommonMapperExt 和 DefaultMapperExt 这两个derive 宏, 可以分别给 struct 实现 common行为
+通过使用 MapperExt 和 NoMapperExt 这两个derive 宏, 可以分别给 struct 实现 common行为
 和默认行为.
 
-CommonMapperExt 要 配合 common_mapper_field 宏一起使用
+MapperExt 要 配合 mapper_ext_fields 宏一起使用
 
-用了 CommonMapperExt 后，可以在方法内使用 self.is_tail_of_chain 判断是否在链尾，如果在，则可以发送ed, 
+用了 MapperExt 后，可以在方法内使用 self.is_tail_of_chain 判断是否在链尾，如果在，则可以发送ed, 
 如果不在，不可以发送，只能传递到下一级
 
 而作为最高级抽象的动态链则做不到. 静态链是动态链的一种具体的固定的形态

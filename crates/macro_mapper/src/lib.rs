@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{parse::Parser, parse_macro_input, DeriveInput};
 
 #[proc_macro_attribute]
-pub fn common_mapper_field(_args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn mapper_ext_fields(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as DeriveInput);
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -29,7 +29,7 @@ pub fn common_mapper_field(_args: TokenStream, input: TokenStream) -> TokenStrea
 
 use syn;
 
-#[proc_macro_derive(CommonMapperExt)]
+#[proc_macro_derive(MapperExt)]
 pub fn commonext_macro_derive(input: TokenStream) -> TokenStream {
     // 基于 input 构建 AST 语法树
     let ast: DeriveInput = syn::parse(input).unwrap();
@@ -53,7 +53,7 @@ fn impl_common_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
     gen.into()
 }
 
-#[proc_macro_derive(DefaultMapperExt)]
+#[proc_macro_derive(NoMapperExt)]
 pub fn ext_macro_derive(input: TokenStream) -> TokenStream {
     // 基于 input 构建 AST 语法树
     let ast: DeriveInput = syn::parse(input).unwrap();

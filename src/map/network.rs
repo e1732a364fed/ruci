@@ -1,5 +1,5 @@
 use log::{debug, info, log_enabled};
-use macro_mapper::{common_mapper_field, CommonMapperExt, DefaultMapperExt};
+use macro_mapper::{mapper_ext_fields, MapperExt, NoMapperExt};
 use tokio::{
     net::TcpListener,
     sync::mpsc::{self, Receiver},
@@ -9,7 +9,7 @@ use super::*;
 use crate::Name;
 use crate::{map, net::Addr};
 
-#[derive(DefaultMapperExt, Debug, Default, Clone)]
+#[derive(NoMapperExt, Debug, Default, Clone)]
 pub struct BlackHole {}
 
 impl Name for BlackHole {
@@ -29,10 +29,10 @@ impl Mapper for BlackHole {
     }
 }
 
-/// only use CommonMapperExt's is_tail_of_chain. won't use configured_target_addr;
+/// only use MapperExt's is_tail_of_chain. won't use configured_target_addr;
 /// if you want to set configured_target_addr, maybe you should use TcpDialer
-#[common_mapper_field]
-#[derive(Clone, Debug, Default, CommonMapperExt)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, Default, MapperExt)]
 pub struct Direct {}
 impl Name for Direct {
     fn name(&self) -> &'static str {
@@ -77,8 +77,8 @@ impl Mapper for Direct {
     }
 }
 
-#[common_mapper_field]
-#[derive(Clone, Debug, Default, CommonMapperExt)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, Default, MapperExt)]
 pub struct Dialer {}
 
 impl Name for Dialer {
@@ -178,8 +178,8 @@ impl Mapper for Dialer {
 }
 
 /// 不命名为TcpListener 只是因为不希望有重名
-#[common_mapper_field]
-#[derive(CommonMapperExt, Clone, Debug, Default)]
+#[mapper_ext_fields]
+#[derive(MapperExt, Clone, Debug, Default)]
 pub struct TcpStreamGenerator {}
 
 impl Name for TcpStreamGenerator {

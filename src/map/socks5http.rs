@@ -4,7 +4,7 @@
 
 use futures::executor::block_on;
 use log::debug;
-use macro_mapper::DefaultMapperExt;
+use macro_mapper::NoMapperExt;
 use map::Stream;
 
 use crate::map::{self, MapResult};
@@ -31,7 +31,7 @@ impl ToMapper for Config {
     }
 }
 
-#[derive(Debug, Clone, DefaultMapperExt)]
+#[derive(Debug, Clone, NoMapperExt)]
 pub struct Server {
     pub http_s: http::Server,
     pub socks5_s: socks5::server::Server,

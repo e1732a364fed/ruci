@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
-use macro_mapper::DefaultMapperExt;
+use macro_mapper::NoMapperExt;
 use map::Stream;
 use tokio::io::AsyncReadExt;
 
@@ -26,7 +26,7 @@ impl ToMapper for Config {
     }
 }
 
-#[derive(Debug, Clone, DefaultMapperExt)]
+#[derive(Debug, Clone, NoMapperExt)]
 pub struct Server {
     pub um: UsersMap<User>,
 }

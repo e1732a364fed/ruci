@@ -1,4 +1,4 @@
-use macro_mapper::{common_mapper_field, CommonMapperExt};
+use macro_mapper::{mapper_ext_fields, MapperExt};
 use rustls::{
     client::danger::ServerCertVerified,
     pki_types::{CertificateDer, ServerName, UnixTime},
@@ -14,8 +14,8 @@ use self::{
 
 use super::*;
 
-#[common_mapper_field]
-#[derive(Debug, Clone, CommonMapperExt)]
+#[mapper_ext_fields]
+#[derive(Debug, Clone, MapperExt)]
 pub struct Client {
     pub domain: String,
     pub is_insecure: bool,

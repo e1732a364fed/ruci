@@ -5,7 +5,7 @@
 
 use crate::map;
 use async_trait::async_trait;
-use macro_mapper::{common_mapper_field, CommonMapperExt};
+use macro_mapper::{mapper_ext_fields, MapperExt};
 use std::{pin::Pin, task::Poll};
 
 use crate::{net::CID, Name};
@@ -60,8 +60,8 @@ impl AsyncWrite for Conn {
     }
 }
 
-#[common_mapper_field]
-#[derive(Clone, Debug, Default, CommonMapperExt)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, Default, MapperExt)]
 pub struct Stdio {}
 
 impl Name for Stdio {

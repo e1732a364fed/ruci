@@ -1,5 +1,5 @@
 use bytes::BufMut;
-use macro_mapper::DefaultMapperExt;
+use macro_mapper::NoMapperExt;
 use map::{helpers, Addr, Network};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -14,7 +14,7 @@ use crate::{
 };
 use anyhow::{anyhow, bail, Ok};
 
-#[derive(Debug, Clone, DefaultMapperExt)]
+#[derive(Debug, Clone, NoMapperExt)]
 pub struct Client {
     pub up: Option<PlainText>, //todo: make sure len <= 255
 

@@ -8,7 +8,7 @@ use base64::prelude::*;
 use bytes::BytesMut;
 use futures::executor::block_on;
 use log::log_enabled;
-use macro_mapper::DefaultMapperExt;
+use macro_mapper::NoMapperExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
@@ -29,7 +29,7 @@ pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
 pub const PROXY_AUTH_HEADER_STR: &str = "Proxy-Authorization ";
 
-#[derive(Debug, Clone, DefaultMapperExt)]
+#[derive(Debug, Clone, NoMapperExt)]
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,
     pub only_connect: bool,
