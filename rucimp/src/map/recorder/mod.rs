@@ -110,6 +110,14 @@ impl Recorder {
         }
     }
 
+    pub fn record_shutdown(&mut self) {
+        match self {
+            Recorder::Full(r) => r.record_shutdown(),
+            Recorder::Simplified(r) => r.record_shutdown(),
+            Recorder::Info(r) => r.record_shutdown(),
+        }
+    }
+
     pub fn label(&self) -> &str {
         match self {
             Recorder::Full(r) => r.data.common_data.label.as_deref().unwrap_or(""),
@@ -166,6 +174,8 @@ pub struct CommonData {
     pub label: Option<String>,
     pub global_data: Option<SerializableGlobalData>,
     pub target_addr: Option<Addr>,
+    pub start_at: DateTime<chrono::Utc>,
+    pub shutdown_at: Option<u128>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -286,6 +296,10 @@ impl InfoRecorder {
             opt_addr: None,
         });
     }
+
+    pub fn record_shutdown(&mut self) {
+        self.data.common_data.shutdown_at = Some(self.since(self.start));
+    }
 }
 
 impl SimplifiedRecorder {
@@ -295,6 +309,10 @@ impl SimplifiedRecorder {
 
     pub fn record_write(&mut self, data: &[u8]) {
         self.data.data.push((WRITE_DIRECTION, data.to_vec()));
+    }
+
+    pub fn record_shutdown(&mut self) {
+        self.data.common_data.shutdown_at = Some(self.since(self.start));
     }
 }
 
@@ -311,6 +329,10 @@ impl FullRecorder {
         self.data
             .write_data
             .push(FullPayloadData::Tcp(d, data.to_vec()));
+    }
+
+    pub fn record_shutdown(&mut self) {
+        self.data.common_data.shutdown_at = Some(self.since(self.start));
     }
 }
 
@@ -518,6 +540,7 @@ impl Map for RecorderMap {
             behavior,
             label: self.config.label.clone(),
             global_data: params.g.as_ref().map(SerializableGlobalData::from),
+            start_at: chrono::Utc::now(),
             ..Default::default()
         };
         if let Some(target_addr) = &params.a {

@@ -939,6 +939,11 @@ local config_25_recorder_mitm = {
                 }
             },
 
+            -- 一般 一个响应大概在100多毫秒后到达，此回包 的 timestamp 典型值可以为 131876208 (nano seconds)
+            -- h2 的最后一个包 很多情形下为 17 字节 (goaway包)
+            -- 本端关闭时还会有一个 0包 表示 EOF
+            -- 如此， 一个典型的 h2 请求+响应 实际上 一般是由 四个 包构成
+
             {
                 Recorder = {
                     label = "mitm",

@@ -335,6 +335,7 @@ pub enum InMapConfig {
     BindDialer(Box<BindDialerConfig>), //单流发生器 (Box: #[warn(clippy::large_enum_variant)])
     Listener {
         listen_addr: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         ext: Option<Ext>,
     }, //多流发生器
 
@@ -342,6 +343,7 @@ pub enum InMapConfig {
     TcpOptListener {
         listen_addr: String,
         sockopt: crate::net::so2::SockOpt,
+        #[serde(skip_serializing_if = "Option::is_none")]
         ext: Option<Ext>,
     },
 
@@ -416,7 +418,9 @@ pub enum OutMapConfig {
     #[cfg(feature = "sockopt")]
     OptDirect {
         sockopt: crate::net::so2::SockOpt,
+        #[serde(skip_serializing_if = "Option::is_none")]
         more_num_of_files: Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         dns_client: Option<dns::ClientConfig>,
     },
 
@@ -459,8 +463,10 @@ pub enum OutMapConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Ext {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fixed_target_addr: Option<String>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pre_defined_early_data: Option<String>,
 }
 impl Ext {
@@ -484,28 +490,37 @@ pub struct FileConfig {
     pub sleep_interval: Option<u64>,
     pub bytes_per_turn: Option<usize>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ext: Option<Ext>,
 }
 
 /// 明文密码配置
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct PlainTextPassSet {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub userpass: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub more: Option<Vec<String>>,
-    pub upgrade_to_h2: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Socks5Out {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub userpass: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub early_data: Option<bool>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ext: Option<Ext>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct TrojanPassSet {
     pub password: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub more: Option<Vec<String>>,
 }
 
@@ -531,34 +546,6 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
 
     fn try_from(value: InMapConfigWithFileSource) -> Result<Self, Self::Error> {
         let file_source = value.file_source;
-
-        // let read_file_fn: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> = {
-        //     let fc = file_source.clone();
-
-        //     let f = move |s: PathBuf| match fc.as_ref() {
-        //         Some(fs) => fs
-        //             .get_file_content(&s.to_string_lossy())
-        //             .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
-        //             .map_err(|e| {
-        //                 tracing::debug!(
-        //                     "get file content failed, file: {}, error: {}",
-        //                     s.to_string_lossy(),
-        //                     e
-        //                 );
-        //                 std::io::Error::other(e)
-        //             }),
-        //         None => {
-        //             let r = std::fs::read_to_string(s);
-
-        //             if r.is_err() {
-        //                 tracing::debug!("std::fs::read_to_string failed");
-        //             }
-        //             r
-        //         }
-        //     };
-
-        //     Box::new(f)
-        // };
 
         match value.config {
             InMapConfig::Echo => Ok(Echo::boxed()),
@@ -753,20 +740,6 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
         use anyhow::Context;
 
         let file_source = value.file_source;
-
-        // let read_file_fn: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> = {
-        //     let fc = file_source.clone();
-
-        //     let f = move |s: PathBuf| match fc.as_ref() {
-        //         Some(fs) => fs
-        //             .get_file_content(&s.to_string_lossy())
-        //             .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
-        //             .map_err(std::io::Error::other),
-        //         None => std::fs::read_to_string(s),
-        //     };
-
-        //     Box::new(f)
-        // };
 
         match value.config {
             OutMapConfig::Stdio(sc) => sc.try_into(),

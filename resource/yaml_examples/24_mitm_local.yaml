@@ -7,7 +7,6 @@ inbounds:
   - !Socks5Http
     userpass: null
     more: null
-    upgrade_to_h2: null
   - !MITM
     cert: test_ca_cert.pem
     key: test_ca_key.pem

@@ -12,18 +12,14 @@
         {
           "Socks5Http": {
             "userpass": null,
-            "more": null,
-            "upgrade_to_h2": null
+            "more": null
           }
         },
         {
           "MITM": {
             "cert": "test_ca_cert.pem",
             "key": "test_ca_key.pem",
-            "alpn": [
-              "h2",
-              "http/1.1"
-            ]
+            "alpn": ["h2", "http/1.1"]
           }
         }
       ]
@@ -47,10 +43,7 @@
           "TLS": {
             "host": "www.google.com",
             "insecure": true,
-            "alpn": [
-              "h2",
-              "http/1.1"
-            ]
+            "alpn": ["h2", "http/1.1"]
           }
         },
         {

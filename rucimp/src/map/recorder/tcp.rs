@@ -58,6 +58,7 @@ impl RecorderConn {
             return;
         }
         *this.state = State::SavingToFile;
+        this.record.record_shutdown();
         if this.save_future.is_none() {
             *this.save_future = Some(Box::pin(this.record.async_save()));
         }
