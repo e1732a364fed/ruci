@@ -10,21 +10,44 @@ jobs:
   build:
     strategy:
       matrix:
-        platform:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
+        config:
+          - {
+              name: "Windows-x86_64", artifact: "Windows-x86_64",
+              os: windows-latest,
+              has_release: true,
+              rust: stable-x86_64-msvc,
+              target_triple: x86_64-pc-windows-msvc
+            }
+          - {
+              name: "Linux", artifact: "Linux-x86_64",
+              os: ubuntu-latest,
+              has_release: true,
+              rust: stable,
+              target_triple: x86_64-unknown-linux-gnu
+            }
+          - {
+              name: "macOS-x64", artifact: "macOS-x64",
+              os: macos-latest,
+              rust: stable,
+              has_release: true,
+              target_triple: x86_64-apple-darwin
+            }
 
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{ matrix.config.os }}
+    name: '${{ matrix.config.name }}'
 
     steps:
     - uses: actions/checkout@v4
+    - name: Get version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+    - run: rustup target add ${{ matrix.config.target_triple }}
     - name: Build
       run: |
         cd rucimp
         cargo build --release --example chain --example suit  --example suit2 --verbose
     - name: Copy Files 
-      if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+      if: ${{ runner.os != 'Windows' }}
       run: |
         mkdir dist
         cp target/release/examples/chain dist/
@@ -42,25 +65,8 @@ jobs:
         cp -r resource dist/
   
     - name: Archive production artifacts
-      if: ${{ runner.os == 'Linux' }}
       uses: actions/upload-artifact@v4
       with:
-        name: ruci_linux
+        name: rucimp_${{ steps.get_version.outputs.VERSION }}_${{matrix.config.target_triple}}
         path: |
           dist
-    - name: Archive production artifacts
-      if: ${{ runner.os == 'macOS' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ruci_macOS
-        path: |
-          dist
-    
-    - name: Archive production artifacts
-      if: ${{ runner.os == 'Windows' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ruci_windows
-        path: |
-          dist
-        
