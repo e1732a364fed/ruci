@@ -1,3 +1,7 @@
+/*!
+Defines Mappper s that can generate a/some basic Stream, or can consume a Stream.
+*/
+
 pub mod accept;
 pub mod echo;
 

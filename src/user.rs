@@ -1,5 +1,5 @@
-/*
-mod user defines basic traits and helper structs for user authentication.
+/*!
+Defines basic traits and helper structs for user authentication.
  */
 
 use std::collections::{BTreeSet, HashMap};
@@ -27,6 +27,9 @@ pub trait UserTrait: Debug + Send + Sync {
     fn auth_bytes(&self) -> &[u8]; //与 auth_str 类似; 对于程序来说,bytes更方便处理; 可以与 auth_str 相同, 也可以不同.
 }
 
+/// a cloneable [`UserTrait`]
+///
+/// Dev Notes:
 /// 如果User的super trait 是 Clone, 则 [`Box<dyn User>`] 会报错, says
 /// can't make into object; 但是用 DynClone 就可以
 pub trait User: UserTrait + DynClone {}

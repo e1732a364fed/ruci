@@ -5,7 +5,7 @@ fold 模块是整个 ruci 链式架构的最核心部分
 
 the mod won't store dynamic data during folding.
 
-几个关键部分: [`MIter`],  [`DynIterator`],  [`DMIterBox`], [`FoldParams`], [`FoldResult`], [`fold`], [`fold_from_start`],
+几个关键部分: [`MIter`],  [`DynIterator`],  [`DMIterBox`], [`FoldParams`], [`FoldResult`], [`fn@fold`], [`fold_from_start`],
 
 */
 

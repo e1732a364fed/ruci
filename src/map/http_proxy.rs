@@ -1,5 +1,5 @@
 /*!
- * implements Mapper for http proxy
+implements Mapper for http proxy
  */
 
 use std::cmp::min;

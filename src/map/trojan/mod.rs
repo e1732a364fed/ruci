@@ -1,5 +1,5 @@
 /*!
- *  Implements <https://trojan-gfw.github.io/trojan/protocol> .
+Implements <https://trojan-gfw.github.io/trojan/protocol> .
  */
 use std::{fmt, mem};
 

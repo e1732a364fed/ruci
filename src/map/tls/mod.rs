@@ -1,5 +1,5 @@
-/*
-impl map::Mapper for tls
+/*!
+Defines Mapper s for tls server and client
  */
 mod load;
 

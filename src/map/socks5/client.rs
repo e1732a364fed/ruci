@@ -1,3 +1,8 @@
+/*
+Defines a Mapper for socks5 client.
+
+*/
+
 use bytes::BufMut;
 use macro_mapper::NoMapperExt;
 use map::{helpers, Addr, Network};

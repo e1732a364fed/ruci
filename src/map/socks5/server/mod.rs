@@ -1,6 +1,5 @@
 /*
-defines socks5 server behavior.
-
+Defines a Mapper for socks5 server.
 
 */
 

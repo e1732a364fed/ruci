@@ -1,5 +1,7 @@
 /*!
- * first try socks5, if not socks5, fallback to http proxy
+Defines a Mapper that can accept both socks5 and http proxy request.
+
+It will try socks5 first . If not socks5, fallbacks to http proxy
  */
 
 use futures::executor::block_on;

@@ -1,13 +1,12 @@
 /*!
- *
 ruci is a proxy abstraction framework, that abstracts the progress of network proxy
-by mod user, net , map and relay.
+by mod [`user`], [`net`] , [`map`] and [`relay`].
 
 uses tokio.
 
-See doc of mod map for the basic proxy progress abstraction.
+See doc of mod [`map`] for the basic proxy progress abstraction.
 
-Refer to rucimp sub crate for config file format related implements and for more proxy protocol implements.
+Refer to rucimp crate for config file format related implements and for more proxy protocol implements.
 
 */
 
