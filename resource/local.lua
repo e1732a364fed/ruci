@@ -576,7 +576,7 @@ local config_16_tun = {
                         tun_dev_name = "utun321",
                         tun_gateway = "10.0.0.1",
                         router_ip = "192.168.0.1",
-                        original_dev_name = "enp0s1",   -- windows/macos 可不填 original_dev_name, linux 要填 original_dev_name
+                        original_dev_name = "enp0s1", -- windows/macos 可不填 original_dev_name, linux 要填 original_dev_name
                         --direct_list = { "192.168.0.204" }, -- 服务端的ip要直连
                         dns_list = { "114.114.114.114" }
                     }
@@ -590,19 +590,19 @@ local config_16_tun = {
         chain = { {
             OptDialer = { -- 如果自动路由没写 direct_list, 也可以用 OptDialer+ bind_to_device 的方法
 
-            -- 注: windows 上要用 OptDialer + bind_to_device 的方法
+                -- 注: windows 上要用 OptDialer + bind_to_device 的方法
 
-           -- BindDialer = {
+                -- BindDialer = {
                 dial_addr = "tcp://192.168.0.204:10801",
                 sockopt = {
                     bind_to_device = "en0"
-                    
-                    -- enp0s1(linux 的一般情况) 
+
+                    -- enp0s1(linux 的一般情况)
                     -- en0  (macos 的情况)
                     -- WLAN( windows, 用wifi联网的情况)
                 }
             }
-        }, tlsout, websocket_out}
+        }, tlsout, websocket_out }
     } }
 
     --[[
@@ -611,7 +611,7 @@ local config_16_tun = {
         这就做出了一个简单的"VPN". 注意, 这种情况不可通过 tcp/udp 目标分流, 因为传递的直接是ip, 且未经任何探查和修改
         同时为了保证dns 不被污染, 要在 dns_list 中指定一个 好的dns
 
-        注意, 这种简单的ip relay 还算不上是真正的VPN, 因为同一时间只支持一个设备连到服务端. 想达到真正VPN的效果 
+        注意, 这种简单的ip relay 还算不上是真正的VPN, 因为同一时间只支持一个设备连到服务端. 想达到真正VPN的效果
         需要真正的VPN协议
 
     --]]
@@ -631,10 +631,11 @@ local config_17_tcp_ip_stack = {
                         tun_dev_name = "utun321",
                         tun_gateway = "10.0.0.1",
                         router_ip = "192.168.0.1",
+                        original_dev_name = "wlp3s0",
                         dns_list = { "114.114.114.114" }
                     }
                 }
-            }, "Stack"},
+            }, "Stack" },
             tag = "listen1"
         },
     },
@@ -650,10 +651,10 @@ local config_17_tcp_ip_stack = {
             OptDialer = {
                 dial_addr = "tcp://192.168.0.225:10801",
                 sockopt = {
-                    bind_to_device = "en0"
+                    bind_to_device = "wlp3s0"
                 }
             }
-        }, tlsout,trojan_out}
+        }, tlsout, trojan_out }
     } }
 }
 

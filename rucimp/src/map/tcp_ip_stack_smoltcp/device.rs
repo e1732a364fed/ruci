@@ -275,8 +275,11 @@ impl  SmoltcpDevice {
         let dst_ip_addr = ip_packet.dst_addr();
 
         match ip_packet.protocol() {
-            IpProtocol::Icmp | IpProtocol::Icmpv6 => {},
+            IpProtocol::Icmp | IpProtocol::Icmpv6 => {
+                debug!("is icmp, {n} {}",ip_packet.payload().len())
+            },
             IpProtocol::Tcp => {
+                debug!("is tcp, {n} {}",ip_packet.payload().len());
                 let tcp_packet = match TcpPacket::new_checked(ip_packet.payload()) {
                     Ok(p) => p,
                     Err(err) => {
@@ -347,6 +350,7 @@ impl  SmoltcpDevice {
                 }
             }
             IpProtocol::Udp => {
+                debug!("is udp, {n} {}",ip_packet.payload().len());
                 let packet = UdpPacket::new_checked(ip_packet.payload()).unwrap();
                 let src_port = packet.src_port();
                 let dst_port = packet.dst_port();
