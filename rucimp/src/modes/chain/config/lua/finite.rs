@@ -12,7 +12,7 @@ const DYN_SELECTORS_STR: &str = "Dyn_Selectors";
 /// test if the lua text is ok for finite dynamic
 pub fn is_finite_dynamic_available(lua_text: &str) -> mlua::Result<()> {
     let lua = Lua::new();
-    lua.load(lua_text).eval()?;
+    lua.load(lua_text).exec().context("eval lua failed")?;
 
     let lg = lua.globals();
 
@@ -48,7 +48,7 @@ fn load_finite_config_and_selector_map(
 
     file_source.inspect(|file_source| create_load_file_func(&lua, file_source));
 
-    lua.load(lua_text).eval()?;
+    lua.load(lua_text).exec()?;
 
     let g = lua.globals();
 

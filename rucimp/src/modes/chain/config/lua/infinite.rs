@@ -65,7 +65,7 @@ fn get_g_map_from(
     let lua = Lua::new();
     file_source.inspect(|file_source| create_load_file_func(&lua, file_source));
 
-    lua.load(lua_text).eval().context("eval lua failed")?;
+    lua.load(lua_text).exec().context("eval lua failed")?;
 
     let t: LuaTable = lua
         .globals()
@@ -85,7 +85,7 @@ fn get_g_map_from(
     // lua 的 index 是从 1 算起
     for i in 1..len + 1 {
         let lua = Lua::new();
-        lua.load(lua_text).eval()?;
+        lua.load(lua_text).exec().context("eval lua failed")?;
         set_lua_create_in_map_func(&lua)?;
         set_lua_create_out_map_func(&lua)?;
 
