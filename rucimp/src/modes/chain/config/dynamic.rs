@@ -100,9 +100,8 @@ pub trait UuidInfiniteNextInMapperGenerator {
 #[derive(Debug, Clone)]
 pub struct Bounded {
     /// 每一个 MapperBox 都是静态的, 在 Vec中有固定的序号.
-    /// 第一个会被第一个调用, 之后根据 selector 返回的序
-    /// 号 决定下一个调用哪一个. selector 返回 None 表示
-    /// 链终止
+    /// 根据 selector 返回的序号 决定下一个调用哪一个.
+    /// selector 返回 None 表示  链终止
     ///
     pub mb_vec: Vec<Arc<MapperBox>>,
 
