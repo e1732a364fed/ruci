@@ -19,6 +19,7 @@ stdio_socks5_chain = { { Stdio="fake.com:80" } , { Socks5 = {} } }
 
 -- stdin + 1 , 在命令行输入 a, 会得到b，输入1，得2，依此类推
 in_stdio_adder_chain = { { Stdio="fake.com:80" } , { Adder = 1 } } 
+--这里 用fake.com 的目的是, 保证我们的输入有一个目标. 这是代理所要求的.
 
 out_stdio_chain = { { Stdio="" } }
 
@@ -41,7 +42,7 @@ config = {
 --]=]
 
 
----[=[
+--[=[
 config = {
 
     inbounds = { 
@@ -61,3 +62,15 @@ config = {
 }
 
 --]=]
+
+
+
+config = {
+
+    inbounds = { 
+        {chain = in_stdio_adder_chain, tag = "listen1"} ,
+    },
+
+    outbounds = { { tag="dial1", chain = dial_trojan_chain } }
+}
+

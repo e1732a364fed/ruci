@@ -16,7 +16,7 @@ dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
 dial_trojan = { dial, { Trojan = "mypassword"} }
 
 
-stdio_out = { Stdio={}  }
+out_stdio_chain = { { Stdio="" } }
 
 direct_out_chain = { "Direct" }
 
@@ -30,6 +30,7 @@ config = {
         {chain = trojan_chain, tag = "listen1"} ,
     },
 
-    outbounds = { { tag="dial1", chain = direct_out_chain  } }
+    --outbounds = { { tag="dial1", chain = direct_out_chain  } }
+    outbounds = { { tag="dial1", chain = out_stdio_chain  } }
 }
 

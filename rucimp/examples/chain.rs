@@ -7,6 +7,7 @@
 use std::{
     env::{self, set_var},
     fs,
+    path::PathBuf,
     time::Duration,
 };
 
@@ -17,7 +18,8 @@ use rucimp::chain::{config::lua, engine::StaticEngine};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("rucimp~ chain\n");
-    println!("working dir: {:?} \n", std::env::current_dir().unwrap());
+    let cdir = std::env::current_dir().unwrap();
+    println!("working dir: {:?} \n", cdir);
 
     const RL: &str = "RUST_LOG";
     let l = env::var(RL).unwrap_or("debug".to_string());
@@ -48,15 +50,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         &default_file
     };
 
-    let mut r_contents = fs::read_to_string(filename);
+    let mut r_contents = fs::read_to_string(PathBuf::from(filename));
     if r_contents.is_err() {
-        r_contents = fs::read_to_string("resource/".to_owned() + &default_file);
+        debug!("try resource folder");
+        let mut cd = cdir.clone();
+        cd.push("resource");
+
+        if cd.exists() {
+            std::env::set_current_dir(cd)?;
+            r_contents = fs::read_to_string(filename);
+        }
     }
     if r_contents.is_err() {
-        r_contents = fs::read_to_string("../resource/".to_owned() + &default_file);
+        debug!("try ../resource folder");
+
+        let mut cd = cdir.clone();
+        cd.push("../resource");
+
+        if cd.exists() {
+            std::env::set_current_dir(cd)?;
+            r_contents = fs::read_to_string(filename);
+        }
     }
 
-    let contents = r_contents.expect(&("no ".to_owned() + &default_file));
+    let contents = r_contents.expect(&("no ".to_owned() + &filename));
 
     let mut se = StaticEngine::default();
     let sc = lua::load(&contents).unwrap();
