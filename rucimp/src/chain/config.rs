@@ -27,13 +27,17 @@ impl StaticConfig {
             .inbounds
             .iter()
             .map(|config_chain| {
-                config_chain
+                let mut chain = config_chain
                     .chain
                     .iter()
                     .map(|mapper_config| mapper_config.to_mapper())
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>();
+
+                chain.last_mut().unwrap().set_is_tail_of_chain(true);
+                chain
             })
             .collect();
+
         listens
     }
 
@@ -46,11 +50,14 @@ impl StaticConfig {
                 let dials: Vec<_> = dials
                     .iter()
                     .map(|config_chain| {
-                        config_chain
+                        let mut chain = config_chain
                             .chain
                             .iter()
                             .map(|mapper_config| mapper_config.to_mapper())
-                            .collect::<Vec<_>>()
+                            .collect::<Vec<_>>();
+
+                        chain.last_mut().unwrap().set_is_tail_of_chain(true);
+                        chain
                     })
                     .collect();
                 dials
@@ -214,7 +221,7 @@ impl ToMapper for OutMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
             OutMapperConfig::Stdio(s) => ruci::map::stdio::Stdio::from(s),
-            OutMapperConfig::Direct => Box::new(ruci::map::network::Direct),
+            OutMapperConfig::Direct => Box::new(ruci::map::network::Direct::default()),
             OutMapperConfig::Dialer(d) => match d {
                 Dialer::TcpDialer(td_str) => {
                     let a = net::Addr::from_ip_addr_str("tcp", td_str).unwrap();

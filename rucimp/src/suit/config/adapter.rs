@@ -65,7 +65,7 @@ pub fn load_in_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mappe
 /// 可作为 SuitEngine::new 的参数
 pub fn load_out_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<MapperBox> {
     match s {
-        "direct" => Some(Box::new(ruci::map::network::Direct)),
+        "direct" => Some(Box::new(ruci::map::network::Direct::default())),
 
         "adder" => {
             let a = ruci::map::math::Adder {

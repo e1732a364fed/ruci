@@ -1,16 +1,19 @@
 use log::{debug, info, log_enabled};
-use macro_mapper::{common_mapper_field, CommonMapperExt, DefaultMapperExt};
+use macro_mapper::{common_mapper_field, CommonMapperExt};
 use tokio::{
+    io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
     sync::mpsc::{self, Receiver},
 };
 
 use super::*;
-use crate::map;
 use crate::Name;
 
-#[derive(Clone, Debug, DefaultMapperExt)]
-pub struct Direct;
+/// only use CommonMapperExt's is_tail_of_chain. won't use configured_target_addr;
+/// if you want to set configured_target_addr, maybe you should use TcpDialer
+#[common_mapper_field]
+#[derive(Clone, Debug, Default, CommonMapperExt)]
+pub struct Direct {}
 impl Name for Direct {
     fn name(&self) -> &'static str {
         "direct"
@@ -41,7 +44,14 @@ impl Mapper for Direct {
                 let r = TcpStream::connect(aso).await;
 
                 match r {
-                    Ok(c) => {
+                    Ok(mut c) => {
+                        if self.is_tail_of_chain() && params.b.is_some() {
+                            let rw = c.write_all(params.b.as_ref().unwrap()).await;
+                            if let Err(re) = rw {
+                                return MapResult::from_err(re);
+                            }
+                            return MapResult::c(Box::new(c));
+                        }
                         return MapResult::obc(params.b, Box::new(c));
                     }
                     Err(e) => return MapResult::from_err(e),
