@@ -58,7 +58,7 @@ pub trait SuitConfigHolder: Send + Sync {
 pub trait MappersVec {
     fn get_mappers_vec(&self) -> Vec<Arc<MapperBox>>;
 
-    fn push_mapper(&mut self, adder: Arc<MapperBox>);
+    fn push_mapper(&mut self, mapper: Arc<MapperBox>);
 }
 
 #[async_trait]

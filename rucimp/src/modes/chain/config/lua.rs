@@ -35,12 +35,12 @@ pub fn try_load_bounded_dynamic(lua_text: &str) -> Result<()> {
     Ok(())
 }
 
-struct SelectorHelper<'a> {
-    pub inbounds_selector: HashMap<String, LuaNextSelector2<'a>>,
-    pub outbounds_selector: HashMap<String, LuaNextSelector2<'a>>,
+struct SelectorHelper {
+    pub inbounds_selector: HashMap<String, LuaNextSelector>,
+    pub outbounds_selector: HashMap<String, LuaNextSelector>,
 }
 
-pub fn load_bounded_dynamic_leak(
+pub fn load_bounded_dynamic(
     lua_text: String,
 ) -> Result<(
     StaticConfig,
@@ -49,17 +49,16 @@ pub fn load_bounded_dynamic_leak(
     Arc<HashMap<String, DMIterBox>>,
 )> {
     let lua = Lua::new();
-    let lua = Box::leak(Box::new(lua));
-    let (sc, sh) = load_bounded_dynamic_helper(lua, lua_text)?;
+    let (sc, sh) = load_bounded_dynamic_helper(&lua, lua_text)?;
 
     let (a, b, c) = get_dmiter_from_static_config_and_helper(sc.clone(), sh);
     Ok((sc, a, b, c))
 }
 
-fn load_bounded_dynamic_helper<'a>(
-    lua: &'a Lua,
+fn load_bounded_dynamic_helper(
+    lua: &Lua,
     lua_text: String,
-) -> Result<(StaticConfig, SelectorHelper<'a>)> {
+) -> Result<(StaticConfig, SelectorHelper)> {
     lua.load(lua_text).eval()?;
 
     let lg = lua.globals();
@@ -71,7 +70,7 @@ fn load_bounded_dynamic_helper<'a>(
         .context(format!("lua has no {}", GET_DYN_SELECTOR_FOR))?;
 
     let c: StaticConfig = lua.from_value(Value::Table(clt))?;
-    let x: HashMap<String, LuaNextSelector2> = c
+    let x: HashMap<String, LuaNextSelector> = c
         .inbounds
         .iter()
         .map(|x| {
@@ -85,12 +84,12 @@ fn load_bounded_dynamic_helper<'a>(
             };
             (
                 tag.to_string(),
-                LuaNextSelector2(Arc::new(parking_lot::Mutex::new(x))),
+                LuaNextSelector(Arc::new(parking_lot::Mutex::new(x.into_owned()))),
             )
         })
         .collect();
 
-    let y: HashMap<String, LuaNextSelector2> = c
+    let y: HashMap<String, LuaNextSelector> = c
         .outbounds
         .iter()
         .map(|x| {
@@ -104,7 +103,7 @@ fn load_bounded_dynamic_helper<'a>(
             };
             (
                 tag.to_string(),
-                LuaNextSelector2(Arc::new(parking_lot::Mutex::new(x))),
+                LuaNextSelector(Arc::new(parking_lot::Mutex::new(x.into_owned()))),
             )
         })
         .collect();
@@ -120,7 +119,7 @@ fn load_bounded_dynamic_helper<'a>(
 /// returns inbounds, first_outbound, outbound_map
 fn get_dmiter_from_static_config_and_helper(
     c: StaticConfig,
-    mut sh: SelectorHelper<'static>,
+    mut sh: SelectorHelper,
 ) -> (Vec<DMIterBox>, DMIterBox, Arc<HashMap<String, DMIterBox>>) {
     let ibs = c.get_inbounds();
     let v: Vec<DMIterBox> = ibs
@@ -177,44 +176,15 @@ fn get_dmiter_from_static_config_and_helper(
     (v, first_o.expect("has a outbound"), Arc::new(omap))
 }
 
-/// 弊端：使用 global中的名，慢
+///(用OwnedFunction 后无生命周期了, 但用了 mlua 的 unstable feature)
+/// https://github.com/mlua-rs/mlua/issues/262
 #[derive(Debug, Clone)]
-pub struct LuaNextSelector {
-    lua: Arc<parking_lot::Mutex<Lua>>,
-    func_name: String,
-}
+pub struct LuaNextSelector(Arc<parking_lot::Mutex<mlua::OwnedFunction>>);
+
+unsafe impl Send for LuaNextSelector {}
+unsafe impl Sync for LuaNextSelector {}
 
 impl NextSelector for LuaNextSelector {
-    fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64> {
-        let w = OptVecOptVecDataLuaWrapper(data);
-        let lua = self.lua.lock();
-
-        let f: LuaFunction = match lua.globals().get(self.func_name.as_str()) {
-            Ok(s) => s,
-            Err(e) => {
-                warn!("{}", e);
-                return None;
-            }
-        };
-
-        match f.call::<_, i64>((this_index, w)) {
-            Ok(rst) => Some(rst),
-            Err(err) => {
-                warn!("{}", err);
-                None
-            }
-        }
-    }
-}
-
-/// 弊端：有生命周期
-#[derive(Debug, Clone)]
-pub struct LuaNextSelector2<'a>(Arc<parking_lot::Mutex<LuaFunction<'a>>>);
-
-unsafe impl<'a> Send for LuaNextSelector2<'a> {}
-unsafe impl<'a> Sync for LuaNextSelector2<'a> {}
-
-impl<'a> NextSelector for LuaNextSelector2<'a> {
     fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64> {
         let w = OptVecOptVecDataLuaWrapper(data);
 

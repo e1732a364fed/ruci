@@ -183,7 +183,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
         };
 
         if log_enabled!(log::Level::Debug) {
-            debug!("acc: {cid} , adder: {}", adder.name())
+            debug!("acc: {cid} , mapper: {}", adder.name())
         }
         last_r = adder
             .maps(
