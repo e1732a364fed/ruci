@@ -91,12 +91,12 @@ impl StaticEngine {
         let mut tasks = Vec::new();
         let mut shutdown_tx_vec = Vec::new();
 
-        let selector = FixedOutSelector {
-            mappers: defaultc.iter(),
-        };
+        let it = defaultc.iter();
+        let ib = Box::new(it);
+
+        let selector = FixedOutSelector { mappers: ib };
         let selector = Box::new(selector);
-        let selector: &'static FixedOutSelector<'_, core::slice::Iter<'_, Box<dyn MapperSync>>> =
-            Box::leak(selector);
+        let selector: &'static FixedOutSelector = Box::leak(selector);
 
         self.servers.iter().for_each(|inmappers| {
             let (tx, rx) = oneshot::channel();
@@ -109,7 +109,10 @@ impl StaticEngine {
                 let a = Box::new(a);
                 let a = Box::leak(a);
 
-                accumulate_from_start(atx, rx, a.iter(), Some(oti)).await;
+                let ait = a.iter();
+                let aib = Box::new(ait);
+
+                accumulate_from_start(atx, rx, aib, Some(oti)).await;
                 Ok(())
             };
 

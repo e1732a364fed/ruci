@@ -1,25 +1,16 @@
-use crate::map::{AnyData, MapperBox};
+use crate::map::{AnyData, MIterBox};
 
 /// Send + Sync to use in async
-pub trait OutSelector<'a, T>: Send + Sync
-where
-    T: Iterator<Item = &'a MapperBox>,
-{
-    fn select(&self, params: Vec<Option<AnyData>>) -> T;
+pub trait OutSelector: Send + Sync {
+    fn select(&self, params: Vec<Option<AnyData>>) -> MIterBox;
 }
 
-pub struct FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send,
-{
-    pub mappers: T,
+pub struct FixedOutSelector {
+    pub mappers: MIterBox,
 }
 
-impl<'a, T> OutSelector<'a, T> for FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send + Sync,
-{
-    fn select(&self, _params: Vec<Option<AnyData>>) -> T {
+impl OutSelector for FixedOutSelector {
+    fn select(&self, _params: Vec<Option<AnyData>>) -> MIterBox {
         self.mappers.clone()
     }
 }

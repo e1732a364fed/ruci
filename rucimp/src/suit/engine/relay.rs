@@ -156,8 +156,12 @@ async fn listen_tcp(
     let listener = TcpListener::bind(laddr.clone()).await?;
 
     let clone_oti = move || oti.clone();
-    let insc = move || ins.clone();
-    let outcc = move || outc.clone();
+
+    let ins = Box::new(ins);
+    let ins: &'static Arc<dyn Suit> = Box::leak(ins);
+
+    let outc = Box::new(outc);
+    let outc: &'static Arc<dyn Suit> = Box::leak(outc);
 
     tokio::select! {
         r = async {
@@ -171,8 +175,8 @@ async fn listen_tcp(
 
                 let laddr = laddr.clone();
                 let ti = clone_oti();
-                let ins = insc();
-                let outc = outcc();
+                let iiter = ins.get_mappers_vec().iter();
+                let oiter =  outc.get_mappers_vec().iter();
 
                 tokio::spawn(async move {
                     if log_enabled!(Debug) {
@@ -185,8 +189,8 @@ async fn listen_tcp(
                         outc.whole_name(),
                         raddr.to_string(),
                         "tcp",
-                        ins.get_mappers_vec().iter(),
-                        outc.get_mappers_vec().iter(),
+                        Box::new(iiter),
+                        Box::new(oiter),
                         outc.addr(),
                         ti,
                     )
@@ -226,9 +230,9 @@ pub async fn handle_conn<'a>(
     in_raddr: String,
     network_str: &'static str,
 
-    ins_iterator: impl Iterator<Item = &'a MapperBox>,
+    ins_iterator: MIterBox,
 
-    outc_iterator: impl Iterator<Item = &'a MapperBox>,
+    outc_iterator: MIterBox,
     outc_addr: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
@@ -244,7 +248,7 @@ pub async fn handle_conn<'a>(
     let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            map::accumulate::<_>(
+            map::accumulate(
                 cidc,
                 ProxyBehavior::DECODE,
                 MapResult::c(in_conn),
@@ -310,7 +314,7 @@ pub async fn handle_conn<'a>(
         let cidc = cid.clone();
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                map::accumulate::<_>(
+                map::accumulate(
                     cidc,
                     ProxyBehavior::ENCODE,
                     MapResult {

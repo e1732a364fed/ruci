@@ -236,10 +236,9 @@ async fn listen_tcp2(
 
     let clone_oti = move || oti.clone();
 
-    let selector = FixedOutSelector {
-        mappers: outc.get_mappers_vec().iter(),
-    };
-    let selector = Box::new(selector);
+    let iter = outc.get_mappers_vec().iter();
+    let ib = Box::new(iter);
+    let selector = Box::new(FixedOutSelector { mappers: ib });
     let selector = Box::leak(selector);
 
     tokio::select! {
@@ -257,9 +256,12 @@ async fn listen_tcp2(
                     debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
                 }
 
+                let iter = outc.get_mappers_vec().iter();
+                let ib = Box::new(iter);
+
                 tokio::spawn( relay::conn::handle_conn_clonable(
                         Box::new(tcpstream),
-                        ins.get_mappers_vec().iter(),
+                        ib,
                         selector,
                         ti,
                     )

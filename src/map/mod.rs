@@ -515,7 +515,7 @@ pub async fn accumulate_from_start(
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去;
 ///
 /// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
-pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
+pub async fn in_iter_accumulate_forever(
     cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,

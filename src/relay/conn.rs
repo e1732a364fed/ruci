@@ -16,16 +16,12 @@ use crate::net::CID;
 
 /// block until in and out handshake is over.
 /// utilize handle_in_accumulate_result and  route::OutSelector
-pub async fn handle_conn_clonable<'a, T, T2>(
+pub async fn handle_conn_clonable(
     in_conn: net::Conn,
-    ins_iterator: T,
-    selector: &'a dyn OutSelector<'a, T2>,
+    ins_iterator: MIterBox,
+    selector: &'static dyn OutSelector,
     ti: Option<Arc<net::TransmissionInfo>>,
-) -> io::Result<()>
-where
-    T: Iterator<Item = &'a MapperBox>,
-    T2: Iterator<Item = &'a MapperBox>,
-{
+) -> io::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
         None => CID::new(),
@@ -34,7 +30,7 @@ where
     let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            map::accumulate::<_>(
+            map::accumulate(
                 cidc,
                 ProxyBehavior::DECODE,
                 MapResult::c(in_conn),
@@ -57,17 +53,13 @@ where
 }
 
 /// block until out handshake is over
-pub async fn handle_in_accumulate_result<'a, T, T2>(
-    mut listen_result: AccumulateResult<'a, T>,
+pub async fn handle_in_accumulate_result(
+    mut listen_result: AccumulateResult,
 
-    out_selector: &'a dyn OutSelector<'a, T2>,
+    out_selector: &'static dyn OutSelector,
 
     ti: Option<Arc<net::TransmissionInfo>>,
-) -> io::Result<()>
-where
-    T: Iterator<Item = &'a MapperBox>,
-    T2: Iterator<Item = &'a MapperBox>,
-{
+) -> io::Result<()> {
     let cid = listen_result.id.as_ref().unwrap();
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
@@ -93,7 +85,7 @@ where
     let cidc = cid.clone();
     let dial_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            map::accumulate::<_>(
+            map::accumulate(
                 cidc,
                 ProxyBehavior::ENCODE,
                 MapResult {
