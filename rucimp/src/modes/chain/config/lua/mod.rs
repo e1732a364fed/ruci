@@ -13,6 +13,7 @@ use parking_lot::Mutex;
 use ruci::map::fold::OVOD;
 use ruci::net::CID;
 
+/// set global func create_in_mapper_func for lua
 pub fn set_lua_create_in_mapper_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
         let c = lua.from_value::<InMapperConfig>(v)?;
@@ -24,6 +25,7 @@ pub fn set_lua_create_in_mapper_func(lua: &Lua) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// set global func create_out_mapper_func for lua
 pub fn set_lua_create_out_mapper_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
         let c = lua.from_value::<OutMapperConfig>(v)?;
@@ -452,6 +454,9 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                             LuaValue::Table(t) => {
                                 Some((r.0, LuaMapperRepresentation::OT(t.into_owned())))
                             }
+                            LuaValue::UserData(t) => {
+                                Some((r.0, LuaMapperRepresentation::OU(t.into_owned())))
+                            }
 
                             _ => None,
                         }
@@ -488,7 +493,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                                 // debug!("thread resume got table");
                                 LuaMapperRepresentation::OT(t.into_owned())
                             }
-
+                            LuaValue::UserData(t) => LuaMapperRepresentation::OU(t.into_owned()),
                             _ => panic!("get lua value not string or table"),
                         };
 
@@ -523,6 +528,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
             let v = match r.1 {
                 LuaValue::String(t) => LuaMapperRepresentation::OS(t.into_owned()),
                 LuaValue::Table(t) => LuaMapperRepresentation::OT(t.into_owned()),
+                LuaValue::UserData(t) => LuaMapperRepresentation::OU(t.into_owned()),
 
                 _ => panic!("get lua value not string or table"),
             };
@@ -534,6 +540,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
     }
 }
 
+#[derive(Clone)]
 pub struct LuaMapperWrapper(Arc<MapperBox>);
 
 use mlua::UserData;
@@ -546,5 +553,9 @@ impl<'lua> FromLua<'lua> for LuaMapperWrapper {
         }
     }
 }
-
-impl UserData for LuaMapperWrapper {}
+use mlua::UserDataMethods;
+impl UserData for LuaMapperWrapper {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("clone", |_, m, ()| Ok(m.clone()));
+    }
+}
