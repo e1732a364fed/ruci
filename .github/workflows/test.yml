@@ -6,6 +6,7 @@ on:
     branches: [ "tokio" ]
     paths-ignore: 
       - 'doc/**'
+      - 'resource/**'
       - '**.md'
       - '.github/workflows/*.yml'
       - '**/Makefile'
