@@ -170,7 +170,7 @@ o2node-.->collector
 - [x] Tls, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
 - [x] Adder (按字节加法器), Counter, Echo
 - [x] 路由 (tag_route)
-- [ ] 回落
+- [x] 回落
 - [ ] DNS
 
 ### rucimp
@@ -178,11 +178,12 @@ o2node-.->collector
 - [x] suit配置格式 （即旧 verysimple 的 toml 配置）
 - [x] chain配置格式 (新增, lua格式)
 - [x] 静态链
-- [x] 动态链(有限动态链，完全动态链)
+- [x] 动态链(有限动态链, 完全动态链)
 - [x] 示例代理程序 (rucimp/examples: suit 或 chain)
 - [x] 路由 (rule_route)
 - [x] tproxy
-- [ ] http header，websocket
+- [x] native-tls
+- [x] http header, websocket
 - [ ] grpc
 - [ ] tcp/ip netstack (lwip/smoltcp)
 - [ ] quic

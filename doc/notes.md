@@ -2,6 +2,12 @@
 
 链式配置中，每条链都必须标一个 tag
 
+## tls 证书
+
+tls 中， native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前又只写了pks8 一种情况;
+
+而默认的 rustls 则支持得更广泛一些, x509, rsa, pks8, ecc , crl 都支持 ，但不支持 pks12 (pfx) 格式
+
 ## 名词
 
 在 suit 模式中, 使用 server, client 这样的形式, 而在 chain 模式中, 使用 inbound 和 
@@ -61,7 +67,7 @@ ruci中有三种 route 实现 fixed, tag, info; 而 rucimp 有一种完整的 ro
 
 rucimp 中有很多feature :
 
-"lua", "route","geoip", "tun", "sockopt"
+"lua", "route","geoip", "tun", "sockopt", "tokio-native-tls"
 
 
 
@@ -154,7 +160,7 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 trace 会将chain 中经过的每一个 Mapper的 name 记录下来, 放到 `Vec<String> ` 中. 它只对于动态链有用
 如果是静态链, 则记录一个 chain_tag 就能知道完整的 链信息
 
-trace 还会将每条连接的 ub, db 信息记录下来
+trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来，这是最耗性能的
 
 
 ## 其它
