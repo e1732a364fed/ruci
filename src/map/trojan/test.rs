@@ -129,7 +129,7 @@ async fn udp() -> anyhow::Result<()> {
     let ula = u.local_addr()?;
     println!("binded to , {}", ula);
 
-    let so12345 = Addr::from_ip_addr_str("udp", "127.0.0.1:12345").unwrap();
+    let so12345 = Addr::from_network_ip_addr_str("udp", "127.0.0.1:12345").unwrap();
 
     //let so12345c = so12345.clone();
 
@@ -154,8 +154,11 @@ async fn udp() -> anyhow::Result<()> {
         println!("try w2");
 
         let r =
-            ac.w.write(b"dfg", &Addr::from_addr_str("udp", "5.6.7.8:90").unwrap())
-                .await;
+            ac.w.write(
+                b"dfg",
+                &Addr::from_network_addr_str("udp", "5.6.7.8:90").unwrap(),
+            )
+            .await;
 
         println!("try w2 ok, {:?}", r);
 

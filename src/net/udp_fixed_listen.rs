@@ -309,8 +309,8 @@ mod test {
     #[tokio::test]
     async fn test1() -> anyhow::Result<()> {
         let listener_addr = "127.0.0.1:12345";
-        let laddr = Addr::from_addr_str("udp", listener_addr).unwrap();
-        let dst = Addr::from_addr_str("udp", "127.0.0.1:23456").unwrap();
+        let laddr = Addr::from_network_addr_str("udp", listener_addr).unwrap();
+        let dst = Addr::from_network_addr_str("udp", "127.0.0.1:23456").unwrap();
         let mut listener = FixedTargetAddrUDPListener::new(laddr.clone(), dst).await?;
 
         let u1 = UdpSocket::bind("127.0.0.1:11211").await?;

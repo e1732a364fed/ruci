@@ -205,7 +205,7 @@ impl Server {
             }
         }
 
-        let ta = net::Addr::from_addr_str("tcp", &addr_str);
+        let ta = net::Addr::from_network_addr_str("tcp", &addr_str);
         let ta = match ta {
             Ok(a) => a,
             Err(e) => {
@@ -390,7 +390,7 @@ mod test {
             .await
             .unwrap();
 
-        let ta = net::Addr::from_addr_str("tcp", "www.baidu.com:80").unwrap();
+        let ta = net::Addr::from_network_addr_str("tcp", "www.baidu.com:80").unwrap();
 
         let r = c
             .handshake(CID::default(), Box::new(cs), ta.clone(), None)

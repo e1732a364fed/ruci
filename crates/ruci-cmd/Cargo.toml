@@ -58,6 +58,7 @@ flate2 = { version = "1.1.0", optional = true }
 
 
 [features]
+default = ["api_server", "utils"]
 lua = ["rucimp/lua"]
 lua54 = ["rucimp/lua54"]
 

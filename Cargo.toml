@@ -94,6 +94,7 @@ tun = { version = "0.7", features = ["async"], optional = true }
 
 [features]
 
+default = ["tun"]
 
 trace = []
 

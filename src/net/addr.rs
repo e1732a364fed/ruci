@@ -242,8 +242,8 @@ impl Addr {
     pub fn from_network_addr_url(s: &str) -> Result<Self> {
         let ns: Vec<_> = s.splitn(2, "://").collect();
         match ns.len() {
-            1 => Addr::from_addr_str("tcp", s),
-            2 => Addr::from_addr_str(ns[0], ns[1]),
+            1 => Addr::from_network_addr_str("tcp", s),
+            2 => Addr::from_network_addr_str(ns[0], ns[1]),
             _ => bail!("Addr::from_network_addr_str, split :// got len!=2 && len!=1",),
         }
     }
@@ -253,7 +253,7 @@ impl Addr {
     ///  if unix, then like path/to/file, without the port and colon.
     ///
     /// network must be a valid network str
-    pub fn from_addr_str(network: &str, s: &str) -> Result<Self> {
+    pub fn from_network_addr_str(network: &str, s: &str) -> Result<Self> {
         let ns: Vec<_> = if s.starts_with('[') && s.contains("]:") {
             crate::utils::rm_first(s).split("]:").collect()
         } else {
@@ -272,7 +272,7 @@ impl Addr {
     }
 
     /// like 127.0.0.1:80  or `[::1]:80`
-    pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
+    pub fn from_network_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
         let ns: Vec<_> = if s.starts_with('[') && s.contains("]:") {
             crate::utils::rm_first(s).split("]:").collect()
         } else {
@@ -465,13 +465,21 @@ impl Addr {
             #[cfg(feature = "tun")]
             Network::IP => {
                 debug!("Addr dialing IP {}", self);
-                let (tun_name, dial_addr, netmask) = self
-                    .to_name_ip_netmask()
-                    .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
-                let c = tun::create_bind(tun_name, dial_addr, netmask)
-                    .await
-                    .context("Addr::try_dial tun, dial failed")?;
-                Ok(Stream::Conn(Box::new(c)))
+                let c = match &self.addr {
+                    NetAddr::Name(name, _) => {
+                        let fd: i32 = name.parse()?;
+
+                        tun::create_fd_device(fd).context("Addr::try_dial tun, dial failed")?
+                    }
+                    _ => {
+                        let (tun_name, dial_addr, netmask) = self
+                            .to_name_ip_netmask()
+                            .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
+                        tun::create_bind(tun_name, dial_addr, netmask)
+                            .context("Addr::try_dial tun, dial failed")?
+                    }
+                };
+                Ok(Stream::Conn(c))
             }
             Network::TCP => {
                 let so = self.get_socket_addr_or_resolve(oc.as_deref()).await?;
@@ -535,22 +543,25 @@ impl Addr {
         match network {
             #[cfg(feature = "tun")]
             Network::IP => {
-                let ip = match &bind_a {
+                let bind_addr = match &bind_a {
                     Some(a) => a,
                     None => bail!("bind_a is required for binding ip"),
                 };
-                debug!("Addr binding IP {}", ip);
-                let (tun_name, dial_addr, netmask) = ip
-                    .to_name_ip_netmask()
-                    .context("Addr::bind_dial tun, to_name_ip_netmask failed")?;
-                // let rw = tun::create_bind_rw(tun_name, dial_addr, netmask)
-                //     .await
-                //     .context("bind_dial failed for tun")?;
-                // Ok(Stream::RW(rw))
+                debug!("Addr binding IP(tun) {}", bind_addr);
 
-                let c = tun::create_bind(tun_name, dial_addr, netmask)
-                    .await
-                    .context("bind_dial failed for tun")?;
+                let c = match &bind_addr.addr {
+                    NetAddr::Name(name, _) => {
+                        let fd: i32 = name.parse()?;
+                        tun::create_fd_device(fd).context("Addr::try_dial tun, dial failed")?
+                    }
+                    _ => {
+                        let (tun_name, dial_addr, netmask) = bind_addr
+                            .to_name_ip_netmask()
+                            .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
+                        tun::create_bind(tun_name, dial_addr, netmask)
+                            .context("Addr::try_dial tun, dial failed")?
+                    }
+                };
                 Ok(Stream::Conn(c))
             }
             Network::TCP => {

@@ -411,7 +411,7 @@ fn get_ovod() -> anyhow::Result<OVOD> {
     let u1 = 3u8;
     let boxed_u1: Box<dyn Data> = Box::new(u1);
 
-    let addr = net::Addr::from_addr_str("tcp", "127.0.0.1:80")?;
+    let addr = net::Addr::from_network_addr_str("tcp", "127.0.0.1:80")?;
     let boxed_a1: Box<dyn Data> = Box::new(map::RAddr(addr));
 
     let pt = PlainText::new("user".to_string(), "pass".to_string());

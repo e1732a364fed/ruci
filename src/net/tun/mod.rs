@@ -16,7 +16,7 @@ use tun::{AsyncDevice, ToAddress, TunPacketCodec};
 
 use super::Conn;
 
-pub async fn create_bind_sink_stream<A1, A2>(
+pub fn create_bind_sink_stream<A1, A2>(
     tun_name: Option<String>,
     bind_addr: A1,
     netmask: A2,
@@ -28,14 +28,26 @@ where
     A1: ToAddress,
     A2: ToAddress,
 {
-    let device = create_bind_device(tun_name, bind_addr, netmask).await?;
+    let device = create_bind_device(tun_name, bind_addr, netmask)?;
     let stream = device.into_framed();
 
     let (writer, reader) = futures::StreamExt::split(stream);
     Ok((writer, reader))
 }
 
-pub async fn create_bind_device<A1, A2>(
+pub fn create_fd_device(fd: std::os::raw::c_int) -> anyhow::Result<Box<AsyncDevice>> {
+    let mut cfg = tun::Configuration::default();
+    cfg.raw_fd(fd);
+    #[cfg(target_os = "ios")]
+    cfg.platform_config(|p_cfg| {
+        p_cfg.packet_information(true);
+    });
+    let device = tun::create_as_async(&cfg).context("create tun device failed")?;
+
+    Ok(Box::new(device))
+}
+
+pub fn create_bind_device<A1, A2>(
     tun_name: Option<String>,
     bind_addr: A1,
     netmask: A2,
@@ -70,7 +82,7 @@ where
     Ok(Box::new(device))
 }
 
-pub async fn create_bind<A1, A2>(
+pub fn create_bind<A1, A2>(
     tun_name: Option<String>,
     bind_addr: A1,
     netmask: A2,
@@ -79,12 +91,12 @@ where
     A1: ToAddress,
     A2: ToAddress,
 {
-    let device = create_bind_device(tun_name, bind_addr, netmask).await?;
+    let device = create_bind_device(tun_name, bind_addr, netmask)?;
 
     Ok(device)
 }
 
-pub async fn create_bind_rw<A1, A2>(
+pub fn create_bind_rw<A1, A2>(
     tun_name: Option<String>,
     bind_addr: A1,
     netmask: A2,
@@ -93,7 +105,7 @@ where
     A1: ToAddress,
     A2: ToAddress,
 {
-    let device = create_bind_device(tun_name, bind_addr, netmask).await?;
+    let device = create_bind_device(tun_name, bind_addr, netmask)?;
 
     let wr = device.split().unwrap();
 
@@ -114,7 +126,7 @@ mod test {
     async fn test() {
         let a = Addr::from_strs("ip", "utun432", "10.0.0.1", 24).unwrap();
         let (dn, ip, nm) = a.to_name_ip_netmask().unwrap();
-        let mut conn = create_bind(dn, ip, nm).await.unwrap();
+        let mut conn = create_bind(dn, ip, nm).unwrap();
         let mut buf = [0; 4096];
         println!("reading...\nuse:\nsudo ifconfig utun432 10.0.0.1 10.0.0.2 up\non macos, then \nping 10.0.0.2");
         let amount = conn.read(&mut buf).await.unwrap();

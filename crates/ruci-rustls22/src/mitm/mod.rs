@@ -192,8 +192,11 @@ impl Map for MITM {
                             );
 
                             Some(
-                                ruci::net::Addr::from_addr_str("tcp", &(authority + ":443"))
-                                    .unwrap(),
+                                ruci::net::Addr::from_network_addr_str(
+                                    "tcp",
+                                    &(authority + ":443"),
+                                )
+                                .unwrap(),
                             )
                         };
 

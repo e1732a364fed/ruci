@@ -148,7 +148,7 @@ mod test {
         let ula = u.local_addr()?;
         println!("bound to , {}", ula);
 
-        let so12345 = Addr::from_ip_addr_str("udp", "127.0.0.1:12345")
+        let so12345 = Addr::from_network_ip_addr_str("udp", "127.0.0.1:12345")
             .unwrap()
             .get_socket_addr()
             .unwrap();
@@ -175,8 +175,11 @@ mod test {
             println!("try w2");
 
             let r =
-                ac.w.write(b"dfg", &Addr::from_addr_str("udp", "5.6.7.8:90").unwrap())
-                    .await;
+                ac.w.write(
+                    b"dfg",
+                    &Addr::from_network_addr_str("udp", "5.6.7.8:90").unwrap(),
+                )
+                .await;
 
             println!("try w2 ok, {:?}", r);
 
@@ -194,7 +197,7 @@ mod test {
         assert!(read_r.unwrap().is_err());
         let mut buf = BytesMut::with_capacity(100);
         crate::map::socks5::encode_udp_diagram(
-            &Addr::from_addr_str("udp", "1.2.3.4:56").unwrap(),
+            &Addr::from_network_addr_str("udp", "1.2.3.4:56").unwrap(),
             &mut buf,
         );
         buf.extend_from_slice(b"abc");

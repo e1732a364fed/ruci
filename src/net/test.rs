@@ -99,6 +99,9 @@ fn addr_to_name_ip_netmask() {
     let r = a.to_name_ip_netmask();
     println!("{:?}", r);
     assert!(r.is_ok());
+
+    let a = Addr::from_name_network_addr_url("ip://#fd1").unwrap();
+    println!("{:?}", a);
 }
 
 #[test]

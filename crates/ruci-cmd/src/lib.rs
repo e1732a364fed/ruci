@@ -295,10 +295,7 @@ pub mod android {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn Java_com_ruci_android_Class1_result(
-        env: JNIEnv,
-        _: JClass,
-    ) -> jstring {
+    pub unsafe extern "C" fn Java_com_ruci_android_Class1_state(env: JNIEnv, _: JClass) -> jstring {
         let r = CORE_STATE.get().unwrap().lock();
 
         let x = std::ffi::CString::new(format!("{:?}", &*r)).unwrap();
