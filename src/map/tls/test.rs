@@ -5,7 +5,7 @@ use crate::{
         tls::{self, client::ClientOptions},
         Map, MapParams, CID,
     },
-    net::{self, gen_random_higher_port, helpers::MockTcpStream},
+    net::{self, gen_random_higher_port, helpers::mock::MockTcpStream},
 };
 use futures::{join, FutureExt};
 use parking_lot::Mutex;

@@ -4,7 +4,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use futures::executor::block_on;
 use ruci::{
     map::{math::*, *},
-    net::{helpers::MockTcpStream2, CID},
+    net::{helpers::mock::MockTcpStream2, CID},
 };
 use tokio::{io::AsyncWriteExt, sync::Mutex};
 

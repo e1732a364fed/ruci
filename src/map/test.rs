@@ -2,7 +2,7 @@ use crate::map::fold::MIterBox;
 use crate::map::math::{AddDirection, Adder};
 use crate::map::network::Direct;
 use crate::map::{Map, MapParams, CID};
-use crate::net::helpers::MockTcpStream;
+use crate::net::helpers::mock::MockTcpStream;
 
 use parking_lot::Mutex;
 use std::sync::Arc;

@@ -44,7 +44,9 @@ use bytes::BytesMut;
 use itertools::Itertools;
 use macro_map::*;
 use rand::Rng;
-use ruci::net::helpers::{BufContentLenProtocolReader, BufReadResult};
+use ruci::net::helpers::{
+    ContentLenProtocolBufReadResult, ContentLenProtocolBufReader, ContentLenProtocolPacketMetadata,
+};
 use ruci::net::http::CommonHttp;
 use ruci::net::Addr;
 use ruci::{
@@ -470,13 +472,15 @@ pub struct Conn {
     base_w: Pin<Box<dyn AsyncWrite + Send + Sync>>,
     write_cache: Option<BytesMut>,
     write_state: WriteState,
-    reader: BufContentLenProtocolReader,
+    reader: ContentLenProtocolBufReader,
 }
 
 pub const READ_CAP: usize = 1024 * 1024;
 const SERVER_QUESTION_PROMPT: &str = "\nYou can also ask these questions:\n";
 
-fn get_pr_header_content_length_body_index(pr: Box<dyn CommonHttp>) -> Result<(usize, usize)> {
+fn get_pr_header_content_length_body_index(
+    pr: Box<dyn CommonHttp>,
+) -> Result<ContentLenProtocolPacketMetadata> {
     match pr.get_header("Content-Length") {
         Some(h) => {
             let clr: usize = h.value.parse().map_err(|e| {
@@ -485,7 +489,10 @@ fn get_pr_header_content_length_body_index(pr: Box<dyn CommonHttp>) -> Result<(u
                     format!("content length 无法解析为整数 ,{e}"),
                 )
             })?;
-            Ok((clr, pr.get_body_start_index()))
+            Ok(ContentLenProtocolPacketMetadata {
+                content_len: clr,
+                body_start_index: pr.get_body_start_index(),
+            })
         }
         None => Err(std::io::Error::new(
             std::io::ErrorKind::Other,
@@ -573,7 +580,7 @@ impl AsyncRead for Conn {
         rbuf: &mut ReadBuf<'_>,
     ) -> Poll<Result<()>> {
         match ready!(self.reader.read(cx)) {
-            Ok(Some(BufReadResult {
+            Ok(Some(ContentLenProtocolBufReadResult {
                 buf,
                 body_from: from,
                 body_to: to,
@@ -775,7 +782,7 @@ impl ClientOrServer {
             base_w: Box::pin(w),
             write_cache: Some(BytesMut::with_capacity(READ_CAP)),
             write_state: WriteState::default(),
-            reader: BufContentLenProtocolReader::new(
+            reader: ContentLenProtocolBufReader::new(
                 READ_CAP,
                 Box::pin(r),
                 Box::new(content_len_body_start_index_parse_fn),
@@ -970,7 +977,7 @@ mod tests {
 
             // 验证服务器能正确解码数据
             let writev = Arc::new(Mutex::new(Vec::new()));
-            let mock_tcp = net::helpers::MockTcpStream {
+            let mock_tcp = net::helpers::mock::MockTcpStream {
                 read_data: client_write.to_vec(),
                 write_data: Vec::new(),
                 write_target: Some(writev.clone()),
@@ -1009,7 +1016,7 @@ mod tests {
             // 测试无效数据
             let invalid_data = b"Invalid HTTP Data";
             let writev = Arc::new(Mutex::new(Vec::new()));
-            let mock_tcp = net::helpers::MockTcpStream {
+            let mock_tcp = net::helpers::mock::MockTcpStream {
                 read_data: invalid_data.to_vec(),
                 write_data: Vec::new(),
                 write_target: Some(writev),

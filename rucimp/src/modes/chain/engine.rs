@@ -399,4 +399,31 @@ impl Engine {
 
         info!("chain engine stopped");
     }
+
+    /// A helper function to start an engine with a static config, run it until it got shutdown signal, then stop it.
+    pub async fn run_static_engine(sc: StaticConfig) -> anyhow::Result<()> {
+        let mut e = Engine::new();
+
+        e.init_static(sc);
+
+        let mut js = e.run().await?;
+
+        crate::utils::wait_close_sig().await?;
+
+        std::thread::spawn(|| {
+            std::thread::sleep(std::time::Duration::from_secs(3));
+            println!("Force shutdown after 3 secs!"); //only println works at this point.
+            std::process::exit(1);
+        });
+
+        e.stop().await;
+
+        debug!("Waiting for join set");
+
+        let r = js.shutdown().await;
+
+        debug!("{:?}", r);
+
+        Ok(())
+    }
 }

@@ -91,7 +91,7 @@ async fn auth_tcp_in_mem_earlydata() -> anyhow::Result<()> {
 
     let writev = Arc::new(Mutex::new(Vec::new()));
 
-    let client_tcps = net::helpers::MockTcpStream {
+    let client_tcps = net::helpers::mock::MockTcpStream {
         read_data: buf.to_vec(),
         write_data: Vec::new(),
         write_target: Some(writev),

@@ -29,7 +29,7 @@ use futures::join;
 use std::net::IpAddr;
 use std::sync::Arc;
 
-use crate::net::helpers::MockTcpStream;
+use crate::net::helpers::mock::MockTcpStream;
 
 use crate::map::socks5::{
     self, ATYP_DOMAIN, ATYP_IP4, ATYP_IP6, AUTH_NONE, AUTH_PASSWORD, CMD_CONNECT, VERSION5,

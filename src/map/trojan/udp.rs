@@ -10,7 +10,7 @@ use tokio::io::{AsyncWrite, ReadHalf, WriteHalf};
 use tracing::debug;
 
 use crate::{
-    map::helpers::BufContentLenProtocolReader,
+    map::helpers::ContentLenProtocolBufReader,
     net::{
         self,
         addr_conn::{AsyncReadAddr, AsyncWriteAddr, MAX_DATAGRAM_SIZE},
@@ -24,13 +24,13 @@ use super::*;
 
 //Reader 包装 ReadHalf<net::Conn>, 使其可以按trojan 格式读出 数据和Addr
 pub struct Reader {
-    reader: BufContentLenProtocolReader,
+    reader: ContentLenProtocolBufReader,
 }
 
 impl Reader {
     pub fn new(r: ReadHalf<net::Conn>) -> Self {
         Self {
-            reader: BufContentLenProtocolReader::new(
+            reader: ContentLenProtocolBufReader::new(
                 MAX_DATAGRAM_SIZE,
                 Box::pin(r),
                 Box::new(|data: &[u8]| {
@@ -51,8 +51,10 @@ impl Reader {
                     if crlf != CRLF {
                         return Err(io::Error::other("invalid CRLF"));
                     }
-
-                    Ok((data_len, data.len() - buf.len()))
+                    Ok(helpers::ContentLenProtocolPacketMetadata {
+                        content_len: data_len,
+                        body_start_index: data.len() - buf.len(),
+                    })
                 }),
             ),
         }
@@ -198,7 +200,7 @@ mod test {
 
     use self::net::{
         addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt},
-        helpers::MockTcpStream,
+        helpers::mock::MockTcpStream,
     };
     use super::*;
     use parking_lot::Mutex;

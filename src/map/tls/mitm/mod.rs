@@ -44,7 +44,7 @@ impl Map for MITM {
 
                 let mut c = params.c.try_unwrap_tcp().unwrap();
 
-                let b = if params.b.is_some() && params.b.as_ref().unwrap().len() > 0 {
+                let b = if params.b.is_some() && !params.b.as_ref().unwrap().is_empty() {
                     params.b.unwrap()
                 } else {
                     let mut b = [0u8; MTU];
@@ -77,7 +77,7 @@ impl Map for MITM {
 
                 assert!(b.len() >= 2);
 
-                if &b[..2] == *b"\x16\x03" {
+                if b[..2] == *b"\x16\x03" {
                     let authority = if let Some(host) = tls::extract_host_from_client_hello(&b) {
                         host
                     } else {
@@ -175,7 +175,7 @@ impl Map for MITM {
                     let b = BytesMut::from(&b[..n]);
 
                     return MapResult::new_c(stream).a(ta).b(Some(b)).build();
-                } else if &b[..4] == *b"GET " {
+                } else if b[..4] == *b"GET " {
                     debug!("  connection is plain http");
                     debug!(
                         "connection is plain http, will pass as is. ta: {:?}, b: {}",

@@ -5,8 +5,8 @@ rucimp 的 examples 提供数个示例可执行文件,主要目的是提供演�
 
 
 
-chain_trace 演示 单连接流量监控
-chain_infinite 演示 完全动态链, 其与 chain 的运行方式一样, 不再赘述
+lua_trace 演示 单连接流量监控
+lua_infinite 演示 完全动态链, 其与 lua 的运行方式一样, 不再赘述
 
 run_h2_trojans_recorder_pair.sh 同时运行h2 的 local 和 remote端用于测试并生成 recorder记录文件
 
@@ -18,16 +18,16 @@ run_h2_trojans_recorder_pair.sh 同时运行h2 的 local 和 remote端用于测�
 ```sh
 # in folder rucimp, run:
 
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp use-native-tls" --example chain
-RUST_LOG=none,ruci=debug cargo run --features "lua steganography" --example chain
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp use-native-tls" --example lua
+RUST_LOG=none,ruci=debug cargo run --features "lua steganography" --example lua
 
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp use-native-tls" --example chain -- remote.lua
-RUST_LOG=none,ruci=debug cargo run --features "lua steganography" --example chain -- remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp use-native-tls" --example lua -- remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua steganography" --example lua -- remote.lua
 
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain_infinite -- local_mux_h2.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example lua_infinite -- local_mux_h2.lua
 
 # linux
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun sockopt" --example chain
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun sockopt" --example lua
 
 ```
 
@@ -52,7 +52,7 @@ then put it to resource folder
 need to enable rucimp's tun feature (which enables ruci's tun feature):
 
 ```sh
-sudo RUST_LOG=debug cargo run --example chain -F tun -F lua
+sudo RUST_LOG=debug cargo run --example lua -F tun -F lua
 ```
 
 （这里的 -F 与上文的 --features 用处相同，只不过 对于参数 一个适合少量 一个适合大量)
@@ -67,14 +67,14 @@ inbounds = {
 }
 ```
 
-运行上面命令运行 chain, 然后在 terminal 新标签中 输入下面命令
+运行上面命令运行 lua, 然后在 terminal 新标签中 输入下面命令
 
 ```sh
 sudo ifconfig utun321 10.0.0.1 10.0.0.2 up
 ping 10.0.0.2
 ```
 
-将能在 chain 的命令行中接收到 ping 的数据包
+将能在 lua 的命令行中接收到 ping 的数据包
 
 ### 全局代理路由
 

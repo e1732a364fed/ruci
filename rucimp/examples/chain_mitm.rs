@@ -1,27 +1,19 @@
 /*!
-在 working dir 或 working dir /resource 或 ../resource/ 文件夹查找 local.lua 或
- 用户提供的参数作为配置文件 读取它并以 chain 模式运行
+演示 mitm 的 代理用法
+
+ 这里手动配置 StaticConfig, 不使用 加载配置文件的方式
 */
 
-use std::time::Duration;
-
-use rucimp::{
-    modes::chain::{
-        config::{
-            BindDialerConfig, DirectConfig, InMapConfig, InMapConfigChain, OutMapConfig,
-            OutMapConfigChain, PlainTextSet, StaticConfig, TlsIn, TlsOut, TrojanPassSet,
-        },
-        engine::Engine,
+use rucimp::modes::chain::{
+    config::{
+        BindDialerConfig, DirectConfig, InMapConfig, InMapConfigChain, OutMapConfig,
+        OutMapConfigChain, PlainTextSet, StaticConfig, TlsIn, TlsOut, TrojanPassSet,
     },
-    utils::*,
+    engine::Engine,
 };
 
-// 这里手动配置 StaticConfig, 不使用 加载配置文件的方式
-
-async fn run_engine2() -> anyhow::Result<()> {
-    let mut e = Engine::new();
-
-    e.init_static(StaticConfig {
+async fn run_engine_server_end() -> anyhow::Result<()> {
+    Engine::run_static_engine(StaticConfig {
         inbounds: vec![InMapConfigChain {
             tag: None,
             chain: vec![
@@ -53,40 +45,18 @@ async fn run_engine2() -> anyhow::Result<()> {
         tag_route: None,
         fallback_route: None,
         rule_route: None,
-    });
-
-    let mut js = e.run().await?;
-
-    wait_close_sig().await?;
-
-    std::thread::spawn(|| {
-        std::thread::sleep(Duration::from_secs(3));
-        println!("Force shutdown after 3 secs!"); //only println works at this point.
-        std::process::exit(1);
-    });
-
-    e.stop().await;
-
-    debug!("Waiting for join set");
-
-    let r = js.shutdown().await;
-
-    debug!("{:?}", r);
-
-    Ok(())
+    })
+    .await
 }
 
-use tracing::debug;
 mod shared;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     shared::print_env_version_and_init_log("example: chain mitm");
 
-    tokio::spawn(run_engine2());
+    tokio::spawn(run_engine_server_end());
 
-    let mut e = Engine::new();
-
-    e.init_static(StaticConfig {
+    let sc = StaticConfig {
         inbounds: vec![InMapConfigChain {
             tag: None,
             chain: vec![
@@ -121,25 +91,7 @@ async fn main() -> anyhow::Result<()> {
         tag_route: None,
         fallback_route: None,
         rule_route: None,
-    });
+    };
 
-    let mut js = e.run().await?;
-
-    wait_close_sig().await?;
-
-    std::thread::spawn(|| {
-        std::thread::sleep(Duration::from_secs(3));
-        println!("Force shutdown after 3 secs!"); //only println works at this point.
-        std::process::exit(1);
-    });
-
-    e.stop().await;
-
-    debug!("Waiting for join set");
-
-    let r = js.shutdown().await;
-
-    debug!("{:?}", r);
-
-    Ok(())
+    Engine::run_static_engine(sc).await
 }
