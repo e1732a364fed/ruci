@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf, process::Command};
 
 use anyhow::{anyhow, bail};
 use tokio::signal;
-use tracing::{debug, info};
+use tracing::{debug, info, trace};
 
 use crate::COMMON_DIRS;
 
@@ -138,7 +138,7 @@ pub fn sync_run_command_list_no_stop(list: Vec<&str>) -> anyhow::Result<()> {
         }
         let args = strs.split_off(1);
 
-        debug!(cmd = strs[0], args = ?args, "running command",);
+        trace!(cmd = strs[0], args = ?args, "running command",);
 
         let r = Command::new(strs[0]).args(args).output();
         match r {
@@ -149,7 +149,7 @@ pub fn sync_run_command_list_no_stop(list: Vec<&str>) -> anyhow::Result<()> {
             }
             Err(e) => {
                 debug!("run command got err, result is {:?}", e);
-                return Err(e.into());
+                continue;
             }
         }
     }
@@ -168,7 +168,7 @@ pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
         }
         let args = strs.split_off(1);
 
-        debug!(cmd = strs[0], args = ?args, "running command",);
+        trace!(cmd = strs[0], args = ?args, "running command",);
 
         let r = Command::new(strs[0]).args(args).output();
 
@@ -190,7 +190,7 @@ pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
 }
 
 pub fn run_command(cmd: &str, args: &str) -> anyhow::Result<()> {
-    debug!(cmd = cmd, args = ?args, "running command",);
+    trace!(cmd = cmd, args = ?args, "running command",);
 
     let r = Command::new(cmd).args(args.split(' ')).output()?;
 

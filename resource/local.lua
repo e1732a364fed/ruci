@@ -51,6 +51,10 @@ tproxy_listen_tcp_chain = {
             port = 12345,
             --auto_route_tcp = true, -- only set route for tcp
             auto_route = true, -- auto_route will set route for both tcp and udp at the appointed port
+
+            route_ipv6 = true, -- 如果为true, 则  也会 对 ipv6 网段执行 自动路由
+
+            -- local_net4 = "192.168.0.0/16" -- 直连 ipv4 局域网段 不给出时, 默认即为 192.168.0.0/16
         }
     }
 }

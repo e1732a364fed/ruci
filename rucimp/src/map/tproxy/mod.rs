@@ -38,8 +38,11 @@ use crate::utils::{run_command, sync_run_command_list_no_stop, sync_run_command_
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Options {
-    pub port: Option<u32>,
+    pub port: Option<u16>,
     pub route_ipv6: Option<bool>,
+
+    /// 局域网段, 默认为 [`DEFAULT_LOCAL_NET4`]
+    pub local_net4: Option<String>,
     pub auto_route: Option<bool>,
     pub auto_route_tcp: Option<bool>,
 }
@@ -49,8 +52,7 @@ pub struct Options {
 #[mapper_ext_fields]
 #[derive(Debug, Clone, Default, MapperExt)]
 pub struct TcpResolver {
-    //opts: Options,
-    port: Option<u32>,
+    opts: Options,
 }
 
 impl Name for TcpResolver {
@@ -59,28 +61,46 @@ impl Name for TcpResolver {
     }
 }
 
+const DEFAULT_PORT: u16 = 12345;
+
 impl TcpResolver {
     pub fn new(opts: Options) -> anyhow::Result<Self> {
+        let p = opts.port.unwrap_or(DEFAULT_PORT);
+
         if opts.auto_route.unwrap_or_default() {
             info!("tproxy run auto_route");
 
             anyhow::Context::context(
-                run_tcp_route(opts.port.unwrap_or(12345), true),
+                run_tcp_route(p, true, &opts.local_net4),
                 "run auto_route commands failed",
             )?;
+
+            if opts.route_ipv6.unwrap_or_default() {
+                info!("tproxy run_tcp_route6");
+                let r = run_tcp_route6(p, true);
+                if let Err(e) = r {
+                    warn!("tproxy run run_tcp_route6 got error {e}")
+                }
+            }
         } else if opts.auto_route_tcp.unwrap_or_default() {
             info!("tproxy run auto_route_tcp");
 
             anyhow::Context::context(
-                run_tcp_route(opts.port.unwrap_or(12345), false),
+                run_tcp_route(opts.port.unwrap_or(DEFAULT_PORT), false, &opts.local_net4),
                 "run auto_route_tcp commands failed",
             )?;
+
+            if opts.route_ipv6.unwrap_or_default() {
+                info!("tproxy run_tcp_route6");
+                let r = run_tcp_route6(p, false);
+                if let Err(e) = r {
+                    warn!("tproxy run run_tcp_route6 got error {e}")
+                }
+            }
         }
 
-        let is_auto_route =
-            opts.auto_route.unwrap_or_default() || opts.auto_route_tcp.unwrap_or_default();
         Ok(Self {
-            port: if is_auto_route { opts.port } else { None },
+            opts,
             ext_fields: Some(MapperExtFields::default()),
         })
     }
@@ -88,12 +108,19 @@ impl TcpResolver {
 
 impl Drop for TcpResolver {
     fn drop(&mut self) {
-        if let Some(port) = self.port {
+        if let Some(port) = self.opts.port {
             info!("tproxy run down_auto_route");
 
-            let r = down_auto_route(port);
+            let r = down_auto_route(port, &self.opts.local_net4);
             if let Err(e) = r {
                 warn!("tproxy run down_auto_route got error {e}")
+            }
+
+            if self.opts.route_ipv6.unwrap_or_default() {
+                let r = down_auto_route6(port);
+                if let Err(e) = r {
+                    warn!("tproxy run down_auto_route6 got error {e}")
+                }
             }
         }
     }
@@ -168,9 +195,9 @@ impl UDPListener {
                 let src_dst_map = Arc::new(Mutex::new(HashMap::new()));
                 let mapc = src_dst_map.clone();
 
-                let mcr = UdpR { rx };
+                let r = UdpR { rx };
 
-                let mcw = UdpW { us, src_dst_map };
+                let w = UdpW { us, src_dst_map };
 
                 // 阻塞函数要用 新线程 而不是 tokio::spawn, 否则 程序退出时会卡住
 
@@ -187,7 +214,7 @@ impl UDPListener {
                     info!("tproxy udp terminated");
                 });
 
-                let mut ac = AddrConn::new(Box::new(mcr), Box::new(mcw));
+                let mut ac = AddrConn::new(Box::new(r), Box::new(w));
                 ac.cached_name = "tproxy_udp".to_string();
                 Stream::AddrConn(ac)
             }),
@@ -291,7 +318,7 @@ impl AsyncWriteAddr for UdpW {
     }
 
     fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        debug!("tproxy MsgConnW close called");
+        debug!("tproxy UdpW close called");
         let mut mg = self.src_dst_map.lock();
         mg.clear();
         Poll::Ready(Ok(()))
