@@ -41,8 +41,9 @@ impl AsyncRead for CounterConn {
     ) -> Poll<io::Result<()>> {
         let previous_len = buf.filled().len();
         let r = self.base.as_mut().poll_read(cx, buf);
-        let n = buf.filled().len() - previous_len;
         if let Poll::Ready(Ok(())) = &r {
+            let n = buf.filled().len() - previous_len;
+
             let db = self.data.db.fetch_add(n as u64, Ordering::Relaxed);
             if log_enabled!(log::Level::Debug) {
                 debug!("cid: {}, counter: db: {}, ", self.data.cid, db,);

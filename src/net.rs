@@ -330,10 +330,11 @@ pub struct TransmissionInfo {
 }
 
 /// ConnTrait 将 可异步读写的功能抽象出来。TcpStream 也实现了 ConnTrait
+/// 这是一个很重要的 Trait
 pub trait ConnTrait: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
 impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync> ConnTrait for T {}
 
-/// 一个方便的 对 ConnTrait 的包装
+/// 一个方便的 对 ConnTrait 的包装。很重要
 pub type Conn = Box<dyn ConnTrait>;
 
 /// may log debug or do other side-effect stuff with id.

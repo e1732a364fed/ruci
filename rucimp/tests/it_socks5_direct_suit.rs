@@ -10,7 +10,7 @@
 测试了 发起长时间挂起的请求的情况 （非法）
  */
 
-use std::{env::set_var, io, sync::Arc, thread, time::Duration};
+use std::{env::set_var, io, sync::Arc, time::Duration};
 
 use bytes::{BufMut, BytesMut};
 use futures::{pin_mut, select, FutureExt};

@@ -1,4 +1,4 @@
-use std::{env::set_var, sync::Arc, thread, time::Duration};
+use std::{env::set_var, sync::Arc, time::Duration};
 
 use futures::{join, FutureExt};
 use log::info;
