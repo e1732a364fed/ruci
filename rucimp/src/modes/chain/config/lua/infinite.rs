@@ -46,16 +46,25 @@ pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
 /// get (inbounds generator map, outbounds generator map).
 ///
 /// read INFINITE_CONFIG_FIELD  global variable
-pub fn load_infinite_io(lua_text: &str) -> anyhow::Result<(GMap, GMap)> {
-    let i = get_g_map_from(lua_text, ProxyBehavior::DECODE)?;
-    let o = get_g_map_from(lua_text, ProxyBehavior::ENCODE)?;
+pub fn load_infinite_io(
+    lua_text: &str,
+    file_source: Option<&crate::utils::FileSource>,
+) -> anyhow::Result<(GMap, GMap)> {
+    let i = get_g_map_from(lua_text, ProxyBehavior::DECODE, file_source)?;
+    let o = get_g_map_from(lua_text, ProxyBehavior::ENCODE, file_source)?;
     Ok((i, o))
 }
 
-fn get_g_map_from(lua_text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMap> {
+fn get_g_map_from(
+    lua_text: &str,
+    behavior: ProxyBehavior,
+    file_source: Option<&crate::utils::FileSource>,
+) -> anyhow::Result<GMap> {
     let mut g_map: GMap = HashMap::new();
 
     let lua = Lua::new();
+    file_source.inspect(|file_source| create_load_file_func(&lua, file_source));
+
     lua.load(lua_text).eval().context("eval lua failed")?;
 
     let t: LuaTable = lua

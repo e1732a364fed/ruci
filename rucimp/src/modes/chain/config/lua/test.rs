@@ -39,7 +39,7 @@ fn test_in() -> mlua::Result<()> {
         }
     "#;
 
-    let mut c: StaticConfig = load_static(text)?;
+    let mut c: StaticConfig = load_static(text, None)?;
 
     println!("{:#?}", c);
 
@@ -48,12 +48,12 @@ fn test_in() -> mlua::Result<()> {
     lua.globals().set("inspect", inspect)?;
     lua.load(
         r#"
-        print(inspect(config))
+        print(inspect(Config))
     "#,
     )
     .exec()?;
 
-    c = load_static(text)?;
+    c = load_static(text, None)?;
 
     let first_listen_group = c.inbounds.first().unwrap();
     let last_m = first_listen_group.chain.last().unwrap();
@@ -112,7 +112,7 @@ fn test_out() -> mlua::Result<()> {
             }
         "#;
 
-    let c: StaticConfig = load_static(text)?;
+    let c: StaticConfig = load_static(text, None)?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -166,7 +166,7 @@ fn test_out2() -> mlua::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text)?;
+    let c: StaticConfig = load_static(text, None)?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -218,7 +218,7 @@ fn test_out3() -> mlua::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text)?;
+    let c: StaticConfig = load_static(text, None)?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -271,7 +271,7 @@ fn test_tag_route() -> mlua::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text)?;
+    let c: StaticConfig = load_static(text, None)?;
 
     println!("{:#?}", c);
     let tr = c.get_tag_route();
@@ -323,7 +323,7 @@ fn test_config1() -> mlua::Result<()> {
     lua.globals().set("inspect", inspect)?;
     lua.load(
         r#"
-        print(inspect(config))
+        print(inspect(Config))
     "#,
     )
     .exec()?;
@@ -398,7 +398,7 @@ fn test_rule_route() -> mlua::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text)?;
+    let c: StaticConfig = load_static(text, None)?;
 
     println!("{:#?}", c);
     let tr = c.get_rule_route(&crate::utils::FileSource::default());
@@ -557,7 +557,7 @@ Infinite = {
 }
         "#;
 
-    let gm = load_infinite_io(text)?;
+    let gm = load_infinite_io(text, None)?;
     println!("{:?}", gm);
     Ok(())
 }

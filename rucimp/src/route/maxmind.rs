@@ -29,7 +29,7 @@ pub fn open_mmdb(
     file_name: &str,
     source: &crate::utils::FileSource,
 ) -> anyhow::Result<maxminddb::Reader<Vec<u8>>> {
-    let (v, _) = crate::utils::get_file_content_from(file_name, source)?;
+    let (v, _) = source.get_file_content(file_name)?;
 
     let r = maxminddb::Reader::from_source(v);
     match r {

@@ -9,6 +9,7 @@ use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
 
+#[derive(Clone)]
 pub enum FileSource {
     Folders(Vec<String>), //从指定的一组路径来寻找文件
     Tar(Vec<u8>),         // 从一个 已放到内存中的 tar 中 寻找文件
@@ -19,28 +20,30 @@ impl Default for FileSource {
     }
 }
 
-/// 返回读到的 数据。如果 source 为 Folders ， 则还会返回 成功找到的路径
-pub fn get_file_content_from<'a>(
-    file_name: &'a str,
-    source: &'a FileSource,
-) -> anyhow::Result<(Vec<u8>, Option<&'a str>)> {
-    match source {
-        FileSource::Tar(v) => get_file_from_tar(file_name, v).map(|x| (x, None)),
+impl FileSource {
+    /// 返回读到的 数据。如果 source 为 Folders ， 则还会返回 成功找到的路径
+    pub fn get_file_content<'a>(
+        &'a self,
+        file_name: &'a str,
+    ) -> anyhow::Result<(Vec<u8>, Option<&'a str>)> {
+        match self {
+            FileSource::Tar(v) => get_file_from_tar(file_name, v).map(|x| (x, None)),
 
-        FileSource::Folders(possible_addrs) => {
-            for dir in possible_addrs {
-                let real_file_name = String::from(dir) + file_name;
+            FileSource::Folders(possible_addrs) => {
+                for dir in possible_addrs {
+                    let real_file_name = String::from(dir) + file_name;
 
-                if std::path::Path::new(&real_file_name).exists() {
-                    if let Ok(mut file) = std::fs::File::open(real_file_name) {
-                        let mut v = vec![];
-                        file.read_to_end(&mut v)?;
+                    if std::path::Path::new(&real_file_name).exists() {
+                        if let Ok(mut file) = std::fs::File::open(real_file_name) {
+                            let mut v = vec![];
+                            file.read_to_end(&mut v)?;
 
-                        return Ok((v, Some(dir)));
+                            return Ok((v, Some(dir)));
+                        }
                     }
                 }
+                Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found").into())
             }
-            Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found").into())
         }
     }
 }
@@ -57,7 +60,7 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
     };
 
     let fs = FileSource::default();
-    let r = get_file_content_from(filename, &fs).context("get file failed")?;
+    let r = fs.get_file_content(filename).context("get file failed")?;
 
     let mut cd = std::env::current_dir().expect("has current directory");
 
@@ -232,8 +235,7 @@ pub fn compress_bytes_to_zip(file_name_in_zip: &str, buf: &[u8]) -> std::io::Res
     let mut zip_writer = zip::ZipWriter::new(bs);
 
     let options = zip::write::SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated)
-        .unix_permissions(0o755);
+        .compression_method(zip::CompressionMethod::Deflated);
 
     zip_writer.start_file(file_name_in_zip, options)?;
     use std::io::Write;
@@ -266,11 +268,15 @@ pub fn get_file_from_tar(file_name: &str, b: &Vec<u8>) -> anyhow::Result<Vec<u8>
 
     let tp = std::path::Path::new(file_name);
 
+    debug!("finding {}, {}", file_name, b.len());
+
     let mut e = a
         .entries()
         .unwrap()
         .find(|a| a.as_ref().is_ok_and(|b| b.path().is_ok_and(|c| c == tp)))
         .ok_or_else(|| anyhow!("get_file_from_tar: can't find the file, {}", file_name))??;
+
+    debug!("found {}", file_name);
 
     let mut v = vec![];
     use std::io::Read;

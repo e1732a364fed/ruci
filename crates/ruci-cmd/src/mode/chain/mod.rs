@@ -72,10 +72,10 @@ pub(crate) async fn run(
                 get_file_f()?
             };
 
-        //tar.zip, tar, lua 三种情况. .tar.zip 要解压成 tar 之后，按 tar 的逻辑处理
-        // 若为 tar, 则会将 Engine 的 FileSource 设为 该tar, 后续 Engine 访问文件都会只在该tar 中寻找
+        // zip, tar, lua 三种情况. zip 要解压
+        // 之后若为 tar, 则会将 Engine 的 FileSource 设为 该tar, 后续 Engine 访问文件都会只在该tar 中寻找
 
-        if file_name.ends_with(".tar.zip") {
+        if file_name.ends_with(".zip") {
             let real_fn = &file_name[..file_name.len() - 4];
 
             file_bytes_v = rucimp::utils::extract_vec_from_zip(real_fn, file_bytes_v)?;
@@ -83,8 +83,12 @@ pub(crate) async fn run(
             file_name = real_fn.to_string();
         }
 
-        let contents = if file_name.ends_with(".tar") {
-            let md5_s = format!("{:x}", rucimp::utils::md5::compute(file_bytes_v.as_slice()));
+        if file_name.ends_with(".tar") {
+            let tar_file_bytes_v = file_bytes_v;
+            let md5_s = format!(
+                "{:x}",
+                rucimp::utils::md5::compute(tar_file_bytes_v.as_slice())
+            );
 
             let should_be = file_name.split_once('.').unwrap().0;
 
@@ -99,15 +103,14 @@ pub(crate) async fn run(
             }
 
             //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua
-            let v = rucimp::utils::get_file_from_tar(DEFAULT_CONFIG_FILE_NAME, &file_bytes_v)?;
+            let real_file_bytes =
+                rucimp::utils::get_file_from_tar(DEFAULT_CONFIG_FILE_NAME, &tar_file_bytes_v)?;
+            e.file_source = FileSource::Tar(tar_file_bytes_v);
 
-            let s = String::from_utf8_lossy(v.as_slice()).to_string();
-            e.file_source = FileSource::Tar(v);
+            file_bytes_v = real_file_bytes;
+        }
 
-            s
-        } else {
-            String::from_utf8_lossy(file_bytes_v.as_slice()).to_string()
-        };
+        let contents = String::from_utf8_lossy(file_bytes_v.as_slice()).to_string();
 
         if args.infinite {
             e.init_lua_infinite_dynamic(contents)?;

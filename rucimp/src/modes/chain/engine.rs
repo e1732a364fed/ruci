@@ -142,7 +142,8 @@ impl Engine {
         use anyhow::Context;
         debug!("trying init_lua_static");
 
-        let sc = lua::load_static(&lua_text).context("init_lua_static failed")?;
+        let sc = lua::load_static(&lua_text, Some(&self.file_source))
+            .context("init_lua_static failed")?;
         self.init_static(sc);
         Ok(())
     }
@@ -155,8 +156,9 @@ impl Engine {
         info!("initializing lua finite dynamic");
 
         use crate::modes::chain::config::lua;
-        let (sc, ibs, default_o, ods) = lua::finite::load_finite_dynamic(&lua_text)
-            .context("Engine::init_lua_finite_dynamic: lua::load_finite_dynamic failed")?;
+        let (sc, ibs, default_o, ods) =
+            lua::finite::load_finite_dynamic(&lua_text, Some(&self.file_source))
+                .context("Engine::init_lua_finite_dynamic: lua::load_finite_dynamic failed")?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);
         self.outbounds = ods;
@@ -171,7 +173,7 @@ impl Engine {
 
         info!("initializing lua infinite dynamic");
 
-        let g_maps = lua::infinite::load_infinite_io(&lua_text)?;
+        let g_maps = lua::infinite::load_infinite_io(&lua_text, Some(&self.file_source))?;
 
         let gi = g_maps.0;
         let go = g_maps.1;

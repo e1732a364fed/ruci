@@ -28,8 +28,11 @@ pub type LoadFiniteDynamicResult = (
     Arc<HashMap<String, DMIterBox>>,
 );
 
-pub fn load_finite_dynamic(lua_text: &str) -> mlua::Result<LoadFiniteDynamicResult> {
-    let (sc, sm) = load_finite_config_and_selector_map(lua_text)?;
+pub fn load_finite_dynamic(
+    lua_text: &str,
+    file_source: Option<&crate::utils::FileSource>,
+) -> mlua::Result<LoadFiniteDynamicResult> {
+    let (sc, sm) = load_finite_config_and_selector_map(lua_text, file_source)?;
 
     let (ibs, fb, obm) = get_io_bounds_by_config_and_selector_map(sc.clone(), sm);
     Ok((sc, ibs, fb, obm))
@@ -39,8 +42,11 @@ pub fn load_finite_dynamic(lua_text: &str) -> mlua::Result<LoadFiniteDynamicResu
 /// by tag of each chain
 fn load_finite_config_and_selector_map(
     lua_text: &str,
+    file_source: Option<&crate::utils::FileSource>,
 ) -> mlua::Result<(StaticConfig, HashMap<String, LuaNextSelector>)> {
     let lua = Lua::new();
+
+    file_source.inspect(|file_source| create_load_file_func(&lua, file_source));
 
     lua.load(lua_text).eval()?;
 
