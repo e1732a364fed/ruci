@@ -59,8 +59,9 @@ Steganography, cryptography, Provable Perfect Security ， Covert Communication
 https://patents.google.com/patent/CN101741744B/zh
 (接着看 Cited By 即可找到更多)
 
+更多讨论可移步电报
 
-可能有用的论文
+## 可能有用的论文
 
 https://www.usenix.org/conference/usenixsecurity24/presentation/xue-fingerprinting
 
@@ -76,7 +77,7 @@ https://www.journalofcybersec.com/CN/Y2023/V1/I1/38
 生成式隐写研究
 http://cjc.ict.ac.cn/online/bfpub/zlz-202322140707.pdf
 
-一些项目与资源
+## 一些项目与资源
 
 
 https://github.com/munhouiani/Deep-Packet
@@ -89,7 +90,7 @@ https://github.com/Srinivas11789/PcapXray
 https://wiki.wireshark.org/SampleCaptures
 
 
-
+## 学术刊物
 
 中国计算机学会推荐国际学术刊物
 https://www.ccf.org.cn/Academic_Evaluation/NIS/

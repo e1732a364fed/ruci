@@ -6,12 +6,11 @@ Defines a set of relay logic for proxy, but it is not compulsory.
 */
 mod cp_ac;
 mod cp_conn;
-pub mod record;
 pub mod route;
 
+pub use crate::utils::record::*;
 pub use cp_ac::*;
 pub use cp_conn::*;
-pub use record::*;
 
 use std::sync::Arc;
 

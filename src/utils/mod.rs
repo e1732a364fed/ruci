@@ -1,3 +1,5 @@
+pub mod record;
+
 use std::{fmt, io, process::Command};
 
 use anyhow::bail;

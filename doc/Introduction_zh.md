@@ -87,3 +87,22 @@ ruci-cmd 是一套长且乏味的应用程序代码，如果仅需了解基本�
 
 功能主要有 start_engine, api_client, api_server, utils 这几个部分.
 
+## 部分重要文档
+
+本项目中散布有很多文档文件，下面列出一些比较重要的
+
+[GOAL_zh.md](GOAL_zh.md)
+
+[CONTRIBUTING_zh.md](CONTRIBUTING_zh.md)
+
+[book](book/src/index.md)
+
+[notes.md](notes.md)
+
+[dev.md](dev.md)
+
+[rucimp/exmaples](../rucimp/examples/readme.md)
+
+[ruci-cmd](../crates/ruci-cmd/README.md)
+
+[ruci-cmd release log](../crates/ruci-cmd/release_log.md)

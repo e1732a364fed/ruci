@@ -1,4 +1,4 @@
-本文档是一个很长的文本文件，分为 user note , lib note 和 dev note 三部分
+本文档是一个很长的文本文件，分为 user note , dev note 两部分，内容较为碎片化，目的是快速记录一些有用的信息
 
 # user note 
 
@@ -246,12 +246,15 @@ smoltcp 的实现 在实践中比 lwip 实现快一些。因此 ruci-cmd 只采�
 
 在linux/macOS 上还发现了 内存泄漏问题，也许和 tun 包有关. windows上没有任何问题。
 
-# lib note
-
-ruci中有三种 route 实现 fixed, tag, info; 而 rucimp 有一种完整的 route 实现: RuleSet
 
 
 # dev note
+
+## route
+
+ruci中有三种 route 实现: fixed, tag, info; 
+
+而 rucimp 有一种完整的 route 实现: RuleSet
 
 ## feature  
 

@@ -1,6 +1,6 @@
 use tokio::sync::mpsc::{self, *};
 
-use super::*;
+use crate::net::{self, *};
 
 pub type OptNewInfoSender = Option<Sender<NewConnInfo>>;
 
