@@ -74,7 +74,7 @@ fn get_g_map_from(
     )?;
 
     let t_key = match behavior {
-        ProxyBehavior::UNSPECIFIED => todo!(),
+        ProxyBehavior::UNSPECIFIED => anyhow::bail!("ProxyBehavior::UNSPECIFIED unsupported"),
         ProxyBehavior::DECODE => "inbounds",
         ProxyBehavior::ENCODE => "outbounds",
     };

@@ -173,9 +173,19 @@ impl Map for OptDirect {
                     ))
                 }),
                 Network::TCP => so2::dial_tcp(&a, &self.sopt).map(|s| Stream::Conn(Box::new(s))),
-                _ => todo!(),
+                _ => {
+                    return MapResult::from_err_str(&format!(
+                        "OptDirect only supports dialing UDP or TCP, but got {}",
+                        a.network
+                    ))
+                }
             },
-            _ => todo!(),
+            _ => {
+                return MapResult::from_err_str(&format!(
+                    "OptDirect only supports ProxyBehavior::ENCODE, but got {:?}",
+                    behavior
+                ))
+            }
         };
         match dial_r {
             Ok(mut stream) => {
@@ -260,7 +270,12 @@ impl OptDialer {
                 ))
             }),
             Network::TCP => so2::dial_tcp(dial_a, &self.sockopt).map(|s| Stream::Conn(Box::new(s))),
-            _ => todo!(),
+            _ => {
+                return MapResult::from_err_str(&format!(
+                    "OptDirect only supports UDP or TCP, but got {}",
+                    dial_a.network
+                ))
+            }
         };
 
         match r {
