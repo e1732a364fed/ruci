@@ -4,7 +4,7 @@ features=()
 target=""
 version=""
 
-while getopts "v:t:f" opt; do
+while getopts "v:t:f:" opt; do
     case $opt in
         v)
             version=($OPTARG)
@@ -23,7 +23,7 @@ done
 
 TARGET_FEATURES="${features[@]}"
 
-echo "* Building ${target} package ${version} with features \"${TARGET_FEATURES}\" ..."
+echo "* Building ${target} package ${version} with features \"${features[@]}\" ..."
 
 cross build --target ${target} --features "${TARGET_FEATURES}" --release 
 
