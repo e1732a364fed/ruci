@@ -4,17 +4,16 @@
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
+    net::IpAddr,
     sync::Arc,
 };
 
 use async_trait::async_trait;
-use rustls::pki_types::IpAddr;
 
 use crate::{
     map::{AnyData, MIterBox},
     net,
-    user::{self, User, UserVec},
-    AnyBox, AnyS,
+    user::{self, bget_user_from_anydata, get_user_from_anydata, UserVec},
 };
 
 /// Send + Sync to use in async
@@ -117,49 +116,6 @@ pub struct RuleSetOutSelector {
     pub default: MIterBox,
 }
 
-/// from &AnyS get `Box<dyn User>`
-///
-/// # Example
-///
-/// ```
-/// use ruci::map::AnyBox;
-/// use ruci::user::{PlainText, User};
-/// use ruci::relay::route::bget_user_from_anydata;
-///
-/// let u = PlainText::new("u".to_string(), "".to_string());
-/// let ub0: Box<dyn User> = Box::new(u);
-/// let ub2: AnyArc = Arc::new(Mutex::new(ub0));
-/// let anyv = ub2.lock().await;
-/// let y = get_user_from_anydata(&*anyv);
-/// assert!(y.is_some());
-/// ```
-///
-pub fn get_user_from_anydata(anys: &AnyS) -> Option<Box<dyn User>> {
-    let a = anys.downcast_ref::<Box<dyn User>>();
-    a.map(|u| u.clone())
-}
-
-/// from &AnyBox get `Box<dyn User>`
-///
-/// # Example
-///
-/// ```
-/// use ruci::map::AnyBox;
-/// use ruci::user::{PlainText, User};
-/// use ruci::relay::route::bget_user_from_anydata;
-///
-/// let u = PlainText::new("u".to_string(), "".to_string());
-/// let ub0: Box<dyn User> = Box::new(u);
-/// let ub2:AnyBox = Box::new(ub0);
-/// let y = bget_user_from_anydata(&ub2);
-/// assert!(y.is_some());
-/// ```
-///
-pub fn bget_user_from_anydata(anys: &AnyBox) -> Option<Box<dyn User>> {
-    let a = anys.downcast_ref::<Box<dyn User>>();
-    a.map(|u| u.clone())
-}
-
 pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<UserVec> {
     let mut v = UserVec::new();
 
@@ -232,7 +188,7 @@ mod test {
     use crate::map::math::*;
     use crate::map::*;
     use crate::net::Addr;
-    use crate::user::PlainText;
+    use crate::user::{PlainText, User};
 
     use super::*;
 

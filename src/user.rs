@@ -5,6 +5,8 @@ use async_trait::async_trait;
 use dyn_clone::DynClone;
 use parking_lot::Mutex;
 use std::hash::Hash;
+
+use crate::{AnyBox, AnyS};
 /// 用于用户鉴权
 pub trait UserTrait: Debug + Send + Sync {
     /// 每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name. 用于在非敏感环境显示该用户
@@ -23,6 +25,49 @@ pub trait UserTrait: Debug + Send + Sync {
 pub trait User: UserTrait + DynClone {}
 impl<T: UserTrait + DynClone> User for T {}
 dyn_clone::clone_trait_object!(User);
+
+/// from &AnyS get `Box<dyn User>`
+///
+/// # Example
+///
+/// ```
+/// use ruci::*;
+/// use ruci::user::*;
+/// use parking_lot::Mutex;
+/// use std::sync::Arc;
+///
+/// let u = PlainText::new("u".to_string(), "".to_string());
+/// let ub0: Box<dyn User> = Box::new(u);
+/// let ub2: AnyArc = Arc::new(Mutex::new(ub0));
+/// let anyv = ub2.lock();
+/// let y = get_user_from_anydata(&*anyv);
+/// assert!(y.is_some());
+/// ```
+///
+pub fn get_user_from_anydata(anys: &AnyS) -> Option<Box<dyn User>> {
+    let a = anys.downcast_ref::<Box<dyn User>>();
+    a.map(|u| u.clone())
+}
+
+/// from &AnyBox get `Box<dyn User>`
+///
+/// # Example
+///
+/// ```
+/// use ruci::*;
+/// use ruci::user::*;
+/// ///
+/// let u = PlainText::new("u".to_string(), "".to_string());
+/// let ub0: Box<dyn User> = Box::new(u);
+/// let ub2:AnyBox = Box::new(ub0);
+/// let y = bget_user_from_anydata(&ub2);
+/// assert!(y.is_some());
+/// ```
+///
+pub fn bget_user_from_anydata(anys: &AnyBox) -> Option<Box<dyn User>> {
+    let a = anys.downcast_ref::<Box<dyn User>>();
+    a.map(|u| u.clone())
+}
 
 #[derive(Clone)]
 pub struct UserBox(pub Box<dyn User>);
