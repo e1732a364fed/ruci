@@ -339,6 +339,8 @@ end
 
 local inspect = require("inspect")
 
+--my_cid_record = {}
+
 infinite = {
 
     -- 下面这个演示 与第一个普通示例 形式上等价
@@ -354,6 +356,9 @@ infinite = {
                     },
                     new_thread_fn = function(cid, this_index, data)
                         --print("lua: cid",inspect(cid))
+                        --table.insert(my_cid_record,cid)
+                        --print("lua: cid cache",inspect(my_cid_record))
+
                         local new_cid, newi, new_data = coroutine.yield(1, {
                             Socks5 = {}
                         })
