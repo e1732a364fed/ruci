@@ -23,7 +23,7 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
         net::Network::TCP => {
             let r = TcpListener::bind(a.get_socket_addr().expect("a has socket addr"))
                 .await
-                .context("tcp listen failed")?;
+                .with_context(|| "tcp listen failed")?;
             Ok(Listener::TCP(r))
         }
         #[cfg(unix)]
@@ -38,9 +38,10 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
                     "unix listen: previous {:?} exists, will delete it for new listening.",
                     p
                 );
-                remove_file(p.clone()).context("unix listen try remove previous file failed")?;
+                remove_file(p.clone())
+                    .with_context(|| "unix listen try remove previous file failed")?;
             }
-            let r = UnixListener::bind(p).context("unix listen failed")?;
+            let r = UnixListener::bind(p).with_context(|| "unix listen failed")?;
 
             Ok(Listener::UNIX((r, filen)))
         }
@@ -70,7 +71,8 @@ impl Listener {
                 let p = PathBuf::from(filen.clone());
                 if p.exists() && !p.is_dir() {
                     warn!("unix clean up:  will delete {:?}", p);
-                    let r = remove_file(p.clone()).context("unix clean up delete file failed");
+                    let r =
+                        remove_file(p.clone()).with_context(|| "unix clean up delete file failed");
                     if let Err(e) = r {
                         warn!("{}", e)
                     }

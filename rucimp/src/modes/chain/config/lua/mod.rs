@@ -66,11 +66,13 @@ fn load_finite_config_and_selector_map(
 
     let g = lua.globals();
 
-    let config: LuaTable = g.get("config").context("lua has no config field")?;
+    let config: LuaTable = g
+        .get("config")
+        .with_context(|e| format!("lua has no config field {}", e))?;
 
     let _: LuaFunction = g
         .get(DYN_SELECTORS_STR)
-        .context(format!("lua has no {}", DYN_SELECTORS_STR))?;
+        .with_context(|e| format!("lua has no {}, {e}", DYN_SELECTORS_STR))?;
 
     let c: StaticConfig = lua.from_value(Value::Table(config))?;
     let mut selector_map: HashMap<String, LuaNextSelector> = c
@@ -160,7 +162,7 @@ fn get_iobounds_by_config_and_selector_map(
 /// used by load_infinite,
 pub type GMAP = HashMap<String, LuaNextGenerator>;
 
-const INFINITE_CONFIG_FIELD:&str = "infinite";
+const INFINITE_CONFIG_FIELD: &str = "infinite";
 
 /// get (inbounds generator map, outbounds generator map).
 ///

@@ -31,7 +31,7 @@ pub(crate) async fn run(
         use anyhow::Context;
 
         let contents = rucimp::cmd_common::try_get_filecontent("local.lua", Some(f))
-            .context(format!("run chain engine try get file {} failed", f))?;
+            .with_context(|| format!("run chain engine try get file {} failed", f))?;
 
         if args.infinite {
             se.init_lua_infinite_dynamic(contents)?;

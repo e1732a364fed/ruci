@@ -52,7 +52,7 @@ pub async fn dl_url(url: &str, file_name: &str) -> anyhow::Result<()> {
     use bytesize::ByteSize;
     let response = tokio::time::timeout(Duration::from_secs(10), reqwest::get(url))
         .await
-        .context("dl waiting for too long")??;
+        .with_context(|| "dl waiting for too long")??;
 
     info!("got response");
     let size = response.content_length().unwrap_or_default();

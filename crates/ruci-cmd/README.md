@@ -21,6 +21,8 @@ cargo run -F api_server -F api_client -F utils --release -- -a run
 
 debug:
 ```
+RUST_LOG=debug cargo run
+
 RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run --trace
 
 ```

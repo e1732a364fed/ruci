@@ -67,7 +67,8 @@ pub fn decode_udp_diagram(buf: &mut BytesMut) -> anyhow::Result<net::Addr> {
     }
     let _frag = buf.get_u8();
 
-    let mut ad = net::helpers::socks5_bytes_to_addr(buf).context("decode_udp_diagram failed")?;
+    let mut ad =
+        net::helpers::socks5_bytes_to_addr(buf).with_context(|| "decode_udp_diagram failed")?;
 
     ad.network = Network::UDP;
     Ok(ad)

@@ -416,13 +416,13 @@ impl Addr {
         match self.network {
             #[cfg(feature = "tun")]
             Network::IP => {
-                debug!("Addr dialing {}", self);
+                debug!("Addr dialing IP {}", self);
                 let (tun_name, dial_addr, netmask) = self
                     .to_name_ip_netmask()
-                    .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
+                    .with_context(|| "Addr::try_dial tun, to_name_ip_netmask failed")?;
                 let c = tun::dial(tun_name, dial_addr, netmask)
                     .await
-                    .context("Addr::try_dial tun, dial failed")?;
+                    .with_context(|| "Addr::try_dial tun, dial failed")?;
                 Ok(Stream::Conn(Box::new(c)))
             }
             Network::TCP => {

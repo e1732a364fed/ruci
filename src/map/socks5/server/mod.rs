@@ -336,7 +336,7 @@ impl Server {
             n = base
                 .read(&mut buf)
                 .await
-                .context("socks5 server read client cmd msg failed")?;
+                .with_context(|| "socks5 server read client cmd msg failed")?;
         }
         if n < 7 {
             let e = anyhow!("{}, socks5: read cmd part failed, msgTooShort: {}", cid, n);

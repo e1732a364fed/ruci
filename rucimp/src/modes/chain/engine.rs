@@ -110,7 +110,7 @@ impl Engine {
         use anyhow::Context;
         debug!("trying init_lua_static");
 
-        let sc = lua::load_static(&config_string).context("init_lua_static failed")?;
+        let sc = lua::load_static(&config_string).with_context(|| "init_lua_static failed")?;
         self.init_static(sc);
         Ok(())
     }
@@ -120,11 +120,11 @@ impl Engine {
     pub fn init_lua_finite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
         use anyhow::Context;
 
-        debug!("trying init_lua_finite_dynamic");
+        info!("initializing lua finite dynamic");
 
         use crate::modes::chain::config::lua;
-        let (sc, ibs, default_o, ods) =
-            lua::load_finite_dynamic(&config_string).context("lua::load_finite_dynamic failed")?;
+        let (sc, ibs, default_o, ods) = lua::load_finite_dynamic(&config_string)
+            .with_context(|| "lua::load_finite_dynamic failed")?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);
         self.outbounds = ods;
