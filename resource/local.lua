@@ -520,7 +520,15 @@ local config_15_tun = {
         --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
         -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
-        { chain = { { BindDialer = { bind_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1" },
+        {
+            chain = { {
+                BindDialer = {
+                    bind_addr = "ip://10.0.0.1:24#utun321",
+                    auto_route = true, -- 自动配置 系统路由 以 代理全局
+                }
+            } },
+            tag = "listen1"
+        },
     },
 
     --[[

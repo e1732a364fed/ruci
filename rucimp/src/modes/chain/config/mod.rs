@@ -216,12 +216,12 @@ impl ToMapBox for DialerConfig {
             .dial_addr
             .clone()
             .map(|a| net::Addr::from_name_network_addr_url(&a).expect("network_ip_addr is valid"));
-        let d = ruci::map::network::BindDialer {
-            dial_addr: opt_dial_a,
-            bind_addr: opt_bind_a,
-            auto_route: self.auto_route.clone(),
-            ext_fields: self.ext.as_ref().map(|e| e.to_ext_fields()),
-        };
+        let mut d = ruci::map::network::BindDialer::new();
+
+        d.dial_addr = opt_dial_a;
+        d.bind_addr = opt_bind_a;
+        d.auto_route = self.auto_route.clone();
+        d.ext_fields = self.ext.as_ref().map(|e| e.to_ext_fields());
 
         Box::new(d)
     }

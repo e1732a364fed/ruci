@@ -20,6 +20,7 @@ See [notes.md](doc/notes.md) for more notes.
 一个好的解决问题的模式: 有暂时不懂的问题可以先进群问, 确定问题后再发 issue
 
 Developer chat:     https://t.me/+6yL4ggeyKY0yNjIx
+
 User channel:       https://t.me/+r5hKQKYyeuowMTcx
 
 The project is work in progress, 功能会陆续添加
@@ -30,12 +31,12 @@ The project is work in progress, 功能会陆续添加
 The project is divided to three main parts:
 
 ruci is the base framewark, defines some concepts like【映射】(Map), 动态Map迭代器 DMIter; 
-implements chain structure, implements some basic Maps; provide some useful relay facilities.
+implements chain structure, implements some basic Maps; provides some useful relay facilities.
 
 rucimp provides more Maps, defines multiple config modes, provides some example binaries.
 rucimp is the core.
 
-ruci-cmd 是最终的全功能的可执行文件, 包含一些系统路由的配置功能 和 api-server
+ruci-cmd is the ultimate full feature executable, including utils, api-client and api-server
 
 具体名词解释请看下文. 
 
@@ -188,11 +189,12 @@ o2node-.->collector
 - [x] 动态链(有限动态链, 完全动态链)
 - [x] rucimp/examples: suit , chain, etc.
 - [x] 路由 (rule_route)
-- [x] tproxy
+- [x] tproxy (with auto_route)
 - [x] native-tls
 - [x] http_filter, websocket(including early data)
 - [x] h2, grpc
 - [x] quic
+- [ ] ip relay protocol test1
 - [ ] tcp/ip netstack (smoltcp)
 - [ ] ss?, vmess?
 
@@ -203,7 +205,6 @@ o2node-.->collector
 - [x] api_server
 - [x] api_client
 - [x] utils
-- [ ] system auto route
 
 #### Real Purpose of This Project?
 

@@ -1,5 +1,5 @@
 /*!
-Defines Mappper s that can generate a/some basic Stream, or can consume a Stream.
+Defines Maps that can generate a/some basic Stream like ip/tcp/udp/uds, or can consume a Stream.
 */
 
 pub mod accept;
@@ -104,6 +104,14 @@ impl Map for Direct {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub enum AutoRouteState {
+    #[default]
+    None,
+    Up,
+    Down,
+}
+
 /// BindDialer can dial ip, tcp, udp or unix domain socket
 #[map_ext_fields]
 #[derive(Clone, Debug, Default, MapExt)]
@@ -111,6 +119,8 @@ pub struct BindDialer {
     pub dial_addr: Option<net::Addr>,
     pub bind_addr: Option<net::Addr>,
     pub auto_route: Option<bool>,
+
+    auto_route_state: AutoRouteState,
 }
 
 impl Name for BindDialer {
@@ -120,6 +130,11 @@ impl Name for BindDialer {
 }
 
 impl BindDialer {
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
     pub async fn action(
         bind_a: Option<&net::Addr>,
         dial_a: Option<&net::Addr>,
@@ -128,6 +143,9 @@ impl BindDialer {
         pass_b: Option<BytesMut>,
         udp_fix_target_listen: Option<bool>,
     ) -> MapResult {
+        if let Some(a) = &bind_a {
+            if let Network::IP = a.network {}
+        }
         let r = net::Addr::bind_dial(bind_a, dial_a, udp_fix_target_listen).await;
 
         match r {
