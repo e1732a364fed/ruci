@@ -10,7 +10,6 @@ use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
 use macro_mapper::NoMapperExt;
-use map::Stream;
 use tokio::io::AsyncReadExt;
 
 #[derive(Default, Clone)]
@@ -162,15 +161,14 @@ impl Server {
 
         if is_udp {
             let u = udp::from(base);
-            let mut mr = MapResult::builder()
-                .c(Stream::u(u))
-                .a(Some(ta))
-                .b(Some(buf))
-                .build();
+            let mut mr = MapResult::newu(u).a(Some(ta)).b(Some(buf)).build();
             mr.d = ou_to_od(opt_user);
             Ok(mr)
         } else {
-            Ok(MapResult::abcod(ta, buf, base, ou_to_od(opt_user)))
+            let mut mr = MapResult::newc(base).a(Some(ta)).b(Some(buf)).build();
+            mr.d = ou_to_od(opt_user);
+
+            Ok(mr)
         }
     }
 }

@@ -39,7 +39,6 @@ impl Mapper for Tproxy {
             }
             Stream::AddrConn(_) => todo!(),
             _ => MapResult::err_str(&format!("Tproxy needs a stream, got {}", params.c)),
-        };
-        unimplemented!()
+        }
     }
 }

@@ -183,14 +183,6 @@ impl MapResult {
     pub fn buf_err_str(buf: BytesMut, estr: &str) -> Self {
         MapResult::buf_err(buf, anyhow!("{}", estr))
     }
-
-    pub fn abcod(a: net::Addr, b: BytesMut, c: net::Conn, d: Option<AnyData>) -> Self {
-        let builder = MapResult::newc(c).a(Some(a)).b(Some(b));
-        match d {
-            Some(d) => builder.d(d).build(),
-            None => builder.build(),
-        }
-    }
 }
 
 /// indicate the meaning of what the Mapper is really doing

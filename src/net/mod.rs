@@ -889,7 +889,7 @@ impl crate::Name for UnixStream {
     }
 }
 
-/// 一个方便的 对 ConnTrait 的包装。很重要
+/// an important type in ruci
 pub type Conn = Box<dyn ConnTrait>;
 
 /// may log debug or do other side-effect stuff with id.
@@ -913,13 +913,13 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
 
     pin_mut!(c1_to_c2, c2_to_c1);
 
-    // 一个方向停止后, 关闭连接, 如果info 不为空, 则等待另一个方向关闭, 以获取另一方向的流量信息。
+    // 一个方向停止后, 关闭连接, 如果 opt 不为空, 则等待另一个方向关闭, 以获取另一方向的流量信息。
 
     futures::select! {
         r1 = c1_to_c2 => {
-            if let Some(ref info) = opt {
+            if let Some(ref tr) = opt {
                 if let Ok(n) = r1 {
-                    let tt = info.ub.fetch_add(n, Ordering::Relaxed);
+                    let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
                         debug!("cp, {}, u, ub, {}, {}",cid,n,tt+n);
@@ -931,9 +931,9 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                 // during the tests we can prove it's dropped.
 
                 let r2 = c2_to_c1.await;
-                if let Some(info) = opt {
+                if let Some(ref tr) = opt {
                     if let Ok(n) = r2 {
-                        let tt = info.db.fetch_add(n, Ordering::Relaxed);
+                        let tt = tr.db.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
                             debug!("cp, {}, u, db, {}, {}",cid, n,tt+n);
@@ -950,9 +950,9 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
             r1
         },
         r2 = c2_to_c1 => {
-            if let Some(ref info) = opt {
+            if let Some(ref tr) = opt {
                 if let Ok(n) = r2 {
-                    let tt = info.db.fetch_add(n, Ordering::Relaxed);
+                    let tt = tr.db.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
                         debug!("cp, {}, d, db, {}, {}",cid, n,tt+n);
@@ -960,9 +960,9 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                 }
 
                 let r1 = c1_to_c2.await;
-                if let Some(ref info) = opt {
+                if let Some(ref tr) = opt {
                     if let Ok(n) = r1 {
-                        let tt = info.ub.fetch_add(n, Ordering::Relaxed);
+                        let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
                             debug!("cp, {}, d, ub, {}, {}",cid,n,tt+n);
