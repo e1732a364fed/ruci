@@ -22,7 +22,6 @@
  */
 use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
-use async_trait::async_trait;
 use dyn_clone::DynClone;
 use ruci::map::{acc::DynIterator, MapperBox};
 
@@ -121,9 +120,8 @@ pub trait NextSelector: Debug + DynClone + Send + Sync {
 }
 dyn_clone::clone_trait_object!(NextSelector);
 
-#[async_trait]
 impl DynIterator for Bounded {
-    async fn next_with_data(
+    fn next_with_data(
         &mut self,
         data: Option<Vec<ruci::map::OptVecData>>,
     ) -> Option<Arc<MapperBox>> {
