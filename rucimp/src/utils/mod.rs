@@ -241,7 +241,7 @@ pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
 }
 /// helper function
 pub fn init_tls_server_pem_option(
-    opts: &ruci_rustls22::server::TlsServerOptions,
+    opts: &ruci::map::tls_config::ServerOptions,
     fs: &DataSource,
 ) -> std::io::Result<ruci_rustls22::server::ServerPEMOptions> {
     Ok(ruci_rustls22::server::ServerPEMOptions {

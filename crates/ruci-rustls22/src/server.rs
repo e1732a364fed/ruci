@@ -1,4 +1,4 @@
-use std::{fmt::Display, path::PathBuf, sync::Arc};
+use std::{fmt::Display, sync::Arc};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -7,25 +7,20 @@ use ruci::{
     map::{self, MapResult, ProxyBehavior},
     net::{helpers::EarlyDataWrapper, CID},
 };
-use serde::{Deserialize, Serialize};
 
 use ruci::map::MapExtFields;
+use serde::{Deserialize, Serialize};
 use tokio_rustls::TlsAcceptor;
 use tracing::debug;
 
 use super::*;
 
-#[derive(Debug, Clone, Default)]
-pub struct ServerPEMOptions {
-    pub cert: String,
-    pub key: String,
-    pub alpn: Option<Vec<String>>,
-}
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct TlsServerOptions {
-    pub cert: PathBuf,
-    pub key: PathBuf,
+pub struct ServerPEMOptions {
+    /// cert pem file content
+    pub cert: String,
+    /// key pem file content
+    pub key: String,
     pub alpn: Option<Vec<String>>,
 }
 

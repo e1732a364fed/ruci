@@ -6,7 +6,6 @@
 
 use std::collections::BTreeMap;
 
-use ruci_rustls22::server::TlsServerOptions;
 use rucimp::modes::chain::{config::*, engine::Engine};
 
 mod shared;
@@ -22,9 +21,9 @@ async fn main() -> anyhow::Result<()> {
             ext: None,
         },
         InMapConfig::Socks5Http(PlainTextPassSet::default()),
-        InMapConfig::MITM(TlsServerOptions {
-            cert: "test_ca_cert.pem".into(),
-            key: "test_ca_key.pem".into(),
+        InMapConfig::MITM(ruci::map::tls_config::ServerOptions {
+            cert: "test_ca_cert.pem".to_string(),
+            key: "test_ca_key.pem".to_string(),
             alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
         }),
     ];
@@ -69,7 +68,7 @@ async fn run_engine_server_end() -> anyhow::Result<()> {
                 listen_addr: "127.0.0.1:10801".to_string(),
                 ext: None,
             },
-            InMapConfig::TLS(TlsServerOptions {
+            InMapConfig::TLS(ruci::map::tls_config::ServerOptions {
                 cert: "test_ca_cert.pem".into(),
                 key: "test_ca_key.pem".into(),
                 alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),

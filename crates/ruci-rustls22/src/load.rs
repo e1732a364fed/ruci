@@ -90,16 +90,6 @@ pub fn load_ser_config_from_pem(
     Ok(config)
 }
 
-// if `opt_authority` is given, we will use the given cert as CA and generate a new cert for the
-// authority.
-// pub fn load_ser_config(
-//     options: &TlsServerOptions,
-//     opt_authority: Option<&http::uri::Authority>,
-// ) -> anyhow::Result<ServerConfig> {
-//     let pem_opts = ServerPEMOptions::from(options, &crate::utils::DataSource::StdReadFile)?;
-//     load_ser_config_from_pem(&pem_opts, opt_authority)
-// }
-
 /// Load the passed certificates file
 pub fn load_certs(path: &PathBuf) -> io::Result<Vec<CertificateDer<'static>>> {
     let certs_data = std::fs::read(path)?;
@@ -188,24 +178,4 @@ mod test {
             Err(e) => panic!("failed, {}", e),
         }
     }
-
-    // #[test]
-    // fn test_load_ser_config() {
-    //     let mut path = PathBuf::new();
-    //     path.push("test.crt");
-
-    //     let mut path2 = PathBuf::new();
-    //     path2.push("test.key");
-
-    //     let r = load_ser_config(
-    //         &TlsServerOptions {
-    //             cert: path,
-    //             key: path2,
-    //             ..Default::default()
-    //         },
-    //         None,
-    //     );
-
-    //     println!("{:#?}", r);
-    // }
 }

@@ -375,10 +375,10 @@ pub enum InMapConfig {
     },
     Counter,
     Recorder(recorder::Config),
-    TLS(ruci_rustls22::server::TlsServerOptions),
+    TLS(ruci::map::tls_config::ServerOptions),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(ruci_rustls22::server::TlsServerOptions),
+    NativeTLS(ruci::map::tls_config::ServerOptions),
     H2 {
         is_grpc: Option<bool>,
         http_config: Option<CommonConfig>,
@@ -415,7 +415,7 @@ pub enum InMapConfig {
         handshake_function: String, // 用于 handshake 的 函数名
     },
 
-    MITM(ruci_rustls22::server::TlsServerOptions),
+    MITM(ruci::map::tls_config::ServerOptions),
 
     #[cfg(feature = "steganography")]
     Embedder {

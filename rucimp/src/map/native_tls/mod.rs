@@ -34,10 +34,15 @@ pub fn load(cert: PathBuf, key: PathBuf, fs: &DataSource) -> anyhow::Result<Iden
 
 impl Server {
     pub fn from(
-        sc: &ruci_rustls22::server::TlsServerOptions,
+        sc: &ruci::map::tls_config::ServerOptions,
         fs: &DataSource,
     ) -> anyhow::Result<Server> {
-        let id = load(sc.cert.clone(), sc.key.clone(), fs).context("load cert or key failed")?;
+        let id = load(
+            PathBuf::from(sc.cert.as_str()),
+            PathBuf::from(sc.key.as_str()),
+            fs,
+        )
+        .context("load cert or key failed")?;
 
         //native_tls 的 acceptor 的 builder 是不支持配置 alpn的，只有 connector 才支持
         let ta =

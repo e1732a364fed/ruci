@@ -46,15 +46,21 @@ pub mod tls_config {
 
     #[derive(Debug, Clone, Default, Serialize, Deserialize)]
     pub struct ClientOptions {
-        pub host: Option<String>,
+        #[serde(default)]
         pub insecure: bool,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub host: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub alpn: Option<Vec<String>>,
 
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub cert: Option<String>,
     }
 
     #[derive(Debug, Clone, Default, Serialize, Deserialize)]
     pub struct ServerOptions {
+        #[serde(skip_serializing_if = "Option::is_none")]
         pub alpn: Option<Vec<String>>,
 
         pub cert: String,
