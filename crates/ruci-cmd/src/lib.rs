@@ -565,7 +565,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     #[cfg(feature = "api_server")]
     let ws_logger = {
         let addr: &str = args.ws_log_addr.as_deref().unwrap_or(log_ws::DEFAULT_ADDR);
-        if addr.is_empty() {
+        if addr.is_empty() || !args.api_server {
             None
         } else {
             let logger = log_ws::WebsocketLogger::new();

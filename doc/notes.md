@@ -10,7 +10,7 @@
 
 因为feature use-native-tls 编译使用了 native-tls, 因此会在 linux 版本中需要 openssl 3 安装在 机器上才行
 
-但是有些老机器上的 openssl 是 1.1.1 版的
+但是有些老机器上的 openssl 是 1.1.1 版的. 可以用 native-tls-vendored feature 解决
 
 ### 证书
 
@@ -417,8 +417,9 @@ linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 1. 更新系统的glibc
 2. 使用 musl 版
 3. 自己编译
+4. 使用 docker
 
-更新系统的 glibc 是比较危险的做法, 此时推荐使用 musl
+更新系统的 glibc 是比较危险的做法, 此时推荐使用 musl 或者 docker
 
 ## tproxy: Too many open files
 
