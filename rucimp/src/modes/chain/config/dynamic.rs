@@ -103,17 +103,17 @@ pub struct Bounded {
     ///
     pub mb_vec: Vec<Arc<MapperBox>>,
 
-    pub selector: Box<dyn NextPartSelector>,
+    pub selector: Box<dyn NextSelector>,
 
     pub current_index: usize,
 
     pub history: Vec<usize>,
 }
 
-pub trait NextPartSelector {
-    fn next_part(
+pub trait NextSelector {
+    fn next_index(
         &self,
-        this_part_index: usize,
+        this_index: usize,
         data: Option<Vec<ruci::map::OptVecData>>,
     ) -> Option<usize>;
 }
@@ -123,7 +123,7 @@ impl DynIterator for Bounded {
         &mut self,
         data: Option<Vec<ruci::map::OptVecData>>,
     ) -> Option<Arc<MapperBox>> {
-        let oi = self.selector.next_part(self.current_index, data);
+        let oi = self.selector.next_index(self.current_index, data);
         match oi {
             Some(i) => {
                 self.current_index = i;
