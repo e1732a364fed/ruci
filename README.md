@@ -95,7 +95,7 @@ multi-stream generator【多流发生器】: `function( Option<stream> ,args...)
 
 流发生器是一种不接受流参数, 只接受其它参数的函数, 是整个链的起点, 是流的源
 
-单流发生器可能是 Dialer, 文件, 或者 Stdio.
+单流发生器可能是 BindDialer, 文件, 或者 Stdio.
 
 多流发生器可能是 Listener (不接受流参数的无中生有 (一般实际上原理上是对接硬件上的流,
 如网卡提供的流) ) 或 inner mux (接受一个流, 对其进行分支处理)
@@ -171,7 +171,7 @@ o2node-.->collector
 - [x] 链式架构 
 - [x] tcp, udp, unix domain socket, ip (tun)([tun example](rucimp/examples/README.md#tun))
 - [x] 流量记录 (两种实现, 分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
-- [x] Direct, Blackhole, Listener, Dialer, Stdio, Fileio
+- [x] Direct, Blackhole, Listener, BindDialer, Stdio, Fileio
 - [x] Tls, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
 - [x] Adder (按字节加法器), Counter, Echo
 - [x] 路由 (tag_route)

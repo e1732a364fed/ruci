@@ -113,13 +113,13 @@ ruci 新手常见的错误, 用 Listener 监听 udp
 
 Listener的原理是 listen  然后 accept  出 子流，而udp 是不会分出子流的
 
-所以 udp 监听要用的是 Dialer
+所以 udp 监听要用的是 BindDialer
 
 监听 udp 本地 20800 端口:
 
 ```lua
 
-Dialer = {
+BindDialer = {
     bind_addr = "udp://127.0.0.1:20800"
 }
 ```
@@ -127,7 +127,7 @@ Dialer = {
 ### 报错示例: socks5 client only support tcplike stream, got NoStream
 
 
-注意几乎所有的 outbound 都要先有一个 "流发生器", 如 Dialer, 如果直接是 socks5/trojan 的话, 
+注意几乎所有的 outbound 都要先有一个 "流发生器", 如 BindDialer, 如果直接是 socks5/trojan 的话, 
 没有流发生器, 是无法建立任何连接的
 
 也就是说, 要有一个拨号环节

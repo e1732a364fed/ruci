@@ -98,7 +98,7 @@ in_quic_chain = {{
 }, trojan_in}
 
 dial = {
-    Dialer = {
+    BindDialer = {
         dial_addr = "tcp://0.0.0.0:10801"
     }
 }
@@ -124,7 +124,7 @@ config = {
         --[[ 
         {
             chain = {{
-                Dialer = {
+                BindDialer = {
                     bind_addr = "udp://127.0.0.1:20800"
                 }
             }, "Echo"},
@@ -143,7 +143,7 @@ config = {
     }, {
         tag = "fallback_d",
         chain = {{
-            Dialer = {
+            BindDialer = {
                 dial_addr = "tcp://0.0.0.0:80"
             }
         }}

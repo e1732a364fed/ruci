@@ -3,7 +3,7 @@
 max_num = 12
 
 dial_config = {
-    Dialer = {
+    BindDialer = {
         dial_addr = "tcp://0.0.0.0:10801"
     }
 }

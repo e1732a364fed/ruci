@@ -71,7 +71,7 @@ fn test_out() -> mlua::Result<()> {
     let text = r#"
     
             tls = { TLS = {  host = "my.com", insecure = true } }
-            dialer = { Dialer =  {dial_addr = "0.0.0.0:1081" }   }
+            dialer = { BindDialer =  {dial_addr = "0.0.0.0:1081" }   }
             c = "Counter"
             chain1 = {
                 dialer,
@@ -110,7 +110,7 @@ fn test_out() -> mlua::Result<()> {
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::Dialer(DialerConfig {
+        OutMapperConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str,
             ext: None
@@ -119,7 +119,7 @@ fn test_out() -> mlua::Result<()> {
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::Dialer(DialerConfig {
+        OutMapperConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str2,
             ext: None
@@ -145,7 +145,7 @@ fn test_out2() -> mlua::Result<()> {
             outbounds = {
                 { 
                     tag="dial1", chain = {
-                        { Dialer =  { dial_addr = "0.0.0.0:1080"}  }
+                        { BindDialer =  { dial_addr = "0.0.0.0:1080"}  }
                     } 
                 }
             }
@@ -164,7 +164,7 @@ fn test_out2() -> mlua::Result<()> {
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::Dialer(DialerConfig {
+        OutMapperConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str,
             ext: None
@@ -173,7 +173,7 @@ fn test_out2() -> mlua::Result<()> {
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::Dialer(DialerConfig {
+        OutMapperConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str2,
             ext: None
@@ -214,11 +214,11 @@ fn test_out3() -> mlua::Result<()> {
 
     // let first_m = first_listen_group.chain.first().unwrap();
     // let str = "0.0.0.0:1080".to_string();
-    // assert!(matches!(first_m, OutMapperConfig::Dialer(str)));
+    // assert!(matches!(first_m, OutMapperConfig::BindDialer(str)));
     // let str2 = "0.0.0.0:1".to_string();
     // assert!(matches!(
     //     first_m,
-    //     OutMapperConfig::Dialer(str2) //won't match inner fields
+    //     OutMapperConfig::BindDialer(str2) //won't match inner fields
     // ));
     // assert!(!matches!(first_m, OutMapperConfig::Counter));
     Ok(())
@@ -241,7 +241,7 @@ fn test_tag_route() -> mlua::Result<()> {
             outbounds = {
                 { 
                     tag="dial1", chain = {
-                        { Dialer =  { dial_addr = "0.0.0.0:1080"}   }
+                        { BindDialer =  { dial_addr = "0.0.0.0:1080"}   }
                     }
                 },
 
@@ -284,7 +284,7 @@ fn test_rule_route() -> mlua::Result<()> {
             outbounds = {
                 { 
                     tag="dial1", chain = {
-                        { Dialer =  { dial_addr = "0.0.0.0:1080" }   }
+                        { BindDialer =  { dial_addr = "0.0.0.0:1080" }   }
                     }
                 },
 

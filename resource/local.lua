@@ -15,7 +15,7 @@ l2 = {
         -- 如果 ext 中的 fixed_target_addr 给出, 则其行为等价于
         -- 一些其它代理程序中 所定义的 "dokodemo door (任意门)"
 
-        -- ruci 中, Listener,TcpOptListener, Dialer, Stdio, Fileio 都能如此配置
+        -- ruci 中, Listener,TcpOptListener, BindDialer, Stdio, Fileio 都能如此配置
 
         ext = {
             -- fixed_target_addr = "udp://127.0.0.1:40800"
@@ -107,7 +107,7 @@ trojan_in = {
 listen_trojan = {listen, trojan_in}
 
 dial = {
-    Dialer = {
+    BindDialer = {
         dial_addr = "tcp://0.0.0.0:10801"
     }
 }
@@ -308,7 +308,7 @@ config = {
     outbounds = { 
         { 
             tag="dial1", 
-            chain = { { Dialer =  { dial_addr = "unix://file1"} }, tlsout, trojan_out } 
+            chain = { { BindDialer =  { dial_addr = "unix://file1"} }, tlsout, trojan_out } 
         } 
     }
 
@@ -464,7 +464,7 @@ config = {
     }, {
         tag = "fallback_d",
         chain = {{
-            Dialer = { dial_addr = "tcp://0.0.0.0:80" }
+            BindDialer = { dial_addr = "tcp://0.0.0.0:80" }
         }}
     }},
 
@@ -549,7 +549,7 @@ config = {
         --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
         -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
-        {chain = { { Dialer= { bind_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
+        {chain = { { BindDialer= { bind_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
     },
 
 --[[

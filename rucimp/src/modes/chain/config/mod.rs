@@ -215,7 +215,7 @@ impl ToMapperBox for DialerConfig {
             .dial_addr
             .clone()
             .map(|a| net::Addr::from_name_network_addr_url(&a).expect("network_ip_addr is valid"));
-        let d = ruci::map::network::Dialer {
+        let d = ruci::map::network::BindDialer {
             dial_addr: opt_dial_a,
             bind_addr: opt_bind_a,
             ext_fields: self.ext.as_ref().map(|e| e.to_ext_fields()),
@@ -227,10 +227,10 @@ impl ToMapperBox for DialerConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
-    Echo,                 //单流消耗器
-    Stdio(Ext),           //单流发生器
-    Fileio(FileConfig),   //单流发生器
-    Dialer(DialerConfig), //单流发生器
+    Echo,                     //单流消耗器
+    Stdio(Ext),               //单流发生器
+    Fileio(FileConfig),       //单流发生器
+    BindDialer(DialerConfig), //单流发生器
     Listener {
         listen_addr: String,
         ext: Option<Ext>,
@@ -278,11 +278,11 @@ pub enum InMapperConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapperConfig {
-    Blackhole,            //单流消耗器
-    Direct,               //单流发生器
-    Stdio(Ext),           //单流发生器
-    Fileio(FileConfig),   //单流发生器
-    Dialer(DialerConfig), //单流发生器
+    Blackhole,                //单流消耗器
+    Direct,                   //单流发生器
+    Stdio(Ext),               //单流发生器
+    Fileio(FileConfig),       //单流发生器
+    BindDialer(DialerConfig), //单流发生器
     Adder(i8),
     Counter,
     TLS(TlsOut),
@@ -398,7 +398,7 @@ impl ToMapperBox for InMapperConfig {
                 };
                 Box::new(s)
             }
-            InMapperConfig::Dialer(dc) => dc.to_mapper_box(),
+            InMapperConfig::BindDialer(dc) => dc.to_mapper_box(),
             InMapperConfig::Listener { listen_addr, ext } => {
                 let a =
                     net::Addr::from_network_addr_url(listen_addr).expect("network_addr is valid");
@@ -552,7 +552,7 @@ impl ToMapperBox for OutMapperConfig {
             OutMapperConfig::Blackhole => Box::<BlackHole>::default(),
 
             OutMapperConfig::Direct => Box::<Direct>::default(),
-            OutMapperConfig::Dialer(dc) => dc.to_mapper_box(),
+            OutMapperConfig::BindDialer(dc) => dc.to_mapper_box(),
             OutMapperConfig::Adder(i) => i.to_mapper_box(),
             OutMapperConfig::Counter => Box::<counter::Counter>::default(),
             OutMapperConfig::TLS(c) => {

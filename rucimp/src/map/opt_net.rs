@@ -220,7 +220,7 @@ impl OptDialer {
 
         match r {
             Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
-            Err(e) => MapResult::from_e(e.context(format!("Dialer dial {} failed", dial_a))),
+            Err(e) => MapResult::from_e(e.context(format!("BindDialer dial {} failed", dial_a))),
         }
     }
 }
@@ -235,7 +235,7 @@ impl Mapper for OptDialer {
                 return self.dial_addr(&self.dial_addr, params.a, params.b).await;
             }
 
-            _ => return MapResult::err_str("Dialer can't dial when a stream already exists"),
+            _ => return MapResult::err_str("BindDialer can't dial when a stream already exists"),
         }
     }
 }

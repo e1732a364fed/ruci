@@ -104,21 +104,21 @@ impl Mapper for Direct {
     }
 }
 
-/// Dialer can dial ip, tcp, udp or unix domain socket
+/// BindDialer can dial ip, tcp, udp or unix domain socket
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
-pub struct Dialer {
+pub struct BindDialer {
     pub dial_addr: Option<net::Addr>,
     pub bind_addr: Option<net::Addr>,
 }
 
-impl Name for Dialer {
+impl Name for BindDialer {
     fn name(&self) -> &'static str {
-        "dialer"
+        "bind_dialer"
     }
 }
 
-impl Dialer {
+impl BindDialer {
     pub async fn action(
         bind_a: Option<&net::Addr>,
         dial_a: Option<&net::Addr>,
@@ -131,7 +131,7 @@ impl Dialer {
         match r {
             Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
             Err(e) => MapResult::from_e(
-                e.context(format!("Dialer dial {:?} {:?} failed", bind_a, dial_a)),
+                e.context(format!("BindDialer dial {:?} {:?} failed", bind_a, dial_a)),
             ),
         }
     }
@@ -148,7 +148,7 @@ fn get_addr_from_vd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
 }
 
 #[async_trait]
-impl Mapper for Dialer {
+impl Mapper for BindDialer {
     /// try the parameter first, if no addr was given, use dial_addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
@@ -160,13 +160,13 @@ impl Mapper for Dialer {
                 let mut target_addr = params.a;
 
                 if self.configured_target_addr().is_some() {
-                    debug!(cid = %cid, "Dialer using fixed_target_addr");
+                    debug!(cid = %cid, "BindDialer using fixed_target_addr");
                     target_addr = self.configured_target_addr().cloned();
                 }
 
                 match d {
                     Some(a) => {
-                        return Dialer::action(
+                        return BindDialer::action(
                             self.bind_addr.as_ref(),
                             Some(&a),
                             target_addr,
@@ -176,7 +176,7 @@ impl Mapper for Dialer {
                     }
 
                     None => {
-                        return Dialer::action(
+                        return BindDialer::action(
                             self.bind_addr.as_ref(),
                             self.dial_addr.as_ref(),
                             target_addr,
@@ -187,7 +187,7 @@ impl Mapper for Dialer {
                 }
             }
 
-            _ => return MapResult::err_str("Dialer can't map when a stream already exists"),
+            _ => return MapResult::err_str("BindDialer can't map when a stream already exists"),
         }
     }
 }

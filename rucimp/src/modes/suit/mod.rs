@@ -176,7 +176,7 @@ impl Suit for SuitStruct {
                 if self.protocol_str != "direct" && !self.addr_str.is_empty() {
                     let a = net::Addr::from_network_addr_url(self.addr_str())
                         .expect("self addr str ok");
-                    let dialer = network::Dialer {
+                    let dialer = network::BindDialer {
                         dial_addr: Some(a),
                         ..Default::default()
                     };
