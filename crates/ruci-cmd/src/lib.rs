@@ -15,6 +15,8 @@ mod utils;
 
 mod mode;
 
+pub use rucimp;
+
 use std::env::{self, set_var};
 
 use clap::{Parser, Subcommand, ValueEnum};
@@ -141,11 +143,13 @@ pub enum SubCommands {
     },
 }
 
+/// blocking
 pub async fn run_main() -> anyhow::Result<()> {
     let args = Args::parse();
     run_main_with_args(args).await
 }
 
+/// blocking
 pub async fn run_main_with_args(args: Args) -> anyhow::Result<()> {
     let _g = log_setup(args.clone());
 
