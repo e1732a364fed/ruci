@@ -77,7 +77,8 @@ impl FromStr for LevelWrapper {
     type Err = ParseLevelError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        let s = s.to_uppercase();
+        match s.as_str() {
             "ERROR" => Ok(LevelWrapper(Level::ERROR)),
             "WARN" => Ok(LevelWrapper(Level::WARN)),
             "INFO" => Ok(LevelWrapper(Level::INFO)),
