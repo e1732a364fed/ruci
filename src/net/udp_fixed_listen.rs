@@ -72,39 +72,43 @@ impl FixedTargetAddrUDPListener {
                         // mutex guard
                         let mut mg = conn_map.lock().await;
 
-                        if mg.contains_key(&a) {
-                            trace!("FixedUdpListener loop got old conn msg: {a} {n}");
+                        //if mg.contains_key(&a) {
+                        match mg.entry(a) {
+                            std::collections::hash_map::Entry::Occupied(e) => {
+                                trace!("FixedUdpListener loop got old conn msg: {a} {n}");
 
-                            let new_buf = BytesMut::from(&buf[..n]);
+                                let new_buf = BytesMut::from(&buf[..n]);
 
-                            let tx = mg.get(&a).unwrap();
-                            let r = tx.send(new_buf).await;
-                            if let Err(e) = r {
-                                debug!("FixedUdpListener tx send got e: {e}");
-                                continue;
-                            }
-                        } else {
-                            trace!("FixedUdpListener loop got new conn: {a} {n}");
-                            let (tx, rx) = mpsc::channel(100);
+                                let tx = e.get();
+                                let r = tx.send(new_buf).await;
+                                if let Err(e) = r {
+                                    debug!("FixedUdpListener tx send got e: {e}");
+                                    continue;
+                                }
+                            },
+                            std::collections::hash_map::Entry::Vacant(e) => {
 
-                            mg.insert(a.clone(), tx);
+                                trace!("FixedUdpListener loop got new conn: {a} {n}");
+                                let (tx, rx) = mpsc::channel(100);
 
-                            let ac = new(
-                                udp.clone(),
-                                rx,
-                                a,
-                                dst_c.clone(),
-                                BytesMut::from(&buf[..n]),
-                                conn_map.clone(),
-                            );
+                                e.insert(tx);
 
-                            let r = new_conn_tx.send((ac, a)).await;
-                            if let Err(e) = r {
-                                debug!("FixedUdpListener loop got e: {e}");
-                                break;
+                                let ac = new(
+                                    udp.clone(),
+                                    rx,
+                                    a,
+                                    dst_c.clone(),
+                                    BytesMut::from(&buf[..n]),
+                                    conn_map.clone(),
+                                );
+
+                                let r = new_conn_tx.send((ac, a)).await;
+                                if let Err(e) = r {
+                                    debug!("FixedUdpListener loop got e: {e}");
+                                    break;
+                                }
                             }
                         }
-
                     }
                 }
             } //loop

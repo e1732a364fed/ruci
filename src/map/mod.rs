@@ -31,6 +31,7 @@ pub mod http_filter;
 pub mod http_proxy;
 pub mod math;
 pub mod network;
+pub mod recorder;
 pub mod socks5;
 pub mod socks5http;
 pub mod stdio;
@@ -206,7 +207,7 @@ impl MapResult {
 /// 1. "encode" the target addr and payload into the stream
 /// 2. "decode" the target addr and payload from the stream
 ///
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProxyBehavior {
     #[default]
     UNSPECIFIED,

@@ -359,6 +359,7 @@ async fn rw_once<R: AddrReadTrait, W: AddrWriteTrait>(
 /// 若 no_timeout = false, 每一次 copy 都会以
 /// CP_UDP_TIMEOUT 为 最长等待时间, 一旦超时, 就会退出函数
 ///
+#[allow(clippy::too_many_arguments)]
 pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
     cid: CID,
     mut r: R,

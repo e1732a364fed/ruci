@@ -159,7 +159,7 @@ impl AsyncWriteAddr for Conn {
                     }
                     Err(e) => Poll::Ready(Err(io::Error::other(e))),
                 },
-                Poll::Pending => return Poll::Pending,
+                Poll::Pending => Poll::Pending,
             }
         }
     }

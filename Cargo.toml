@@ -47,7 +47,7 @@ url = "2"
 base64 = "0.21.7"
 sha2 = "0.10.8"
 
-hickory-resolver = {version = "0.24.1",features = ["serde-config"]}
+hickory-resolver = { version = "0.24.1", features = ["serde-config"] }
 tokio-rustls = "0.25.0"
 rustls = { version = "0.22" }
 rustls-pemfile = "1.0"

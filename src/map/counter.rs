@@ -2,7 +2,9 @@
 Defines a [`Map`] that counts the traffic bytes of the base connection.
 
 使用 [`Counter`] 与 [`Arc<GlobalTrafficRecorder>`] 的区别是, [`Arc<GlobalTrafficRecorder>`] 是全局解密流量的统计,
-而 [`Counter`] 是针对自己持有的 Conn的流量的统计
+而 [`Counter`] 是针对自己持有的 Conn的流量的统计.
+
+Counter 使用 原子的动态数据，方便实时查询
 */
 
 use super::*;
@@ -146,8 +148,8 @@ impl Map for Counter {
             Stream::AddrConn(_) => {
                 todo!()
             }
-            Stream::None => MapResult::err_str("counter: can't count without a stream"),
-            _ => MapResult::err_str("counter: can't count with a stream generator"),
+            Stream::None => MapResult::err_str("counter: can't init without a stream"),
+            _ => MapResult::err_str("counter: can't init with a stream generator"),
         }
     }
 }
