@@ -13,7 +13,10 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 use bytes::BytesMut;
 use log::warn;
 use ruci::{
-    map::{acc::MIterBox, *},
+    map::{
+        acc::{DMIterBox, DynVecIterWrapper},
+        *,
+    },
     net,
 };
 use serde::{Deserialize, Serialize};
@@ -88,10 +91,10 @@ impl StaticConfig {
     }
 
     /// (out_tag, outbound)
-    pub fn get_default_and_outbounds_map(&self) -> (MIterBox, HashMap<String, MIterBox>) {
+    pub fn get_default_and_outbounds_map(&self) -> (DMIterBox, HashMap<String, DMIterBox>) {
         let obs = self.get_outbounds();
 
-        let mut first_o: Option<MIterBox> = None;
+        let mut first_o: Option<DMIterBox> = None;
 
         let omap = obs
             .into_iter()
@@ -105,7 +108,7 @@ impl StaticConfig {
                 let ts = tag.to_string();
                 let outbound: Vec<_> = outbound.into_iter().map(|o| Arc::new(o)).collect();
 
-                let outbound_iter: MIterBox = Box::new(outbound.into_iter());
+                let outbound_iter: DMIterBox = Box::new(DynVecIterWrapper(outbound.into_iter()));
 
                 if let None = first_o {
                     first_o = Some(outbound_iter.clone());

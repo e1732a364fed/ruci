@@ -18,7 +18,7 @@ use log::{debug, info, log_enabled, warn};
 use crate::net::addr_conn::AsyncWriteAddrExt;
 use crate::net::{self, Addr, Stream, CID};
 
-use self::acc::{AccumulateParams, MIterBox};
+use self::acc::{AccumulateParams, DMIterBox};
 use self::route::OutSelector;
 
 use anyhow::anyhow;
@@ -32,7 +32,7 @@ pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间�
 /// utilize handle_in_accumulate_result and  route::OutSelector
 pub async fn handle_in_stream(
     in_conn: Stream,
-    ins_iterator: MIterBox,
+    ins_iterator: DMIterBox,
     out_selector: Arc<Box<dyn OutSelector>>,
     ti: Option<Arc<net::GlobalTrafficRecorder>>,
 

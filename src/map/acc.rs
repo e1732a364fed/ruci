@@ -20,28 +20,71 @@ pub type MIterBox = Box<dyn MIter>;
 
 /// dynamic Iterator, can get different next item if the
 /// input data is different
+///
+/// DynIterator is uncountable, because it's input is dynamic, it's
+/// output is also dynamic
+///
+/// if you want to count it, you might use to_miter to try to get MIterBox first
+///
 pub trait DynIterator {
-    type Item;
+    fn next_with_data(&mut self, data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>>;
 
-    fn next(&mut self, data: Option<Vec<OptVecData>>) -> Option<Self::Item>;
+    fn next(&mut self) -> Option<Arc<MapperBox>> {
+        self.next_with_data(None)
+    }
+
+    fn to_miter(&self) -> Option<MIterBox> {
+        None
+    }
+
     fn requires_no_data(&self) -> bool {
         false
     }
 }
 
-pub trait DMIter: DynIterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug {}
-impl<T: DynIterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug> DMIter for T {}
+pub trait DMIter: DynIterator + DynClone + Send + Sync + Debug {}
+impl<T: DynIterator + DynClone + Send + Sync + Debug> DMIter for T {}
 dyn_clone::clone_trait_object!(DMIter);
 
 pub type DMIterBox = Box<dyn DMIter>;
 
-pub struct DynMIterWrapper(MIterBox);
+/// 包装 MIterBox 以使其支持 DynIterator
+#[derive(Debug, Clone)]
+pub struct DynMIterWrapper(pub MIterBox);
 
 impl DynIterator for DynMIterWrapper {
-    type Item = Arc<MapperBox>;
-
-    fn next(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Self::Item> {
+    fn next_with_data(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>> {
         self.0.next()
+    }
+
+    fn next(&mut self) -> Option<Arc<MapperBox>> {
+        self.0.next()
+    }
+
+    fn to_miter(&self) -> Option<MIterBox> {
+        Some(self.0.clone())
+    }
+
+    fn requires_no_data(&self) -> bool {
+        true
+    }
+}
+
+/// 包装 std::vec::IntoIter<Arc<MapperBox>> 以使其支持 DynIterator
+#[derive(Debug, Clone)]
+pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapperBox>>);
+
+impl DynIterator for DynVecIterWrapper {
+    fn next_with_data(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>> {
+        self.0.next()
+    }
+
+    fn next(&mut self) -> Option<Arc<MapperBox>> {
+        self.0.next()
+    }
+
+    fn to_miter(&self) -> Option<MIterBox> {
+        Some(Box::new(self.0.clone()))
     }
 
     fn requires_no_data(&self) -> bool {
@@ -62,7 +105,7 @@ pub struct AccumulateResult {
     pub chain_tag: String,
 
     // 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
-    pub left_mappers_iter: MIterBox,
+    pub left_mappers_iter: DMIterBox,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>, // table of Names of each Mapper during accumulation.
@@ -86,7 +129,7 @@ pub struct AccumulateParams {
     pub cid: CID,
     pub behavior: ProxyBehavior,
     pub initial_state: MapResult,
-    pub mappers: MIterBox,
+    pub mappers: DMIterBox,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,
@@ -123,10 +166,17 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
 
     let mut tag: String = String::new();
 
-    for adder in mappers.by_ref() {
-        // let input_data = calculated_output_vec
-        //     .last()
-        //     .and_then(|x: &OptVecData| x.as_ref().and_then(|y| Some(y.clone())));
+    loop {
+        let adder = if mappers.requires_no_data() {
+            mappers.next()
+        } else {
+            mappers.next_with_data(Some(calculated_output_vec.clone()))
+        };
+
+        let adder = match adder {
+            Some(a) => a,
+            None => break,
+        };
 
         if log_enabled!(log::Level::Debug) {
             debug!("acc: {cid} , adder: {}", adder.name())
@@ -199,10 +249,10 @@ pub async fn accumulate_from_start(
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
-    mut inmappers: MIterBox,
+    mut inmappers: DMIterBox,
     oti: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
-    let first = inmappers.next().expect("first inmapper");
+    let first = inmappers.next_with_data(None).expect("first inmapper");
     let first_r = first
         .maps(
             CID::default(),
@@ -264,7 +314,7 @@ struct InIterAccumulateForeverParams {
     cid: CID,
     rx: tokio::sync::mpsc::Receiver<MapResult>,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
-    miter: MIterBox,
+    miter: DMIterBox,
     oti: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")]
@@ -316,7 +366,7 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
 struct SpawnAccForeverParams {
     cid: CID,
     new_stream_info: MapResult,
-    miter: Box<dyn MIter>,
+    miter: DMIterBox,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     oti: Option<Arc<GlobalTrafficRecorder>>,
 

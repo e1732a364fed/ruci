@@ -27,7 +27,7 @@ use ipnet::*;
 use iprange::IpRange;
 use regex::RegexSet;
 use ruci::{
-    map::{acc::MIterBox, OptVecData},
+    map::{acc::DMIterBox, OptVecData},
     net::{self, *},
     relay::route::{self, *},
     user::*,
@@ -36,8 +36,8 @@ use ruci::{
 #[derive(Debug)]
 pub struct RuleSetOutSelector {
     pub outbounds_rules_vec: Vec<RuleSet>, // rule -> out_tag
-    pub outbounds_map: Arc<HashMap<String, MIterBox>>, //out_tag -> outbound
-    pub default: MIterBox,
+    pub outbounds_map: Arc<HashMap<String, DMIterBox>>, //out_tag -> outbound
+    pub default: DMIterBox,
 }
 
 #[async_trait]
@@ -47,7 +47,7 @@ impl route::OutSelector for RuleSetOutSelector {
         addr: &net::Addr,
         in_chain_tag: &str,
         params: &Vec<OptVecData>,
-    ) -> MIterBox {
+    ) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),

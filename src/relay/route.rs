@@ -28,7 +28,7 @@ use std::{
 use async_trait::async_trait;
 
 use crate::{
-    map::{acc::MIterBox, AnyData},
+    map::{acc::DMIterBox, AnyData},
     net,
     user::{self, UserVec},
 };
@@ -37,9 +37,9 @@ use super::OptVecData;
 
 /// Send + Sync to use in async
 ///
-/// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 MIterBox
+/// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 DMIterBox
 ///
-/// 选择出的 MIterBox 一般是用于 outbound,
+/// 选择出的 DMIterBox 一般是用于 outbound,
 ///
 /// params 是 &Vec<Option<AnyData>>, 这是链累加 得到的 结果, 里面可能有任何值,
 ///
@@ -53,7 +53,7 @@ pub trait OutSelector: Send + Sync {
         addr: &net::Addr,
         in_chain_tag: &str,
         params: &Vec<OptVecData>,
-    ) -> MIterBox;
+    ) -> DMIterBox;
 }
 
 pub async fn get_user_from_anydata_vec(adv: &Vec<OptVecData>) -> Option<UserVec> {
@@ -92,7 +92,7 @@ pub async fn get_user_from_anydata_vec(adv: &Vec<OptVecData>) -> Option<UserVec>
 
 #[derive(Debug)]
 pub struct FixedOutSelector {
-    pub default: MIterBox,
+    pub default: DMIterBox,
 }
 
 #[async_trait]
@@ -102,7 +102,7 @@ impl OutSelector for FixedOutSelector {
         _addr: &net::Addr,
         _in_chain_tag: &str,
         _params: &Vec<OptVecData>,
-    ) -> MIterBox {
+    ) -> DMIterBox {
         self.default.clone()
     }
 }
@@ -110,8 +110,8 @@ impl OutSelector for FixedOutSelector {
 #[derive(Debug)]
 pub struct TagOutSelector {
     pub outbounds_tag_route_map: HashMap<String, String>, // in_tag -> out_tag
-    pub outbounds_map: Arc<HashMap<String, MIterBox>>,    //out_tag -> outbound
-    pub default: MIterBox,
+    pub outbounds_map: Arc<HashMap<String, DMIterBox>>,   //out_tag -> outbound
+    pub default: DMIterBox,
 }
 
 #[async_trait]
@@ -121,7 +121,7 @@ impl OutSelector for TagOutSelector {
         _addr: &net::Addr,
         in_chain_tag: &str,
         _params: &Vec<OptVecData>,
-    ) -> MIterBox {
+    ) -> DMIterBox {
         let ov = self.outbounds_tag_route_map.get(in_chain_tag);
         match ov {
             Some(out_k) => {
@@ -168,8 +168,8 @@ impl InboundInfoOutTagPair {
 #[derive(Debug)]
 pub struct InboundInfoOutSelector {
     pub outbounds_ruleset_vec: Vec<InboundInfoOutTagPair>, // rule -> out_tag
-    pub outbounds_map: Arc<HashMap<String, MIterBox>>,     //out_tag -> outbound
-    pub default: MIterBox,
+    pub outbounds_map: Arc<HashMap<String, DMIterBox>>,    //out_tag -> outbound
+    pub default: DMIterBox,
 }
 #[async_trait]
 impl OutSelector for InboundInfoOutSelector {
@@ -178,7 +178,7 @@ impl OutSelector for InboundInfoOutSelector {
         addr: &net::Addr,
         in_chain_tag: &str,
         params: &Vec<OptVecData>,
-    ) -> MIterBox {
+    ) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),
@@ -213,9 +213,11 @@ mod test {
     use crate::net::Addr;
     use crate::user::{PlainText, User};
 
+    use self::acc::DynVecIterWrapper;
+
     use super::*;
 
-    fn get_miter_ab() -> MIterBox {
+    fn get_miter_ab() -> DMIterBox {
         let mut a = Adder::default();
         a.addnum = 1;
         let a: MapperBox = Box::new(a);
@@ -225,17 +227,20 @@ mod test {
 
         let v = vec![a, b];
         let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
-        let m: MIterBox = Box::new(v.into_iter());
+        // let m: DMIterBox = Box::new(DynMIterWrapper(Box::new(v.into_iter())));
+        let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
         m
     }
-    fn get_miter_a() -> MIterBox {
+    fn get_miter_a() -> DMIterBox {
         let mut a = Adder::default();
         a.addnum = 2;
         let a: MapperBox = Box::new(a);
 
         let v = vec![a];
         let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
-        let m: MIterBox = Box::new(v.into_iter());
+        //let m: DMIterBox = Box::new(DynMIterWrapper(Box::new(v.into_iter())));
+        let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
+
         m
     }
 
@@ -247,8 +252,8 @@ mod test {
         ];
         let outbounds_route_map: HashMap<_, _> = pair_list.into_iter().collect();
 
-        let m: MIterBox = get_miter_ab();
-        let m2: MIterBox = get_miter_a();
+        let m: DMIterBox = get_miter_ab();
+        let m2: DMIterBox = get_miter_a();
 
         let mut outbounds_map = HashMap::new();
         outbounds_map.insert("d1".to_string(), m);
@@ -261,16 +266,16 @@ mod test {
         };
         let x = t.select(&Addr::default(), "l1", &Vec::new()).await;
         println!("{:?}", x);
-        assert_eq!(x.count(), 2);
+        assert_eq!(x.to_miter().unwrap().count(), 2); //can't count DMIter directly
         let x = t.select(&Addr::default(), "l11", &Vec::new()).await;
         println!("{:?}", x);
-        assert_eq!(x.count(), 1);
+        assert_eq!(x.to_miter().unwrap().count(), 1);
     }
 
     #[tokio::test]
     async fn test_inbound_info_select() {
-        let m: MIterBox = get_miter_ab();
-        let m2: MIterBox = get_miter_a();
+        let m: DMIterBox = get_miter_ab();
+        let m2: DMIterBox = get_miter_a();
 
         let mut outbounds_map = HashMap::new();
         outbounds_map.insert("d1".to_string(), m);
@@ -309,11 +314,13 @@ mod test {
 
         let x = rsos.select(&Addr::default(), "l1", &params).await;
 
-        assert_eq!(x.count(), 1);
+        assert_eq!(x.to_miter().unwrap().count(), 1);
 
+        println!("{:?}", x);
         params.clear();
         let x = rsos.select(&Addr::default(), "l1", &params).await;
 
-        assert_eq!(x.count(), 2);
+        assert_eq!(x.to_miter().unwrap().count(), 2);
+        println!("{:?}", x);
     }
 }

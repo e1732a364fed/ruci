@@ -6,7 +6,7 @@ use futures::Future;
 use log::{debug, info};
 use parking_lot::Mutex;
 use ruci::{
-    map::*,
+    map::{acc::DynVecIterWrapper, *},
     net::{GlobalTrafficRecorder, Stream},
     relay::{self, route::*},
 };
@@ -243,7 +243,7 @@ async fn listen_tcp(
     let clone_oti = move || oti.clone();
 
     let iter = outc.get_mappers_vec().into_iter();
-    let ib = Box::new(iter);
+    let ib = Box::new(DynVecIterWrapper(iter));
     let selector: Box<dyn OutSelector> = Box::new(FixedOutSelector { default: ib });
     let selector = Arc::new(selector);
 
@@ -258,7 +258,7 @@ async fn listen_tcp(
                 }
 
                 let iter = ins.get_mappers_vec().into_iter();
-                let ib = Box::new(iter);
+                let ib = Box::new(DynVecIterWrapper(iter));
 
                 let slt = selector.clone();
                 tokio::spawn(  relay::handle_in_stream(

@@ -5,7 +5,10 @@ use parking_lot::Mutex;
 #[allow(unused)]
 use ruci::net;
 use ruci::{
-    map::{acc::MIterBox, *},
+    map::{
+        acc::{DMIterBox, DynVecIterWrapper},
+        *,
+    },
     net::GlobalTrafficRecorder,
     relay::{handle_in_accumulate_result, route::*, *},
 };
@@ -27,9 +30,9 @@ pub struct Engine {
     #[cfg(feature = "trace")]
     pub conn_info_updater: net::OptUpdater,
 
-    inbounds: Vec<MIterBox>,                   // 不为空
-    outbounds: Arc<HashMap<String, MIterBox>>, //不为空
-    default_outbound: Option<MIterBox>,        // init 后一定有值
+    inbounds: Vec<DMIterBox>,                   // 不为空
+    outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
+    default_outbound: Option<DMIterBox>,        // init 后一定有值
     tag_routes: Option<HashMap<String, String>>,
 }
 
@@ -40,7 +43,7 @@ impl Engine {
 
         if running.is_none() {
             self.inbounds.clear();
-            self.outbounds = Arc::<HashMap<String, MIterBox>>::default();
+            self.outbounds = Arc::<HashMap<String, DMIterBox>>::default();
             self.default_outbound = None;
             self.tag_routes = None;
             self.ti = Arc::<GlobalTrafficRecorder>::default();
@@ -57,7 +60,7 @@ impl Engine {
             .map(|v| {
                 let inbound: Vec<_> = v.into_iter().map(|o| Arc::new(o)).collect();
 
-                let x: MIterBox = Box::new(inbound.into_iter());
+                let x: DMIterBox = Box::new(DynVecIterWrapper(inbound.into_iter()));
                 x
             })
             .collect();
