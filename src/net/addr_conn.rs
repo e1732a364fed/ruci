@@ -135,6 +135,63 @@ impl<T: ?Sized + AsyncWriteAddr + Unpin> AsyncWriteAddr for &mut T {
     deref_async_write_addr!();
 }
 
+/*
+
+////////////////////////////////////////////////////////////////////
+
+                        shutdown part
+
+////////////////////////////////////////////////////////////////////
+*/
+//tokio::io::util::shutdown
+
+pin_project_lite::pin_project! {
+    /// A future used to shutdown an I/O object.
+    ///
+    /// Created by the [`AsyncWriteExt::shutdown`][shutdown] function.
+    /// [shutdown]: [`crate::io::AsyncWriteExt::shutdown`]
+    #[must_use = "futures do nothing unless you `.await` or poll them"]
+    #[derive(Debug)]
+    pub struct Shutdown<'a, A: ?Sized> {
+        a: &'a mut A,
+        // Make this future `!Unpin` for compatibility with async trait methods.
+        #[pin]
+        _pin: std::marker::PhantomPinned,
+    }
+}
+
+/// Creates a future which will shutdown an I/O object.
+pub(super) fn shutdown<A>(a: &mut A) -> Shutdown<'_, A>
+where
+    A: AsyncWriteAddr + Unpin + ?Sized,
+{
+    Shutdown {
+        a,
+        _pin: std::marker::PhantomPinned,
+    }
+}
+
+impl<A> futures_util::Future for Shutdown<'_, A>
+where
+    A: AsyncWriteAddr + Unpin + ?Sized,
+{
+    type Output = io::Result<()>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let me = self.project();
+        Pin::new(me.a).poll_close_addr(cx)
+    }
+}
+
+/*
+
+////////////////////////////////////////////////////////////////////
+
+                        end shutdown part
+
+////////////////////////////////////////////////////////////////////
+*/
+
 pub trait AsyncWriteAddrExt: AsyncWriteAddr {
     fn write<'a>(&'a mut self, buf: &'a [u8], addr: &'a Addr) -> WriteFuture<'a, Self>
     where
@@ -145,6 +202,13 @@ pub trait AsyncWriteAddrExt: AsyncWriteAddr {
             buf,
             addr,
         }
+    }
+
+    fn shutdown(&mut self) -> Shutdown<'_, Self>
+    where
+        Self: Unpin,
+    {
+        shutdown(self)
     }
 }
 impl<T: AsyncWriteAddr + ?Sized> AsyncWriteAddrExt for T {}

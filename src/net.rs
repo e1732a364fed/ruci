@@ -363,6 +363,10 @@ impl Stream {
     pub async fn try_shutdown(self) {
         if let Stream::TCP(mut t) = self {
             let _ = t.shutdown().await;
+        } else if let Stream::UDP(mut c) = self {
+            use crate::net::addr_conn::AsyncWriteAddrExt;
+
+            let _ = c.1.shutdown().await;
         }
     }
 

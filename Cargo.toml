@@ -23,6 +23,7 @@ futures-util = "0.3.30"
 async-trait = "0.1.77" 
 
 tokio = { version = "1", features = ["full"] }
+pin-project-lite = "0.2.13"
 tokio-rustls = "0.24.0"
 
 lazy_static = "1" #1.4.0
