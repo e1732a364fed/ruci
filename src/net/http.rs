@@ -7,6 +7,20 @@ rust上就好了
 
 */
 
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Serialize};
+
+/// used by various Mappers in ruci that have a http layer
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommonConfig {
+    pub host: String,
+    pub path: String,
+    pub headers: Option<BTreeMap<String, String>>,
+
+    pub is_early_data: Option<bool>,
+}
+
 const MAX_PARSE_URL_LEN: usize = 3000;
 const HEADER_ENDING_BYTES: &[u8] = b"\r\n\r\n";
 const HEADER_ENDING_STR: &str = "\r\n\r\n";

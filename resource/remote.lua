@@ -16,7 +16,13 @@ trojan_in = { Trojan = { password = "mypassword" } }
 
 trojan_chain = { tcp, tls,  trojan_in, }
 
-trojan_ws_chain = { tcp, tls, "WebSocket",  trojan_in, }
+ws={
+    WebSocket = {
+        host = "myhost", path = "/path1"
+    }
+}
+
+trojan_ws_chain = { tcp, tls,ws,  trojan_in, }
 
 
 dial = { Dialer =  "tcp://0.0.0.0:10801" }

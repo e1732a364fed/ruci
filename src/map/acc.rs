@@ -368,12 +368,21 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
         };
         let new_cid = cid.clone_push(o_gtr.clone());
 
-        if tracing::enabled!(Level::DEBUG) {
-            info!(
-                cid = %cid,
-                new_cid = %new_cid,
-                "new accepted stream"
-            );
+        if tracing::enabled!(Level::INFO) {
+            if let Some(d) = &new_stream_info.d {
+                info!(
+                    cid = %cid,
+                    new_cid = %new_cid,
+                    data = ?d,
+                    "new accepted stream"
+                );
+            } else {
+                info!(
+                    cid = %cid,
+                    new_cid = %new_cid,
+                    "new accepted stream"
+                );
+            }
         }
 
         spawn_acc_forever(SpawnAccForeverParams {

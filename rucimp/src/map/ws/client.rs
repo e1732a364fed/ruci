@@ -1,12 +1,10 @@
-use std::collections::BTreeMap;
-
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, *},
-    net::{self, *},
+    net::{self, http::CommonConfig, *},
 };
 use tokio_tungstenite::{
     client_async,
@@ -26,18 +24,11 @@ impl ruci::Name for Client {
     }
 }
 
-pub struct Config {
-    pub host: String,
-    pub path: String,
-    pub headers: Option<BTreeMap<String, String>>,
-
-    pub is_early_data: bool,
-}
 const EARLY_DATA_HEADER_K: &str = "k";
 const EARLY_DATA_HEADER_V: &str = "v";
 
 impl Client {
-    pub fn new(c: Config) -> Self {
+    pub fn new(c: CommonConfig) -> Self {
         let mut request = Request::builder()
             .method("GET")
             .header("Host", c.host.as_str())
@@ -58,7 +49,7 @@ impl Client {
             }
         }
 
-        if c.is_early_data {
+        if c.is_early_data.unwrap_or_default() {
             request = request.header(EARLY_DATA_HEADER_K, EARLY_DATA_HEADER_V);
         }
         let r = request.body(()).unwrap();

@@ -56,9 +56,8 @@ trojan_out = {
 
 websocket_out = {
     WebSocket ={
-        is_early_data = false,
-        host = "host1",
-        path = "/?ed=2048"
+        host = "myhost",
+        path = "/path1"
     }
 }
 
