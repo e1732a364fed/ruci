@@ -36,6 +36,10 @@ impl TcpDialer {
 
 #[async_trait]
 impl Mapper for TcpDialer {
+    fn get_target_addr(&self) -> Option<net::Addr> {
+        self.addr.clone()
+    }
+
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::None => match params.d {
