@@ -29,7 +29,9 @@ pub async fn copy<C1: AsyncConn, C2: AsyncConn>(
     }
 
     #[cfg(not(feature = "trace"))]
-    tokio::io::copy_bidirectional(local_c, remote_c).await
+    {
+        tokio::io::copy_bidirectional(local_c, remote_c).await
+    }
 }
 
 /// cp with updater will send msg when each single read/write ends.

@@ -58,7 +58,7 @@ impl Map for Stack {
 
                     let mut iface = device::create_interface(&mut device);
 
-                    let mut interval = tokio::time::interval(Duration::from_secs(30));
+                    let mut interval = tokio::time::interval(Duration::from_secs(2));
 
                     tokio::spawn(async move {
                         loop {
