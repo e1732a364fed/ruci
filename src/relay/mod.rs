@@ -6,7 +6,7 @@ TcpStream 的版本和 UnixStream 的版本的代码应该是一样的, 但因�
 
 */
 
+pub mod conn;
 pub mod cp_tcp;
-pub mod tcp;
 
 pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间。 //todo: 修改这里
