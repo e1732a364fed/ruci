@@ -12,6 +12,8 @@ ruci pronounced lucy.
 
 A network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+)
 
+入门 ruci 可阅读 [Introduction_zh.md](doc/Introduction_zh.md)
+
 See [notes.md](doc/notes.md) for more notes.
 
 文档所限, 肯定有东西没有涉及到, 可提交issue提问或加入讨论. 
@@ -44,10 +46,10 @@ ruci-cmd is the ultimate full feature executable, including utils, api-client an
 
 由下文可知, ruci现在支持两种配置格式, 
 
-1. "suit mode", 是扁平配置, toml格式. (suit 含义是 "套装")
-2. "chain mode", 链式配置, lua格式. 
+1. "suit mode", 是扁平配置, uses `toml`. (suit 含义是 "套装")
+2. "chain mode", 链式配置, uses `lua`. 
 
-lua格式可参考 [local.lua](resource/local.lua), [remote.lua](resource/remote.lua)  和 [lua配置说明](doc/lua.md) 
+For lua configuration, see [local.lua](resource/local.lua), [remote.lua](resource/remote.lua)  和 [lua配置说明](doc/lua.md) 
 
 ## Compile/Run
 
@@ -86,12 +88,12 @@ Ruci abstracts proxy, regards any protocols as consisting of one or more Map 【
 
 Pseudo code: 
 
-stream generator 【单流发生器】(zero to one):  `function(args)->stream`
+Stream generator 【单流发生器】(zero to one):  `function(args)->stream`
 
-injection 【单射】(one to one function, which is the normal stream Map): 
+Injection 【单射】(one to one function, which is the normal stream Map): 
  `function(stream1, args...)-> (Option<stream2>, useful_data...) `
 
-multi-stream generator【多流发生器】(one to many): `function( Option<stream> ,args...)->[channel->stream]`
+Multi-stream generator【多流发生器】(one to many): `function( Option<stream> ,args...)->[channel->stream]`
 
 流由流发生器产生. 
 
@@ -171,13 +173,13 @@ o2node-.->collector
 
 ### ruci
 
-- [x] 链式架构 
+- [x] basic structure (based on "Map"s)
 - [x] tcp, udp, unix domain socket, ip (tun, with auto_route)([tun example](rucimp/examples/README.md#tun))
 - [x] 流量记录 (两种实现, 分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
 - [x] Direct, Blackhole, Listener, BindDialer, Stdio, Fileio
 - [x] fixed_target_addr
-- [x] Tls, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
-- [x] Adder (按字节加法器), Counter, Echo
+- [x] TLS, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
+- [x] MathAdder (按字节加法器), Counter, Echo
 - [x] 路由 (tag_route)
 - [x] 回落
 - [ ] DNS
@@ -186,10 +188,10 @@ o2node-.->collector
 
 - [x] suit配置格式 （toml 格式）
 - [x] chain配置格式 (动态链须为lua格式)
-- [x] 静态链
-- [x] 动态链(有限动态链, 完全动态链)
+- [x] static chain (静态链)
+- [x] dynamic chain (finite, infinite) (动态链)(有限动态链, 完全动态链)
 - [x] rucimp/examples: suit , chain, etc.
-- [x] 路由 (rule_route)
+- [x] rule_route 规则路由
 - [x] tproxy (with auto_route)
 - [x] native-tls
 - [x] http_filter, websocket(including early data)
