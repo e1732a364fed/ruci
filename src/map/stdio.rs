@@ -6,6 +6,7 @@
 use std::{pin::Pin, task::Poll};
 
 use async_trait::async_trait;
+use macro_mapper::common_mapper_field;
 
 use crate::{net::CID, Name};
 
@@ -59,11 +60,9 @@ impl AsyncWrite for Conn {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Stdio {
-    // 存一个可选的addr, 可作为指定的连接目标。 这样stdio的decode行为就像一个 socks5一样
-    pub addr: Option<net::Addr>,
-}
+#[common_mapper_field]
+#[derive(Clone, Debug, Default)]
+pub struct Stdio {}
 
 impl Name for Stdio {
     fn name(&self) -> &'static str {
@@ -74,20 +73,25 @@ impl Name for Stdio {
 impl Stdio {
     pub fn from(s: &str) -> MapperBox {
         if s.is_empty() {
-            Box::new(Stdio { addr: None })
+            Box::new(Stdio::default())
         } else {
             let a = net::Addr::from_network_addr_str(s).unwrap();
-            Box::new(Stdio { addr: Some(a) })
+            Box::new(Stdio {
+                fixed_target_addr: Some(a),
+                ..Default::default()
+            })
         }
+    }
+}
+
+impl MapperExt for Stdio {
+    fn configured_target_addr(&self) -> Option<net::Addr> {
+        self.fixed_target_addr.clone()
     }
 }
 
 #[async_trait]
 impl Mapper for Stdio {
-    fn configured_target_addr(&self) -> Option<net::Addr> {
-        self.addr.clone()
-    }
-
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.c.is_not_none() {
             return MapResult::err_str("stdio can't generate stream when there's already one");

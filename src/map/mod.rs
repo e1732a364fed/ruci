@@ -354,14 +354,28 @@ pub trait Mapper: crate::Name + DynClone {
     /// 与 InAdder 一样, 它返回一个可选的额外数据  OptData
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult;
-
-    fn configured_target_addr(&self) -> Option<net::Addr> {
-        None
-    }
 }
 
 pub trait ToMapper {
     fn to_mapper(&self) -> MapperBox;
+}
+
+/// 一些辅助方法. See crates/macro_mapper.
+/// ```plaintext
+/// use macro_mapper::*;
+/// #[derive(MapperExt)]
+/// #[common_mapper_field]
+/// ```
+/// 来自动添加实现
+pub trait MapperExt: Mapper {
+    fn set_configured_target_addr(&mut self, _a: Option<net::Addr>) {}
+    fn set_is_tail_of_chain(&mut self, _is: bool) {}
+    fn configured_target_addr(&self) -> Option<net::Addr> {
+        None
+    }
+    fn is_tail_of_chain(&self) -> bool {
+        false
+    }
 }
 
 //令 Mapper 实现 Send + Sync, 否则异步/多线程报错

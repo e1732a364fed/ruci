@@ -215,7 +215,10 @@ impl ToMapper for OutMapperConfig {
             OutMapperConfig::Dialer(d) => match d {
                 Dialer::TcpDialer(td_str) => {
                     let a = net::Addr::from_ip_addr_str("tcp", td_str).unwrap();
-                    Box::new(ruci::map::network::TcpDialer { addr: Some(a) })
+                    Box::new(ruci::map::network::TcpDialer {
+                        fixed_target_addr: Some(a),
+                        ..ruci::map::network::TcpDialer::default()
+                    })
                 }
                 Dialer::UnixDialer(_) => todo!(),
             },

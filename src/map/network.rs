@@ -1,4 +1,5 @@
 use log::{debug, info, log_enabled};
+use macro_mapper::common_mapper_field;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::mpsc::{self, Receiver},
@@ -51,10 +52,9 @@ impl Mapper for Direct {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct TcpDialer {
-    pub addr: Option<net::Addr>,
-}
+#[common_mapper_field]
+#[derive(Clone, Debug, Default)]
+pub struct TcpDialer {}
 
 impl Name for TcpDialer {
     fn name(&self) -> &'static str {
@@ -79,13 +79,14 @@ impl TcpDialer {
         }
     }
 }
+impl MapperExt for TcpDialer {
+    fn configured_target_addr(&self) -> Option<net::Addr> {
+        self.fixed_target_addr.clone()
+    }
+}
 
 #[async_trait]
 impl Mapper for TcpDialer {
-    fn configured_target_addr(&self) -> Option<net::Addr> {
-        self.addr.clone()
-    }
-
     /// try the paramater first, if no addr was given, use configured addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
@@ -128,7 +129,7 @@ impl Mapper for TcpDialer {
                     }
                 }
                 None => {
-                    if let Some(configured_dial_a) = &self.addr {
+                    if let Some(configured_dial_a) = &self.fixed_target_addr {
                         return TcpDialer::dial_addr(configured_dial_a, params.a, params.b).await;
                     }
                     return MapResult::err_str(&format!(
