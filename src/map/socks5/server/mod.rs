@@ -12,9 +12,9 @@ use super::*;
 
 use crate::{
     buf_to_ob,
-    map::{self, AnyData, MapResult, MapperBox, ProxyBehavior, ToMapper, CID},
+    map::{self, MapResult, MapperBox, ProxyBehavior, ToMapper, CID},
     net::{self, Addr, Conn},
-    user::{self, AsyncUserAuthenticator, PlainText, User, UsersMap},
+    user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
     Name,
 };
 use anyhow::{Context, Ok};
@@ -435,14 +435,13 @@ impl Server {
         }
         let ad = Addr::from("tcp", name, ip, port).map_err(|e| io::Error::other(e.to_string()))?;
 
-        fn ou_to_oad(ou: Option<PlainText>) -> Option<AnyData> {
+        fn ou_to_oad(ou: Option<PlainText>) -> Option<Box<dyn map::Data>> {
             ou.map(|up| {
-                let b: Box<dyn User> = Box::new(up);
-                map::AnyData::User(b)
+                let b: Box<dyn map::Data> = Box::new(up);
+                b
             })
         }
         let d = ou_to_oad(the_user);
-        let d = map::Data::from_opt_any(d);
 
         if cmd == CMD_CONNECT {
             let _ = base.write(&*COMMMON_TCP_HANDSHAKE_REPLY).await?;

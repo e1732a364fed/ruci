@@ -120,41 +120,31 @@ async fn test_counter1() -> anyhow::Result<()> {
         return Err(e);
     }
 
-    match r.d {
-        crate::map::Data::Data(_) => {
-            panic!("counter should return a vec instead of pure data")
+    match r.dynamic_data {
+        None => {
+            panic!("counter should return a dynamic_data")
         }
-        crate::map::Data::Vec(mut v) => {
+        Some(mut v) => {
             if v.len() != 2 {
                 panic!("counter should return 2 data, got {}", v.len())
             } else {
-                let d1 = v.pop().expect("vec has 1 data ");
-                let d2 = v.pop().expect("vec has 2 data ");
+                let db = v.pop().expect("vec has 1 data ");
+                let ub = v.pop().expect("vec has 2 data ");
 
-                match d1 {
-                    crate::map::AnyData::AU64(db) => match d2 {
-                        crate::map::AnyData::AU64(ub) => {
-                            let mut inital_data = [1u8, 2, 3];
-                            r.c.try_unwrap_tcp()?.write(&mut inital_data).await?;
+                let mut inital_data = [1u8, 2, 3];
+                r.c.try_unwrap_tcp()?.write(&mut inital_data).await?;
 
-                            let v = writevc.lock();
+                let v = writevc.lock();
 
-                            println!("it     be {:?}", v);
-                            assert_eq!(v.len(), inital_data.len());
+                println!("it     be {:?}", v);
+                assert_eq!(v.len(), inital_data.len());
 
-                            println!(
-                                "Successfully downcasted to CounterConn, {}, {}",
-                                ub.load(std::sync::atomic::Ordering::Relaxed),
-                                db.load(std::sync::atomic::Ordering::Relaxed)
-                            );
-                            return Ok(());
-                        }
-
-                        _ => panic!("counter got data2 other than AtomicU64"),
-                    },
-
-                    _ => panic!("counter got data1 other than AtomicU64"),
-                }
+                println!(
+                    "Successfully downcasted to CounterConn, {}, {}",
+                    db.load(std::sync::atomic::Ordering::Relaxed),
+                    ub.load(std::sync::atomic::Ordering::Relaxed)
+                );
+                return Ok(());
             }
         }
     }

@@ -28,7 +28,7 @@ use std::{
 use async_trait::async_trait;
 
 use crate::{
-    map::{acc::DMIterBox, AnyData},
+    map::acc::DMIterBox,
     net,
     user::{self, UserVec},
 };
@@ -48,26 +48,20 @@ use super::Data;
 ///
 #[async_trait]
 pub trait OutSelector: Send + Sync {
-    async fn select(&self, addr: &net::Addr, in_chain_tag: &str, params: &[Data]) -> DMIterBox;
+    async fn select(
+        &self,
+        addr: &net::Addr,
+        in_chain_tag: &str,
+        params: &[Option<Box<dyn Data>>],
+    ) -> DMIterBox;
 }
 
-pub async fn get_user_from_anydata_vec(adv: &[Data]) -> Option<UserVec> {
+pub async fn get_user_from_anydata_vec(adv: &[Option<Box<dyn Data>>]) -> Option<UserVec> {
     let mut v = UserVec::default();
 
-    for anyd in adv.iter() {
-        match anyd {
-            super::Data::Data(data) => {
-                if let AnyData::User(u) = data {
-                    v.0.push(user::UserBox(u.clone()));
-                }
-            }
-            super::Data::Vec(v2) => {
-                for data in v2 {
-                    if let AnyData::User(u) = data {
-                        v.0.push(user::UserBox(u.clone()));
-                    }
-                }
-            }
+    for anyd in adv.iter().flatten() {
+        if let Some(u) = anyd.get_user() {
+            v.0.push(user::UserBox(u.clone()));
         }
     }
     if v.0.is_empty() {
@@ -84,7 +78,12 @@ pub struct FixedOutSelector {
 
 #[async_trait]
 impl OutSelector for FixedOutSelector {
-    async fn select(&self, _addr: &net::Addr, _in_chain_tag: &str, _params: &[Data]) -> DMIterBox {
+    async fn select(
+        &self,
+        _addr: &net::Addr,
+        _in_chain_tag: &str,
+        _params: &[Option<Box<dyn Data>>],
+    ) -> DMIterBox {
         self.default.clone()
     }
 }
@@ -98,7 +97,12 @@ pub struct TagOutSelector {
 
 #[async_trait]
 impl OutSelector for TagOutSelector {
-    async fn select(&self, _addr: &net::Addr, in_chain_tag: &str, _params: &[Data]) -> DMIterBox {
+    async fn select(
+        &self,
+        _addr: &net::Addr,
+        in_chain_tag: &str,
+        _params: &[Option<Box<dyn Data>>],
+    ) -> DMIterBox {
         let ov = self.outbounds_tag_route_map.get(in_chain_tag);
         match ov {
             Some(out_k) => {
@@ -150,7 +154,12 @@ pub struct InboundInfoOutSelector {
 }
 #[async_trait]
 impl OutSelector for InboundInfoOutSelector {
-    async fn select(&self, addr: &net::Addr, in_chain_tag: &str, params: &[Data]) -> DMIterBox {
+    async fn select(
+        &self,
+        addr: &net::Addr,
+        in_chain_tag: &str,
+        params: &[Option<Box<dyn Data>>],
+    ) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),
@@ -183,7 +192,7 @@ mod test {
     use crate::map::math::*;
     use crate::map::*;
     use crate::net::Addr;
-    use crate::user::{PlainText, User};
+    use crate::user::PlainText;
 
     use self::acc::DynVecIterWrapper;
 
@@ -278,10 +287,10 @@ mod test {
         };
 
         let u = PlainText::new("user".to_string(), "pass".to_string());
-        let ub: Box<dyn User> = Box::new(u);
+        //let ub: Box<dyn User> = Box::new(u);
 
-        let mut params: Vec<Data> = Vec::new();
-        params.push(Data::Data(AnyData::User(ub)));
+        let mut params: Vec<Option<Box<dyn Data>>> = Vec::new();
+        params.push(Some(Box::new(u)));
 
         let x = rsos.select(&Addr::default(), "l1", &params).await;
 

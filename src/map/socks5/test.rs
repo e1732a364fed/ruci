@@ -262,33 +262,17 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
         assert_eq!(r.b, None);
 
         match r.d {
-            map::Data::Data(d) => match d {
-                map::AnyData::User(up) => {
+            Some(d) => {
+                if let Some(up) = d.get_user() {
                     assert_eq!(up.identity_str(), "u0");
                     assert_eq!(up.auth_str(), "plaintext:u0\np0");
                     println!("auth user succeed")
+                } else {
+                    panic!("socks5 should returns a User data")
                 }
-                _ => panic!("socks5 should returns a User data"),
-            },
-            map::Data::Vec(_) => panic!("got vec instead of pure data"),
+            }
+            None => panic!("got None instead of   data"),
         }
-
-        // match d {
-        //     // crate::map::AnyData::B(mut d) => {
-        //     //     if let Some(up) = d.downcast_mut::<Box<dyn User>>() {
-        //     //         assert_eq!(up.identity_str(), "u0");
-        //     //         assert_eq!(up.auth_str(), "plaintext:u0\np0");
-        //     //     } else {
-        //     //         panic!("failed downcasted to UserPass, ")
-        //     //     }
-        //     // }
-        //     crate::map::AnyData::User(up) => {
-        //         assert_eq!(up.identity_str(), "u0");
-        //         assert_eq!(up.auth_str(), "plaintext:u0\np0");
-        //         println!("auth user succeed")
-        //     }
-        //     _ => panic!("need AsyncAnyData::B"),
-        // }
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];

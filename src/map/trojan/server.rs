@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
-    map::{self, AnyData, MapResult, Mapper, MapperBox, ToMapper, CID},
+    map::{self, Data, MapResult, Mapper, MapperBox, ToMapper, CID},
     net::{self, helpers, Network},
-    user::{self, AsyncUserAuthenticator, UsersMap},
+    user::{AsyncUserAuthenticator, UsersMap},
     Name,
 };
 use anyhow::anyhow;
@@ -152,15 +152,14 @@ impl Server {
             ));
         }
 
-        fn ou_to_od(opt_user: Option<User>) -> Option<AnyData> {
+        fn ou_to_od(opt_user: Option<User>) -> Option<Box<dyn Data>> {
             opt_user.map(|up| {
-                let b: Box<dyn user::User> = Box::new(up);
-                map::AnyData::User(b)
+                let u: Box<dyn Data> = Box::new(up);
+                u
             })
         }
 
         let d = ou_to_od(opt_user);
-        let d = map::Data::from_opt_any(d);
 
         if is_udp {
             let u = udp::from(base);

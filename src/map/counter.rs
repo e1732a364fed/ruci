@@ -144,16 +144,13 @@ impl Mapper for Counter {
                     base: Box::pin(c),
                 };
 
-                let output_data: Vec<AnyData> =
-                    vec![AnyData::AU64(cd.ub.clone()), AnyData::AU64(cd.db.clone())];
-
-                let od = Data::Vec(output_data);
+                let output_data: Vec<Arc<AtomicU64>> = vec![cd.ub.clone(), cd.db.clone()];
 
                 MapResult::builder()
                     .a(params.a)
                     .b(params.b)
                     .c(Stream::c(Box::new(cc)))
-                    .d(od)
+                    .dynamic_data(output_data)
                     .build()
             }
             Stream::AddrConn(_) => {

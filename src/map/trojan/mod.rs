@@ -6,6 +6,10 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
 
+use crate::user;
+
+use super::{Data, DataFlags};
+
 pub mod client;
 pub mod server;
 pub mod udp;
@@ -85,6 +89,17 @@ impl User {
             hex: hex.clone(),
             astr: format!("trojan:{}", hex),
         }
+    }
+}
+
+#[typetag::serde]
+impl Data for User {
+    fn get_user(&self) -> Option<Box<dyn user::User>> {
+        let ub = Box::new(self.clone());
+        Some(ub)
+    }
+    fn get_flags(&self) -> DataFlags {
+        DataFlags::User
     }
 }
 

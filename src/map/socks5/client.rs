@@ -10,7 +10,7 @@ use tokio::{
 use self::map::{MapParams, ProxyBehavior, CID};
 use super::*;
 use crate::{
-    map::{socks5::udp::new_addr_conn, AnyData, Data, MapResult, MapperExt},
+    map::{socks5::udp::new_addr_conn, MapResult, MapperExt},
     net,
 };
 use anyhow::{anyhow, bail, Ok};
@@ -135,13 +135,12 @@ impl Client {
 
             let ac = new_addr_conn(uso, server_udp_so);
 
-            let data = AnyData::U64(adopted_method as u64);
-            let output_data = Data::Data(data);
+            let output_data = Box::new(adopted_method);
 
             Ok(MapResult::newu(ac)
                 .a(Some(a))
                 .b(the_ed)
-                .d(output_data)
+                .d(Some(output_data))
                 .build())
         } else {
             buf.extend_from_slice(&[VERSION5, CMD_CONNECT, 0][..]);
@@ -165,10 +164,9 @@ impl Client {
                 }
             }
 
-            let data = AnyData::U64(adopted_method as u64);
-            let output_data = Data::Data(data);
+            let output_data = Box::new(adopted_method);
 
-            Ok(MapResult::newc(base).b(the_ed).d(output_data).build())
+            Ok(MapResult::newc(base).b(the_ed).d(Some(output_data)).build())
         }
     }
 }

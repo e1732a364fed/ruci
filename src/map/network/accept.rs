@@ -1,4 +1,7 @@
-use crate::{map::AnyData, net::listen::Listener};
+use crate::{
+    map::{self},
+    net::listen::Listener,
+};
 use anyhow::anyhow;
 use log::{debug, info, log_enabled};
 use tokio::sync::{
@@ -6,7 +9,7 @@ use tokio::sync::{
     oneshot,
 };
 
-use super::{Data, MapResult};
+use super::MapResult;
 
 /// non-blocking
 pub async fn loop_accept(
@@ -64,12 +67,11 @@ async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::
                 laddr
             );
         }
-        // let data = AnyData::RLAddr((raddr, laddr));
-        // let output_data = Data::Data(data);
-        let output_data = Data::Vec(vec![AnyData::Addr(raddr), AnyData::Addr(laddr)]);
+        let data = map::RLAddr(raddr, laddr);
+        let output_data = Box::new(data);
 
         let r = tx
-            .send(MapResult::builder().c(stream).d(output_data).build())
+            .send(MapResult::builder().c(stream).d(Some(output_data)).build())
             .await;
 
         if let Err(e) = r {

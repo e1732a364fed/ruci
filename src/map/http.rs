@@ -16,14 +16,14 @@ use crate::buf_to_ob;
 use crate::map::{self, MapResult};
 use crate::net::http::Method;
 use crate::net::CID;
-use crate::user::{self, AsyncUserAuthenticator, User};
+use crate::user::{self, AsyncUserAuthenticator};
 use crate::{
     net::{self, http::FailReason, Conn},
     user::{PlainText, UsersMap},
     Name,
 };
 
-use super::{Data, MapperBox, Stream, ToMapper};
+use super::{MapperBox, Stream, ToMapper};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
@@ -227,16 +227,15 @@ impl Server {
         }
 
         let data = authed_user.map(|up| {
-            let b: Box<dyn User> = Box::new(up);
-            map::AnyData::User(b)
+            let b: Box<dyn map::Data> = Box::new(up);
+            b
         });
-        let output_data = Data::from_opt_any(data);
 
         Ok(MapResult {
             a: Some(ta),
             b: buf_to_ob(buf),
             c: Stream::c(base),
-            d: output_data, //将 该登录的用户信息 作为 额外信息 传回
+            d: data, //将 该登录的用户信息 作为 额外信息 传回
             ..Default::default()
         })
     }

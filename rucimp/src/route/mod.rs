@@ -42,7 +42,12 @@ pub struct RuleSetOutSelector {
 
 #[async_trait]
 impl route::OutSelector for RuleSetOutSelector {
-    async fn select(&self, addr: &net::Addr, in_chain_tag: &str, params: &[Data]) -> DMIterBox {
+    async fn select(
+        &self,
+        addr: &net::Addr,
+        in_chain_tag: &str,
+        params: &[Option<Box<dyn Data>>],
+    ) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),

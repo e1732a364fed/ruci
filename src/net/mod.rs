@@ -39,6 +39,8 @@ use futures::pin_mut;
 use futures::{io::Error, FutureExt};
 use log::{debug, log_enabled};
 use rand::Rng;
+use serde::Deserialize;
+use serde::Serialize;
 use std::sync::atomic::AtomicU32;
 use std::vec;
 use std::{fmt::Debug, net::Ipv4Addr};
@@ -249,7 +251,7 @@ pub fn eq_socket_addr(a: &SocketAddr, b: &SocketAddr) -> bool {
 }
 
 /// default: ipv4 0.0.0.0:0
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NetAddr {
     Socket(SocketAddr), //ip+port
     Name(String, u16),
@@ -263,7 +265,7 @@ impl Default for NetAddr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum Network {
     IP,
 
@@ -344,7 +346,7 @@ fn prefix_length_to_netmask(prefix_length: u8) -> (u8, u8, u8, u8) {
 /// Addr实现 Eq和 Hash, 以支持作为Key存入 HashMap 等集合中。
 ///
 /// default is  tcp://0.0.0.0:0
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct Addr {
     pub addr: NetAddr,
     pub network: Network,

@@ -1,5 +1,3 @@
-use std::mem;
-
 use self::dynamic::NextSelector;
 
 use super::*;
@@ -174,7 +172,11 @@ impl LuaNextSelector {
 }
 
 impl NextSelector for LuaNextSelector {
-    fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::Data>>) -> Option<i64> {
+    fn next_index(
+        &self,
+        this_index: i64,
+        data: Option<Vec<Option<Box<dyn ruci::map::Data>>>>,
+    ) -> Option<i64> {
         let w = OptVecDataLuaWrapper(data);
         let inner = self.0.lock();
 
@@ -197,6 +199,8 @@ impl NextSelector for LuaNextSelector {
 */
 use mlua::{UserData, UserDataMethods};
 use parking_lot::Mutex;
+
+/*
 
 #[repr(transparent)]
 pub struct AnyDataLuaWrapper(ruci::map::AnyData);
@@ -246,32 +250,34 @@ impl UserData for VecOfAnyDataLuaWrapper {
     }
 }
 
-pub struct DataLuaWrapper(Data);
+*/
+
+pub struct DataLuaWrapper(Option<Box<dyn Data>>);
 
 impl UserData for DataLuaWrapper {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("has_value", |_, this, ()| Ok(!this.0.is_empty()));
+    // fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    // methods.add_method("has_value", |_, this, ()| Ok(!this.0.is_empty()));
 
-        methods.add_method("get_type", |_, this, ()| match &this.0 {
-            Data::Data(_) => Ok("data"),
-            Data::Vec(_) => Ok("vec"),
-        });
+    // methods.add_method("get_type", |_, this, ()| match &this.0 {
+    //     Data::Data(_) => Ok("data"),
+    //     Data::Vec(_) => Ok("vec"),
+    // });
 
-        methods.add_method("get_data", |_, this, ()| match &this.0 {
-            Data::Data(d) => Ok(AnyDataLuaWrapper(d.clone())),
-            Data::Vec(_) => Err(LuaError::DeserializeError("can't get data".to_string())),
-        });
+    // methods.add_method("get_data", |_, this, ()| match &this.0 {
+    //     Data::Data(d) => Ok(AnyDataLuaWrapper(d.clone())),
+    //     Data::Vec(_) => Err(LuaError::DeserializeError("can't get data".to_string())),
+    // });
 
-        methods.add_method("get_vec", |_, this, ()| match &this.0 {
-            Data::Data(_) => Err(LuaError::DeserializeError("can't get vec".to_string())),
-            Data::Vec(v) => Ok(VecOfAnyDataLuaWrapper(v.clone())),
-        });
-    }
+    // methods.add_method("get_vec", |_, this, ()| match &this.0 {
+    //     Data::Data(_) => Err(LuaError::DeserializeError("can't get vec".to_string())),
+    //     Data::Vec(v) => Ok(VecOfAnyDataLuaWrapper(v.clone())),
+    // });
+    // }
 }
 
 /// 对 dynamic::NextSelector 的 next_index 方法 的 data 参数
 /// 的类型的包装
-pub struct OptVecDataLuaWrapper(Option<Vec<Data>>);
+pub struct OptVecDataLuaWrapper(Option<Vec<Option<Box<dyn Data>>>>);
 
 impl UserData for OptVecDataLuaWrapper {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
@@ -634,6 +640,8 @@ mod test {
         Ok(())
     }
 
+    /*
+
     #[tokio::test]
     async fn test_pass_in_anydata() -> Result<()> {
         use std::rc::Rc;
@@ -758,13 +766,13 @@ mod test {
         function dyn_next_selector(this_index, ovov)
             print(ovov:is_some())
             print(ovov:len())
-        
+
             ov = ovov:get(0)
             print(ov:has_value())
             print(ov:get_type())
             d = ov:get_data()
             print(d:get_u64())
-        
+
             return this_index + 1
         end
         ";
@@ -786,22 +794,6 @@ mod test {
         Ok(())
     }
 
-    // #[test]
-    // fn test_dyn() -> Result<()> {
-    //     let lua = Lua::new();
 
-    //     use mlua::chunk;
-    //     use mlua::Function;
-
-    //     let handler_fn = lua
-    //         .load(chunk! {
-    //             function(current_index)
-
-    //             end
-    //         })
-    //         .eval::<Function>()
-    //         .expect("cannot create Lua handler");
-
-    //     Ok(())
-    // }
+     */
 }

@@ -32,6 +32,7 @@ pub trait UserTrait: Debug + Send + Sync {
 /// 如果User的supertrait 是 Clone, 则 Box<dyn User> 会报错, says
 /// can't make into object; 但是用 DynClone 就可以
 pub trait User: UserTrait + DynClone {}
+
 impl<T: UserTrait + DynClone> User for T {}
 dyn_clone::clone_trait_object!(User);
 
