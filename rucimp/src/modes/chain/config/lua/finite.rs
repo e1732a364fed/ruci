@@ -32,7 +32,7 @@ pub type LoadFiniteDynamicResult = (
 
 pub fn load_finite_dynamic(
     lua_text: &str,
-    file_source: Arc<Option<FileSource>>,
+    file_source: Arc<FileSource>,
 ) -> mlua::Result<LoadFiniteDynamicResult> {
     let (sc, sm) = load_finite_config_and_selector_map(lua_text, file_source.clone())?;
 
@@ -44,7 +44,7 @@ pub fn load_finite_dynamic(
 /// by tag of each chain
 fn load_finite_config_and_selector_map(
     lua_text: &str,
-    file_source: Arc<Option<FileSource>>,
+    file_source: Arc<FileSource>,
 ) -> mlua::Result<(StaticConfig, HashMap<String, LuaNextSelector>)> {
     let lua = Lua::new();
 
@@ -94,7 +94,7 @@ fn load_finite_config_and_selector_map(
 fn get_io_bounds_by_config_and_selector_map(
     c: StaticConfig,
     mut selector_map: HashMap<String, LuaNextSelector>,
-    file_source: Arc<Option<FileSource>>,
+    file_source: Arc<FileSource>,
 ) -> (Vec<DMIterBox>, DMIterBox, Arc<HashMap<String, DMIterBox>>) {
     let ibs = c.get_inbounds(file_source.clone());
     let v: Vec<DMIterBox> = ibs

@@ -77,10 +77,10 @@ async fn listen_future(
         ..Default::default()
     };
 
-    let f: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> =
-        Box::new(std::fs::read_to_string);
-
-    let a = super::server::Server::new(ServerPEMOptions::from(&sc, &f)?);
+    let a = super::server::Server::new(ServerPEMOptions::from(
+        &sc,
+        &utils::FileSource::StdReadFile,
+    )?);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
         .await

@@ -21,7 +21,6 @@ test_lua_file() {
     RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp use-native-tls steganography" --example lua "../$file" &
     local pid=$!
     
-    # 等待2秒
     sleep 2
     
     # 检查进程是否仍在运行
@@ -44,6 +43,9 @@ test_lua_file() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 移动到 rucimp 目录
 cd "$SCRIPT_DIR/../rucimp" || exit 1
+echo "Building example lua ..."
+
+RUST_LOG=none,ruci=debug cargo build --example lua --features "lua quinn tun smoltcp use-native-tls steganography"
 
 # 主测试逻辑
 echo "Starting Lua examples test..."
@@ -57,6 +59,7 @@ if [ ! -e "${lua_files[0]}" ]; then
     print_red "No Lua files found in ../resource/lua_examples/local/"
     exit 1
 fi
+
 
 # 测试每个文件
 for file in "${lua_files[@]}"; do

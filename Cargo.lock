@@ -3060,6 +3060,7 @@ dependencies = [
  "serde",
  "sha2",
  "smallvec",
+ "tar",
  "time",
  "tokio",
  "tokio-rustls",

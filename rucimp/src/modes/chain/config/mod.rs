@@ -18,7 +18,7 @@ pub mod lua;
 
 pub mod dynamic;
 
-use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 #[cfg(feature = "s2n-quic")]
 use crate::map::quic;
@@ -33,15 +33,13 @@ use ruci::{
         *,
     },
     net::{self, dns, http::CommonConfig},
+    utils::FileSource,
 };
 use serde::{Deserialize, Serialize};
 use tls::server::ServerPEMOptions;
 use tracing::warn;
 
-use crate::{
-    map::{recorder, ws},
-    utils::FileSource,
-};
+use crate::map::{recorder, ws};
 
 #[cfg(feature = "lwip")]
 use crate::map::tcp_ip_stack_lwip;
@@ -70,10 +68,7 @@ pub struct StaticConfig {
 
 impl StaticConfig {
     /// convert config chain to map chain
-    pub fn get_inbounds(
-        &self,
-        file_source: Arc<Option<FileSource>>,
-    ) -> anyhow::Result<Vec<Vec<MapBox>>> {
+    pub fn get_inbounds(&self, file_source: Arc<FileSource>) -> anyhow::Result<Vec<Vec<MapBox>>> {
         use anyhow::Context;
         use itertools::Itertools;
 
@@ -115,10 +110,7 @@ impl StaticConfig {
     }
 
     /// convert config chain to map chain
-    pub fn get_outbounds(
-        &self,
-        file_source: Arc<Option<FileSource>>,
-    ) -> anyhow::Result<Vec<Vec<MapBox>>> {
+    pub fn get_outbounds(&self, file_source: Arc<FileSource>) -> anyhow::Result<Vec<Vec<MapBox>>> {
         use itertools::Itertools;
         self.outbounds
             .iter()
@@ -155,7 +147,7 @@ impl StaticConfig {
     /// (out_tag, outbound)
     pub fn get_default_and_outbounds_map(
         &self,
-        file_source: Arc<Option<FileSource>>,
+        file_source: Arc<FileSource>,
     ) -> anyhow::Result<(DMIterBox, HashMap<String, DMIterBox>)> {
         let obs = self.get_outbounds(file_source)?;
 
@@ -202,7 +194,7 @@ impl StaticConfig {
     #[cfg(feature = "route")]
     pub fn get_rule_route(
         &self,
-        file_source: Arc<Option<crate::utils::FileSource>>,
+        file_source: Arc<ruci::utils::FileSource>,
     ) -> Option<Vec<RuleSet>> {
         let mut result = self.rule_route.clone().map(|rr| {
             let v: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
@@ -211,19 +203,17 @@ impl StaticConfig {
         #[cfg(feature = "geoip")]
         {
             if let Some(mut rs_v) = result {
-                if let Some(fs) = file_source.as_ref() {
-                    use crate::route::maxmind;
+                use crate::route::maxmind;
 
-                    let r = maxmind::open_mmdb("Country.mmdb", fs);
-                    match r {
-                        Ok(m) => {
-                            let am = Some(Arc::new(m));
+                let r = maxmind::open_mmdb("Country.mmdb", file_source.as_ref());
+                match r {
+                    Ok(m) => {
+                        let am = Some(Arc::new(m));
 
-                            rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
-                        }
-                        Err(e) => {
-                            warn!("no Country.mmdb: {e}");
-                        }
+                        rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
+                    }
+                    Err(e) => {
+                        warn!("no Country.mmdb: {e}");
                     }
                 }
 
@@ -516,7 +506,7 @@ pub struct TrojanPassSet {
 
 pub struct InMapConfigWithFileSource {
     pub config: InMapConfig,
-    pub file_source: Arc<Option<FileSource>>,
+    pub file_source: Arc<FileSource>,
 }
 
 impl TryFrom<InMapConfig> for MapBox {
@@ -525,7 +515,7 @@ impl TryFrom<InMapConfig> for MapBox {
     fn try_from(config: InMapConfig) -> Result<Self, Self::Error> {
         let ic = InMapConfigWithFileSource {
             config,
-            file_source: Arc::new(None),
+            file_source: Arc::new(FileSource::StdReadFile),
         };
         ic.try_into()
     }
@@ -537,33 +527,33 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
     fn try_from(value: InMapConfigWithFileSource) -> Result<Self, Self::Error> {
         let file_source = value.file_source;
 
-        let read_file_fn: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> = {
-            let fc = file_source.clone();
+        // let read_file_fn: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> = {
+        //     let fc = file_source.clone();
 
-            let f = move |s: PathBuf| match fc.as_ref() {
-                Some(fs) => fs
-                    .get_file_content(&s.to_string_lossy())
-                    .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
-                    .map_err(|e| {
-                        tracing::debug!(
-                            "get file content failed, file: {}, error: {}",
-                            s.to_string_lossy(),
-                            e
-                        );
-                        std::io::Error::other(e)
-                    }),
-                None => {
-                    let r = std::fs::read_to_string(s);
+        //     let f = move |s: PathBuf| match fc.as_ref() {
+        //         Some(fs) => fs
+        //             .get_file_content(&s.to_string_lossy())
+        //             .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
+        //             .map_err(|e| {
+        //                 tracing::debug!(
+        //                     "get file content failed, file: {}, error: {}",
+        //                     s.to_string_lossy(),
+        //                     e
+        //                 );
+        //                 std::io::Error::other(e)
+        //             }),
+        //         None => {
+        //             let r = std::fs::read_to_string(s);
 
-                    if r.is_err() {
-                        tracing::debug!("std::fs::read_to_string failed");
-                    }
-                    r
-                }
-            };
+        //             if r.is_err() {
+        //                 tracing::debug!("std::fs::read_to_string failed");
+        //             }
+        //             r
+        //         }
+        //     };
 
-            Box::new(f)
-        };
+        //     Box::new(f)
+        // };
 
         match value.config {
             InMapConfig::Echo => Ok(Echo::boxed()),
@@ -594,14 +584,14 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::Recorder(c) => Ok(c.into()),
 
             InMapConfig::TLS(sc) => {
-                let sc = ServerPEMOptions::from(&sc, &read_file_fn)?;
+                let sc = ServerPEMOptions::from(&sc, file_source.as_ref())?;
 
                 Ok(sc.into())
             }
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             InMapConfig::NativeTLS(c) => Ok(Box::new(
-                crate::map::native_tls::Server::from(&c, &read_file_fn)
+                crate::map::native_tls::Server::from(&c, file_source.as_ref())
                     .expect("native_tls server config valid"),
             )),
 
@@ -666,7 +656,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             #[cfg(feature = "quinn")]
             InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(
                 c,
-                &read_file_fn,
+                &file_source,
             )?)),
 
             #[cfg(feature = "sockopt")]
@@ -710,7 +700,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 file_name,
                 handshake_function,
             } => {
-                let lua_text = read_file_fn(file_name.into())?;
+                let lua_text = file_source.read_to_string(&file_name)?;
 
                 Ok(Box::new(crate::map::lua::LuaMap {
                     lua_text,
@@ -724,7 +714,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {
-                let sc = ServerPEMOptions::from(&c, &read_file_fn)?;
+                let sc = ServerPEMOptions::from(&c, &file_source)?;
 
                 Ok(Box::new(ruci::map::tls::mitm::MITM {
                     sc,
@@ -736,7 +726,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
 }
 pub struct OutMapConfigWithFileSource {
     pub config: OutMapConfig,
-    pub file_source: Arc<Option<FileSource>>,
+    pub file_source: Arc<FileSource>,
 }
 
 impl TryFrom<OutMapConfig> for MapBox {
@@ -745,7 +735,7 @@ impl TryFrom<OutMapConfig> for MapBox {
     fn try_from(config: OutMapConfig) -> Result<Self, Self::Error> {
         let ic = OutMapConfigWithFileSource {
             config,
-            file_source: Arc::new(None),
+            file_source: Arc::new(FileSource::StdReadFile),
         };
         ic.try_into()
     }
@@ -759,19 +749,19 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
 
         let file_source = value.file_source;
 
-        let read_file_fn: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> = {
-            let fc = file_source.clone();
+        // let read_file_fn: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> = {
+        //     let fc = file_source.clone();
 
-            let f = move |s: PathBuf| match fc.as_ref() {
-                Some(fs) => fs
-                    .get_file_content(&s.to_string_lossy())
-                    .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
-                    .map_err(std::io::Error::other),
-                None => std::fs::read_to_string(s),
-            };
+        //     let f = move |s: PathBuf| match fc.as_ref() {
+        //         Some(fs) => fs
+        //             .get_file_content(&s.to_string_lossy())
+        //             .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
+        //             .map_err(std::io::Error::other),
+        //         None => std::fs::read_to_string(s),
+        //     };
 
-            Box::new(f)
-        };
+        //     Box::new(f)
+        // };
 
         match value.config {
             OutMapConfig::Stdio(sc) => sc.try_into(),
@@ -855,7 +845,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
 
             #[cfg(feature = "quinn")]
             OutMapConfig::Quic(c) => Ok(Box::new(
-                crate::map::quinn::client::Client::new(c, &read_file_fn)
+                crate::map::quinn::client::Client::new(c, &file_source)
                     .context("load quic client config failed")?,
             )),
 

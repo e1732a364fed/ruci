@@ -25,7 +25,9 @@ async fn main() -> anyhow::Result<()> {
     let contents = String::from_utf8_lossy(bs.as_slice()).to_string();
 
     Engine::new_and_run(Box::new(move |e| {
-        e.set_default_file_source();
+        let mut fs = rucimp::utils::default_file_source();
+        fs.insert_current_working_dir()?;
+        e.set_file_source(fs);
         e.init_lua(contents)
     }))
     .await

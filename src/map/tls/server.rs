@@ -1,4 +1,5 @@
 use macro_map::*;
+use map::utils::FileSource;
 use serde::{Deserialize, Serialize};
 
 use self::map::{MapExtFields, CID};
@@ -20,13 +21,10 @@ pub struct TlsServerOptions {
 }
 
 impl ServerPEMOptions {
-    pub fn from(
-        opts: &TlsServerOptions,
-        read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
-    ) -> std::io::Result<Self> {
+    pub fn from(opts: &TlsServerOptions, fs: &FileSource) -> std::io::Result<Self> {
         Ok(Self {
-            cert: read_fn(opts.cert.clone())?,
-            key: read_fn(opts.key.clone())?,
+            cert: fs.read_to_string(opts.cert.clone())?,
+            key: fs.read_to_string(opts.key.clone())?,
             alpn: opts.alpn.clone(),
         })
     }

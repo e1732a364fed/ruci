@@ -1,8 +1,8 @@
 use anyhow::Context;
 use quinn::Endpoint;
+use ruci::utils::FileSource;
 
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -35,10 +35,7 @@ impl Name for Client {
 }
 
 impl Client {
-    pub fn new(
-        c: quic_common::ClientConfig,
-        read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
-    ) -> anyhow::Result<Self> {
+    pub fn new(c: quic_common::ClientConfig, file_source: &FileSource) -> anyhow::Result<Self> {
         let cc = {
             let cc = rustls21::cc(
                 rustls21::ClientOptions {
@@ -46,7 +43,7 @@ impl Client {
                     alpn: c.alpn,
                     cert_path: c.cert_path.clone(),
                 },
-                read_fn,
+                file_source,
             )
             .context("load rustls21 client config failed")?;
 

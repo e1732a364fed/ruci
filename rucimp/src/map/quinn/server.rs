@@ -1,7 +1,7 @@
 use anyhow::Context;
 use quinn::{Endpoint, ServerConfig};
+use ruci::utils::FileSource;
 
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
@@ -37,17 +37,14 @@ impl Name for Server {
 }
 
 impl Server {
-    pub fn new(
-        c: quic_common::ServerConfig,
-        read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
-    ) -> anyhow::Result<Self> {
+    pub fn new(c: quic_common::ServerConfig, file_source: &FileSource) -> anyhow::Result<Self> {
         let tls_server_config = rustls21::sc(
             rustls21::ServerOptions {
                 alpn: c.alpn.clone(),
                 cert_path: c.cert_path.clone(),
                 key_path: c.key_path.clone(),
             },
-            read_fn,
+            file_source,
         )
         .context("rustls21::sc failed")?;
 

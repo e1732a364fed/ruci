@@ -7,6 +7,7 @@ use super::*;
 use parking_lot::Mutex;
 use ruci::map::fold::OVOD;
 use ruci::net::CID;
+use ruci::utils::FileSource;
 
 const INFINITE_CONFIG_FIELD: &str = "Infinite";
 const GENERATOR_FIELD: &str = "generator";
@@ -47,7 +48,7 @@ pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
 /// read INFINITE_CONFIG_FIELD  global variable
 pub fn load_infinite_io(
     lua_text: &str,
-    file_source: Arc<Option<FileSource>>,
+    file_source: Arc<FileSource>,
 ) -> anyhow::Result<(GMap, GMap)> {
     let i = get_g_map_from(lua_text, ProxyBehavior::DECODE, file_source.clone())?;
     let o = get_g_map_from(lua_text, ProxyBehavior::ENCODE, file_source)?;
@@ -57,15 +58,13 @@ pub fn load_infinite_io(
 fn get_g_map_from(
     lua_text: &str,
     behavior: ProxyBehavior,
-    file_source: Arc<Option<FileSource>>,
+    file_source: Arc<FileSource>,
 ) -> anyhow::Result<GMap> {
     let mut g_map: GMap = HashMap::new();
 
     let lua = Lua::new();
 
-    if let Some(file_source) = file_source.as_ref() {
-        create_load_file_func(&lua, file_source)
-    }
+    create_load_file_func(&lua, file_source.as_ref());
 
     lua.load(lua_text).exec().context("eval lua failed")?;
 

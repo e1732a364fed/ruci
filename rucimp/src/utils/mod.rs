@@ -4,56 +4,15 @@ Provides some helper functions to read a certain resource file or to wait the sh
 
 pub mod anti_replay;
 
-use std::io::Read;
-
-use anyhow::{anyhow, Context};
+use anyhow::Context;
+use ruci::utils::FileSource;
 use tokio::signal;
 use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
 
-/// Defines where to get the content of the requested file name.
-///
-/// Default will use [`crate::COMMON_DIRS`] as folders.
-#[derive(Clone, Debug)]
-pub enum FileSource {
-    Folders(Vec<String>), //从指定的一组路径来寻找文件
-    Tar(Vec<u8>),         // 从一个 已放到内存中的 tar 中 寻找文件
-}
-impl Default for FileSource {
-    fn default() -> Self {
-        FileSource::Folders(COMMON_DIRS.iter().map(|str| str.to_string()).collect())
-    }
-}
-
-impl FileSource {
-    /// 返回读到的 数据。如果 source 为 Folders ， 则还会返回 成功找到的路径
-    pub fn get_file_content<'a>(
-        &'a self,
-        file_name: &'a str,
-    ) -> anyhow::Result<(Vec<u8>, Option<&'a str>)> {
-        match self {
-            FileSource::Tar(v) => get_file_from_tar(file_name, v).map(|data| (data, None)),
-
-            FileSource::Folders(possible_addrs) => {
-                for dir in possible_addrs {
-                    let real_file_name = String::from(dir) + file_name;
-
-                    // tracing::trace!("try to read file from {}", real_file_name);
-
-                    if std::path::Path::new(&real_file_name).exists() {
-                        if let Ok(mut file) = std::fs::File::open(real_file_name) {
-                            let mut v = vec![];
-                            file.read_to_end(&mut v)?;
-
-                            return Ok((v, Some(dir)));
-                        }
-                    }
-                }
-                Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found").into())
-            }
-        }
-    }
+pub fn default_file_source() -> FileSource {
+    FileSource::Folders(COMMON_DIRS.iter().map(|str| str.to_string()).collect())
 }
 
 /// try folders in COMMON_DIRS
@@ -66,8 +25,7 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
         Some(a) => a,
         None => default_file,
     };
-
-    let fs = FileSource::default();
+    let fs = default_file_source();
     let r = fs
         .get_file_content(filename)
         .context(format!("get file failed: {}", filename))?;
@@ -78,7 +36,7 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
 
     if cd.exists() {
         std::env::set_current_dir(cd).expect("set_current_dir ok");
-        debug!("set current dir to {:?}", std::env::current_dir());
+        debug!("set current dir to {:?}", std::env::current_dir().unwrap());
     }
 
     Ok(r.0)
@@ -270,26 +228,5 @@ pub fn extract_vec_from_zip(file_name_in_zip: &str, v: Vec<u8>) -> std::io::Resu
     use std::io::Read;
     file.read_to_end(&mut v)?;
 
-    Ok(v)
-}
-
-pub fn get_file_from_tar(file_name: &str, b: &Vec<u8>) -> anyhow::Result<Vec<u8>> {
-    let mut a = tar::Archive::new(std::io::Cursor::new(b));
-
-    let tp = std::path::Path::new(file_name);
-
-    debug!("finding {}, {}", file_name, b.len());
-
-    let mut e = a
-        .entries()
-        .unwrap()
-        .find(|a| a.as_ref().is_ok_and(|b| b.path().is_ok_and(|c| c == tp)))
-        .ok_or_else(|| anyhow!("get_file_from_tar: can't find the file, {}", file_name))??;
-
-    debug!("found {}", file_name);
-
-    let mut v = vec![];
-    use std::io::Read;
-    e.read_to_end(&mut v)?;
     Ok(v)
 }

@@ -4,7 +4,7 @@ Defines the engine to run the chain config.
 
 #[cfg(feature = "route")]
 use crate::route::{RuleSet, RuleSetOutSelector};
-use crate::utils::FileSource;
+use ruci::utils::FileSource;
 
 use super::config::StaticConfig;
 use anyhow;
@@ -48,7 +48,7 @@ pub struct Engine {
     /// 配置文件中有一些地方是指定文件名的，而 Engine 会从 file_source 中找到指定文件
     ///
     /// 这一项需要手动配置
-    pub file_source: Arc<Option<FileSource>>,
+    pub file_source: Arc<FileSource>,
 
     inbounds: Vec<DMIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
@@ -82,7 +82,10 @@ impl Engine {
     }
 
     pub fn set_default_file_source(&mut self) {
-        self.file_source = Arc::new(Some(FileSource::default()))
+        self.set_file_source(crate::utils::default_file_source())
+    }
+    pub fn set_file_source(&mut self, fs: FileSource) {
+        self.file_source = Arc::new(fs)
     }
 
     /// 清空配置. reset 后 可以 接着调用 init_*
@@ -457,7 +460,7 @@ impl Engine {
     /// A helper function to start an engine with a static config, run it until it got shutdown signal, then stop it.
     pub async fn new_and_run_static(sc: StaticConfig) -> anyhow::Result<()> {
         let f = move |e: &mut Engine| {
-            e.file_source = Arc::new(Some(FileSource::default()));
+            e.file_source = Arc::new(FileSource::StdReadFile);
 
             e.init_static(sc)
         };

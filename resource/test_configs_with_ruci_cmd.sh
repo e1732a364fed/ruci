@@ -22,10 +22,9 @@ test_config_file() {
     echo "Testing $file..."
     
     # 运行命令
-    RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography" -- --log-file "" -c "$file" &
+    RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography smoltcp" -- --log-file "" -c "$file" &
     local pid=$!
     
-    # 等待2秒
     sleep 2
     
     # 检查进程是否仍在运行
@@ -152,6 +151,8 @@ fi
 # 主测试逻辑
 echo "Starting test with ruci-cmd for ${selected_type} files in $(basename "$selected_dir")..."
 echo "----------------------------------------"
+
+RUST_LOG=none,ruci=debug cargo build --features "lua utils use-native-tls quinn tun steganography smoltcp"
 
 # 测试每个文件
 for file in "${config_files[@]}"; do

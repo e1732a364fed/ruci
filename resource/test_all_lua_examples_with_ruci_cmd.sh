@@ -18,10 +18,9 @@ test_lua_file() {
     echo "Testing $file..."
     
     # 运行命令
-    RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography" -- --log-file "" -c "../../$file" &
+    RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography smoltcp" -- --log-file "" -c "../../$file" &
     local pid=$!
     
-    # 等待2秒
     sleep 2
     
     # 检查进程是否仍在运行
@@ -45,6 +44,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 移动到 ruci-cmd 目录
 cd "$SCRIPT_DIR/../crates/ruci-cmd" || exit 1
 
+echo "Building ruci-cmd..."
+
+RUST_LOG=none,ruci=debug cargo build --features "lua utils use-native-tls quinn tun steganography smoltcp"
+
 # 主测试逻辑
 echo "Starting Lua examples test with ruci-cmd..."
 echo "----------------------------------------"
@@ -57,6 +60,7 @@ if [ ! -e "${lua_files[0]}" ]; then
     print_red "No Lua files found in ../../resource/lua_examples/local/"
     exit 1
 fi
+
 
 # 测试每个文件
 for file in "${lua_files[@]}"; do

@@ -3,7 +3,6 @@ use std::{fs, sync::Arc, time::Duration};
 use super::*;
 use anyhow::{Context, Ok};
 use ruci::net;
-use rucimp::utils::FileSource;
 use tokio::sync::mpsc;
 use tracing::info;
 
@@ -342,7 +341,7 @@ pub fn convert_config(
     input_file_content: &str,
     input_format: &str,
     output_format: &str,
-    file_source: FileSource,
+    file_source: ruci::utils::FileSource,
 ) -> anyhow::Result<String> {
     use rucimp::modes::chain::config::StaticConfig;
 
@@ -353,7 +352,7 @@ pub fn convert_config(
             {
                 rucimp::modes::chain::config::lua::load_static(
                     input_file_content,
-                    Arc::new(Some(file_source)),
+                    Arc::new(file_source),
                 )
                 .context("init_lua_static failed")?
             }

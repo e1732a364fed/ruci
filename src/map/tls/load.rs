@@ -96,9 +96,7 @@ pub fn load_ser_config(
     options: &TlsServerOptions,
     opt_authority: Option<&http::uri::Authority>,
 ) -> anyhow::Result<ServerConfig> {
-    let f: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> =
-        Box::new(std::fs::read_to_string);
-    let pem_opts = ServerPEMOptions::from(options, &f)?;
+    let pem_opts = ServerPEMOptions::from(options, &crate::utils::FileSource::StdReadFile)?;
     load_ser_config_from_pem(&pem_opts, opt_authority)
 }
 

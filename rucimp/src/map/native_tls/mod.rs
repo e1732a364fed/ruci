@@ -11,20 +11,17 @@ use bytes::BytesMut;
 use ruci::{
     map::{self, MapExtFields, MapResult, ProxyBehavior},
     net::{self, helpers::EarlyDataWrapper, CID},
+    utils::FileSource,
     Name,
 };
 
 use macro_map::*;
 use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
 
-pub fn load(
-    cert_path: PathBuf,
-    key_path: PathBuf,
-    read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
-) -> anyhow::Result<Identity> {
-    let cert_file = read_fn(cert_path)?;
+pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &FileSource) -> anyhow::Result<Identity> {
+    let cert_file = fs.read_to_string(cert_path)?;
 
-    let key_file = read_fn(key_path)?;
+    let key_file = fs.read_to_string(key_path)?;
     let pkcs8 = Identity::from_pkcs8(cert_file.as_bytes(), key_file.as_bytes())
         .context("Identity::from_pkcs8 failed")?;
 
@@ -34,10 +31,9 @@ pub fn load(
 impl Server {
     pub fn from(
         sc: &ruci::map::tls::server::TlsServerOptions,
-        read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
+        fs: &FileSource,
     ) -> anyhow::Result<Server> {
-        let id =
-            load(sc.cert.clone(), sc.key.clone(), read_fn).context("load cert or key failed")?;
+        let id = load(sc.cert.clone(), sc.key.clone(), fs).context("load cert or key failed")?;
 
         //native_tls 的 acceptor 的 builder 是不支持配置 alpn的，只有 connector 才支持
         let ta =

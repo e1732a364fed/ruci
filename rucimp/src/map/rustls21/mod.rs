@@ -15,6 +15,7 @@ use std::{
 };
 
 use anyhow::{bail, Result};
+use ruci::utils::FileSource;
 use rustls::{
     client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerConfig, ServerName,
 };
@@ -28,10 +29,7 @@ pub struct ClientOptions {
     pub cert_path: Option<String>,
 }
 
-pub(crate) fn cc(
-    opt: ClientOptions,
-    read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
-) -> Result<ClientConfig> {
+pub(crate) fn cc(opt: ClientOptions, file_source: &FileSource) -> Result<ClientConfig> {
     let mut root_store = rustls::RootCertStore::empty();
 
     root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
@@ -43,7 +41,7 @@ pub(crate) fn cc(
     }));
 
     if let Some(c) = opt.cert_path {
-        let c = load_certs(&c, &read_fn)?;
+        let c = load_certs(&c, file_source)?;
         for c in c {
             root_store.add(&c)?;
         }
@@ -72,13 +70,10 @@ pub struct ServerOptions {
     pub key_path: String,
 }
 
-pub fn sc(
-    opt: ServerOptions,
-    read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
-) -> Result<ServerConfig> {
+pub fn sc(opt: ServerOptions, file_source: &FileSource) -> Result<ServerConfig> {
     use anyhow::Context;
 
-    let (c, k) = read_certs_from_file(opt.cert_path.as_str(), opt.key_path.as_str(), &read_fn)
+    let (c, k) = read_certs_from_file(opt.cert_path.as_str(), opt.key_path.as_str(), file_source)
         .context("read_certs_from_file failed")?;
 
     let mut config = ServerConfig::builder()
@@ -114,12 +109,9 @@ impl rustls::client::ServerCertVerifier for SuperDanVer {
     }
 }
 
-pub fn load_key(
-    path: &Path,
-    read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
-) -> Result<PrivateKey> {
+pub fn load_key(path: &Path, file_source: &FileSource) -> Result<PrivateKey> {
     let key_path = PathBuf::from(path);
-    let key_str = read_fn(key_path)?;
+    let key_str = file_source.read_to_string(key_path)?;
 
     match read_one(&mut BufReader::new(key_str.as_bytes())) {
         Ok(Some(Item::RSAKey(data) | Item::PKCS8Key(data) | Item::ECKey(data))) => {
@@ -132,12 +124,9 @@ pub fn load_key(
 }
 
 /// 注：一个文件有多个 cert 的情况一般是 fullchain
-pub fn load_certs(
-    cert_path: &str,
-    read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
-) -> Result<Vec<rustls::Certificate>> {
+pub fn load_certs(cert_path: &str, file_source: &FileSource) -> Result<Vec<rustls::Certificate>> {
     let cert_path = PathBuf::from(cert_path);
-    let cert_str = read_fn(cert_path)?;
+    let cert_str = file_source.read_to_string(cert_path)?;
 
     let mut cert_chain_reader = BufReader::new(cert_str.as_bytes());
     let certs = rustls_pemfile::certs(&mut cert_chain_reader)?
@@ -150,11 +139,11 @@ pub fn load_certs(
 pub fn read_certs_from_file(
     cert_path: &str,
     key_path: &str,
-    read_fn: &Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>>,
+    file_source: &FileSource,
 ) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey)> {
-    let certs = load_certs(cert_path, &read_fn)?;
+    let certs = load_certs(cert_path, file_source)?;
 
-    let key = load_key(Path::new(key_path), read_fn)?;
+    let key = load_key(Path::new(key_path), file_source)?;
 
     Ok((certs, key))
 }

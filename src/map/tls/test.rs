@@ -116,16 +116,15 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Resul
     path2.push("test.key");
 
     let sc = tls::server::TlsServerOptions {
-        // addr: "addr".to_string(),
         cert: path,
         key: path2,
         ..Default::default()
     };
 
-    let f: Box<dyn Send + Fn(PathBuf) -> std::io::Result<String>> =
-        Box::new(std::fs::read_to_string);
-
-    let a = tls::server::Server::new(ServerPEMOptions::from(&sc, &f)?);
+    let a = tls::server::Server::new(ServerPEMOptions::from(
+        &sc,
+        &map::utils::FileSource::StdReadFile,
+    )?);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
         .await

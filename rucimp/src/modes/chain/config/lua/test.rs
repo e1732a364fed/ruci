@@ -39,7 +39,7 @@ fn test_in() -> anyhow::Result<()> {
         }
     "#;
 
-    let mut c: StaticConfig = load_static(text, Arc::new(None))?;
+    let mut c: StaticConfig = load_static(text, Arc::new(FileSource::StdReadFile))?;
 
     println!("{:#?}", c);
 
@@ -53,7 +53,7 @@ fn test_in() -> anyhow::Result<()> {
     )
     .exec()?;
 
-    c = load_static(text, Arc::new(None))?;
+    c = load_static(text, Arc::new(FileSource::StdReadFile))?;
 
     let first_listen_group = c.inbounds.first().unwrap();
     let last_m = first_listen_group.chain.last().unwrap();
@@ -112,7 +112,7 @@ fn test_out() -> anyhow::Result<()> {
             }
         "#;
 
-    let c: StaticConfig = load_static(text, Arc::new(None))?;
+    let c: StaticConfig = load_static(text, Arc::new(FileSource::StdReadFile))?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -166,7 +166,7 @@ fn test_out2() -> anyhow::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text, Arc::new(None))?;
+    let c: StaticConfig = load_static(text, Arc::new(FileSource::StdReadFile))?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -218,7 +218,7 @@ fn test_out3() -> anyhow::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text, Arc::new(None))?;
+    let c: StaticConfig = load_static(text, Arc::new(FileSource::StdReadFile))?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -278,14 +278,17 @@ fn test_tag_route() -> anyhow::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text, Arc::new(None))?;
+    let c: StaticConfig = load_static(text, Arc::new(FileSource::StdReadFile))?;
 
     println!("{:#?}", c);
     let tr = c.get_tag_route();
     assert!(tr.is_some());
     println!("{:#?}", c.get_tag_route());
 
-    println!("{:#?}", c.get_default_and_outbounds_map(Arc::new(None)));
+    println!(
+        "{:#?}",
+        c.get_default_and_outbounds_map(Arc::new(FileSource::StdReadFile))
+    );
 
     Ok(())
 }
@@ -404,13 +407,13 @@ fn test_rule_route() -> anyhow::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text, Arc::new(None))?;
+    let c: StaticConfig = load_static(text, Arc::new(FileSource::StdReadFile))?;
 
     println!("{:#?}", c);
 
     #[cfg(feature = "route")]
     {
-        let tr = c.get_rule_route(Arc::new(None));
+        let tr = c.get_rule_route(Arc::new(FileSource::StdReadFile));
         assert!(tr.is_some());
         println!("{:#?}", tr);
     }
@@ -567,7 +570,7 @@ Infinite = {
 }
         "#;
 
-    let gm = load_infinite_io(text, Arc::new(None))?;
+    let gm = load_infinite_io(text, Arc::new(FileSource::StdReadFile))?;
     println!("{:?}", gm);
     Ok(())
 }

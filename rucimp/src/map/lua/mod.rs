@@ -43,8 +43,8 @@ use tokio::io::ReadBuf;
 /// # Arguments
 /// * `lua` - The Lua instance to add the function to
 /// * `file_source` - The FileSource to load files from
-pub fn create_load_file_func(lua: &Lua, file_source: &crate::utils::FileSource) {
-    let raw_ptr = file_source as *const crate::utils::FileSource as *const std::os::raw::c_void;
+pub fn create_load_file_func(lua: &Lua, file_source: &ruci::utils::FileSource) {
+    let raw_ptr = file_source as *const ruci::utils::FileSource as *const std::os::raw::c_void;
 
     let pointer_n = raw_ptr as usize;
 
@@ -53,7 +53,7 @@ pub fn create_load_file_func(lua: &Lua, file_source: &crate::utils::FileSource) 
             let file_name = std::str::from_utf8(s.as_slice()).unwrap();
 
             let file_source = unsafe {
-                &*((pointer_n as *const std::os::raw::c_void) as *const crate::utils::FileSource)
+                &*((pointer_n as *const std::os::raw::c_void) as *const ruci::utils::FileSource)
             };
 
             let r = file_source
@@ -457,12 +457,12 @@ impl AsyncWrite for LuaConn {
 /// 与 在 lua中调用 Create_in_map 来将 lua配置导入 rust 代码 来生成 LuaMapWrapper 不同,
 /// LuaMap 是在 rust 中直接调用 lua 代码 来生成一个 Map
 #[map_ext_fields]
-#[derive(Debug, Clone, MapExt, Default)]
+#[derive(Debug, Clone, MapExt)]
 pub struct LuaMap {
     pub lua_text: String,        //整个 lua文件的内容
     pub handshake_f_key: String, //lua文件中 对应的 map 函数的 函数名
 
-    pub file_source: Arc<Option<crate::utils::FileSource>>,
+    pub file_source: Arc<ruci::utils::FileSource>,
 }
 
 impl Name for LuaMap {
@@ -524,9 +524,7 @@ impl LuaMap {
             .unwrap();
         lua.globals().set("Warn_print", f).unwrap();
 
-        if let Some(fs) = self.file_source.as_ref() {
-            create_load_file_func(&lua, fs);
-        }
+        create_load_file_func(&lua, self.file_source.as_ref());
 
         let _: () = lua
             .load(&self.lua_text)

@@ -31,7 +31,7 @@ pub(crate) async fn run(
 
     use anyhow::Context;
 
-    e.file_source = Arc::new(Some(file_source));
+    e.file_source = Arc::new(file_source);
 
     if file_name.ends_with(".lua") {
         #[cfg(any(feature = "lua", feature = "lua54"))]
