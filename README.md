@@ -8,11 +8,11 @@
 rucimp = ruci + imp,
 ruci pronounced lucy。
 
-## 介绍
+## Intro
 
-一个网络代理框架，采用rust(Rust 2021 edition 1.75+)
+A network proxy framework uses rust(Rust 2021 edition 1.75+)
 
-更多 notes 见: [notes.md](doc/notes.md)
+See [notes.md](doc/notes.md) for more notes 
 
 文档所限，肯定有东西没有涉及到，可提交issue提问或加入讨论。
 欢迎加入我们。注意低调。
@@ -25,12 +25,13 @@ ruci pronounced lucy。
 项目还在开发中，功能会陆续添加
 
 
-## 整体结构
-整个项目分成三部分。
+## Structure
+The project is divided to three main parts:
 
-ruci 是基础框架, 其中定义一些trait 和基本结构与方法，实现链式架构，实现了一些基本流【映射】(Mapper), 提供转发方法
+ruci is the base framewark, defines some concepts like【映射】(Mapper), 动态Mapper迭代器 DMIter; 
+implements chain structure, implements some basic Mappers; provide some useful relay facilities.
 
-rucimp 中提供若干流映射, 定义多种配置文件格式, 并提供一些 example 程序.
+rucimp provides more Mappers, defines multiple config modes, provides some example binaries.
 rucimp is the core.
 
 ruci-cmd 是最终的全功能的可执行文件，包含一些系统路由的配置功能 和 api-server
@@ -52,23 +53,23 @@ lua格式可参考 [用例](resource/local.lua)  和 [lua配置功能](doc/lua.m
 
 ### ruci-cmd
 
-详见 [ruci-cmd](crates/ruci-cmd/README.md)
+See [ruci-cmd](crates/ruci-cmd/README.md)
 
 
 ### rucimp/examples
 
 rucimp 提供若干示例程序, suit, chain 等
 
-详见 [exmaples](rucimp/examples/README.md)
+See [exmaples](rucimp/examples/README.md)
 
 
 # Dev
 
 TDD。See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md)
 
-## Chain Mode Explained
+## Chain Structure Explained
 
-ruci对代理的原理加以更高的抽象化，认为任何协议都可被认定为一个"映射"
+ruci对代理的原理加以更高的抽象化，认为任何协议都可被认定为由一个或多个【映射】组成
 
 有如下定义(伪代码)：
 
@@ -77,7 +78,6 @@ ruci对代理的原理加以更高的抽象化，认为任何协议都可被认�
 单射(normal stream mapper)： function(stream1, args...)-> (Option<stream2>, useful_data...) 
 
 多流发生器(multi-stream generator)：function( Option<stream> ,args...)->[channel->stream]
-
 
 流由流发生器产生。
 
@@ -91,12 +91,14 @@ ruci对代理的原理加以更高的抽象化，认为任何协议都可被认�
 
 也可以完全不做修改而只提供副作用(如 Counter, 或Trojan/Socks5 先做握手然后不改变流) 
 
-也可以消耗掉流(如 Echo; 再如 relay 转发过程 将 in 和 out 调转对接, 同时消耗in 和 out 两个流)，
+也可以消耗掉流(如 Echo (持有对流的所有权, 自己建立relay loop); Blackhole; 
+再如 relay 转发过程 将 in 和 out 调转对接, 同时消耗in 和 out 两个流)，
+
 消耗流的映射是整个链的终点 。
 
-也可以替换掉流的源(如socks5中的 udp associate, 是tcp变udp)。
+也可以替换掉流的源(如socks5中的 udp associate, 是持有tcp流的所有权后, 产生并返回一个新的udp流)。
 
-如此，整个架构由 suit 模式 的 扁平结构转化成了链式结构。这种抽象把代理分成了一个一个小模块，任由你拼接。
+如此，整个架构抽象把代理分成了一个一个小模块，任由你拼接。
 
 
 虽然看起来没有什么区别，但是，你可以很方便地构建一些独特的结构，比如 TLS+TLS (用于分析 tls in tls, 

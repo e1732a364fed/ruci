@@ -86,6 +86,13 @@ infinite = {
                 return 1, tlsout:clone()
             elseif state_index == 1 then
 
+                --[[
+
+                -- 错误写法. 状态为1即有了tcp-tls 拨号, 此时必需建立新
+                -- h2连接. 不能用原连接, 也不能用新连接替换原连接, 这都会
+                -- 导致悬垂连接 
+
+                
                 local pool_n = table.getn(h2_out_pool)
 
                 --print("1 pooln",pool_n, max_num)
@@ -99,6 +106,20 @@ infinite = {
 
                 local i = math.random(1,pool_n)
                 return 2, h2_out_pool[i]:clone()
+
+
+                -- ]]
+
+                local pool_n = table.getn(h2_out_pool)
+
+                local h2_out = create_out_mapper(h2_out_config)
+
+                if pool_n < max_num then
+                    table.insert(h2_out_pool,h2_out)
+                end
+
+                return 2, h2_out:clone()
+
 
             elseif state_index == 2 then
                 if trojan_out == nil then

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use h2::client::{Connection, SendRequest};
@@ -155,31 +155,35 @@ impl MuxClient {
 
         match conn {
             Some(conn) => {
-                //debug!("h2_mux_client got some conn");
-                let r = h2::client::handshake(conn).await;
-                let r = match r {
-                    Ok(r) => r,
-                    Err(e) => {
-                        let e = anyhow::anyhow!("accept h2 got e {}", e);
-                        return Ok(MapResult::from_e(e));
-                    }
-                };
-                let (mut send_request, connection) = r;
+                let mut cache = self.cache.lock().await;
+                if cache.is_none() {
+                    //debug!("h2_mux_client got some conn");
+                    let r = h2::client::handshake(conn).await;
+                    let r = match r {
+                        Ok(r) => r,
+                        Err(e) => {
+                            let e = anyhow::anyhow!("accept h2 got e {}", e);
+                            return Ok(MapResult::from_e(e));
+                        }
+                    };
+                    let (mut send_request, connection) = r;
 
-                let stream = new_stream_by_send_request(
-                    cid,
-                    is_grpc,
-                    &mut send_request,
-                    self.req.clone(),
-                    Some(connection),
-                )
-                .await?;
+                    let stream = new_stream_by_send_request(
+                        cid,
+                        is_grpc,
+                        &mut send_request,
+                        self.req.clone(),
+                        Some(connection),
+                    )
+                    .await?;
 
-                let m = MapResult::new_c(stream).a(a).b(early_data).build();
+                    let m = MapResult::new_c(stream).a(a).b(early_data).build();
 
-                *self.cache.lock().await = Some(send_request);
-
-                Ok(m)
+                    *cache = Some(send_request);
+                    Ok(m)
+                } else {
+                    bail!("can't handshake multiple times")
+                }
             }
             None => {
                 //debug!(cid = %cid , "h2_mux_client got no conn");
