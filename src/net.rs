@@ -18,6 +18,7 @@ use futures::{io::Error, FutureExt};
 use log::{debug, log_enabled};
 use rand::Rng;
 use std::io;
+use std::sync::atomic::AtomicU32;
 use std::{fmt::Debug, net::Ipv4Addr};
 use std::{
     fmt::{Display, Formatter},
@@ -393,7 +394,7 @@ impl Stream {
     }
 }
 
-use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::Name;
 
@@ -402,7 +403,9 @@ use self::addr_conn::AddrConn;
 /// 用于状态监视和流量统计；可以用 Arc<TransmissionInfo> 进行全局的监视和统计。
 #[derive(Debug, Default)]
 pub struct TransmissionInfo {
-    pub alive_connection_count: AtomicI32,
+    pub last_connection_id: AtomicU32,
+
+    pub alive_connection_count: AtomicU32,
 
     /// total downloaded bytes since start
     pub db: AtomicU64,

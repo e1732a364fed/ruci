@@ -46,6 +46,13 @@ use std::{
     sync::Arc,
 };
 
+#[derive(Default)]
+pub enum GenerateStateIDBehavior {
+    #[default]
+    Random,
+    Ordered,
+}
+
 pub trait StateID: Ord + Eq + Display {}
 impl<T: Ord + Eq + Display> StateID for T {}
 
@@ -56,6 +63,7 @@ fn new_rand_state_id() -> u32 {
     rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
 }
 
+/// 0 为 parent, 1为自己
 pub struct SubStateID(u32, u32);
 impl Display for SubStateID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -116,9 +124,18 @@ pub struct RootState {
 }
 
 impl RootState {
+    /// new with random id
     pub fn new(network: &'static str) -> RootState {
         let mut s = RootState::default();
         s.cid = new_rand_state_id();
+        s.network = network;
+        s
+    }
+
+    pub fn new_ordered(network: &'static str, lastid: &std::sync::atomic::AtomicU32) -> RootState {
+        let mut s = RootState::default();
+        let li = lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        s.cid = li + 1;
         s.network = network;
         s
     }

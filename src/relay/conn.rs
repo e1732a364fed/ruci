@@ -36,7 +36,10 @@ pub async fn handle_conn<'a>(
     outc_addr: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
-    let mut state = RootState::new(network_str);
+    let mut state = match ti.as_ref() {
+        Some(ti) => RootState::new_ordered(network_str, &ti.last_connection_id),
+        None => RootState::new(network_str),
+    };
     state.set_ins_name(ins_name.to_string());
     state.set_cached_in_raddr(in_raddr);
 
