@@ -1,3 +1,7 @@
+/*!
+copy between [`AddrConn`] and [`net::Conn`]
+*/
+
 use crate::net;
 use crate::net::addr_conn::*;
 use crate::net::CID;
@@ -18,7 +22,7 @@ use tracing::info;
 
 //todo: improve code
 
-pub struct CpUdpTcpArgs {
+pub struct CpAddrConnAndConnArgs {
     pub cid: CID,
     pub ac: net::addr_conn::AddrConn,
     pub c: net::Conn,
@@ -29,7 +33,7 @@ pub struct CpUdpTcpArgs {
     pub no_timeout: bool,
 }
 
-pub async fn cp_udp_tcp(args: CpUdpTcpArgs) -> io::Result<u64> {
+pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u64> {
     let cid = args.cid;
     let mut ac = args.ac;
     let mut c = args.c;
@@ -38,8 +42,8 @@ pub async fn cp_udp_tcp(args: CpUdpTcpArgs) -> io::Result<u64> {
     let first_target = args.first_target;
     let gtr = args.gtr;
     let no_timeout = args.no_timeout;
-
-    info!(cid = %cid, "relay udp to tcp start",);
+    use crate::Name;
+    info!(cid = %cid, ac = ac.name(), "cp_addr_conn_and_conn start",);
 
     let tic = gtr.clone();
     scopeguard::defer! {
@@ -71,8 +75,8 @@ pub async fn cp_udp_tcp(args: CpUdpTcpArgs) -> io::Result<u64> {
 
     if no_timeout {
         let (c1_to_c2, c2_to_c1) = (
-            cp_conn_to_addr(&mut r, ac.w).fuse(),
-            cp_addr_to_conn(ac.r, &mut w).fuse(),
+            cp_conn_to_addr_conn(&mut r, ac.w).fuse(),
+            cp_addr_conn_to_conn(ac.r, &mut w).fuse(),
         );
         pin_mut!(c1_to_c2, c2_to_c1);
 
@@ -88,8 +92,8 @@ pub async fn cp_udp_tcp(args: CpUdpTcpArgs) -> io::Result<u64> {
         }
     } else {
         let (c1_to_c2, c2_to_c1) = (
-            cp_conn_to_addr(&mut r, ac.w).fuse(),
-            cp_addr_to_conn_timeout(ac.r, &mut w).fuse(),
+            cp_conn_to_addr_conn(&mut r, ac.w).fuse(),
+            cp_addr_conn_to_conn_timeout(ac.r, &mut w).fuse(),
         );
         pin_mut!(c1_to_c2, c2_to_c1);
 
@@ -106,7 +110,7 @@ pub async fn cp_udp_tcp(args: CpUdpTcpArgs) -> io::Result<u64> {
     }
 }
 
-pub async fn cp_conn_to_addr<R, W1: AddrWriteTrait>(r1: &mut R, mut w1: W1) -> io::Result<u64>
+pub async fn cp_conn_to_addr_conn<R, W1: AddrWriteTrait>(r1: &mut R, mut w1: W1) -> io::Result<u64>
 where
     R: AsyncRead + Unpin + ?Sized,
 {
@@ -133,7 +137,7 @@ where
     Ok(whole)
 }
 
-pub async fn cp_addr_to_conn_timeout<W, R1: AddrReadTrait>(
+pub async fn cp_addr_conn_to_conn_timeout<W, R1: AddrReadTrait>(
     mut r1: R1,
     w1: &mut W,
 ) -> io::Result<u64>
@@ -196,7 +200,7 @@ where
     Ok(whole_write as u64)
 }
 
-pub async fn cp_addr_to_conn<W, R1: AddrReadTrait>(mut r1: R1, w1: &mut W) -> io::Result<u64>
+pub async fn cp_addr_conn_to_conn<W, R1: AddrReadTrait>(mut r1: R1, w1: &mut W) -> io::Result<u64>
 where
     W: AsyncWrite + Unpin + ?Sized,
 {

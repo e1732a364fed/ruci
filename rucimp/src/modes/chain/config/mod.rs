@@ -35,7 +35,7 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{quic_common, ws};
+use crate::map::ws;
 
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 use crate::map::tproxy::{self, TcpResolver};
@@ -249,7 +249,7 @@ pub enum InMapperConfig {
         http_config: Option<CommonConfig>,
     },
     #[cfg(any(feature = "quic", feature = "quinn"))]
-    Quic(quic_common::ServerConfig),
+    Quic(crate::map::quic_common::ServerConfig),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -289,7 +289,7 @@ pub enum OutMapperConfig {
         http_config: Option<CommonConfig>,
     },
     #[cfg(any(feature = "quic", feature = "quinn"))]
-    Quic(quic_common::ClientConfig),
+    Quic(crate::map::quic_common::ClientConfig),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -380,17 +380,21 @@ impl ToMapperBox for InMapperConfig {
             InMapperConfig::Dialer { dial_addr, ext } => {
                 let a = net::Addr::from_name_network_addr_str(dial_addr)
                     .expect("network_ip_addr is valid");
-                let mut d = ruci::map::network::Dialer::default();
-                d.dial_addr = a;
-                d.ext_fields = ext.as_ref().map(|e| e.to_ext_fields());
+                let d = ruci::map::network::Dialer {
+                    dial_addr: a,
+                    ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
+                };
+
                 Box::new(d)
             }
             InMapperConfig::Listener { listen_addr, ext } => {
                 let a =
                     net::Addr::from_network_addr_str(listen_addr).expect("network_addr is valid");
-                let mut g = ruci::map::network::Listener::default();
-                g.listen_addr = a;
-                g.ext_fields = ext.as_ref().map(|e| e.to_ext_fields());
+                let g = ruci::map::network::Listener {
+                    listen_addr: a,
+                    ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
+                };
+
                 Box::new(g)
             }
             InMapperConfig::Adder(i) => i.to_mapper_box(),
@@ -539,9 +543,11 @@ impl ToMapperBox for OutMapperConfig {
             OutMapperConfig::Dialer { dial_addr, ext } => {
                 let a = net::Addr::from_name_network_addr_str(dial_addr)
                     .expect("network_ip_addr is valid");
-                let mut d = ruci::map::network::Dialer::default();
-                d.dial_addr = a;
-                d.ext_fields = ext.as_ref().map(|e| e.to_ext_fields());
+                let d = ruci::map::network::Dialer {
+                    dial_addr: a,
+                    ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
+                };
+
                 Box::new(d)
             }
             OutMapperConfig::Adder(i) => i.to_mapper_box(),

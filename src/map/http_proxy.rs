@@ -77,7 +77,7 @@ impl Server {
 
         Server {
             only_connect: option.only_support_connect,
-            um: if um.len() > 0 { Some(um) } else { None },
+            um: if um.is_empty() { None } else { Some(um) },
             ext_fields: Some(MapperExtFields::default()),
         }
     }

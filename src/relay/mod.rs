@@ -3,8 +3,12 @@ relay 包定义了一种转发逻辑, 但是它不是强制性的, 可用于参�
 具体实现 中可以有不同的转发逻辑
 
 */
-pub mod cp_tcp;
-pub mod cp_udp;
+mod cp_ac_conn;
+mod cp_conn;
+
+pub use cp_ac_conn::*;
+pub use cp_conn::*;
+
 pub mod record;
 pub mod route;
 
@@ -15,7 +19,7 @@ use std::sync::Arc;
 use bytes::BytesMut;
 use tracing::{debug, info, warn};
 
-use crate::net::addr_conn::AsyncWriteAddrExt;
+use crate::net::addr_conn::{AddrConn, AsyncWriteAddrExt};
 use crate::net::{self, Addr, Stream, CID};
 
 use self::fold::{DMIterBox, FoldParams};
@@ -26,10 +30,13 @@ use std::time::Duration;
 
 use crate::map::*;
 
-pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间.  //todo: 修改这里
+pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间.  //todo: adjust this
 
+/// this function utilizes [`handle_in_fold_result`] and  [`OutSelector`]
+/// to select an outbound, fold it and then copy streams.
+///
 /// block until in and out handshake is over.
-/// utilize handle_in_accumulate_result and  route::OutSelector
+///
 pub async fn handle_in_stream(
     in_conn: Stream,
     ins_iterator: DMIterBox,
@@ -83,6 +90,9 @@ pub async fn handle_in_stream(
     .await
 }
 
+/// fold the inbound, select an outbound, fold the outbound, then calls
+/// [`cp_stream`] to copy between the inbound stream and outbound stream.
+///
 /// block until out handshake is over
 pub async fn handle_in_fold_result(
     mut listen_result: fold::FoldResult,
@@ -294,6 +304,8 @@ pub struct CpStreamArgs {
     updater: net::OptUpdater,
 }
 
+/// copy between two [`Stream`]
+///
 /// non-blocking,
 pub fn cp_stream(args: CpStreamArgs) {
     let cid = args.cid;
@@ -308,7 +320,7 @@ pub fn cp_stream(args: CpStreamArgs) {
 
     //todo: add trace for udp
     match (s1, s2) {
-        (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(
+        (Stream::Conn(i), Stream::Conn(o)) => cp_conn::cp_conn(
             cid,
             i,
             o,
@@ -318,31 +330,35 @@ pub fn cp_stream(args: CpStreamArgs) {
             args.updater,
         ),
         (Stream::Conn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(cp_udp::CpUdpTcpArgs {
-                cid,
-                ac: o,
-                c: i,
-                ed_from_ac: false,
-                ed,
-                first_target,
-                gtr: tr,
-                no_timeout,
-            }));
+            tokio::spawn(cp_ac_conn::cp_addr_conn_and_conn(
+                cp_ac_conn::CpAddrConnAndConnArgs {
+                    cid,
+                    ac: o,
+                    c: i,
+                    ed_from_ac: false,
+                    ed,
+                    first_target,
+                    gtr: tr,
+                    no_timeout,
+                },
+            ));
         }
         (Stream::AddrConn(i), Stream::Conn(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(cp_udp::CpUdpTcpArgs {
-                cid,
-                ac: i,
-                c: o,
-                ed_from_ac: true,
-                ed,
-                first_target,
-                gtr: tr,
-                no_timeout,
-            }));
+            tokio::spawn(cp_ac_conn::cp_addr_conn_and_conn(
+                cp_ac_conn::CpAddrConnAndConnArgs {
+                    cid,
+                    ac: i,
+                    c: o,
+                    ed_from_ac: true,
+                    ed,
+                    first_target,
+                    gtr: tr,
+                    no_timeout,
+                },
+            ));
         }
         (Stream::AddrConn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp(CpUdpArgs {
+            tokio::spawn(cp_addr_conn(CpAddrConnArgs {
                 cid,
                 in_conn: i,
                 out_conn: o,
@@ -360,10 +376,10 @@ pub fn cp_stream(args: CpStreamArgs) {
     }
 }
 
-pub struct CpUdpArgs {
+pub struct CpAddrConnArgs {
     cid: CID,
-    in_conn: net::addr_conn::AddrConn,
-    out_conn: net::addr_conn::AddrConn,
+    in_conn: AddrConn,
+    out_conn: AddrConn,
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
@@ -372,7 +388,8 @@ pub struct CpUdpArgs {
     shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
-pub async fn cp_udp(args: CpUdpArgs) {
+/// copy between two [`AddrConn`]
+pub async fn cp_addr_conn(args: CpAddrConnArgs) {
     use crate::Name;
 
     let cid = args.cid;
@@ -385,7 +402,7 @@ pub async fn cp_udp(args: CpUdpArgs) {
     let shutdown_rx1 = args.shutdown_rx1;
     let shutdown_rx2 = args.shutdown_rx2;
 
-    info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "relay udp start",);
+    info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
 
     let tc = tr.clone();
     scopeguard::defer! {
@@ -395,24 +412,27 @@ pub async fn cp_udp(args: CpUdpArgs) {
 
         }
         info!( cid = %cid,
-        "udp relay end" );
+        "cp_addr_conn end" );
 
     }
 
     if let Some(real_ed) = ed {
         if let Some(real_first_target) = first_target {
-            debug!("cp_udp: writing ed {:?}", real_ed);
+            debug!("cp_addr_conn: writing ed {:?}", real_ed);
             let r = out_conn.w.write(&real_ed, &real_first_target).await;
             if let Err(e) = r {
-                warn!("cp_udp: writing ed failed: {e}");
+                warn!("cp_addr_conn: writing ed failed: {e}");
                 let _ = out_conn.w.shutdown().await;
                 return;
             }
         } else {
-            debug!("cp_udp: writing ed without real_first_target {:?}", real_ed);
+            debug!(
+                "cp_addr_conn: writing ed without real_first_target {:?}",
+                real_ed
+            );
             let r = out_conn.w.write(&real_ed, &Addr::default()).await;
             if let Err(e) = r {
-                warn!("cp_udp: writing ed failed: {e}");
+                warn!("cp_addr_conn: writing ed failed: {e}");
                 let _ = out_conn.w.shutdown().await;
                 return;
             }
@@ -430,9 +450,9 @@ pub async fn cp_udp(args: CpUdpArgs) {
     )
     .await;
 
-    // debug!("cp_udp: calling shutdown");
+    // debug!("cp_addr_conn: calling shutdown");
 
     // let r1 = in_conn.w.shutdown().await;
     // let r2 = out_conn.w.shutdown().await;
-    // debug!("cp_udp: called shutdown {:?} {:?}", r1, r2);
+    // debug!("cp_addr_conn: called shutdown {:?} {:?}", r1, r2);
 }

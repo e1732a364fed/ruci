@@ -174,10 +174,13 @@ impl Suit for SuitStruct {
         match self.get_behavior() {
             ProxyBehavior::ENCODE => {
                 if self.protocol_str != "direct" && !self.addr_str.is_empty() {
-                    let mut a = network::Dialer::default();
-                    a.dial_addr = net::Addr::from_network_addr_str(self.addr_str())
+                    let a = net::Addr::from_network_addr_str(self.addr_str())
                         .expect("self addr str ok");
-                    self.push_mapper(Arc::new(Box::new(a)));
+                    let dialer = network::Dialer {
+                        dial_addr: a,
+                        ..Default::default()
+                    };
+                    self.push_mapper(Arc::new(Box::new(dialer)));
                 }
                 if self.has_tls() {
                     let a = tls::client::Client::new(tls::client::ClientOptions {

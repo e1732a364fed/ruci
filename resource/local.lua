@@ -10,7 +10,7 @@ l2 = {
     Listener = { 
         listen_addr = "0.0.0.0:20800",
 
-        --[[ 
+        ---[[ 
 
         -- 如果 ext 中的 fixed_target_addr 给出, 则其行为等价于
         -- 一些其它代理程序中 所定义的 "dokodemo door (任意门)"
@@ -18,6 +18,7 @@ l2 = {
         -- ruci 中, Listener,TcpOptListener, Dialer, Stdio, Fileio 都能如此配置
 
         ext = {
+            -- fixed_target_addr = "udp://127.0.0.1:40800"
             fixed_target_addr = "1.1.1.1:80"
         }
         --]]
@@ -448,7 +449,7 @@ config = {
         chain = listen_socks5http,
         tag = "l1"
     }, {
-        chain = {l2, tlsin},
+        chain = {l2},
         tag = "l2"
     }, {
         chain = {l3, tlsin},
@@ -468,7 +469,7 @@ config = {
     }},
 
     ---[==[
-    tag_route = {{"l1", "d1"}, {"l2", "d2"}, {"l3", "d2"}},
+    tag_route = {{"l1", "d1"}, {"l2", "d1"}, {"l3", "d2"}},
 
     fallback_route = {{"l1", "fallback_d"}}
 
@@ -479,11 +480,11 @@ config = {
     rule_route = {{
         mode = "WhiteList",
         out_tag = "d1",
-        in_tags = {"l1"}
+        in_tags = {"l1","l2"}
     }, {
         mode = "WhiteList",
         out_tag = "d2",
-        in_tags = {"l2", "l3"}
+        in_tags = {"l3"}
     }, {
         mode = "WhiteList",
         out_tag = "fallback_d",
@@ -500,7 +501,7 @@ config = {
 
 这两种给出的配置在行为上是等价的
 
-该 路由 示例明确指出, l1将被路由到d1, l2 -> d2, l3 -> d2, 且 l1 的回落为 fallback_d
+该 路由 示例明确指出, l1将被路由到d1, l2 -> d1, l3 -> d2, 且 l1 的回落为 fallback_d
 
 --]]
 

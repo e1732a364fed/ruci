@@ -11,6 +11,8 @@ use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, warn};
 
+/// copy between two [`net::Conn`]
+///
 /// non-blocking, spawns new task to do actual relay
 pub fn cp_conn(
     cid: CID,

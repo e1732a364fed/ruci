@@ -26,16 +26,16 @@ use crate::{
 use super::Data;
 
 ///
-/// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 DMIterBox
+/// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 [`DMIterBox`]
 ///
-/// 选择出的 DMIterBox 一般是用于 outbound,
+/// 选择出的 [`DMIterBox`] 一般是用于 outbound,
 ///
 /// params 的类型 是链累加 得到的 结果, 里面可能有任何值,
 ///
-/// 不过对于路由来说最有用的值应该是 验证后的 user, 所以本模块中含一个 get_user_from_opt_data
+/// 不过对于路由来说最有用的值应该是 验证后的 user, 所以本模块中含一个 [`get_user_from_opt_data`]
 /// 函数用于这一点.
 ///
-/// Send + Sync to use in async
+/// [`Send`] + [`Sync`] to use in async
 ///
 #[async_trait]
 pub trait OutSelector: Send + Sync {

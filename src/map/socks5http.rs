@@ -66,7 +66,7 @@ impl Server {
         }
 
         let mut oum: Option<UsersMap<PlainText>> = None;
-        if um.len() > 0 {
+        if !um.is_empty() {
             oum = Some(um);
         }
 

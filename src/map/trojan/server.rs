@@ -47,7 +47,7 @@ impl Server {
                 um.add_user(uup);
             }
         }
-        if um.len() == 0 {
+        if um.is_empty() {
             panic!("can't init a trojan server without any password");
         }
 
