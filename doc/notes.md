@@ -552,6 +552,8 @@ https://github.com/Shadowrocket/lua-backend/tree/master
 
 ### 项目对比,参考与评估
 
+注意，ruci 与 luci (openwrt's lua Configuration Interface) 完全无关。不过，都使用了lua.
+
 链式代理配置的想法来自 v2ray-rust, 但是 ruci中 的 Infinity 完全动态链 与 Dyn_Selectors 部分动态链 的实现是新的想法。
 
 ruci 中的基本结构 Map 的先例是 YtFlowCore 中的 Plugin，（ruci并未参考其对应代码）。不过它使用的是json配置，没有 lua配置灵活。

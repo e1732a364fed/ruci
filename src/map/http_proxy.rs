@@ -1,5 +1,5 @@
 /*!
-Implements a [`Map`] for http proxy by https://www.ietf.org/rfc/rfc2817.txt.
+Implements a [`Map`] for http proxy by section 5.2 of https://www.ietf.org/rfc/rfc2817.txt.
  */
 
 use std::cmp::min;
