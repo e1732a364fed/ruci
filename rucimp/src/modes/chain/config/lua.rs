@@ -1,3 +1,5 @@
+use std::mem;
+
 use self::dynamic::NextSelector;
 
 use super::*;
@@ -19,8 +21,6 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
     Ok(c)
 }
 
-//todo: 写得太乱了，improve code
-
 const DYN_SELECTORS_STR: &str = "dyn_selectors";
 
 /// test if the lua text is ok for finite dynamic
@@ -35,46 +35,41 @@ pub fn is_finite_dynamic_available(lua_text: &str) -> Result<()> {
     Ok(())
 }
 
-struct SelectorHelper {
-    pub inbounds_selector: HashMap<String, LuaNextSelector>,
-    pub outbounds_selector: HashMap<String, LuaNextSelector>,
-}
-
 pub fn load_finite_dynamic(
-    lua_text: String,
+    lua_text: &str,
 ) -> Result<(
     StaticConfig,
     Vec<DMIterBox>,
     DMIterBox,
     Arc<HashMap<String, DMIterBox>>,
 )> {
-    let lua = Lua::new();
-    let (sc, sh) = load_finite_dynamic_helper(&lua, lua_text)?;
+    let (sc, sm) = load_finite_config_and_selector_map(lua_text)?;
 
-    let (ibs, fb, obm) = get_dmiter_from_static_config_and_helper(sc.clone(), sh);
+    let (ibs, fb, obm) = get_iobounds_by_config_and_selector_map(sc.clone(), sm);
     Ok((sc, ibs, fb, obm))
 }
 
-fn load_finite_dynamic_helper(
-    lua: &Lua,
-    lua_text: String,
-) -> Result<(StaticConfig, SelectorHelper)> {
-    lua.load(&lua_text).eval()?;
+fn load_finite_config_and_selector_map(
+    lua_text: &str,
+) -> Result<(StaticConfig, HashMap<String, LuaNextSelector>)> {
+    let lua = Lua::new();
+
+    lua.load(lua_text).eval()?;
 
     let g = lua.globals();
 
-    let clt: LuaTable = g.get("config").context("lua has no config field")?;
+    let config: LuaTable = g.get("config").context("lua has no config field")?;
 
     let _: LuaFunction = g
         .get(DYN_SELECTORS_STR)
         .context(format!("lua has no {}", DYN_SELECTORS_STR))?;
 
-    let c: StaticConfig = lua.from_value(Value::Table(clt))?;
-    let x: HashMap<String, LuaNextSelector> = c
+    let c: StaticConfig = lua.from_value(Value::Table(config))?;
+    let mut selector_map: HashMap<String, LuaNextSelector> = c
         .inbounds
         .iter()
-        .map(|x| {
-            let tag = x.tag.as_ref().unwrap();
+        .map(|chain| {
+            let tag = chain.tag.as_ref().unwrap();
 
             (
                 tag.to_string(),
@@ -83,31 +78,22 @@ fn load_finite_dynamic_helper(
         })
         .collect();
 
-    let y: HashMap<String, LuaNextSelector> = c
-        .outbounds
-        .iter()
-        .map(|x| {
-            let tag = &x.tag;
+    c.outbounds.iter().for_each(|chain| {
+        let tag = &chain.tag;
 
-            (
-                tag.to_string(),
-                LuaNextSelector::from(&lua_text, &tag).expect("get handler from lua must be ok"),
-            )
-        })
-        .collect();
+        selector_map.insert(
+            tag.to_string(),
+            LuaNextSelector::from(&lua_text, tag).expect("get handler from lua must be ok"),
+        );
+    });
 
-    let sh = SelectorHelper {
-        inbounds_selector: x,
-        outbounds_selector: y,
-    };
-
-    Ok((c, sh))
+    Ok((c, selector_map))
 }
 
 /// returns inbounds, first_outbound, outbound_map
-fn get_dmiter_from_static_config_and_helper(
+fn get_iobounds_by_config_and_selector_map(
     c: StaticConfig,
-    mut sh: SelectorHelper,
+    mut selector_map: HashMap<String, LuaNextSelector>,
 ) -> (Vec<DMIterBox>, DMIterBox, Arc<HashMap<String, DMIterBox>>) {
     let ibs = c.get_inbounds();
     let v: Vec<DMIterBox> = ibs
@@ -116,7 +102,7 @@ fn get_dmiter_from_static_config_and_helper(
             let tag = v.last().unwrap().get_chain_tag().to_string();
             let inbound: Vec<_> = v.into_iter().map(|o| Arc::new(o)).collect();
 
-            let selector = Box::new(sh.inbounds_selector.remove(&tag).unwrap());
+            let selector = Box::new(selector_map.remove(&tag).unwrap());
 
             let x: DMIterBox = Box::new(Finite {
                 mb_vec: inbound,
@@ -144,7 +130,7 @@ fn get_dmiter_from_static_config_and_helper(
             let ts = tag.to_string();
             let outbound: Vec<_> = outbound.into_iter().map(|o| Arc::new(o)).collect();
 
-            let selector = Box::new(sh.outbounds_selector.remove(&ts).unwrap());
+            let selector = Box::new(selector_map.remove(&ts).unwrap());
 
             let outbound_iter: DMIterBox = Box::new(Finite {
                 mb_vec: outbound,
@@ -164,6 +150,12 @@ fn get_dmiter_from_static_config_and_helper(
     (v, first_o.expect("has an outbound"), Arc::new(omap))
 }
 
+#[derive(Debug, Clone)]
+pub struct LuaNextSelector(Arc<Mutex<LuaOwnedFunction>>);
+
+unsafe impl Send for LuaNextSelector {}
+unsafe impl Sync for LuaNextSelector {}
+
 impl LuaNextSelector {
     pub fn from(lua_text: &str, tag: &str) -> anyhow::Result<LuaNextSelector> {
         let lua = Lua::new();
@@ -180,12 +172,6 @@ impl LuaNextSelector {
         Ok(LuaNextSelector(Arc::new(Mutex::new(f.into_owned()))))
     }
 }
-
-#[derive(Debug, Clone)]
-pub struct LuaNextSelector(Arc<Mutex<LuaOwnedFunction>>);
-
-unsafe impl Send for LuaNextSelector {}
-unsafe impl Sync for LuaNextSelector {}
 
 impl NextSelector for LuaNextSelector {
     fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64> {
@@ -215,14 +201,17 @@ use parking_lot::Mutex;
 #[repr(transparent)]
 pub struct AnyDataLuaWrapper(ruci::map::AnyData);
 
-//todo: 都用clone 太慢了, 加 add_method_mut
-
 impl UserData for AnyDataLuaWrapper {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method("get_type", |_, this, ()| Ok(this.0.get_type_str()));
 
         methods.add_method("get_string", |_, this, ()| match &this.0 {
             AnyData::String(s) => Ok(s.to_owned()),
+            _ => Err(LuaError::DeserializeError("can't get string".to_string())),
+        });
+
+        methods.add_method_mut("take_string", |_, this, ()| match &mut this.0 {
+            AnyData::String(s) => Ok(mem::take(s)),
             _ => Err(LuaError::DeserializeError("can't get string".to_string())),
         });
 
@@ -244,6 +233,13 @@ impl UserData for VecOfAnyDataLuaWrapper {
             let x = this.0.get(index);
             match x {
                 Some(d) => Ok(AnyDataLuaWrapper(d.clone())),
+                None => Err(LuaError::DeserializeError("can't get u64".to_string())),
+            }
+        });
+
+        methods.add_method_mut("take", |_, this, index: usize| {
+            match this.0.get_mut(index) {
+                Some(d) => Ok(AnyDataLuaWrapper(mem::take(d))),
                 None => Err(LuaError::DeserializeError("can't get u64".to_string())),
             }
         });
@@ -319,7 +315,6 @@ mod test {
     fn test_transmute() {
         use std::mem;
 
-        // 定义结构体 A 和 B
         #[derive(Debug)]
         struct A {
             i: i32,
@@ -329,10 +324,8 @@ mod test {
         #[derive(Debug)]
         struct B(A);
 
-        // 假设 vec_a 是 Vec<A> 类型的向量
         let vec_a: Vec<A> = vec![A { i: 1 }, A { i: 1 }, A { i: 1 }];
 
-        // 使用 transmute 将 Vec<A> 转换为 Vec<B>
         let vec_b: Vec<B> = unsafe { mem::transmute(vec_a) };
         println!("{:?}", vec_b)
     }
@@ -678,7 +671,13 @@ mod test {
         let handler_fn = lua
             .load(chunk! {
                 function(userdata1)
-                    print("datai is "..userdata1:get_string())
+                    print("data is "..userdata1:get_string())
+
+                    print("data is "..userdata1:take_string())
+
+                    // take 后原值会为空
+                    print("data is "..userdata1:take_string())
+
 
                 end
             })
@@ -688,7 +687,7 @@ mod test {
         let handler_fn2 = lua
             .load(chunk! {
                 function(userdata1)
-                    print("datai is "..userdata1:get_u64())
+                    print("data is "..userdata1:get_u64())
 
                 end
             })
@@ -796,145 +795,22 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_dyn() -> Result<()> {
-        let lua = Lua::new();
+    // #[test]
+    // fn test_dyn() -> Result<()> {
+    //     let lua = Lua::new();
 
-        use mlua::chunk;
-        use mlua::Function;
+    //     use mlua::chunk;
+    //     use mlua::Function;
 
-        let handler_fn = lua
-            .load(chunk! {
-                function(current_index)
+    //     let handler_fn = lua
+    //         .load(chunk! {
+    //             function(current_index)
 
+    //             end
+    //         })
+    //         .eval::<Function>()
+    //         .expect("cannot create Lua handler");
 
-
-                end
-            })
-            .eval::<Function>()
-            .expect("cannot create Lua handler");
-
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }
-
-/*
-#[allow(unused)]
-#[cfg(test)]
-mod test1 {
-
-    // example from mlua
-
-    use std::io;
-    use std::net::SocketAddr;
-    use std::rc::Rc;
-
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::task;
-
-    use mlua::{chunk, Function, Lua, RegistryKey, String as LuaString, UserData, UserDataMethods};
-
-    struct LuaTcpStream(TcpStream);
-
-    impl UserData for LuaTcpStream {
-        fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-            methods.add_method("peer_addr", |_, this, ()| {
-                Ok(this.0.peer_addr()?.to_string())
-            });
-
-            methods.add_async_method_mut("read", |lua, this, size| async move {
-                let mut buf = vec![0; size];
-                let n = this.0.read(&mut buf).await?;
-                buf.truncate(n);
-                lua.create_string(&buf)
-            });
-
-            methods.add_async_method_mut("write", |_, this, data: LuaString| async move {
-                let n = this.0.write(&data.as_bytes()).await?;
-                Ok(n)
-            });
-
-            methods.add_async_method_mut("close", |_, this, ()| async move {
-                this.0.shutdown().await?;
-                Ok(())
-            });
-        }
-    }
-
-    pub async fn run_server(lua: Lua, handler: RegistryKey) -> io::Result<()> {
-        let addr: SocketAddr = ([127, 0, 0, 1], 3000).into();
-        let listener = TcpListener::bind(addr).await.expect("cannot bind addr");
-
-        println!("Listening on {}", addr);
-
-        let lua = Rc::new(lua);
-        let handler = Rc::new(handler);
-        loop {
-            let (stream, _) = match listener.accept().await {
-                Ok(res) => res,
-                Err(err) if is_transient_error(&err) => continue,
-                Err(err) => return Err(err),
-            };
-
-            let lua = lua.clone();
-            let handler = handler.clone();
-            task::spawn_local(async move {
-                let handler: Function = lua
-                    .registry_value(&handler)
-                    .expect("cannot get Lua handler");
-
-                let stream = LuaTcpStream(stream);
-                if let Err(err) = handler.call_async::<_, ()>(stream).await {
-                    eprintln!("{}", err);
-                }
-            });
-        }
-    }
-
-    //#[tokio::main(flavor = "current_thread")]
-    #[tokio::test]
-    pub async fn main() {
-        let lua = Lua::new();
-
-        // Create Lua handler function
-        let handler_fn = lua
-            .load(chunk! {
-                function(stream)
-                    local peer_addr = stream:peer_addr()
-                    print("connected from "..peer_addr)
-
-                    while true do
-                        local data = stream:read(100)
-                        data = data:match("^%s*(.-)%s*$") // trim
-                        print("["..peer_addr.."] "..data)
-                        if data == "bye" then
-                            stream:write("bye bye\n")
-                            stream:close()
-                            return
-                        end
-                        stream:write("echo: "..data.."\n")
-                    end
-                end
-            })
-            .eval::<Function>()
-            .expect("cannot create Lua handler");
-
-        // Store it in the Registry
-        let handler = lua
-            .create_registry_value(handler_fn)
-            .expect("cannot store Lua handler");
-
-        task::LocalSet::new()
-            .run_until(run_server(lua, handler))
-            .await
-            .expect("cannot run server")
-    }
-
-    fn is_transient_error(e: &io::Error) -> bool {
-        e.kind() == io::ErrorKind::ConnectionRefused
-            || e.kind() == io::ErrorKind::ConnectionAborted
-            || e.kind() == io::ErrorKind::ConnectionReset
-    }
-}
-*/

@@ -78,7 +78,7 @@ impl Engine {
 
         debug!("trying init_lua");
 
-        let r = lua::is_finite_dynamic_availiable(&config_string);
+        let r = lua::is_finite_dynamic_available(&config_string);
         match r {
             Ok(_) => self.init_lua_finite_dynamic(config_string),
             Err(_) => self.init_lua_static(config_string),
@@ -103,7 +103,7 @@ impl Engine {
 
         use crate::modes::chain::config::lua;
         let (sc, ibs, default_o, ods) =
-            lua::load_finite_dynamic(config_string).context("lua::load_finite_dynamic failed")?;
+            lua::load_finite_dynamic(&config_string).context("lua::load_finite_dynamic failed")?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);
         self.outbounds = ods;

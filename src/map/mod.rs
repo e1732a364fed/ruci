@@ -68,8 +68,10 @@ use self::addr_conn::AddrConn;
 ///
 /// The data must be clonable
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum AnyData {
+    #[default]
+    None,
     Bool(bool),
     CID(CID),
     String(String),
@@ -81,9 +83,11 @@ pub enum AnyData {
     Addr(net::Addr),           //store raddr
     User(Box<dyn user::User>), //store authed user
 }
+
 impl AnyData {
     pub fn get_type_str(&self) -> &'static str {
         match self {
+            AnyData::None => "none",
             AnyData::Bool(_) => "bool",
             AnyData::CID(_) => "cid",
             AnyData::String(_) => "str",
