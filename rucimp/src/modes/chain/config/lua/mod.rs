@@ -117,7 +117,6 @@ fn get_iobounds_by_config_and_selector_map(
             let x: DMIterBox = Box::new(Finite {
                 mb_vec: inbound,
                 current_index: -1,
-                history: Vec::new(),
                 selector,
             });
             x
@@ -144,7 +143,6 @@ fn get_iobounds_by_config_and_selector_map(
             let outbound_iter: DMIterBox = Box::new(Finite {
                 mb_vec: outbound,
                 current_index: -1,
-                history: Vec::new(),
                 selector,
             });
 
@@ -207,7 +205,7 @@ fn get_infinite_gmap_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result
             (key, tag)
         };
 
-        let lng = LuaNextGenerator::new(lua, key, behavior);
+        let lng = LuaNextGenerator::new(tag.clone(), lua, key, behavior);
 
         gmap.insert(tag, lng);
     }
@@ -272,15 +270,19 @@ pub struct LuaNextGenerator {
     inner: Arc<Mutex<InnerLuaNextGenerator>>,
 }
 impl LuaNextGenerator {
-    pub fn new(lua: Lua, key: LuaRegistryKey, behavior: ProxyBehavior) -> Self {
+    pub fn new(tag: String, lua: Lua, key: LuaRegistryKey, behavior: ProxyBehavior) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(InnerLuaNextGenerator::new(lua, key, behavior))),
+            inner: Arc::new(Mutex::new(InnerLuaNextGenerator::new(
+                tag, lua, key, behavior,
+            ))),
         }
     }
 }
 
 #[derive(Debug)]
 struct InnerLuaNextGenerator {
+    tag: String,
+
     lua: Lua,
     key: LuaRegistryKey,
     behavior: ProxyBehavior,
@@ -290,27 +292,10 @@ struct InnerLuaNextGenerator {
 unsafe impl Send for InnerLuaNextGenerator {}
 unsafe impl Sync for InnerLuaNextGenerator {}
 
-fn lua_value_to_opt_index_mapperbox<T: for<'de> Deserialize<'de> + ruci::map::ToMapperBox>(
-    lua: &Lua,
-    i: i64,
-    v: Value,
-) -> Option<dynamic::IndexMapperBox> {
-    let ic: LuaResult<T> = lua.from_value(v);
-    match ic {
-        Ok(ic) => {
-            let mb = ic.to_mapper_box();
-            Some((i, Some(Arc::new(mb))))
-        }
-        Err(e) => {
-            warn!("expect an mapper config, got error: {e}");
-            None
-        }
-    }
-}
-
 impl InnerLuaNextGenerator {
-    pub fn new(lua: Lua, key: LuaRegistryKey, behavior: ProxyBehavior) -> Self {
+    pub fn new(tag: String, lua: Lua, key: LuaRegistryKey, behavior: ProxyBehavior) -> Self {
         Self {
+            tag,
             lua,
             key,
             behavior,
@@ -321,11 +306,26 @@ impl InnerLuaNextGenerator {
     fn get_result_by_value(&self, i: i64, t: Value) -> Option<dynamic::IndexMapperBox> {
         match self.behavior {
             ProxyBehavior::UNSPECIFIED => todo!(),
-            ProxyBehavior::DECODE => {
-                lua_value_to_opt_index_mapperbox::<InMapperConfig>(&self.lua, i, t)
+            ProxyBehavior::DECODE => self.lua_value_to_oim::<InMapperConfig>(i, t),
+            ProxyBehavior::ENCODE => self.lua_value_to_oim::<OutMapperConfig>(i, t),
+        }
+    }
+
+    fn lua_value_to_oim<T: for<'de> Deserialize<'de> + ruci::map::ToMapperBox>(
+        &self,
+        i: i64,
+        v: Value,
+    ) -> Option<dynamic::IndexMapperBox> {
+        let ic: LuaResult<T> = self.lua.from_value(v);
+        match ic {
+            Ok(ic) => {
+                let mut mb = ic.to_mapper_box();
+                mb.set_chain_tag(&self.tag);
+                Some((i, Some(Arc::new(mb))))
             }
-            ProxyBehavior::ENCODE => {
-                lua_value_to_opt_index_mapperbox::<OutMapperConfig>(&self.lua, i, t)
+            Err(e) => {
+                warn!("expect an mapper config, got error: {e}");
+                None
             }
         }
     }

@@ -114,24 +114,6 @@ impl DynIterator for IndexInfinite {
     }
 }
 
-/// Complete Dynamic Chain using uuid
-// pub struct UuidInfinite {
-//     pub generator: Box<dyn UuidInfiniteNextInMapperGenerator>,
-
-//     /// 生成的 新 MapperBox 会存储在 cache 中
-//     pub cache: HashMap<Uuid, Arc<MapperBox>>,
-
-//     pub history: Vec<Uuid>,
-
-//     pub current_id: Uuid,
-// }
-
-// pub type UUIDMapperBox = (Uuid, Arc<MapperBox>); //MapperBox 和它的 uuid
-
-// pub trait UuidInfiniteNextInMapperGenerator {
-//     fn next_mapper(&self, this_index: Uuid, data: OVOD) -> Option<UUIDMapperBox>;
-// }
-
 /// 有界部分动态链, 即米利型有限状态机, Mealy machine
 #[derive(Debug, Clone)]
 pub struct Finite {
@@ -148,8 +130,7 @@ pub struct Finite {
 
     /// current state
     pub current_index: i64,
-
-    pub history: Vec<usize>,
+    //pub history: Vec<usize>,
 }
 
 /// 即FSM的 状态转移函数
@@ -178,7 +159,7 @@ impl DynIterator for Finite {
                     return None;
                 }
                 self.current_index = i;
-                self.history.push(iu);
+                //self.history.push(iu);
                 self.mb_vec.get(iu).cloned()
             }
             None => None,

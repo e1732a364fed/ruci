@@ -132,6 +132,7 @@ impl Debug for AccumulateResult {
     }
 }
 
+/// cid 为 跟踪 该连接的 标识
 pub struct AccumulateParams {
     pub cid: CID,
     pub behavior: ProxyBehavior,
@@ -146,20 +147,18 @@ pub struct AccumulateParams {
 ///
 /// 它的做法类似 Iterator 的 fold
 ///
-/// cid 为 跟踪 该连接的 标识
-/// 返回的元组包含新的 Conn 和 可能的目标地址
+/// 返回的AccumulateResult包含新的 流 和 可能的目标地址
 ///
-/// decode: 用途： 从listen得到的ip/tcp/udp/uds开始, 一层一层往上加, 直到加到能解析出代理目标地址为止
+/// behavior为 DECODE 的 一般行为: 从listen得到的ip/tcp/udp/uds开始, 一层一层往上加, 直到加到能解析出代理目标地址为止
 ///
 /// 一般 【中同层是返回的 target_addr都是None, 只有最后一层会返回出目标地址, 即,
 ///只有代理层会有目标地址】
 ///
 ///
-/// accumulate 只适用于 不含 Stream::Generator 的情况,
+/// accumulate 只适用于 不含 Stream::Generator 的情况, 即 累加不会
+/// 造成分支.
 ///
 /// 结果中 Stream为 None 或 一个 Stream::Generator , 或e不为None时, 将退出累加
-///
-/// 能生成 Stream::Generator 说明其 behavior 为 DECODE
 ///
 pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
     let cid = params.cid;
@@ -289,7 +288,7 @@ pub async fn accumulate_from_start(
             cid: in_cid,
             rx,
             tx,
-            miter: inmappers,
+            dmiter: inmappers,
             oti,
 
             #[cfg(feature = "trace")]
@@ -327,7 +326,7 @@ struct InIterAccumulateForeverParams {
     cid: CID,
     rx: tokio::sync::mpsc::Receiver<MapResult>,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
-    miter: DMIterBox,
+    dmiter: DMIterBox,
     oti: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")]
@@ -339,6 +338,7 @@ struct InIterAccumulateForeverParams {
 /// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
 ///
+/// 每一条子连接都使用 dmiter 的克隆, 并在 cid 基础上push生成新的 CIDChain
 ///
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去; 会对 cid 用 clone_push
 /// 添加新项
@@ -349,7 +349,7 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
     let mut rx = params.rx;
     let cid = params.cid;
     let tx = params.tx;
-    let miter = params.miter;
+    let dmiter = params.dmiter;
     let oti = params.oti;
 
     loop {
@@ -368,7 +368,7 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
         spawn_acc_forever(SpawnAccForeverParams {
             cid: new_cid,
             new_stream_info,
-            miter: miter.clone(),
+            miter: dmiter.clone(),
             tx: tx.clone(),
             oti: oti.clone(),
 
@@ -419,7 +419,7 @@ fn spawn_acc_forever(params: SpawnAccForeverParams) {
 
                 rx,
                 tx,
-                miter: r.left_mappers_iter.clone(),
+                dmiter: r.left_mappers_iter.clone(),
                 oti,
 
                 #[cfg(feature = "trace")]
