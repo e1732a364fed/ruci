@@ -186,6 +186,8 @@ impl BindDialer {
         pass_a: Option<net::Addr>,
         pass_b: Option<BytesMut>,
         udp_fix_target_listen: Option<bool>,
+
+        pass_shutdown_rx: Option<tokio::sync::oneshot::Receiver<()>>,
     ) -> MapResult {
         let r = net::Addr::bind_dial(bind_a, dial_a, udp_fix_target_listen).await;
 
@@ -238,7 +240,15 @@ impl BindDialer {
                     }
                 }
 
-                MapResult::builder().c(c).a(pass_a).b(pass_b).build()
+                match pass_shutdown_rx {
+                    Some(s) => MapResult::builder()
+                        .c(c)
+                        .a(pass_a)
+                        .b(pass_b)
+                        .shutdown_rx(s)
+                        .build(),
+                    None => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
+                }
             }
             Err(e) => MapResult::from_e(
                 e.context(format!("BindDialer dial {:?} {:?} failed", bind_a, dial_a)),
@@ -296,6 +306,7 @@ impl Map for BindDialer {
                                 target_addr,
                                 params.b,
                                 udp_fix_target_listen,
+                                params.shutdown_rx,
                             )
                             .await;
                     }
@@ -308,6 +319,7 @@ impl Map for BindDialer {
                                 target_addr,
                                 params.b,
                                 udp_fix_target_listen,
+                                params.shutdown_rx,
                             )
                             .await;
                     }

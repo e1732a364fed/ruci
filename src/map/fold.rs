@@ -208,6 +208,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
                     a: last_r.a,
                     b: last_r.b,
                     d: calculated_output_vec.clone(),
+                    shutdown_rx: last_r.shutdown_rx,
                     ..Default::default()
                 },
             )
@@ -260,10 +261,9 @@ pub async fn fold(params: FoldParams) -> FoldResult {
 
 /// blocking.
 ///
-/// 先调用第一个 map 生成 流发生器, 然后调用 [`in_iter_fold_forever`]
+/// 先调用fold, 然后调用 [`in_iter_fold_forever`]
 ///
-/// 但如果 第一个 map 生成的不是流发生器而是普通的流, 则会调用 普通的
-/// fold, 累加结束后就会返回
+/// 但如果 fold 生成的不是流发生器而是普通的流,则会返回, 不调用forever
 ///
 ///
 pub async fn fold_from_start(
@@ -271,22 +271,41 @@ pub async fn fold_from_start(
     result_dealer: tokio::sync::mpsc::Sender<FoldResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
-    mut inmaps: DMIterBox,
+    inmaps: DMIterBox,
     o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
-    let first = inmaps
-        .next_with_data(in_cid.clone(), None)
-        .expect("has first inmap");
-    let first_r = first
-        .maps(
-            in_cid.clone(),
-            ProxyBehavior::DECODE,
-            MapParams::builder().shutdown_rx(shutdown_rx).build(),
-        )
-        .await;
-    let first_tag = first.get_chain_tag().to_string();
+    // let first = inmaps
+    //     .next_with_data(in_cid.clone(), None)
+    //     .expect("has first inmap");
+    //let first_tag = first.get_chain_tag().to_string();
+
+    let first_r = fold(FoldParams {
+        cid: in_cid.clone(),
+        behavior: ProxyBehavior::DECODE,
+        initial_state: MapResult {
+            shutdown_rx: Some(shutdown_rx),
+            ..Default::default()
+        },
+        maps: inmaps,
+        chain_tag: "".to_string(),
+
+        #[cfg(feature = "trace")]
+        trace: vec![],
+    })
+    .await;
+
+    // let first_r = first
+    //     .maps(
+    //         in_cid.clone(),
+    //         ProxyBehavior::DECODE,
+    //         MapParams::builder().shutdown_rx(shutdown_rx).build(),
+    //     )
+    //     .await;
     if let Some(e) = first_r.e {
-        let e = e.context(format!("fold_from_start failed, tag: {} ", first_tag));
+        let e = e.context(format!(
+            "fold_from_start failed, tag: {} ",
+            first_r.chain_tag
+        ));
         //use {:#} to show full chain of anyhow::Error
 
         warn!(cid = %in_cid,"{:#} ", e);
@@ -298,30 +317,17 @@ pub async fn fold_from_start(
             cid: in_cid,
             stream_generator,
             result_dealer,
-            dmiter: inmaps,
+            dmiter: first_r.left_maps_iter,
             o_gtr,
-            first_tag,
+            first_tag: first_r.chain_tag.clone(),
 
             #[cfg(feature = "trace")]
-            trace: vec![first.name().to_string()],
+            trace: vec![first_r.chain_tag],
         })
         .await;
     } else {
-        match &first_r.c {
-            Stream::None => {
-                warn!(
-                    cid = %in_cid,
-                    "fold_from_start: no input stream, still trying to fold"
-                )
-            }
-            _ => {
-                debug!(
-                    cid = %in_cid,
-                    "fold_from_start: not a stream generator, will fold directly.",
-                );
-            }
-        }
-        let cid = in_cid.clone_push(o_gtr);
+        /*
+         let cid = in_cid.clone_push(o_gtr);
         tokio::spawn(async move {
             let r = fold(FoldParams {
                 cid,
@@ -336,6 +342,21 @@ pub async fn fold_from_start(
             .await;
             let _ = result_dealer.send(r).await;
         });
+         */
+        match &first_r.c {
+            Stream::None => {
+                warn!(
+                    cid = %in_cid,
+                    "fold_from_start: no input stream, "
+                )
+            }
+            _ => {
+                debug!(
+                    cid = %in_cid,
+                    "fold_from_start: not a stream generator, .",
+                );
+            }
+        }
     };
     Ok(())
 }
@@ -370,6 +391,8 @@ pub async fn in_iter_fold_forever(params: InIterFoldForeverParams) {
     let tx = params.result_dealer;
     let dmiter = params.dmiter;
     let o_gtr = params.o_gtr;
+
+    debug!(cid = %cid, "in_iter_fold_forever");
 
     loop {
         let opt_stream_info = rx.recv().await;

@@ -310,6 +310,10 @@ pub enum InMapConfig {
     },
     #[cfg(any(feature = "quic", feature = "quinn"))]
     Quic(crate::map::quic_common::ServerConfig),
+
+    /// tcp/ip stack
+    #[cfg(feature = "smoltcp")]
+    Stack,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -558,6 +562,8 @@ impl ToMapBox for InMapConfig {
                 sopt: sockopt.clone(),
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             }),
+            #[cfg(feature = "smoltcp")]
+            InMapConfig::Stack => Box::<crate::map::tcp_ip_stack_smoltcp::Stack>::default(),
         }
     }
 }

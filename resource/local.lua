@@ -211,10 +211,6 @@ local out_stdio_show_bytes_chain = { {
     }
 } }
 
-
-local direct_out_chain = { "Direct" }
-
-
 local config_1_direct = {
     inbounds = { {
         chain = listen_socks5http,
@@ -524,7 +520,7 @@ local config_14_stdio_adder_udp_fixed_target_addr = {
 
 }
 
-local config_15_tun = {
+local config_15_tun_stdio_out = {
 
     inbounds = {
 
@@ -623,7 +619,34 @@ local config_16_tun = {
 }
 
 
-Config = config_16_tun
+local config_17_tcp_ip_stack_direct = {
+
+    inbounds = {
+        {
+            chain = { {
+                BindDialer = {
+                    bind_addr = "ip://10.0.0.1:24#utun321",
+
+                    in_auto_route = {
+                        tun_dev_name = "utun321",
+                        tun_gateway = "10.0.0.1",
+                        router_ip = "192.168.0.1",
+                        dns_list = { "114.114.114.114" }
+                    }
+                }
+            }, "Stack"},
+            tag = "listen1"
+        },
+    },
+    outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
+    -- outbounds = { {
+    --     tag = "dial1",
+    --     chain = { "Direct" }
+    -- } }
+}
+
+
+Config = config_17_tcp_ip_stack_direct
 
 --[[
 

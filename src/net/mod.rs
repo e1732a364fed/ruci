@@ -259,6 +259,11 @@ impl CID {
     }
 }
 
+/// Receiver 中的元素为 MapResult, 是为了
+///
+/// 方便传递其它信息, 如 RLAddr 由 MapResult.d 标识, 见
+///
+/// [`crate::map::network::accept`]
 pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 
 /// Represents one of the four different kinds of streams. Default is [`Stream::None`]
@@ -272,11 +277,6 @@ pub enum Stream {
 
     /// 比如:  tcp listener.
     ///
-    /// Receiver 中的元素为 MapResult, 是为了
-    ///
-    /// 方便传递其它信息, 如 RLAddr 由 MapResult.d 标识, 见
-    ///
-    /// [`crate::map::network::accept`]
     Generator(StreamGenerator),
 
     #[default]

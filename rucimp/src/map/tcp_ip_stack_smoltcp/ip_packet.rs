@@ -1,6 +1,10 @@
+/*!
+[`IpPacket`]
+ */
 use smoltcp::wire::{IpProtocol, IpVersion, Ipv4Packet, Ipv6Packet};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
+/// Represents a Ipv4Packet or a Ipv6Packet.
 #[derive(Debug)]
 pub enum IpPacket<T: AsRef<[u8]>> {
     Ipv4(Ipv4Packet<T>),
@@ -39,7 +43,6 @@ impl<T: AsRef<[u8]>> IpPacket<T> {
 }
 
 impl<'a, T: AsRef<[u8]> + ?Sized> IpPacket<&'a T> {
-    /// Return a pointer to the payload.
     #[inline]
     pub fn payload(&self) -> &'a [u8] {
         match *self {
