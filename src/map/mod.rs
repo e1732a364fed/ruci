@@ -137,7 +137,7 @@ pub struct MapResult {
     #[builder(default, setter(strip_option))]
     pub d: Option<AnyData>,
 
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(strip_option, into))]
     pub e: Option<anyhow::Error>,
 
     /// 有值代表产生了与之前不同的 cid
@@ -173,11 +173,7 @@ impl MapResult {
         MapResult::builder().e(anyhow!("{}", estr)).build()
     }
 
-    pub fn from_io_err(e: io::Error) -> Self {
-        MapResult::builder().e(e.into()).build()
-    }
-
-    pub fn from_e(e: anyhow::Error) -> Self {
+    pub fn from_e<E: Into<anyhow::Error>>(e: E) -> Self {
         MapResult::builder().e(e).build()
     }
 

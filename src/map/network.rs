@@ -71,13 +71,13 @@ impl Mapper for Direct {
                                 .write_all(params.b.as_ref().expect("param.b is some"))
                                 .await;
                             if let Err(re) = rw {
-                                return MapResult::from_io_err(re);
+                                return MapResult::from_e(re);
                             }
                             return MapResult::c(Box::new(c));
                         }
                         return MapResult::cb(Box::new(c), params.b);
                     }
-                    Err(e) => return MapResult::from_io_err(e),
+                    Err(e) => return MapResult::from_e(e),
                 }
             }
             Err(e) => return MapResult::from_e(e),
@@ -108,7 +108,7 @@ impl TcpDialer {
 
         match r {
             Ok(c) => MapResult::newc(Box::new(c)).a(pass_a).b(pass_b).build(),
-            Err(e) => MapResult::from_io_err(e),
+            Err(e) => MapResult::from_e(e),
         }
     }
 }
@@ -331,7 +331,7 @@ impl Mapper for TcpStreamGenerator {
 
         match r {
             Ok(rx) => MapResult::newgs(rx).build(),
-            Err(e) => MapResult::builder().e(e.into()).build(), //MapResult::from_err(e),
+            Err(e) => MapResult::builder().e(e).build(), //MapResult::from_err(e),
         }
     }
 }
