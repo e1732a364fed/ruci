@@ -26,9 +26,8 @@ impl AsyncReadAddr for Reader {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        mut buf: &mut [u8],
+        mut rbuf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        //let mut buf2 = BytesMut::with_capacity(CAP);
         let mut inner = [0u8; CAP];
         let mut buf2 = ReadBuf::new(&mut inner[..]);
 
@@ -62,7 +61,7 @@ impl AsyncReadAddr for Reader {
                                 }
                                 buf2.truncate(l);
 
-                                buf.put(buf2);
+                                rbuf.put(buf2);
 
                                 Poll::Ready(Ok((l, ad)))
                             }
@@ -97,8 +96,7 @@ impl AsyncWriteAddr for Writer {
 
         buf2.put_u16(CRLF);
 
-        let r = self.base.as_mut().poll_write(cx, &buf2);
-        r
+        self.base.as_mut().poll_write(cx, &buf2)
     }
 
     fn poll_flush_addr(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
