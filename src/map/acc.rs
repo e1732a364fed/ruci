@@ -265,7 +265,7 @@ pub async fn accumulate_from_start(
 ) -> anyhow::Result<()> {
     let first = inmappers
         .next_with_data(in_cid.clone(), None)
-        .expect("first inmapper");
+        .expect("has first inmapper");
     let first_r = first
         .maps(
             in_cid.clone(),
@@ -280,7 +280,7 @@ pub async fn accumulate_from_start(
         ));
         //use {:#} to show full chain of anyhow::Error
 
-        warn!("{:#} ", e);
+        warn!(cid = %in_cid,"{:#} ", e);
         return Err(e);
     }
 

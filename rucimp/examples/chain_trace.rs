@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
 
     let args: Vec<String> = env::args().collect();
 
-    let arg_f = if args.len() > 1 && args[1] != "-s" {
+    let arg_f = if args.len() > 1 {
         Some(args[1].as_str())
     } else {
         None
@@ -32,9 +32,6 @@ async fn main() -> anyhow::Result<()> {
     let contents = try_get_file_content(&default_fn, arg_f)?;
 
     let mut se = Engine::default();
-    // let sc = lua::load_static(&contents).expect("has valid lua codes in the file content");
-
-    // se.init_static(sc);
 
     se.init_lua(contents)?;
 

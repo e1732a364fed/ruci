@@ -48,7 +48,7 @@ fn response_to_async_read(resp: reqwest::Response) -> impl tokio::io::AsyncRead 
 /// will print download progress inline during downloading.
 ///
 pub async fn dl_url(url: &str, file_name: &str) -> anyhow::Result<()> {
-    info!("try downloading {} from {} ", file_name, url);
+    info!("try downloading {file_name} from {url} ");
     use bytesize::ByteSize;
     let response = tokio::time::timeout(Duration::from_secs(10), reqwest::get(url))
         .await

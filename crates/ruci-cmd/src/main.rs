@@ -218,9 +218,8 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     );
 
     info!(
-        "version: ruci-cmd:{}, rucimp_{}",
-        env!("CARGO_PKG_VERSION"),
-        rucimp::VERSION,
+        ruci_cmd = env!("CARGO_PKG_VERSION"),
+        rucimp = rucimp::VERSION
     );
     if no_file {
         info!("Empty log-file name specified, no log file would be generated.")
