@@ -122,7 +122,7 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-    se.load_config(rucimp::suit::engine::Config { proxy_config: c });
+    se.load_config(c);
 
     let se = &se;
     //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future
@@ -174,7 +174,7 @@ async fn suit_engine2_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-    se.load_config(rucimp::suit::engine2::Config { proxy_config: c });
+    se.load_config(c);
 
     let se = &se;
     //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future

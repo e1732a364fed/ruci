@@ -9,20 +9,12 @@ use log::{debug, info};
 use parking_lot::Mutex;
 use ruci::{map::*, net::TransmissionInfo};
 
-use serde::{Deserialize, Serialize};
 use tokio::{
     sync::oneshot::{self, Sender},
     task,
 };
 
 use super::config;
-
-/// Engine 级别的 Config, 比proxy级的 Config 多了一些信息, 如api server部分和 engine 部分
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Config {
-    pub proxy_config: crate::suit::config::Config,
-    //todo: api_server_config, engine_config
-}
 
 pub struct SuitEngine<FInadder, FOutadder>
 where
@@ -69,13 +61,11 @@ where
     pub fn load_config_from_str(&mut self, s: &str) {
         //todo: 修改 suit::config::Config 的结构后要改这里
         let c: crate::suit::config::Config = crate::suit::config::Config::from_toml(s);
-        let c = Config { proxy_config: c };
         self.load_config(c);
     }
 
-    pub fn load_config(&mut self, c: Config) {
+    pub fn load_config(&mut self, c: crate::suit::config::Config) {
         self.clients = c
-            .proxy_config
             .dial
             .iter()
             .map(|lc| {
@@ -99,7 +89,6 @@ where
         self.default_c = Some(self.clients.first().unwrap().clone());
 
         self.servers = c
-            .proxy_config
             .listen
             .iter()
             .map(|lc| {
