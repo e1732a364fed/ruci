@@ -150,7 +150,7 @@ fn get_iobounds_by_config_and_selector_map(
 
 /// implements dynamic::NextSelector
 #[derive(Debug, Clone)]
-pub struct LuaNextSelector(Arc<Mutex<LuaOwnedFunction>>);
+pub struct LuaNextSelector(Arc<Mutex<(Lua, LuaRegistryKey)>>);
 
 unsafe impl Send for LuaNextSelector {}
 unsafe impl Sync for LuaNextSelector {}
@@ -161,14 +161,18 @@ impl LuaNextSelector {
         lua.load(lua_text).eval::<()>()?;
 
         let selectors: LuaFunction = lua.globals().get(DYN_SELECTORS_STR)?;
+        let selectors = selectors.into_owned();
         let f = match selectors.call::<&str, LuaFunction>(tag) {
             Ok(rst) => rst,
             Err(err) => {
                 panic!("get dyn_selectors for {tag} err: {}", err);
             }
         };
+        let key: LuaRegistryKey = lua
+            .create_registry_value(f)
+            .expect("cannot store Lua handler");
 
-        Ok(LuaNextSelector(Arc::new(Mutex::new(f.into_owned()))))
+        Ok(LuaNextSelector(Arc::new(Mutex::new((lua, key)))))
     }
 }
 
@@ -178,10 +182,15 @@ impl NextSelector for LuaNextSelector {
         this_index: i64,
         data: Option<Vec<Option<Box<dyn ruci::map::Data>>>>,
     ) -> Option<i64> {
-        let w = OptVecDataLuaWrapper(data);
-        let inner = self.0.lock();
+        let mg = self.0.lock();
+        let lua = &mg.0;
+        let key = &mg.1;
 
-        match inner.call::<_, i64>((this_index, w)) {
+        let f: LuaFunction = lua
+            .registry_value(&key)
+            .expect("must get selector from lua");
+
+        match f.call::<_, i64>((this_index, lua.to_value(&data))) {
             Ok(rst) => Some(rst),
             Err(err) => {
                 warn!("{}", err);
@@ -191,75 +200,11 @@ impl NextSelector for LuaNextSelector {
     }
 }
 
-use mlua::{UserData, UserDataMethods};
 use parking_lot::Mutex;
-
-pub struct DataLuaWrapper(Option<Box<dyn Data>>);
-
-impl UserData for DataLuaWrapper {
-    // fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-    // methods.add_method("has_value", |_, this, ()| Ok(!this.0.is_empty()));
-
-    // methods.add_method("get_type", |_, this, ()| match &this.0 {
-    //     Data::Data(_) => Ok("data"),
-    //     Data::Vec(_) => Ok("vec"),
-    // });
-
-    // methods.add_method("get_data", |_, this, ()| match &this.0 {
-    //     Data::Data(d) => Ok(AnyDataLuaWrapper(d.clone())),
-    //     Data::Vec(_) => Err(LuaError::DeserializeError("can't get data".to_string())),
-    // });
-
-    // methods.add_method("get_vec", |_, this, ()| match &this.0 {
-    //     Data::Data(_) => Err(LuaError::DeserializeError("can't get vec".to_string())),
-    //     Data::Vec(v) => Ok(VecOfAnyDataLuaWrapper(v.clone())),
-    // });
-    // }
-}
-
-/// 对 dynamic::NextSelector 的 next_index 方法 的 data 参数
-/// 的类型的包装
-pub struct OptVecDataLuaWrapper(Option<Vec<Option<Box<dyn Data>>>>);
-
-impl UserData for OptVecDataLuaWrapper {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("is_some", |_, this, ()| Ok(this.0.is_some()));
-
-        methods.add_method("len", |_, this, ()| Ok(this.0.as_ref().unwrap().len()));
-
-        methods.add_method("get", |_, this, index: usize| {
-            let x = this.0.as_ref().unwrap().get(index);
-            match x {
-                Some(d) => Ok(DataLuaWrapper(d.clone())),
-                None => Err(LuaError::DeserializeError("can't get u64".to_string())),
-            }
-        });
-    }
-}
 
 #[allow(unused)]
 #[cfg(test)]
 mod test {
-
-    #[allow(unused)]
-    #[test]
-    fn test_transmute() {
-        use std::mem;
-
-        #[derive(Debug)]
-        struct A {
-            i: i32,
-        };
-
-        #[repr(transparent)]
-        #[derive(Debug)]
-        struct B(A);
-
-        let vec_a: Vec<A> = vec![A { i: 1 }, A { i: 1 }, A { i: 1 }];
-
-        let vec_b: Vec<B> = unsafe { mem::transmute(vec_a) };
-        println!("{:?}", vec_b)
-    }
 
     use std::net::TcpListener;
     use std::sync::atomic::AtomicU64;
@@ -574,26 +519,23 @@ mod test {
         Ok(())
     }
 
-    /*
+    #[test]
+    fn test_serde_json() -> Result<()> {
+        let u1 = 3u8;
+        let va: Box<dyn Data> = Box::new(u1);
+        let vva = Some(vec![Some(va)]);
+        let json_str = serde_json::to_string(&vva).map_err(Error::external)?;
+        println!("{}", json_str);
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_pass_in_anydata() -> Result<()> {
         use std::rc::Rc;
 
-        let sa = AnyData::String(String::from("mydata"));
-        let w = AnyDataLuaWrapper(sa);
-
-        let sa2 = AnyData::U64(321);
-        let w2 = AnyDataLuaWrapper(sa2);
-
-        let sa21 = AnyData::AU64(Arc::new(AtomicU64::new(321)));
-        let w21 = AnyDataLuaWrapper(sa21);
-
-        let sa22 = AnyData::AU64(Arc::new(AtomicU64::new(321)));
-
-        let va = Data::Data(sa22);
-        let vva = Some(vec![va]);
-        let vvaw = OptVecDataLuaWrapper(vva);
+        let u1 = 3u8;
+        let va: Box<dyn Data> = Box::new(u1);
+        let vva = Some(vec![Some(va)]);
 
         let lua = Lua::new();
         let lua = Rc::new(lua);
@@ -603,60 +545,12 @@ mod test {
 
         let handler_fn = lua
             .load(chunk! {
-                function(userdata1)
-                    print("data is "..userdata1:get_string())
+                function(data1)
+                    print("data is ",data1)
+                    print("data is ",data1[1])
+                    print("data is ",data1[1]["type"])
+                    print("data is ",data1[1]["value"])
 
-                    print("data is "..userdata1:take_string())
-
-                    // take 后原值会为空
-                    print("data is "..userdata1:take_string())
-
-
-                end
-            })
-            .eval::<Function>()
-            .expect("cannot create Lua handler");
-
-        let handler_fn2 = lua
-            .load(chunk! {
-                function(userdata1)
-                    print("data is "..userdata1:get_u64())
-
-                end
-            })
-            .eval::<Function>()
-            .expect("cannot create Lua handler");
-
-        let handler_fn3 = lua
-            .load(chunk! {
-                function(userdata1)
-                    print(userdata1:is_some())
-                    print(userdata1:len())
-
-                    x = userdata1:get(0)
-                    print(x:has_value())
-                    print(x:get_type())
-                    y = x:get_data()
-                    print(y:get_u64())
-
-                end
-            })
-            .eval::<Function>()
-            .expect("cannot create Lua handler");
-
-        let handler_fn4 = lua
-            .load(chunk! {
-                function(this_index, ovov)
-                    print(ovov:is_some())
-                    print(ovov:len())
-
-                    ov = ovov:get(0)
-                    print(ov:has_value())
-                    print(ov:get_type())
-                    d = ov:get_data()
-                    print(d:get_u64())
-
-                    return this_index + 1
                 end
             })
             .eval::<Function>()
@@ -670,64 +564,37 @@ mod test {
             .registry_value(&handler)
             .expect("cannot get Lua handler");
 
-        if let Err(err) = handler.call_async::<_, ()>(w).await {
+        if let Err(err) = handler.call_async::<_, ()>(lua.to_value(&vva)?).await {
             eprintln!("{}", err);
         }
 
-        if let Err(err) = handler_fn2.call_async::<_, ()>(w2).await {
-            eprintln!("{}", err);
-        }
-
-        if let Err(err) = handler_fn2.call_async::<_, ()>(w21).await {
-            eprintln!("{}", err);
-        }
-
-        // if let Err(err) = handler_fn3.call_async::<_, ()>(vvaw).await {
-        //     eprintln!("{}", err);
-        // }
-
-        match handler_fn4.call::<_, u64>((1, vvaw)) {
-            Ok(rst) => println!("{}", rst),
-            Err(err) => eprintln!("{}", err),
-        }
         Ok(())
     }
 
     #[tokio::test]
     async fn load_dynamic1() -> Result<()> {
         let lua = Lua::new();
-        let lua_text = r"
-        function dyn_next_selector(this_index, ovov)
-            print(ovov:is_some())
-            print(ovov:len())
+        let lua_text = r#"
+           function dyn_next_selector(this_index, ovod)
+               print("ovod:",ovod)
 
-            ov = ovov:get(0)
-            print(ov:has_value())
-            print(ov:get_type())
-            d = ov:get_data()
-            print(d:get_u64())
-
-            return this_index + 1
-        end
-        ";
+               return this_index + 1
+           end
+           "#;
 
         lua.load(lua_text).eval()?;
 
         let func: LuaFunction = lua.globals().get("dyn_next_selector")?;
 
-        let sa22 = AnyData::AU64(Arc::new(AtomicU64::new(321)));
-        let va = Data::Data(sa22);
-        let vva = Some(vec![va]);
-        let vvaw = OptVecDataLuaWrapper(vva);
+        let u1 = 3u8;
+        let va: Box<dyn Data> = Box::new(u1);
+        let vva = Some(vec![Some(va)]);
 
-        match func.call::<_, u64>((1, vvaw)) {
+        match func.call::<_, u64>((1, lua.to_value(&vva)?)) {
             Ok(rst) => println!("{}", rst),
             Err(err) => eprintln!("{}", err),
         }
 
         Ok(())
     }
-
-
-     */
 }

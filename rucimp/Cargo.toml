@@ -46,6 +46,7 @@ features = [
 
 [dev-dependencies]
 chrono = "0.4.34"
+serde_json = "1.0.114"
 
 [features]
 default = ["lua", "route","geoip"]
