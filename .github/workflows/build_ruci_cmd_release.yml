@@ -13,6 +13,7 @@ env:
 
 jobs:
   build-cross:
+    permissions: write-all
     uses: ./.github/workflows/build_ruci_cmd_cross.yml
 
   build-ubuntu:
