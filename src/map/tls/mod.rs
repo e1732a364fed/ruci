@@ -9,6 +9,9 @@ pub mod server;
 #[cfg(test)]
 mod test;
 
+/// for benchmark
+pub mod test2;
+
 use async_trait::async_trait;
 use bytes::BytesMut;
 use log::debug;
