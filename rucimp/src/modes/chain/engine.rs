@@ -124,7 +124,7 @@ impl Engine {
 
         debug!("trying init_lua");
 
-        let r = lua::is_finite_dynamic_available(&config_string);
+        let r = lua::finite::is_finite_dynamic_available(&config_string);
         match r {
             Ok(_) => self.init_lua_finite_dynamic(config_string),
             Err(_) => self.init_lua_static(config_string),
@@ -151,7 +151,7 @@ impl Engine {
         info!("initializing lua finite dynamic");
 
         use crate::modes::chain::config::lua;
-        let (sc, ibs, default_o, ods) = lua::load_finite_dynamic(&config_string)
+        let (sc, ibs, default_o, ods) = lua::finite::load_finite_dynamic(&config_string)
             .context("Engine::init_lua_finite_dynamic: lua::load_finite_dynamic failed")?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);
@@ -167,7 +167,7 @@ impl Engine {
 
         info!("initializing lua infinite dynamic");
 
-        let g_maps = lua::load_infinite_io(&config_string)?;
+        let g_maps = lua::infinite::load_infinite_io(&config_string)?;
 
         let gi = g_maps.0;
         let go = g_maps.1;
