@@ -18,6 +18,7 @@ use ruci::{
 
 use macro_map::*;
 use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
+use tracing::debug;
 
 use crate::utils::FileSource;
 
@@ -156,12 +157,19 @@ impl map::Map for Client {
                 TlsConnector::from(b.build().unwrap())
             };
 
+            if self.config.host.is_none() {
+                debug!("host: {:?}", params.a);
+            }
             let r = connector
                 .connect(
-                    self.config
-                        .host
-                        .as_ref()
-                        .unwrap_or(&params.a.clone().unwrap().get_name().unwrap()),
+                    self.config.host.as_ref().unwrap_or(
+                        &params
+                            .a
+                            .clone()
+                            .unwrap_or_default()
+                            .get_name_or_ip_string()
+                            .unwrap_or_default(),
+                    ),
                     conn,
                 )
                 .await;

@@ -141,9 +141,12 @@ impl Client {
         let new_c = connector
             .connect(
                 ServerName::try_from(
-                    self.server_domain
-                        .clone()
-                        .unwrap_or(a.clone().unwrap_or_default().get_name().unwrap_or_default()),
+                    self.server_domain.clone().unwrap_or(
+                        a.clone()
+                            .unwrap_or_default()
+                            .get_name_or_ip_string()
+                            .unwrap_or_default(),
+                    ),
                 )
                 .expect("domain string to serverName ok"),
                 conn,

@@ -353,6 +353,20 @@ impl Addr {
             _ => None,
         }
     }
+
+    /// used for get a domain
+    pub fn get_name_or_ip_string(&self) -> Option<String> {
+        let on = self.get_name();
+        if on.is_none() {
+            Some(match &self.addr {
+                NetAddr::Socket(so) => so.ip().to_string(),
+                NetAddr::Name(n, _) => n.clone(),
+                NetAddr::NameAndSocket(_, ip, _) => ip.to_string(),
+            })
+        } else {
+            on
+        }
+    }
     pub fn get_port(&self) -> u16 {
         match &self.addr {
             NetAddr::Name(_, p) => *p,
