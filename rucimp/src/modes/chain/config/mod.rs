@@ -722,6 +722,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                     ext_fields: None,
                 }))
             }
+            #[cfg(feature = "steganography")]
             InMapConfig::Embedder { file_name } => {
                 let (fcontent, _) = file_source.get_file_content(&file_name)?;
 
@@ -883,6 +884,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                     file_source: file_source.clone(),
                 }))
             }
+            #[cfg(feature = "steganography")]
             OutMapConfig::Embedder { file_name } => {
                 let (fcontent, _) = file_source.get_file_content(&file_name)?;
 
