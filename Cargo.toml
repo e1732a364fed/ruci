@@ -41,10 +41,3 @@ sha2 = "0.10.8"
 
 [dev-dependencies]
 env_logger = "0.11.1"
-
-
-[target.armv7-unknown-linux-gnueabihf]
-linker = "armv7-unknown-linux-gnueabihf-gcc"
-
-[target.aarch64-unknown-linux-gnu]
-linker = "aarch64-unknown-linux-gnu-gcc"
