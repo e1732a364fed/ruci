@@ -73,6 +73,13 @@ native-tls-vendored = ["native-tls/vendored","tokio-native-tls/vendored"]
 name = "chain"
 required-features = ["lua", "route"]
 
+[[example]]
+name = "chain_infinite"
+required-features = ["lua", "route"]
+
+[[example]]
+name = "chain_trace"
+required-features = ["lua", "route"]
 
 [[example]]
 name = "shared"
