@@ -152,8 +152,6 @@ pub struct SmoltcpDevice {
     pub tcp_sockets: smoltcp::iface::SocketSet<'static>,
     pub udp_sockets: smoltcp::iface::SocketSet<'static>,
 
-    pub fake_sockets: smoltcp::iface::SocketSet<'static>,
-
     tcp_handle_set: Arc<Mutex<HashSet<SocketHandle>>>,
     udp_handle_set: Arc<Mutex<HashSet<SocketHandle>>>,
 
@@ -264,7 +262,6 @@ pub fn create(
 
         tcp_sockets: smoltcp::iface::SocketSet::new([]),
         udp_sockets: smoltcp::iface::SocketSet::new([]),
-        fake_sockets: smoltcp::iface::SocketSet::new([]),
 
         tcp_handle_set: Arc::new(Mutex::new(HashSet::new())),
         udp_handle_set: Arc::new(Mutex::new(HashSet::new())),
@@ -540,6 +537,12 @@ impl SmoltcpDevice {
                 let mut tcp_handles_to_remove = Vec::new();
                 let mut tcp_src_to_remove = Vec::new();
 
+                if !self.tcp_handle_set.lock().contains(&h) {
+                    // 有可能是在 close、把 handle 删掉后，又调用了一次 tcpstream的 shutdown，此时就是没有 handle 的情况,
+                    // 应直接返回
+                    return;
+                }
+
                 let so: &mut smoltcp::socket::tcp::Socket = self.tcp_sockets.get_mut(h);
 
                 debug!(
@@ -692,9 +695,9 @@ impl SmoltcpDevice {
 
     /// 发送tcp 数据
     ///
-    /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 socket 的 buffer,
+    ///  对socket 的要写的数据 用 send_slice 写入 smoltcp 的 socket 的 buffer,
     /// 之后可调用 iface.poll 来发出.
-    pub fn process_tcp_egress(&mut self, sh: SocketHandle, mut data: BytesMut) {
+    pub fn send_tcp(&mut self, sh: SocketHandle, mut data: BytesMut) {
         // debug!("process_egress tcp for {sh}, {}", data.len());
 
         if !self.tcp_handle_set.lock().contains(&sh) {
@@ -711,8 +714,10 @@ impl SmoltcpDevice {
         }
         let mut left_data = data.len();
 
+        // let mut count = 0;
         while left_data > 0 {
-            //debug!("while left_data>0, {left_data}");
+            // debug!("while left_data>0, {left_data}, {count}");
+            // count += 1;
 
             let r = socket.send_slice(&data);
 
@@ -739,9 +744,9 @@ impl SmoltcpDevice {
 
     /// 发送udp 数据
     ///
-    /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 socket 的 buffer,
+    ///  对socket 的要写的数据 用 send_slice 写入 smoltcp 的 socket 的 buffer,
     /// 之后可调用 iface.poll 来发出.
-    pub fn process_udp_egress(&mut self, sh: SocketHandle, src: IpEndpoint, data: BytesMut) {
+    pub fn send_udp(&mut self, sh: SocketHandle, src: IpEndpoint, data: BytesMut) {
         //debug!("process_egress udp for {sh}, {src}, {}",data.len());
 
         let socket: &mut smoltcp::socket::udp::Socket = self.udp_sockets.get_mut(sh);

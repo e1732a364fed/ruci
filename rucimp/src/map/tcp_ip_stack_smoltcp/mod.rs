@@ -74,21 +74,29 @@ impl Map for Stack {
                                         //poll->socket_ingress->device.receive->rx_token.consume->process_ip->process_ipv4->process_tcp
 
                                         match device.new_read_handle{
-                                            device::NewReadType::None => {},
+                                            device::NewReadType::None => {
+                                                let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
+
+                                                iface.poll_ingress_single(smoltcp::time::Instant::now(), &mut device, unsafe { &mut *tcp_sockets });
+                                                iface.poll_egress(smoltcp::time::Instant::now(), &mut device, unsafe { &mut *tcp_sockets });
+
+                                            },
 
                                             device::NewReadType::TCP(_) =>{
                                                 let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 
+                                                // iface.poll(smoltcp::time::Instant::now(), &mut device, unsafe { &mut *tcp_sockets });
                                                 while iface.poll_ingress_single(smoltcp::time::Instant::now(), &mut device, unsafe { &mut *tcp_sockets })
                                                 != PollIngressSingleResult::None
                                                 {
-                                                    device.process_ingress();
-
-                                                    iface.poll_egress(smoltcp::time::Instant::now(), &mut device, unsafe { &mut *tcp_sockets });
+                                                    // debug!("loop");
                                                     //poll_egress followed by process_ingress is necessary for tcp
+                                                    device.process_ingress();
+                                                    iface.poll_egress(smoltcp::time::Instant::now(), &mut device, unsafe { &mut *tcp_sockets });
+
+                                                    // debug!("loop e");
+
                                                 }
-
-
                                             },
                                             device::NewReadType::UDP(_) =>{
 
@@ -108,7 +116,7 @@ impl Map for Stack {
                             r = tcp_rx.recv() =>{
                                 match r {
                                     Some((sh,_,b)) => {
-                                        device.process_tcp_egress(sh, b);
+                                        device.send_tcp(sh, b);
 
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
@@ -128,7 +136,7 @@ impl Map for Stack {
                             r = udp_rx.recv() =>{
                                 match r {
                                     Some((sh,d,b)) => {
-                                        device.process_udp_egress(sh,d, b);
+                                        device.send_udp(sh,d, b);
 
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
