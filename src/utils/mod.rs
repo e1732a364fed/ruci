@@ -1,4 +1,4 @@
-use std::{io, process::Command};
+use std::{fmt, io, process::Command};
 
 use anyhow::bail;
 use bytes::BytesMut;
@@ -8,6 +8,21 @@ pub fn rem_first(value: &str) -> &str {
     let mut chars = value.chars();
     chars.next();
     chars.as_str()
+}
+
+pub struct HexSlice<'a>(pub &'a [u8]);
+
+impl fmt::Display for HexSlice<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let len = self.0.len();
+        write!(f, "{:06},", len)?;
+
+        for byte in self.0 {
+            write!(f, "{:02X}", byte)?;
+        }
+        writeln!(f)?;
+        Ok(())
+    }
 }
 
 /// generate an io::ErrorKind::Other

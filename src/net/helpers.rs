@@ -217,14 +217,21 @@ impl AsyncWrite for EarlyDataWrapper {
     }
 }
 
+pub enum BytesDisplayMode {
+    UTF8,
+    Bytes,
+}
+
 pub struct PrintWrapper {
     base: Pin<Conn>,
+    pub mode: BytesDisplayMode,
 }
 
 impl PrintWrapper {
     pub fn from(conn: Conn) -> Self {
         PrintWrapper {
             base: Box::pin(conn),
+            mode: BytesDisplayMode::Bytes,
         }
     }
 }
@@ -272,23 +279,37 @@ impl AsyncWrite for PrintWrapper {
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         let r = self.base.as_mut().poll_write(cx, buf);
-
+        const MAX_DISPLAY_LEN: usize = 64;
         match &r {
             Poll::Ready(r) => match r {
-                Ok(u) => {
-                    debug!(
-                        "write: {} {}",
-                        *u,
-                        String::from_utf8_lossy(&buf[..min(*u, 64)])
-                    )
-                }
-                Err(e) => {
-                    debug!(
-                        "PrintWrapper write got e:{} {}, {e}",
-                        buf.len(),
-                        String::from_utf8_lossy(&buf[..min(buf.len(), 64)])
-                    );
-                }
+                Ok(u) => match self.mode {
+                    BytesDisplayMode::UTF8 => {
+                        debug!(
+                            "write: {}, {}",
+                            *u,
+                            String::from_utf8_lossy(&buf[..min(*u, MAX_DISPLAY_LEN)])
+                        )
+                    }
+                    BytesDisplayMode::Bytes => {
+                        let buf = crate::utils::HexSlice(&buf[..min(*u, MAX_DISPLAY_LEN)]);
+                        let str = format!("{buf}");
+                        debug!("write: {}, {str}", *u,)
+                    }
+                },
+                Err(e) => match self.mode {
+                    BytesDisplayMode::UTF8 => {
+                        debug!(
+                            "PrintWrapper write got e:{} {}, {e}",
+                            buf.len(),
+                            String::from_utf8_lossy(&buf[..min(buf.len(), MAX_DISPLAY_LEN)])
+                        );
+                    }
+                    BytesDisplayMode::Bytes => {
+                        let buf2 = crate::utils::HexSlice(buf);
+                        let str = format!("{buf2}");
+                        debug!("PrintWrapper write got e:{} {}, {e}", buf.len(), str,)
+                    }
+                },
             },
             Poll::Pending => {}
         };

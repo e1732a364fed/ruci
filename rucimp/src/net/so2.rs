@@ -343,10 +343,8 @@ pub fn new_socket2(na: &net::Addr, sopt: &SockOpt, is_listen: bool) -> anyhow::R
         if na.network == Network::TCP {
             so.set_nonblocking(true)?; // NECESSARY
         }
-    } else {
-        if na.network == Network::UDP {
-            so.set_nonblocking(true)?; // NECESSARY!, or it will block the program
-        }
+    } else if na.network == Network::UDP {
+        so.set_nonblocking(true)?; // NECESSARY!, or it will block the program
     }
 
     so.set_reuse_address(true)?;
@@ -472,5 +470,5 @@ pub async fn accept_tcp(tcp: &TcpListener) -> anyhow::Result<(Stream, net::Addr,
         addr: net::NetAddr::Socket(tcp_stream.local_addr()?),
         network: net::Network::TCP,
     };
-    return Ok((Stream::Conn(Box::new(tcp_stream)), ra, la));
+    Ok((Stream::Conn(Box::new(tcp_stream)), ra, la))
 }

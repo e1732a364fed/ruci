@@ -20,15 +20,12 @@ pub fn get_sys_dns() -> Vec<String> {
     #[cfg(unix)]
     {
         let r = std::fs::read_to_string(UNIX_DNS_FILE);
-        match r {
-            Ok(s) => {
-                return s
-                    .split('\n')
-                    .filter(|x| x.starts_with("nameserver"))
-                    .map(|x| x.split(' ').last().unwrap_or_default().to_string())
-                    .collect()
-            }
-            Err(_) => {}
+        if let Ok(s) = r {
+            return s
+                .split('\n')
+                .filter(|x| x.starts_with("nameserver"))
+                .map(|x| x.split(' ').last().unwrap_or_default().to_string())
+                .collect();
         }
     }
 

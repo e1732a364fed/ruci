@@ -102,8 +102,8 @@ impl Name for OptDirect {
     }
 }
 impl OptDirect {
+    #[allow(unused)]
     pub fn new(sopt: SockOpt, more_num_of_files: Option<bool>) -> anyhow::Result<Self> {
-
         #[cfg(target_os = "linux")]
         if more_num_of_files.unwrap_or_default() {
             tracing::info!("calls rlimit::prlimit");
@@ -228,11 +228,9 @@ impl OptDialer {
         pass_b: Option<BytesMut>,
     ) -> MapResult {
         let r = match dial_a.network {
-            Network::UDP => so2::dial_udp(&dial_a, &self.sockopt)
+            Network::UDP => so2::dial_udp(dial_a, &self.sockopt)
                 .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None, false))),
-            Network::TCP => {
-                so2::dial_tcp(&dial_a, &self.sockopt).map(|s| Stream::Conn(Box::new(s)))
-            }
+            Network::TCP => so2::dial_tcp(dial_a, &self.sockopt).map(|s| Stream::Conn(Box::new(s))),
             _ => todo!(),
         };
 

@@ -322,13 +322,13 @@ pub enum OutMapConfig {
     Counter,
     TLS(TlsOut),
 
-    #[cfg(all(feature = "sockopt"))]
+    #[cfg(feature = "sockopt")]
     OptDirect {
         sockopt: crate::net::so2::SockOpt,
         more_num_of_files: Option<bool>,
     },
 
-    #[cfg(all(feature = "sockopt"))]
+    #[cfg(feature = "sockopt")]
     OptDialer(crate::map::opt_net::OptDialerOption),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
@@ -530,14 +530,13 @@ impl ToMapBox for InMapConfig {
             #[cfg(feature = "quinn")]
             InMapConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
 
-            #[cfg(all(feature = "sockopt"))]
+            #[cfg(feature = "sockopt")]
             InMapConfig::TcpOptListener {
                 listen_addr,
                 sockopt,
                 ext,
             } => Box::new(crate::map::opt_net::TcpOptListener {
-                listen_addr: net::Addr::from_network_addr_url(&listen_addr)
-                    .expect("listen_addr ok"),
+                listen_addr: net::Addr::from_network_addr_url(listen_addr).expect("listen_addr ok"),
                 sopt: sockopt.clone(),
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             }),
@@ -652,15 +651,15 @@ impl ToMapBox for OutMapConfig {
                     .expect("legal quic client config"),
             ),
 
-            #[cfg(all(feature = "sockopt"))]
+            #[cfg(feature = "sockopt")]
             OutMapConfig::OptDirect {
                 sockopt,
                 more_num_of_files,
             } => Box::new(
-                crate::map::opt_net::OptDirect::new(sockopt.clone(), more_num_of_files.clone())
+                crate::map::opt_net::OptDirect::new(sockopt.clone(), *more_num_of_files)
                     .expect("ok"),
             ),
-            #[cfg(all(feature = "sockopt"))]
+            #[cfg(feature = "sockopt")]
             OutMapConfig::OptDialer(sopt) => {
                 Box::new(crate::map::opt_net::OptDialer::new(sopt.clone()).expect("ok"))
             }

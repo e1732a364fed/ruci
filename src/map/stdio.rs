@@ -7,10 +7,12 @@ Defines a Map that write, read stdio (标准输入输出, 即命令行).
 use crate::map;
 use async_trait::async_trait;
 use macro_map::{map_ext_fields, MapExt};
-use std::{fmt, pin::Pin, task::Poll};
+use std::{pin::Pin, task::Poll};
 use tracing::debug;
 
 use crate::{net::CID, Name};
+
+use self::utils::HexSlice;
 
 use super::*;
 use tokio::io::{self, AsyncRead, AsyncWrite, AsyncWriteExt, Stdin, Stdout};
@@ -42,21 +44,6 @@ impl AsyncRead for Conn {
     ) -> Poll<io::Result<()>> {
         let r = self.input.as_mut().poll_read(cx, buf);
         r
-    }
-}
-
-pub struct HexSlice<'a>(&'a [u8]);
-
-impl fmt::Display for HexSlice<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let len = self.0.len();
-        write!(f, "{:06},", len)?;
-
-        for byte in self.0 {
-            write!(f, "{:02X}", byte)?;
-        }
-        writeln!(f)?;
-        Ok(())
     }
 }
 
