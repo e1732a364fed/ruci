@@ -6,6 +6,7 @@
 因为系统不会立即释放端口, 所以连续运行test有可能会报错, 手动运行是没问题的. 测试代码里面已经使用了随机端口.
 */
 
+use anyhow::Context;
 use bytes::{BufMut, BytesMut};
 use parking_lot::Mutex;
 use tokio::io::AsyncReadExt;
@@ -225,9 +226,12 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
     let listen_host = "127.0.0.1".to_string();
     let listen_port = ps;
 
-    let listener = TcpListener::bind(listen_host.clone() + ":" + &listen_port.to_string())
+    let listen_addr = listen_host.clone() + ":" + &listen_port.to_string();
+
+    let listener = TcpListener::bind(&listen_addr)
         .await
-        .expect("listen successful");
+        .context(format!("TcpListener listen failed {}", listen_addr))
+        .unwrap();
 
     let target_name = "www.b";
     let target_port: u16 = 43;
@@ -355,8 +359,11 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
     let listen_host = "127.0.0.1".to_string();
     let listen_port = ps;
 
-    let listener = TcpListener::bind(listen_host.clone() + ":" + &listen_port.to_string())
+    let listen_addr = listen_host.clone() + ":" + &listen_port.to_string();
+
+    let listener = TcpListener::bind(&listen_addr)
         .await
+        .context(format!("TcpListener listen failed {}", listen_addr))
         .unwrap();
 
     let target_name = "123.123.123.123";
@@ -462,8 +469,11 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::
     let listen_host = "127.0.0.1".to_string();
     let listen_port = ps;
 
-    let listener = TcpListener::bind(listen_host.clone() + ":" + &listen_port.to_string())
+    let listen_addr = listen_host.clone() + ":" + &listen_port.to_string();
+
+    let listener = TcpListener::bind(&listen_addr)
         .await
+        .context(format!("TcpListener listen failed {}", listen_addr))
         .unwrap();
 
     let target_name = net::gen_random_ipv6().to_string();

@@ -183,7 +183,7 @@ o2node-.->collector
 - [x] TLS, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
 - [x] MathAdder (按字节加法器), Counter, Echo
 - [x] 路由 (tag_route)
-- [x] 回落
+- [x] fallback (回落)
 - [x] DNS: client
 - [x] http1.1 识别
 
@@ -214,11 +214,12 @@ o2node-.->collector
 - [x] utils
 - [ ] tui: using ratatui
 
-#### Real Purpose of This Project?
+#### Goal of The Project
 
-我们要了解协议的细节, 以进行数据处理、转换到统一格式和“标注”.
+1. 了解协议的细节 以进行数据处理、转换到统一格式和“标注”.
+2. 提供一些新协议的想法
 
-详见 [终极目标]( doc/GOAL_zh.md)
+详见 [目标]( doc/GOAL_zh.md)
 
 
 # License

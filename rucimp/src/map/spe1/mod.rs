@@ -525,10 +525,7 @@ impl AsyncWrite for Conn {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize>> {
-        if matches!(
-            self.reader.read_state,
-            ruci::net::helpers::BufferReadState::Closed
-        ) {
+        if self.reader.is_closed() {
             return Poll::Ready(Err(io::Error::new(
                 io::ErrorKind::ConnectionAborted,
                 "spe1: writing when read end closed",
@@ -842,15 +839,11 @@ impl ClientOrServer {
             base_w: Box::pin(w),
             write_cache: Some(BytesMut::with_capacity(READ_CAP)),
             write_state: WriteState::default(),
-            reader: BufContentLenProtocolReader {
-                read_cache: None,
-                read_state: Default::default(),
-                read_cap: READ_CAP,
-                reader: Box::pin(r),
-                content_len_body_start_index_parse_fn: Box::new(
-                    content_len_body_start_index_parse_fn,
-                ),
-            },
+            reader: BufContentLenProtocolReader::new(
+                READ_CAP,
+                Box::pin(r),
+                Box::new(content_len_body_start_index_parse_fn),
+            ),
         };
 
         return MapResult::new_c(Box::new(c)).a(a).b(b).build();

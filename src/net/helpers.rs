@@ -421,11 +421,11 @@ pub enum BufferReadState {
 /// The real data must be right after the body_start_index returned by the clousure.
 ///
 pub struct BufContentLenProtocolReader {
-    pub read_cache: Option<BytesMut>,
-    pub read_state: BufferReadState,
-    pub read_cap: usize,
-    pub reader: Pin<Box<dyn AsyncRead + Send + Sync>>,
-    pub content_len_body_start_index_parse_fn:
+    read_cache: Option<BytesMut>,
+    read_state: BufferReadState,
+    read_cap: usize,
+    reader: Pin<Box<dyn AsyncRead + Send + Sync>>,
+    content_len_body_start_index_parse_fn:
         Box<dyn Fn(&[u8]) -> std::io::Result<(usize, usize)> + Send + Sync>,
 }
 
@@ -440,10 +440,31 @@ pub struct BufReadResult {
 }
 
 impl BufContentLenProtocolReader {
+    pub fn new(
+        read_cap: usize,
+        reader: Pin<Box<dyn AsyncRead + Send + Sync>>,
+        content_len_body_start_index_parse_fn: Box<
+            dyn Fn(&[u8]) -> std::io::Result<(usize, usize)> + Send + Sync,
+        >,
+    ) -> Self {
+        BufContentLenProtocolReader {
+            read_cache: None,
+            read_state: Default::default(),
+            read_cap,
+            reader,
+            content_len_body_start_index_parse_fn,
+        }
+    }
+
+    pub fn is_closed(&self) -> bool {
+        matches!(self.read_state, BufferReadState::Closed)
+    }
+
     /// Call it after calling [`read`] and finished using the returned buffer.
     pub fn put_back(&mut self, rc: BytesMut) {
         let _ = self.read_cache.insert(rc);
     }
+
     /// if read succeed, it returns the buffer, the index where the data begins
     /// and the index where the data ends, wrapped in the struct [`BufReadResult`]
     ///
@@ -455,7 +476,7 @@ impl BufContentLenProtocolReader {
     ///
     /// It's not possible that `from >= to`.
     ///
-    /// If the returned result is None, then it marks EOF.
+    /// Ok(None) marks EOF.
     ///
     pub fn read(&mut self, cx: &mut Context<'_>) -> Poll<std::io::Result<Option<BufReadResult>>> {
         let rc = self.read_cache.take();
@@ -465,6 +486,13 @@ impl BufContentLenProtocolReader {
                 io::ErrorKind::ConnectionAborted,
                 "closed",
             ))),
+            BufferReadState::ContinueReadLocalCache { from, to } => {
+                let rc = rc.unwrap();
+
+                debug_assert_eq!(rc.len(), self.read_cap);
+
+                self.read_header(cx, rc, from, to)
+            }
             BufferReadState::ReadyForNew => {
                 let mut rc = rc.unwrap_or(BytesMut::zeroed(self.read_cap));
 
@@ -512,7 +540,17 @@ impl BufContentLenProtocolReader {
                 rb.set_filled(filled_data_len);
 
                 match self.reader.as_mut().poll_read(cx, &mut rb) {
+                    Poll::Pending => {
+                        let _ = self.read_cache.insert(rc);
+
+                        Poll::Pending
+                    }
                     Poll::Ready(r) => match r {
+                        Err(e) => {
+                            let _ = self.read_cache.insert(rc);
+
+                            Poll::Ready(Err(e))
+                        }
                         Ok(_) => {
                             let data = rb.filled();
                             let dl = data.len();
@@ -569,29 +607,16 @@ impl BufContentLenProtocolReader {
                                 })))
                             }
                         }
-                        Err(e) => {
-                            let _ = self.read_cache.insert(rc);
-
-                            Poll::Ready(Err(e))
-                        }
                     },
-                    Poll::Pending => {
-                        let _ = self.read_cache.insert(rc);
-
-                        Poll::Pending
-                    }
                 }
-            }
-            BufferReadState::ContinueReadLocalCache { from, to } => {
-                let rc = rc.unwrap();
-
-                debug_assert_eq!(rc.len(), self.read_cap);
-
-                self.read_header(cx, rc, from, to)
             }
         }
     }
 
+    /// It extracts body len by using self.content_len_body_start_index_parse_fn, then
+    /// if the cached `rc` is not less than the body len, it returns the result, or else
+    /// it calls self.read to read until it got the full body.
+    ///
     fn read_header(
         &mut self,
         cx: &mut Context<'_>,
