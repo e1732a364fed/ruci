@@ -146,18 +146,26 @@ fn get_addr_from_vd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
 impl Mapper for Dialer {
     /// try the parameter first, if no addr was given, use dial_addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
-    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::None => {
                 let vd = params.d;
                 let d = get_addr_from_vd(vd);
+
+                let mut target_addr = params.a;
+
+                if self.configured_target_addr().is_some() {
+                    debug!(cid = %cid, "Dialer using fixed_target_addr");
+                    target_addr = self.configured_target_addr().cloned();
+                }
+
                 match d {
                     Some(a) => {
-                        return Dialer::dial_addr(&a, params.a, params.b).await;
+                        return Dialer::dial_addr(&a, target_addr, params.b).await;
                     }
 
                     None => {
-                        return Dialer::dial_addr(&self.dial_addr, params.a, params.b).await;
+                        return Dialer::dial_addr(&self.dial_addr, target_addr, params.b).await;
                     }
                 }
             }
