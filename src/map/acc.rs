@@ -18,8 +18,8 @@ pub struct AccumulateResult {
     pub id: Option<CID>,
 
     pub chain_tag: String,
-    /// 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
-    pub left_mappers_iter: MIterBox,
+    // 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
+    //pub left_mappers_iter: MIterBox,
 }
 
 impl Debug for AccumulateResult {
@@ -139,7 +139,7 @@ pub async fn accumulate(
         } else {
             Some(cid)
         },
-        left_mappers_iter: mappers,
+        //left_mappers_iter: mappers,
         chain_tag: tag,
     }
 }
