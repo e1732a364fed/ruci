@@ -74,7 +74,7 @@ impl Server {
             }
         };
 
-        if previous_read_len == 0 {
+        if previous_read_len < 17 {
             loop {
                 let n = base
                     .read(&mut buf[previous_read_len..])
@@ -101,11 +101,17 @@ impl Server {
             //根据下面回答，HTTP的最小长度恰好是16字节，但是是0.9版本。1.0是18字节，1.1还要更长。总之 可以直接不回落
             //https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089
 
-            return Err(anyhow!("fallback, msg too short, {}", previous_read_len));
+            return Err(anyhow!(
+                "trojan fallback, msg too short, {}",
+                previous_read_len
+            ));
         }
 
         if previous_read_len < PASS_LEN + 8 + 1 {
-            return Ok(MapResult::buf_err_str(buf, "handshake len too short"));
+            return Ok(MapResult::buf_err_str(
+                buf,
+                "trojan handshake len too short",
+            ));
         }
 
         buf.truncate(previous_read_len);
@@ -125,7 +131,7 @@ impl Server {
         if crlf != CRLF {
             return Ok(MapResult::buf_err_str(
                 buf,
-                &format!("crlf wrong, {} ", crlf),
+                &format!("trojan crlf wrong, {} ", crlf),
             ));
         }
         let cmd_b = buf.get_u8();
@@ -137,12 +143,15 @@ impl Server {
                 is_udp = true;
             }
             CMD_MUX => {
-                return Ok(MapResult::buf_err_str(buf, "cmd MUX not implemented"));
+                return Ok(MapResult::buf_err_str(
+                    buf,
+                    "trojan cmd MUX not implemented",
+                ));
             }
             _ => {
                 return Ok(MapResult::buf_err_str(
                     buf,
-                    &format!("cmd byte wrong, {}", cmd_b),
+                    &format!("trojan cmd byte wrong, {}", cmd_b),
                 ));
             }
         }
@@ -159,16 +168,16 @@ impl Server {
             if buf.len() == 1 {
                 return Ok(MapResult::buf_err_str(
                     buf,
-                    "no suffix crlf field, 1byte left",
+                    "trojan no suffix crlf field, 1byte left",
                 ));
             }
-            return Ok(MapResult::err_str("no suffix crlf field"));
+            return Ok(MapResult::err_str("trojan no suffix crlf field"));
         }
         let supposed_crlf = buf.get_u16();
         if supposed_crlf != CRLF {
             return Ok(MapResult::buf_err_str(
                 buf,
-                &format!("expect CRLF but is, {}", supposed_crlf),
+                &format!("trojan expect CRLF but is, {}", supposed_crlf),
             ));
         }
 

@@ -93,7 +93,6 @@ impl Client {
 
     async fn handshake(
         &self,
-        _cid: CID,
         conn: net::Conn,
         a: Option<net::Addr>,
         b: Option<BytesMut>,
@@ -102,10 +101,8 @@ impl Client {
         if self.use_early_data {
             return Ok(MapResult::new_c(Box::new(EarlyConn {
                 request: req,
-                real_c: None,
                 base_c: Some(conn),
-                dial_f: None,
-                first_data_len: 0,
+                ..Default::default()
             }))
             .a(a)
             .b(b)
@@ -122,13 +119,13 @@ impl Client {
 impl Mapper for Client {
     async fn maps(
         &self,
-        cid: CID,
+        _cid: CID,
         _behavior: ProxyBehavior,
         params: map::MapParams,
     ) -> map::MapResult {
         let conn = params.c;
         if let Stream::Conn(conn) = conn {
-            let r = self.handshake(cid, conn, params.a, params.b).await;
+            let r = self.handshake(conn, params.a, params.b).await;
             match r {
                 anyhow::Result::Ok(r) => r,
                 Err(e) => MapResult::from_e(e.context("websocket_client maps failed")),
@@ -139,6 +136,7 @@ impl Mapper for Client {
     }
 }
 
+#[derive(Default)]
 struct EarlyConn {
     request: Request<()>,
     real_c: Option<Pin<net::Conn>>,
@@ -146,6 +144,7 @@ struct EarlyConn {
 
     dial_f: Option<Pin<Box<dyn Future<Output = anyhow::Result<Box<dyn ConnTrait>>> + Send + Sync>>>,
     first_data_len: usize,
+    left_first_w_data: Option<BytesMut>,
 }
 
 impl ruci::Name for EarlyConn {
@@ -178,20 +177,86 @@ impl AsyncWrite for EarlyConn {
                 Some(f) => {
                     return match ready!(f.as_mut().poll(cx)) {
                         Ok(c) => {
-                            self.real_c = Some(Box::pin(c));
+                            let mut pinc = Box::pin(c);
                             self.dial_f = None;
-                            Poll::Ready(Ok(self.first_data_len))
+                            if let Some(mut left_w_data) = self.left_first_w_data.take() {
+                                let r2 = pinc.as_mut().poll_write(cx, &left_w_data);
+                                self.real_c = Some(pinc);
+
+                                match r2 {
+                                    Poll::Ready(r) => match r {
+                                        Ok(u) => {
+                                            if u < left_w_data.len() {
+                                                left_w_data.advance(u);
+                                                self.left_first_w_data = Some(left_w_data);
+                                            }
+                                            return Poll::Ready(Ok(self.first_data_len + u));
+                                        }
+                                        Err(e) => return Poll::Ready(Err(e)),
+                                    },
+                                    Poll::Pending => {
+                                        self.left_first_w_data = Some(left_w_data);
+                                        return Poll::Pending;
+                                    }
+                                }
+                            } else {
+                                self.real_c = Some(pinc);
+
+                                Poll::Ready(Ok(self.first_data_len))
+                            }
                         }
                         Err(e) => Poll::Ready(Err(io_error(e))),
                     };
                 }
-                None => match &mut self.real_c {
-                    Some(c) => return c.as_mut().poll_write(cx, buf),
-                    None => {
-                        self.first_data_len = buf.len();
+                None => {
+                    if self.real_c.is_some() {
+                        if let Some(mut left_w_data) = self.left_first_w_data.take() {
+                            left_w_data.extend_from_slice(buf);
+
+                            let len = left_w_data.len();
+
+                            let r2 = self
+                                .real_c
+                                .as_mut()
+                                .expect("ok")
+                                .as_mut()
+                                .poll_write(cx, &left_w_data);
+
+                            match r2 {
+                                Poll::Ready(r) => match r {
+                                    Ok(u) => {
+                                        if u < len {
+                                            left_w_data.advance(u);
+                                            self.left_first_w_data = Some(left_w_data);
+                                        }
+                                        return Poll::Ready(Ok(u));
+                                    }
+                                    Err(e) => return Poll::Ready(Err(e)),
+                                },
+                                Poll::Pending => {
+                                    self.left_first_w_data = Some(left_w_data);
+                                    return Poll::Pending;
+                                }
+                            }
+                        } else {
+                            return self
+                                .real_c
+                                .as_mut()
+                                .expect("ok")
+                                .as_mut()
+                                .poll_write(cx, buf);
+                        }
+                    } else {
+                        let mut bl = buf.len();
+                        if bl > MAX_EARLY_DATA_LEN {
+                            bl = MAX_EARLY_DATA_LEN;
+                            self.left_first_w_data =
+                                Some(BytesMut::from(&buf[MAX_EARLY_DATA_LEN..]))
+                        }
+                        self.first_data_len = bl;
 
                         let f = Client::get_conn_by_req(
-                            Some(BytesMut::from(buf)),
+                            Some(BytesMut::from(&buf[..bl])),
                             std::mem::take(&mut self.request),
                             self.base_c.take().expect("base_c ok"),
                         );
@@ -203,7 +268,7 @@ impl AsyncWrite for EarlyConn {
 
                         self.dial_f = Some(Box::pin(f));
                     }
-                },
+                }
             }
         }
     }

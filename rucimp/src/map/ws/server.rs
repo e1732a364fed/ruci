@@ -64,7 +64,7 @@ impl Server {
                         cid = %cid,
                         given = given_host,
                         expected = c.host,
-                        "websocket server got wrong host"
+                        "ws server got wrong host"
                     );
                     return Err(r);
                 }
@@ -80,32 +80,38 @@ impl Server {
                         cid = %cid,
                         given = given_path,
                         expected = c.path,
-                        "websocket server got wrong path"
+                        "ws server got wrong path"
                     );
                     return Err(r);
                 }
             }
 
-            let given_early_data = r
-                .headers()
-                .get(EARLY_DATA_HEADER_KEY)
-                .unwrap_or(&EMPTY_HV)
-                .to_str()
-                .expect("ok");
+            let ed_h = r.headers().get(EARLY_DATA_HEADER_KEY);
 
-            if !given_early_data.is_empty() {
-                use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+            if let Some(h) = ed_h {
+                if h.len() > MAX_EARLY_DATA_LEN_BASE64 {
+                    warn!(
+                        "ws server got early data too long, won't decode at all: {}",
+                        h.len()
+                    );
+                } else {
+                    let given_early_data = h.to_str().expect("ok");
 
-                let r = URL_SAFE_NO_PAD.decode(given_early_data);
-                match r {
-                    Ok(v) => {
-                        debug!("ws got early data {}", v.len());
-                        ob = Some(BytesMut::from(v.as_slice()))
-                    }
-                    Err(e) => {
-                        warn!(
-                            "ws server decode early data from {EARLY_DATA_HEADER_KEY} failed: {e}"
-                        )
+                    if !given_early_data.is_empty() {
+                        use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+
+                        let r = URL_SAFE_NO_PAD.decode(given_early_data);
+                        match r {
+                            Ok(v) => {
+                                debug!("ws got early data {}", v.len());
+                                ob = Some(BytesMut::from(v.as_slice()))
+                            }
+                            Err(e) => {
+                                warn!(
+                                "ws server decode early data from {EARLY_DATA_HEADER_KEY} failed: {e}"
+                            )
+                            }
+                        }
                     }
                 }
             }

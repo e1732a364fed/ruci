@@ -41,7 +41,7 @@ ws = {
     }
 }
 
-trojan_ws_chain = {tcp, ws, trojan_in}
+trojan_ws_chain = {tcp, tls, ws, trojan_in}
 
 dial = {
     Dialer = "tcp://0.0.0.0:10801"
