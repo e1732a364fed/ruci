@@ -37,6 +37,7 @@ use crate::net::{self, addr_conn::AddrConn, Stream, CID};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
+use log::info;
 use tokio::{
     net::TcpStream,
     sync::{oneshot, Mutex},
@@ -196,7 +197,8 @@ pub struct MapParams {
 
     pub d: Option<InputData>,
 
-    /// if Stream is a Generator, shutdown_rx should be provided
+    /// if Stream is a Generator, shutdown_rx should be provided.
+    /// it will stop generating if shutdown_rx got msg.
     pub shutdown_rx: Option<oneshot::Receiver<()>>,
 }
 
@@ -417,12 +419,18 @@ impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
 
-pub struct AccumulateResult {
+pub struct AccumulateResult<'a, IterMapperBoxRef>
+where
+    IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
+{
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
     pub c: Stream,
     pub d: Vec<OptData>,
     pub e: Option<io::Error>,
+
+    pub id: Option<CID>, //有值代表产生了与之前不同的 cid
+    pub left_mappers_iter: IterMapperBoxRef,
 }
 
 ///  accumulate 是一个作用很强的函数,是 mappers 的累加器
@@ -457,7 +465,7 @@ pub async fn accumulate<'a, IterMapperBoxRef, IterOptData>(
     initial_state: MapResult,
     mut mappers: IterMapperBoxRef,
     mut hyperparameter_vec: Option<IterOptData>,
-) -> AccumulateResult
+) -> AccumulateResult<'a, IterMapperBoxRef>
 where
     IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
     IterOptData: Iterator<Item = OptData>,
@@ -534,13 +542,15 @@ where
         c: last_r.c,
         d: calculated_output_vec,
         e: last_r.e,
+        id: last_r.id,
+        left_mappers_iter: mappers,
     };
 }
 
-/// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate，
-/// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator，或e不为None
+/// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
+/// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
 ///
-/// 因为要spawn, 所以对 Iter 的类型提了比 accumulate更高的要求，加了
+/// 因为要spawn, 所以对 Iter 的类型提了比 accumulate更高的要求, 加了
 /// Clone + Send + 'static
 ///
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去
@@ -548,7 +558,74 @@ where
 pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
     cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
-    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
+    shutdown_rx: oneshot::Receiver<()>,
+    tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
+    inmappers: IterMapperBoxRef,
+    hyperparameter_vec: Option<IterOptData>,
+) where
+    IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
+    IterOptData: Iterator<Item = OptData> + Clone + Send + 'static,
+{
+    tokio::select! {
+
+        _r = async move{
+            loop {
+                let opt_stream = rx.recv().await;
+                if opt_stream.is_none() {}
+                let stream = opt_stream.unwrap();
+
+                let mc = inmappers.clone();
+                let txc = tx.clone();
+                let hvc = hyperparameter_vec.clone();
+                let cid = cid.clone();
+                tokio::spawn(async move {
+                    let r = accumulate::<IterMapperBoxRef, IterOptData>(
+                        cid,
+                        ProxyBehavior::DECODE,
+                        MapResult::s(stream),
+                        mc,
+                        hvc,
+                    )
+                    .await;
+                    if r.e.is_none(){
+
+                        if let Stream::Generator(s_rx) = r.c{
+
+                            let cid = r.id.unwrap();
+                            let _ = in_iter_accumulate_forever::<IterMapperBoxRef, IterOptData>(
+                                cid,
+                                s_rx,
+                                txc,
+                                r.left_mappers_iter,
+                                None,
+                            );
+
+                            return;
+                        }
+
+                    }
+
+                    let _ = txc.send(r).await;
+                });
+            }
+
+            //Ok::<_, io::Error>(())
+
+        } => {
+            //r
+        }
+
+        _ = shutdown_rx => {
+            info!("in_iter_accumulate terminating by shutdown_rx");
+            //Ok(())
+        }
+    }
+}
+
+pub async fn in_iter_accumulate_forever<IterMapperBoxRef, IterOptData>(
+    cid: CID,
+    mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
+    tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
     inmappers: IterMapperBoxRef,
     hyperparameter_vec: Option<IterOptData>,
 ) where
@@ -573,6 +650,20 @@ pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
                 hvc,
             )
             .await;
+            if r.e.is_none() {
+                if let Stream::Generator(s_rx) = r.c {
+                    let cid = r.id.unwrap();
+                    let _ = in_iter_accumulate_forever::<IterMapperBoxRef, IterOptData>(
+                        cid,
+                        s_rx,
+                        txc,
+                        r.left_mappers_iter,
+                        None,
+                    );
+
+                    return;
+                }
+            }
             let _ = txc.send(r).await;
         });
     }
