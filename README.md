@@ -10,7 +10,7 @@ ruci pronounced lucy.
 
 ## Intro
 
-A network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+) using Lua/toml as config format.
+A flexible network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+) using Lua/toml as the configuration format.
 
 用户 入门 ruci 可阅读 [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
 
@@ -23,13 +23,13 @@ See [notes.md](doc/notes.md) for more notes.
 文档所限, 肯定有东西没有涉及到, 可提交issue提问或加入讨论. 
 欢迎加入我们. 注意低调. 
 
-一个好的解决问题的模式: 有暂时不懂的问题可以先进群问, 确定问题后再发 issue
+一个好的解决问题的模式: 有暂时不懂的问题可以先进群问, 确定问题后再发 issue.
 
 Developer chat:     https://t.me/+6yL4ggeyKY0yNjIx
 
 User channel:       https://t.me/+r5hKQKYyeuowMTcx
 
-The project is work in progress, 功能会陆续添加与调整
+The project is work in progress, 功能会陆续添加与调整.
 
 
 ## Structure
@@ -210,6 +210,7 @@ o2node-.->collector
 - [x] chain mode support
 - [x] api_server
 - [x] api_client
+- [x] static file server 
 - [x] utils
 - [ ] tui: using ratatui
 

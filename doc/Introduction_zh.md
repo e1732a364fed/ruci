@@ -1,5 +1,7 @@
 # 了解ruci, 并编译运行以试用。
 
+推荐 clone 或者下载 源码zip包之后，在本地阅读 ruci 项目的内容。
+
 首先从 [README.md](../README.md) 读. 之后读 [crates/ruci-cmd/README.md](../crates/ruci-cmd/README.md)
 
 然后读 配置文件 [local.lua](../resource/local.lua) 和 [remote.lua](../resource/remote.lua)
@@ -16,7 +18,7 @@
 
 浏览一个网页，发现能正常浏览，之后日志会有 类似下面的内容
 
-```
+```log
 ruci-cmd
 working dir: “~/ruci/crates/ruci-cmd"
 Mode: C
@@ -36,11 +38,11 @@ direct dial
 fold outbound succeed
 ```
 
-当然，前面会跟着 时间， DEBUG, INFO, 等字样。
+当然，前面会跟着 时间， `DEBUG`, `INFO`, 等字样。
 
 关闭ruci-cmd( ctrl+c) 时，日志会有 如下内容
 
-```
+```log
 got interrupt
 signal received, starting graceful shutdown...
 chain engine: stop called

@@ -29,6 +29,7 @@ id+1; 如此便可区别不同的客户端 以及 不同的请求连接。
 */
 
 use std::io::Result;
+use std::task::ready;
 use std::{
     collections::HashMap,
     fmt::Write,
@@ -43,7 +44,7 @@ use bytes::BytesMut;
 use itertools::Itertools;
 use macro_map::*;
 use rand::Rng;
-use ruci::net::helpers::BufContentLenProtocolReader;
+use ruci::net::helpers::{BufContentLenProtocolReader, BufReadResult};
 use ruci::net::http::CommonHttp;
 use ruci::net::Addr;
 use ruci::{
@@ -320,7 +321,7 @@ fn nearest_power_of_two(mut n: u32) -> u32 {
 }
 
 // 大端序，即 vec![true] 会被转成 vec![128]
-pub fn bools_to_bytes(bools: Vec<bool>) -> Vec<u8> {
+fn bools_to_bytes(bools: Vec<bool>) -> Vec<u8> {
     // bools
     //     .chunks(8) // 每 8 个布尔值分成一组
     //     .map(|chunk| {
@@ -398,22 +399,6 @@ pub enum WriteState {
     Previous(usize),
 }
 
-#[derive(Default)]
-pub enum ReadState {
-    #[default]
-    ReadyForNew,
-    ContinueReadRemote {
-        content_len: usize,
-        body_start_index: usize,
-        filled_data_len: usize,
-    },
-    ContinueReadLocalCache {
-        from: usize,
-        to: usize,
-    },
-    Closed,
-}
-
 pub struct Conn {
     cid: CID,
     is_server: bool,
@@ -454,7 +439,7 @@ fn get_pr_header_content_length_body_index(pr: Box<dyn CommonHttp>) -> Result<(u
 
 impl Conn {
     /// parse steganography string into real data.
-    fn common_real_read(
+    fn real_read(
         &mut self,
         from: usize,
         to: usize,
@@ -463,12 +448,12 @@ impl Conn {
     ) -> Poll<Result<()>> {
         let real_data = &data[from..to];
         let real_string = String::from_utf8_lossy(real_data).to_string();
-        trace!( cid=%self.cid,"spe1 common_real_read called ");
+        trace!( cid=%self.cid,"spe1 real_read called ");
 
         if self.is_server {
             Poll::Ready(match self.qa.questions_to_bytes(&real_string, true, true) {
                 Ok(bm) => {
-                    trace!(cid=%self.cid, "spe1server server_real_read {}, {}",bm.0.len(),&data[..to].len() );
+                    trace!(cid=%self.cid, "spe1 real_read {}, {}",bm.0.len(),&data[..to].len() );
 
                     buf.put_slice(&bm.0);
                     self.server_cached_answers = bm.1.unwrap();
@@ -477,13 +462,13 @@ impl Conn {
                 }
                 Err(e) => Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("spe1: question string to bytes err: {e}"),
+                    format!("spe1 real_read: question string to bytes err: {e}"),
                 )),
             })
         } else {
             match Self::server_response_to_2_parts(&real_string) {
                 None => {
-                    warn!("server_response_to_2_parts failed");
+                    warn!("spe1 real_read, server_response_to_2_parts failed");
                     Poll::Ready(Ok(()))
                 }
 
@@ -497,13 +482,13 @@ impl Conn {
                         {
                             Ok(bm) => {
                                 buf.put_slice(&bm.0);
-                                trace!( cid=%self.cid,"spe1client client_real_read put_slice {} ",bm.0.len());
+                                trace!( cid=%self.cid,"spe1 real_read put_slice {} ",bm.0.len());
 
                                 Ok(())
                             }
                             Err(e) => Err(std::io::Error::new(
                                 std::io::ErrorKind::Other,
-                                format!("client_real_read: questions string to bytes err: {e}"),
+                                format!("spe1 real_read: questions string to bytes err: {e}"),
                             )),
                         },
                     )
@@ -522,21 +507,18 @@ impl AsyncRead for Conn {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut ReadBuf<'_>,
+        rbuf: &mut ReadBuf<'_>,
     ) -> Poll<Result<()>> {
-        match self.reader.read(cx) {
-            Poll::Ready(r) => match r {
-                Ok(Some((rc, from, to))) => {
-                    debug_assert!(from < to);
+        match ready!(self.reader.read(cx)) {
+            Ok(Some(BufReadResult { buf, from, to })) => {
+                debug_assert!(from < to);
 
-                    let r = self.common_real_read(from, to, buf, &rc);
-                    self.reader.put_back(rc);
-                    r
-                }
-                Ok(None) => Poll::Ready(Ok(())),
-                Err(e) => Poll::Ready(Err(e)),
-            },
-            Poll::Pending => Poll::Pending,
+                let r = self.real_read(from, to, rbuf, &buf);
+                self.reader.put_back(buf);
+                r
+            }
+            Ok(None) => Poll::Ready(Ok(())),
+            Err(e) => Poll::Ready(Err(e)),
         }
     }
 }
@@ -546,12 +528,15 @@ impl AsyncWrite for Conn {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize>> {
-        // if matches!(self.read_state, ReadState::Closed) {
-        //     return Poll::Ready(Err(io::Error::new(
-        //         io::ErrorKind::ConnectionAborted,
-        //         "spe1: writing when read end closed",
-        //     )));
-        // }
+        if matches!(
+            self.reader.read_state,
+            ruci::net::helpers::BufferReadState::Closed
+        ) {
+            return Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::ConnectionAborted,
+                "spe1: writing when read end closed",
+            )));
+        }
 
         if self.is_server {
             match self.write_state {
@@ -590,11 +575,11 @@ impl AsyncWrite for Conn {
                     let _ = write_cache.write_str(&content_buf.len().to_string());
                     let _ = write_cache.write_str("\r\n\r\n");
 
-                    write_cache.extend_from_slice(&content_buf[..]);
+                    write_cache.extend_from_slice(&content_buf);
 
                     let wl = write_cache.len();
 
-                    match self.base_w.as_mut().poll_write(cx, &write_cache[..]) {
+                    match self.base_w.as_mut().poll_write(cx, &write_cache) {
                         Poll::Pending => {
                             let _ = self.write_cache.insert(write_cache);
 
@@ -718,9 +703,9 @@ impl AsyncWrite for Conn {
                     let _ = write_cache.write_str(&content_len.to_string());
                     let _ = write_cache.write_str("\r\nContent-Type: text/plain\r\n\r\n");
 
-                    write_cache.extend_from_slice(&content_buf[..]);
+                    write_cache.extend_from_slice(&content_buf);
 
-                    let r = self.base_w.as_mut().poll_write(cx, &write_cache[..]);
+                    let r = self.base_w.as_mut().poll_write(cx, &write_cache);
 
                     let wcl = write_cache.len();
 

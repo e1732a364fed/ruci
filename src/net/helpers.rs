@@ -426,30 +426,35 @@ pub struct BufContentLenProtocolReader {
         Box<dyn Fn(&[u8]) -> std::io::Result<(usize, usize)> + Send + Sync>,
 }
 
+/// returned by [`BufContentLenProtocolReader`]'s method `read`
+///
+/// It should not happen that `from >= to`. So `debug_assert!(from < to);` is recommended.
+
+pub struct BufReadResult {
+    pub buf: BytesMut,
+    pub from: usize,
+    pub to: usize,
+}
+
 impl BufContentLenProtocolReader {
     /// Call it after calling [`read`] and finished using the returned buffer.
     pub fn put_back(&mut self, rc: BytesMut) {
         let _ = self.read_cache.insert(rc);
     }
     /// if read succeed, it returns the buffer, the index where the data begins
-    /// and the index where the data ends.
+    /// and the index where the data ends, wrapped in the struct [`BufReadResult`]
     ///
-    /// After reading the buffer, the user must put it back using self.put_back(buf).
+    /// After reading the buffer, the user must put it back using `self.put_back(buf)`.
     ///
-    /// Also, it is required that the method will not be called again before.
+    /// Also, it is required that the read method will not be called again before put back.
     ///
     /// This is implemented this way to avoid extra memory copy.
-    /// [`put_back`] is called.
     ///
-    /// Returned number is "from" and "to".
-    /// It's not possible that from >= to.
+    /// It's not possible that `from >= to`.
     ///
     /// If the returned result is None, then it marks EOF.
     ///
-    pub fn read(
-        &mut self,
-        cx: &mut Context<'_>,
-    ) -> Poll<std::io::Result<Option<(BytesMut, usize, usize)>>> {
+    pub fn read(&mut self, cx: &mut Context<'_>) -> Poll<std::io::Result<Option<BufReadResult>>> {
         let rc = self.read_cache.take();
 
         match self.read_state {
@@ -554,11 +559,11 @@ impl BufContentLenProtocolReader {
                                     self.read_state = BufferReadState::ReadyForNew;
                                 }
 
-                                Poll::Ready(Ok(Some((
-                                    rc,
-                                    body_start_index,
-                                    body_start_index + content_len,
-                                ))))
+                                Poll::Ready(Ok(Some(BufReadResult {
+                                    buf: rc,
+                                    from: body_start_index,
+                                    to: body_start_index + content_len,
+                                })))
                             }
                         }
                         Err(e) => {
@@ -590,7 +595,7 @@ impl BufContentLenProtocolReader {
         rc: BytesMut,
         from: usize,
         to: usize,
-    ) -> Poll<std::io::Result<Option<(BytesMut, usize, usize)>>> {
+    ) -> Poll<std::io::Result<Option<BufReadResult>>> {
         let data = &rc[from..to];
         let (content_len, body_start_index) = (self.content_len_body_start_index_parse_fn)(data)?;
         let real_len = data[body_start_index..].len();
@@ -604,19 +609,19 @@ impl BufContentLenProtocolReader {
                     to,
                 };
 
-                Poll::Ready(Ok(Some((
-                    rc,
-                    from + body_start_index,
-                    from + body_start_index + content_len,
-                ))))
+                Poll::Ready(Ok(Some(BufReadResult {
+                    buf: rc,
+                    from: from + body_start_index,
+                    to: from + body_start_index + content_len,
+                })))
             }
             std::cmp::Ordering::Equal => {
                 self.read_state = BufferReadState::ReadyForNew;
-                Poll::Ready(Ok(Some((
-                    rc,
-                    from + body_start_index,
-                    from + body_start_index + content_len,
-                ))))
+                Poll::Ready(Ok(Some(BufReadResult {
+                    buf: rc,
+                    from: from + body_start_index,
+                    to: from + body_start_index + content_len,
+                })))
             }
             std::cmp::Ordering::Greater => {
                 let mut new_rc = BytesMut::with_capacity(self.read_cap);
