@@ -404,7 +404,12 @@ impl Addr {
                     );
                 }
 
-                (format!("{}:{}", n, port)).to_socket_addrs()?.next()
+                let x = (format!("{}:{}", n, port)).to_socket_addrs()?.next();
+                tracing::debug!(
+                    name = %n,
+                    "still ok",
+                );
+                x
             };
 
             so.ok_or(anyhow!("resolve to empty socket_addr from {}", self))
