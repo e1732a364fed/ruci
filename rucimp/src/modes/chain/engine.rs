@@ -18,7 +18,7 @@ use tokio::sync::{
     oneshot::{self, Sender},
 };
 
-use super::config::{lua, StaticConfig};
+use super::config::StaticConfig;
 
 #[derive(Default)]
 pub struct Engine {
@@ -72,7 +72,15 @@ impl Engine {
     }
 
     #[cfg(feature = "lua")]
+    pub fn init_lua_static(&mut self, config_string: String) {
+        use crate::modes::chain::config::lua;
+        let sc = lua::load_static(&config_string).expect("has valid lua codes in the file content");
+        self.init_static(sc)
+    }
+
+    #[cfg(feature = "lua")]
     pub fn init_lua_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
+        use crate::modes::chain::config::lua;
         let (sc, ibs, default_o, ods) = lua::load_bounded_dynamic_leak(config_string)?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);

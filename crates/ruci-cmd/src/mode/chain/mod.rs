@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use anyhow::Context;
 use log::info;
 use ruci::net::GlobalTrafficRecorder;
 use rucimp::{
-    cmd_common::{try_get_filecontent, wait_close_sig, wait_close_sig_with_closer},
-    modes::chain::{config::lua, engine::Engine},
+    cmd_common::{wait_close_sig, wait_close_sig_with_closer},
+    modes::chain::engine::Engine,
 };
 use tokio::sync::mpsc;
 
@@ -14,6 +13,7 @@ use chrono::{DateTime, Utc};
 use crate::api;
 
 ///blocking
+#[allow(unused)]
 pub(crate) async fn run(
     f: &str,
     #[cfg(feature = "api_server")] opts: Option<(
@@ -23,13 +23,18 @@ pub(crate) async fn run(
     )>,
 ) -> anyhow::Result<()> {
     info!("try to start rucimp chain engine");
-    let contents = try_get_filecontent("local.lua", Some(f))
-        .context(format!("run chain engine try get file {} failed", f))?;
 
     let mut se = rucimp::modes::chain::engine::Engine::default();
-    let sc = lua::load_static(&contents).expect("has valid lua codes in the file content");
 
-    se.init_static(sc);
+    #[cfg(feature = "lua")]
+    {
+        use anyhow::Context;
+
+        let contents = rucimp::cmd_common::try_get_filecontent("local.lua", Some(f))
+            .context(format!("run chain engine try get file {} failed", f))?;
+
+        se.init_lua_static(contents);
+    }
 
     let mut se = Box::new(se);
 
