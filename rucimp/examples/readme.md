@@ -14,11 +14,13 @@ chain_infinite 演示 完全动态链, 其与 chain 的运行方式一样, 不�
 # in folder rucimp, run:
 
 # chain mode
-RUST_LOG=none,ruci=debug cargo run -F lua --example chain
-RUST_LOG=none,ruci=debug cargo run -F lua --example chain -- remote.lua
+RUST_LOG=none,ruci=debug cargo run -F lua -F quinn --example chain
+RUST_LOG=none,ruci=debug cargo run -F lua -F quinn --example chain -- remote.lua
 
-RUST_LOG=none,ruci=debug cargo run -F lua --example chain_infinite -- local_mux_h2.lua
+RUST_LOG=none,ruci=debug cargo run -F lua -F quinn --example chain_infinite -- local_mux_h2.lua
 
+# linux
+RUST_LOG=none,ruci=debug cargo run -F lua -F quinn -F sockopt --example chain
 
 # suit mode
 cargo run --example suit -- local.suit.toml

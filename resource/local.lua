@@ -13,6 +13,18 @@ l3 = {
     Listener = "0.0.0.0:30800"
 }
 
+opt_listen = {
+    OptListener = {
+        sockopt = {
+            tproxy = true,
+            so_mark = 255,
+        },
+        ext = {
+            fixed_target_addr = "0.0.0.0:10800"
+        }
+    }
+}
+
 listen_socks5 = {listen, {
     Socks5 = {}
 }}
@@ -20,6 +32,10 @@ listen_http = {listen, {
     Http = {}
 }}
 listen_socks5http = {listen, {
+    Socks5Http = {}
+}}
+
+opt_listen_socks5http = {opt_listen, {
     Socks5Http = {}
 }}
 
@@ -124,11 +140,12 @@ out_stdio_chain = {{
 
 direct_out_chain = {"Direct"}
 
---[=[
+---[=[
 
 config = {
     inbounds = {{
-        chain = listen_socks5http,
+        --chain = listen_socks5http,
+        chain = opt_listen_socks5http,
         tag = "listen1"
     }},
     outbounds = {{
@@ -208,7 +225,7 @@ config = {
 
 --]=]
 
----[=[
+--[=[
 config = {
     inbounds = {{
         chain = listen_socks5http,

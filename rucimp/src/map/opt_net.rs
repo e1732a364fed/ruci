@@ -17,7 +17,7 @@ use crate::net::so2::{self, SockOpt};
 #[mapper_ext_fields]
 #[derive(MapperExt, Clone, Debug, Default)]
 pub struct TcpOptListener {
-    sopt: SockOpt,
+    pub sopt: SockOpt,
 }
 
 impl Name for TcpOptListener {

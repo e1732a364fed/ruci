@@ -202,6 +202,13 @@ pub enum InMapperConfig {
     Fileio(File),     //单流发生器
     Dialer(String),   //单流发生器
     Listener(String), //多流发生器
+
+    #[cfg(all(feature = "sockopt", target_os = "linux"))]
+    OptListener {
+        sockopt: crate::net::so2::SockOpt,
+        ext: Ext,
+    },
+
     Adder(i8),
     Counter,
     TLS(TlsIn),
@@ -442,6 +449,14 @@ impl ToMapperBox for InMapperConfig {
 
             #[cfg(feature = "quinn")]
             InMapperConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
+
+            #[cfg(all(feature = "sockopt", target_os = "linux"))]
+            InMapperConfig::OptListener { sockopt, ext } => {
+                Box::new(crate::map::opt_net::TcpOptListener {
+                    sopt: sockopt.clone(),
+                    ext_fields: Some(ext.to_ext_fields()),
+                })
+            }
         }
     }
 }

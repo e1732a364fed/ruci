@@ -1,4 +1,5 @@
 use anyhow::Context;
+use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 
 use ruci::net::{self, Network, Stream};
@@ -6,7 +7,7 @@ use socket2::{Domain, Protocol, Socket, Type};
 
 use super::so_opts;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SockOpt {
     tproxy: bool,
     so_mark: Option<u8>,
