@@ -1,7 +1,7 @@
 /*!
 module map defines some important traits for proxy
 
-几个关键部分: AnyData, MapParams, MapResult, Mapper, 和 acc 模块
+几个关键部分: Data, MapParams, MapResult, Mapper, 和 acc 模块
 
 ruci 包中实现 Mapper 的模块有: math, counter,stdio, network, socks5,http, socks5http, trojan,  tls
 
@@ -27,6 +27,9 @@ ruci 将任意代理行为分割成若干个不可再分的
 */
 
 pub mod acc;
+pub mod data;
+
+pub use data::*;
 
 pub mod counter;
 pub mod fileio;
@@ -57,134 +60,13 @@ use typed_builder::TypedBuilder;
 
 use std::{
     fmt::Debug,
-    sync::{
-        atomic::{AtomicI64, AtomicU64},
-        Arc,
-    },
+    sync::{atomic::AtomicU64, Arc},
 };
 
 use self::{
     addr_conn::AddrConn,
     user::{PlainText, User},
 };
-
-/// a data type represents what a Mapper might generate.
-///
-/// The data must be clonable
-///
-#[derive(Debug, Clone, Default)]
-pub enum AnyData {
-    #[default]
-    None,
-    Bool(bool),
-    CID(CID),
-    String(String),
-    U64(u64),
-    I64(i64),
-    F64(f64),
-    AU64(Arc<AtomicU64>),
-    AI64(Arc<AtomicI64>),
-    Addr(net::Addr),           //store raddr
-    User(Box<dyn user::User>), //store authed user
-}
-
-impl AnyData {
-    pub fn get_type_str(&self) -> &'static str {
-        match self {
-            AnyData::None => "none",
-            AnyData::Bool(_) => "bool",
-            AnyData::CID(_) => "cid",
-            AnyData::String(_) => "str",
-            AnyData::U64(_) => "u",
-            AnyData::I64(_) => "i",
-            AnyData::F64(_) => "f",
-            AnyData::AU64(_) => "au",
-            AnyData::AI64(_) => "ai",
-            AnyData::Addr(_) => "a",
-            AnyData::User(_) => "user",
-        }
-    }
-}
-
-use bitflags::bitflags;
-
-bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub  struct DataFlags: u32 {
-        const None = 0b00000000;
-        const Bool = 0b00000001;
-        const RAddr = 0b00000010;
-        const LAddr = 0b00000100;
-        const User = 0b00001000;
-        const CID = 0b00010000;
-        const U8 = 0b00100000;
-
-        const RLAddr = Self::RAddr.bits() | Self::LAddr.bits();
-    }
-}
-
-/// Mapper 的 maps 返回的 MapResult 中的静态数据类型
-#[typetag::serde]
-pub trait Data: Debug + Send + Sync + DynClone {
-    fn get_flags(&self) -> DataFlags {
-        DataFlags::None
-    }
-
-    fn get_raddr(&self) -> Option<net::Addr> {
-        None
-    }
-    fn get_laddr(&self) -> Option<net::Addr> {
-        None
-    }
-    fn get_user(&self) -> Option<Box<dyn User>> {
-        None
-    }
-
-    fn get_extra_data(&self) -> Option<Vec<u8>> {
-        None
-    }
-
-    fn get_u8(&self) -> Option<u8> {
-        None
-    }
-}
-dyn_clone::clone_trait_object!(Data);
-
-#[typetag::serde]
-impl Data for PlainText {
-    fn get_user(&self) -> Option<Box<dyn User>> {
-        let ub = Box::new(self.clone());
-        Some(ub)
-    }
-    fn get_flags(&self) -> DataFlags {
-        DataFlags::User
-    }
-}
-#[typetag::serde]
-impl Data for u8 {
-    fn get_u8(&self) -> Option<u8> {
-        Some(*self)
-    }
-    fn get_flags(&self) -> DataFlags {
-        DataFlags::U8
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RLAddr(net::Addr, net::Addr);
-
-#[typetag::serde]
-impl Data for RLAddr {
-    fn get_raddr(&self) -> Option<net::Addr> {
-        Some(self.0.clone())
-    }
-    fn get_laddr(&self) -> Option<net::Addr> {
-        Some(self.1.clone())
-    }
-    fn get_flags(&self) -> DataFlags {
-        DataFlags::RLAddr
-    }
-}
 
 /// the parameter for Mapper's maps method
 #[derive(Default, TypedBuilder)]

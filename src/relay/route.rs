@@ -41,9 +41,9 @@ use super::Data;
 ///
 /// 选择出的 DMIterBox 一般是用于 outbound,
 ///
-/// params 是 &Vec<Option<AnyData>>, 这是链累加 得到的 结果, 里面可能有任何值,
+/// params 的类型 是链累加 得到的 结果, 里面可能有任何值,
 ///
-/// 不过对于路由来说最有用的值应该是 验证后的 user, 所以本模块中含一个 get_user_from_anydata_vec
+/// 不过对于路由来说最有用的值应该是 验证后的 user, 所以本模块中含一个 get_user_from_optdatas
 /// 函数用于这一点.
 ///
 #[async_trait]
@@ -56,7 +56,7 @@ pub trait OutSelector: Send + Sync {
     ) -> DMIterBox;
 }
 
-pub async fn get_user_from_anydata_vec(adv: &[Option<Box<dyn Data>>]) -> Option<UserVec> {
+pub async fn get_user_from_optdatas(adv: &[Option<Box<dyn Data>>]) -> Option<UserVec> {
     let mut v = UserVec::default();
 
     for anyd in adv.iter().flatten() {
@@ -160,7 +160,7 @@ impl OutSelector for InboundInfoOutSelector {
         in_chain_tag: &str,
         params: &[Option<Box<dyn Data>>],
     ) -> DMIterBox {
-        let users = get_user_from_anydata_vec(params).await;
+        let users = get_user_from_optdatas(params).await;
         let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),
             target_addr: addr.clone(),

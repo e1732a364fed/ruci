@@ -116,12 +116,6 @@ impl Dialer {
         }
     }
 }
-// pub fn get_addr_from_d(d: &AnyData) -> Option<net::Addr> {
-//     match d {
-//         AnyData::Addr(a) => Some(a.clone()),
-//         _ => None,
-//     }
-// }
 
 pub fn get_addr_from_vvd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
     for vd in vd.iter().flatten() {
@@ -145,44 +139,6 @@ impl Mapper for Dialer {
                 match d {
                     Some(a) => {
                         return Dialer::dial_addr(&a, params.a, params.b).await;
-
-                        /*
-                        AnyData::A(arc) => {
-                            let a: Option<Addr>;
-                            {
-                                let v = arc.lock();
-                                let aa = v.downcast_ref::<net::Addr>();
-                                a = aa.map(|x| x.clone());
-                            }
-                            match a {
-                                Some(a) => {
-                                    return Dialer::dial_addr(&a, params.a, params.b).await;
-                                }
-                                None => {
-                                    return MapResult::err_str(
-                                        "Dialer got dial addr paramater but it's None",
-                                    )
-                                }
-                            }
-                        }
-                        AnyData::B(mut b) => {
-                            let a = b.downcast_mut::<net::Addr>();
-                            match a {
-                                Some(a) => return Dialer::dial_addr(a, params.a, params.b).await,
-                                None => {
-                                    return MapResult::err_str(
-                                        "Dialer got dial addr paramater but it's None",
-                                    )
-                                }
-                            }
-                        }
-
-                         */
-                        // _ => {
-                        //     return MapResult::err_str(&format!(
-                        //         "{cid} Dialer can't dial without an address-",
-                        //     ));
-                        // }
                     }
 
                     None => {

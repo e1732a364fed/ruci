@@ -200,58 +200,6 @@ impl NextSelector for LuaNextSelector {
 use mlua::{UserData, UserDataMethods};
 use parking_lot::Mutex;
 
-/*
-
-#[repr(transparent)]
-pub struct AnyDataLuaWrapper(ruci::map::AnyData);
-
-impl UserData for AnyDataLuaWrapper {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("get_type", |_, this, ()| Ok(this.0.get_type_str()));
-
-        methods.add_method("get_string", |_, this, ()| match &this.0 {
-            AnyData::String(s) => Ok(s.to_owned()),
-            _ => Err(LuaError::DeserializeError("can't get string".to_string())),
-        });
-
-        methods.add_method_mut("take_string", |_, this, ()| match &mut this.0 {
-            AnyData::String(s) => Ok(mem::take(s)),
-            _ => Err(LuaError::DeserializeError("can't get string".to_string())),
-        });
-
-        methods.add_method("get_u64", |_, this, ()| match &this.0 {
-            AnyData::U64(u) => Ok(*u),
-            AnyData::AU64(au) => Ok(au.load(std::sync::atomic::Ordering::Relaxed)),
-            _ => Err(LuaError::DeserializeError("can't get u64".to_string())),
-        });
-    }
-}
-
-pub struct VecOfAnyDataLuaWrapper(Vec<ruci::map::AnyData>);
-
-impl UserData for VecOfAnyDataLuaWrapper {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("len", |_, this, ()| Ok(this.0.len()));
-
-        methods.add_method("get", |_, this, index: usize| {
-            let x = this.0.get(index);
-            match x {
-                Some(d) => Ok(AnyDataLuaWrapper(d.clone())),
-                None => Err(LuaError::DeserializeError("can't get u64".to_string())),
-            }
-        });
-
-        methods.add_method_mut("take", |_, this, index: usize| {
-            match this.0.get_mut(index) {
-                Some(d) => Ok(AnyDataLuaWrapper(mem::take(d))),
-                None => Err(LuaError::DeserializeError("can't get u64".to_string())),
-            }
-        });
-    }
-}
-
-*/
-
 pub struct DataLuaWrapper(Option<Box<dyn Data>>);
 
 impl UserData for DataLuaWrapper {

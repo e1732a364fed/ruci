@@ -118,8 +118,8 @@ impl Name for Counter {
 impl Mapper for Counter {
     /// ignores behavior
     ///
-    /// ## return value
-    ///  MapResult.d is  vec![AnyData::AU64(cd.ub.clone()), AnyData::AU64(cd.db.clone())];
+    /// returns dynamic_data with upload and download
+    /// Arc<Atomic64>
     ///
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {

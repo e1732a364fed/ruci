@@ -148,30 +148,6 @@ async fn test_counter1() -> anyhow::Result<()> {
             }
         }
     }
-
-    // match d {
-    //     crate::map::AnyData::B(mut d) => {
-    //         if let Some(cd) = d.downcast_mut::<counter::CounterData>() {
-    //             let mut inital_data = [1u8, 2, 3];
-    //             r.c.try_unwrap_tcp()?.write(&mut inital_data).await?;
-
-    //             let v = writevc.lock();
-
-    //             println!("it     be {:?}", v);
-    //             assert_eq!(v.len(), inital_data.len());
-
-    //             println!(
-    //                 "Successfully downcasted to CounterConn, {}, {}",
-    //                 cd.ub.load(std::sync::atomic::Ordering::Relaxed),
-    //                 cd.db.load(std::sync::atomic::Ordering::Relaxed)
-    //             );
-    //             Ok(())
-    //         } else {
-    //             panic!("failed downcasted to CounterConn, ")
-    //         }
-    //     }
-    //     _ => panic!("need AsyncAnyData::B"),
-    // }
 }
 
 #[test]
