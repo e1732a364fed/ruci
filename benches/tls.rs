@@ -6,7 +6,7 @@ use ruci::map::tls;
 fn t(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
-    let mut d = rt.block_on(tls::test2::test_init()).unwrap(); //tls::test2::test_init().await?;
+    let mut d = rt.block_on(tls::test2::test_init()).unwrap();
 
     c.bench_function("tls", move |b| {
         b.iter_custom(|iters| {

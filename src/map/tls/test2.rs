@@ -101,12 +101,10 @@ pub async fn test_init() -> std::io::Result<Box<dyn ConnTrait>> {
     dial_future(HOST, PORT).await
 }
 
-pub async fn test_adder_r(l: usize) -> std::io::Result<()> {
+pub async fn test_batch_run(l: usize) -> std::io::Result<()> {
     let mut d = test_init().await?;
     for _ in 0..l {
-        unsafe {
-            d.write(&VEC2).await?;
-        }
+        test_write(&mut d).await?;
     }
 
     Ok(())
@@ -125,5 +123,5 @@ static mut VEC2: [u8; 1024] = [1u8; 1024];
 
 #[tokio::test]
 async fn te() {
-    let _ = test_adder_r(10).await;
+    let _ = test_batch_run(10).await;
 }
