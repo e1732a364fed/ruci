@@ -194,7 +194,7 @@ pub async fn serve(s: &Server) {
     let addr = s
         .listen_addr
         .clone()
-        .unwrap_or(String::from("127.0.0.1:40681"));
+        .unwrap_or(String::from(DEFAULT_API_ADDR));
     info!("api server starting {addr}");
 
     let mut app = Router::new().route("/stop_core", get(stop_core).with_state(s.close_tx.clone()));

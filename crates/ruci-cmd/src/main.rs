@@ -10,7 +10,7 @@ use std::env::{self, set_var};
 
 use anyhow::Ok;
 use clap::{Parser, Subcommand, ValueEnum};
-use log::{info, log_enabled, Level};
+use log::{info, log_enabled, warn, Level};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
@@ -104,7 +104,10 @@ async fn main() -> anyhow::Result<()> {
         Some(cs) => match cs {
             #[cfg(feature = "api_client")]
             SubCommands::ApiClient { command } => {
-                api::client::deal_cmds(command).await;
+                let r = api::client::deal_cmds(command).await;
+                if r.is_err() {
+                    warn!("{:?}", r)
+                }
             }
 
             #[cfg(feature = "utils")]
