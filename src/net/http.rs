@@ -11,14 +11,15 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-/// used by various Mappers in ruci that have a http layer
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// used by various Mappers in ruci that has a http layer
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CommonConfig {
     pub host: String,
     pub path: String,
     pub headers: Option<BTreeMap<String, String>>,
 
     pub use_early_data: Option<bool>,
+    pub can_fallback: Option<bool>,
 }
 
 const MAX_PARSE_URL_LEN: usize = 3000;
@@ -26,20 +27,30 @@ const HEADER_ENDING_BYTES: &[u8] = b"\r\n\r\n";
 const HEADER_ENDING_STR: &str = "\r\n\r\n";
 const HEADER_ENDING_BYTES_LEN: usize = HEADER_ENDING_BYTES.len();
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct ParsedHttpRequest {
     pub version: String,
     pub method: Method,
     pub path: String,
     pub headers: Vec<RawHeader>,
-    pub fail_reason: FailReason,
+    pub parse_result: Result<(), ParseError>,
     pub last_checked_index: usize,
 }
+impl Default for ParsedHttpRequest {
+    fn default() -> Self {
+        Self {
+            version: Default::default(),
+            method: Default::default(),
+            path: Default::default(),
+            headers: Default::default(),
+            parse_result: Ok(()),
+            last_checked_index: Default::default(),
+        }
+    }
+}
 
-#[derive(PartialEq, Debug, Default)]
-pub enum FailReason {
-    #[default]
-    None,
+#[derive(PartialEq, Debug)]
+pub enum ParseError {
     TooShort,
     NotForH2c,
     MethodLenWrong,
@@ -91,12 +102,12 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     let mut request = ParsedHttpRequest::default();
 
     if bs.len() < 16 {
-        request.fail_reason = FailReason::TooShort;
+        request.parse_result = Err(ParseError::TooShort);
         return request;
     }
 
     if bs[4] == b'*' {
-        request.fail_reason = FailReason::NotForH2c;
+        request.parse_result = Err(ParseError::NotForH2c);
         return request;
     }
 
@@ -142,7 +153,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                 should_space_index = 7;
 
                 if !is_proxy {
-                    request.fail_reason = FailReason::UnexpectedProxy;
+                    request.parse_result = Err(ParseError::UnexpectedProxy);
                     return request;
                 }
             }
@@ -151,7 +162,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     }
 
     if should_space_index == 0 || bs[should_space_index] != b' ' {
-        request.fail_reason = FailReason::SpaceIndexWrong;
+        request.parse_result = Err(ParseError::SpaceIndexWrong);
         return request;
     }
 
@@ -163,12 +174,12 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
         } else {
             //http
             if bs[should_slash_index..should_slash_index + 7] != b"http://"[..] {
-                request.fail_reason = FailReason::ExpectCONNECTButNot;
+                request.parse_result = Err(ParseError::ExpectCONNECTButNot);
                 return request;
             }
         }
     } else if bs[should_slash_index] != b'/' {
-        request.fail_reason = FailReason::NoSlash;
+        request.parse_result = Err(ParseError::NoSlash);
         return request;
     }
 
@@ -186,26 +197,26 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     for i in should_slash_index..last {
         let b = bs[i];
         if b == b'\r' || b == b'\n' {
-            request.fail_reason = FailReason::EarlyLinefeed;
+            request.parse_result = Err(ParseError::EarlyLinefeed);
             return request;
         }
         if b == b' ' {
             // 空格后面至少还有 HTTP/1.1\r\n 这种字样，也就是说空格后长度至少为 10
 
             if bs.len() - i - 1 < 10 {
-                request.fail_reason = FailReason::FirstLineLessThan10;
+                request.parse_result = Err(ParseError::FirstLineLessThan10);
                 return request;
             }
 
             request.path = String::from_utf8_lossy(&bs[should_slash_index..i]).to_string();
 
             if &bs[i + 1..i + 5] != b"HTTP" {
-                request.fail_reason = FailReason::StrHttpNotFoundInRightPlace;
+                request.parse_result = Err(ParseError::StrHttpNotFoundInRightPlace);
                 return request;
             }
             request.version = String::from_utf8_lossy(&bs[i + 6..i + 9]).to_string();
             if bs[i + 9] != b'\r' || bs[i + 10] != b'\n' {
-                request.fail_reason = FailReason::NoEndMark;
+                request.parse_result = Err(ParseError::NoEndMark);
                 return request;
             }
 
@@ -226,7 +237,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                     let ss: Vec<&str> = hs.splitn(2, ':').collect();
 
                     if ss.len() != 2 {
-                        request.fail_reason = FailReason::HeaderNoColon;
+                        request.parse_result = Err(ParseError::HeaderNoColon);
                         return request;
                     }
                     request.headers.push(RawHeader {
@@ -235,7 +246,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                     });
                 }
             } else {
-                request.fail_reason = FailReason::NoEndMark2;
+                request.parse_result = Err(ParseError::NoEndMark2);
             }
 
             return request;
@@ -268,48 +279,48 @@ mod tests {
     #[test]
     fn test_invalid_too_short() {
         let request = parse_h1_request(b"HTTP/", false);
-        assert_eq!(request.fail_reason, FailReason::TooShort);
+        assert_eq!(request.parse_result, Err(ParseError::TooShort));
 
         let request = parse_h1_request(b"GETHTTP/", false);
-        assert_eq!(request.fail_reason, FailReason::TooShort);
+        assert_eq!(request.parse_result, Err(ParseError::TooShort));
 
         let request = parse_h1_request(b"GET HTTP/1.1\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::TooShort);
+        assert_eq!(request.parse_result, Err(ParseError::TooShort));
     }
 
     #[test]
     fn test_invalid_no_end_mark2() {
         let request = parse_h1_request(b"GET / HTTP/1.1\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::NoEndMark2);
+        assert_eq!(request.parse_result, Err(ParseError::NoEndMark2));
 
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHeader: Value", false);
-        assert_eq!(request.fail_reason, FailReason::NoEndMark2);
+        assert_eq!(request.parse_result, Err(ParseError::NoEndMark2));
 
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHeader: Value\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::NoEndMark2);
+        assert_eq!(request.parse_result, Err(ParseError::NoEndMark2));
     }
 
     #[test]
     fn test_invalid_no_end_mark() {
         let request = parse_h1_request(b"GET / HTTPX/1.1\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::NoEndMark);
+        assert_eq!(request.parse_result, Err(ParseError::NoEndMark));
     }
 
     #[test]
     fn test_invalid_header_no_colon() {
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHeaderValue\r\n\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::HeaderNoColon);
+        assert_eq!(request.parse_result, Err(ParseError::HeaderNoColon));
     }
 
     #[test]
     fn test_invalid_unexpected_proxy() {
         let request = parse_h1_request(b"CONNECT example.com:80 HTTP/1.1\r\n\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::UnexpectedProxy);
+        assert_eq!(request.parse_result, Err(ParseError::UnexpectedProxy));
     }
 
     #[test]
     fn test_valid_request() {
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHost:x\r\n\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::None);
+        assert_eq!(request.parse_result, Ok(()));
     }
 }

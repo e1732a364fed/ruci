@@ -17,7 +17,7 @@ use crate::net::CID;
 use crate::user::{self, AsyncUserAuthenticator};
 use crate::utils::buf_to_ob;
 use crate::{
-    net::{self, http::FailReason, Conn},
+    net::{self, Conn},
     user::{PlainText, UsersMap},
     Name,
 };
@@ -99,17 +99,17 @@ impl Server {
         }
 
         let r = net::http::parse_h1_request(&buf[..n], true);
-        if r.fail_reason != FailReason::None {
+        if r.parse_result != Ok(()) {
             if tracing::enabled!(tracing::Level::DEBUG) {
                 let e1 = anyhow::anyhow!(
                     "http proxy: get method/path failed: {:?}, buf as str:\n{}\n",
-                    r.fail_reason,
+                    r.parse_result,
                     String::from_utf8_lossy(&buf[..min(n, 64)])
                 );
 
                 return Ok(MapResult::ebc(e1, buf, base));
             }
-            let e1 = anyhow::anyhow!("http proxy: get method/path failed: {:?}", r.fail_reason);
+            let e1 = anyhow::anyhow!("http proxy: get method/path failed: {:?}", r.parse_result);
 
             return Ok(MapResult::ebc(e1, buf, base));
         }

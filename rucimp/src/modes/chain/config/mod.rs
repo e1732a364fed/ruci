@@ -428,12 +428,7 @@ impl ToMapperBox for OutMapperConfig {
                 Box::new(a)
             }
             OutMapperConfig::WebSocket(c) => {
-                let client = ws::client::Client::new(CommonConfig {
-                    host: c.host.clone(),
-                    path: c.path.clone(),
-                    headers: c.headers.clone(),
-                    use_early_data: c.use_early_data,
-                });
+                let client = ws::client::Client::new(c.clone());
 
                 Box::new(client)
             }
