@@ -71,7 +71,7 @@ impl Mapper for Direct {
                 }
                 return MapResult::builder().c(stream).b(params.b).build();
             }
-            Err(e) => return MapResult::from_e(e),
+            Err(e) => return MapResult::from_e(e.context(format!("Direct dial {} failed", a))),
         }
     }
 }
@@ -96,7 +96,7 @@ impl Dialer {
 
         match r {
             Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
-            Err(e) => MapResult::from_e(e),
+            Err(e) => MapResult::from_e(e.context(format!("Dialer dial {} failed", dial_a))),
         }
     }
 }
@@ -191,7 +191,10 @@ impl TcpStreamGenerator {
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
     ) -> anyhow::Result<Receiver<MapResult>> {
-        let listener = listen::listen(a).await?;
+        let listener = match listen::listen(a).await {
+            Ok(l) => l,
+            Err(e) => return Err(e.context(format!("listen failed for {}", a))),
+        };
 
         let r = accept::loop_accept(listener, shutdown_rx).await;
 

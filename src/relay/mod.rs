@@ -132,7 +132,7 @@ pub async fn handle_in_accumulate_result(
     let cid = dial_result.id;
 
     if let Some(e) = dial_result.e {
-        warn!("{cid}, dial out client failed, {e}",);
+        warn!("{cid}, dial out client failed, {:#}", e);
         return Err(e);
     }
     if let Stream::None = dial_result.c {
