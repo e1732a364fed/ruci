@@ -4,6 +4,7 @@ Defines the engine to run the chain config.
 
 #[cfg(feature = "route")]
 use crate::route::{RuleSet, RuleSetOutSelector};
+use crate::utils::FileSource;
 
 use super::config::StaticConfig;
 use anyhow;
@@ -41,6 +42,8 @@ pub struct Engine {
 
     #[cfg(feature = "trace")]
     pub conn_info_updater: net::OptUpdater,
+
+    pub file_source: FileSource,
 
     inbounds: Vec<DMIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
@@ -83,6 +86,7 @@ impl Engine {
             self.default_outbound = None;
             self.tag_routes = None;
             self.gtr = Arc::<GlobalTrafficRecorder>::default();
+            self.file_source = FileSource::default();
             info!("Engine reset successful");
         } else {
             warn!("Engine is running, can't be reset. Should call stop before reset.");
@@ -95,7 +99,7 @@ impl Engine {
 
         #[cfg(feature = "route")]
         {
-            self.rule_sets = sc.get_rule_route();
+            self.rule_sets = sc.get_rule_route(&self.file_source);
         }
     }
 
@@ -106,8 +110,8 @@ impl Engine {
             .map(|v| {
                 let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
 
-                let x: DMIterBox = Box::new(DynVecIterWrapper(inbound.into_iter()));
-                x
+                let dbox: DMIterBox = Box::new(DynVecIterWrapper(inbound.into_iter()));
+                dbox
             })
             .collect();
 
@@ -119,39 +123,39 @@ impl Engine {
 
     /// finite dynamic or static, depends on the content of the lua code
     #[cfg(any(feature = "lua", feature = "lua54"))]
-    pub fn init_lua(&mut self, config_string: String) -> anyhow::Result<()> {
+    pub fn init_lua(&mut self, lua_text: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
 
         debug!("trying init_lua");
 
-        let r = lua::finite::is_finite_dynamic_available(&config_string);
+        let r = lua::finite::is_finite_dynamic_available(&lua_text);
         match r {
-            Ok(_) => self.init_lua_finite_dynamic(config_string),
-            Err(_) => self.init_lua_static(config_string),
+            Ok(_) => self.init_lua_finite_dynamic(lua_text),
+            Err(_) => self.init_lua_static(lua_text),
         }
     }
 
     /// load static chain
     #[cfg(any(feature = "lua", feature = "lua54"))]
-    pub fn init_lua_static(&mut self, config_string: String) -> anyhow::Result<()> {
+    pub fn init_lua_static(&mut self, lua_text: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
         use anyhow::Context;
         debug!("trying init_lua_static");
 
-        let sc = lua::load_static(&config_string).context("init_lua_static failed")?;
+        let sc = lua::load_static(&lua_text).context("init_lua_static failed")?;
         self.init_static(sc);
         Ok(())
     }
 
     /// load finite dynamic chain
     #[cfg(any(feature = "lua", feature = "lua54"))]
-    pub fn init_lua_finite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
+    pub fn init_lua_finite_dynamic(&mut self, lua_text: String) -> anyhow::Result<()> {
         use anyhow::Context;
 
         info!("initializing lua finite dynamic");
 
         use crate::modes::chain::config::lua;
-        let (sc, ibs, default_o, ods) = lua::finite::load_finite_dynamic(&config_string)
+        let (sc, ibs, default_o, ods) = lua::finite::load_finite_dynamic(&lua_text)
             .context("Engine::init_lua_finite_dynamic: lua::load_finite_dynamic failed")?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);
@@ -162,12 +166,12 @@ impl Engine {
 
     /// load infinite dynamic chain
     #[cfg(any(feature = "lua", feature = "lua54"))]
-    pub fn init_lua_infinite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
+    pub fn init_lua_infinite_dynamic(&mut self, lua_text: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::{dynamic::IndexInfinite, lua};
 
         info!("initializing lua infinite dynamic");
 
-        let g_maps = lua::infinite::load_infinite_io(&config_string)?;
+        let g_maps = lua::infinite::load_infinite_io(&lua_text)?;
 
         let gi = g_maps.0;
         let go = g_maps.1;

@@ -3,12 +3,47 @@ Provides some helper functions to read a certain resource file or to wait the sh
 */
 use std::io::Read;
 
-use anyhow::{anyhow, bail};
-use bytes::{Buf, BufMut, BytesMut};
+use anyhow::{anyhow, Context};
 use tokio::signal;
 use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
+
+pub enum FileSource {
+    Folders(Vec<String>), //从指定的一组路径来寻找文件
+    Tar(Vec<u8>),         // 从一个 已放到内存中的 tar 中 寻找文件
+}
+impl Default for FileSource {
+    fn default() -> Self {
+        FileSource::Folders(COMMON_DIRS.iter().map(|str| str.to_string()).collect())
+    }
+}
+
+/// 返回读到的 数据。如果 source 为 Folders ， 则还会返回 成功找到的路径
+pub fn get_file_content_from<'a>(
+    file_name: &'a str,
+    source: &'a FileSource,
+) -> anyhow::Result<(Vec<u8>, Option<&'a str>)> {
+    match source {
+        FileSource::Tar(v) => get_file_from_tar(file_name, v).map(|x| (x, None)),
+
+        FileSource::Folders(possible_addrs) => {
+            for dir in possible_addrs {
+                let real_file_name = String::from(dir) + file_name;
+
+                if std::path::Path::new(&real_file_name).exists() {
+                    if let Ok(mut file) = std::fs::File::open(real_file_name) {
+                        let mut v = vec![];
+                        file.read_to_end(&mut v)?;
+
+                        return Ok((v, Some(dir)));
+                    }
+                }
+            }
+            Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found").into())
+        }
+    }
+}
 
 /// try folders in COMMON_DIRS
 ///
@@ -21,38 +56,19 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
         None => default_file,
     };
 
-    let mut last_e: Option<std::io::Error> = None;
-    for dir in &COMMON_DIRS {
-        let file_name = String::from(*dir) + filename;
+    let fs = FileSource::default();
+    let r = get_file_content_from(filename, &fs).context("get file failed")?;
 
-        // let r = fs::read_to_string(PathBuf::from(s));
+    let mut cd = std::env::current_dir().expect("has current directory");
 
-        let file = std::fs::File::open(file_name);
+    cd.push(r.1.unwrap());
 
-        match file {
-            Ok(mut file) => {
-                let mut cd = std::env::current_dir().expect("has current directory");
-
-                cd.push(dir);
-
-                if cd.exists() {
-                    std::env::set_current_dir(cd).expect("set_current_dir ok");
-                    debug!("set current dir to {:?}", std::env::current_dir());
-                }
-
-                let mut v = vec![];
-                file.read_to_end(&mut v)?;
-
-                return Ok(v);
-            }
-            Err(e) => last_e = Some(e),
-        }
+    if cd.exists() {
+        std::env::set_current_dir(cd).expect("set_current_dir ok");
+        debug!("set current dir to {:?}", std::env::current_dir());
     }
 
-    match last_e {
-        Some(e) => Err(e.into()),
-        None => bail!("open {filename} failed and no result err"),
-    }
+    Ok(r.0)
 }
 
 /// wait for the close signal, then log and return OK.
@@ -192,26 +208,23 @@ pub use md5;
 
 pub fn tar_folder_and_compute_md5<P: AsRef<std::path::Path>>(
     src_dir: P,
-) -> std::io::Result<(BytesMut, String)> {
+) -> std::io::Result<(Vec<u8>, String)> {
     //https://crates.io/crates/tar
-    let bs = BytesMut::with_capacity(1024 * 1024);
+    let bs = vec![];
 
-    let mut tar_builder = tar::Builder::new(bs.writer());
+    let mut tar_builder = tar::Builder::new(bs);
 
     tar_builder.append_dir_all(".", src_dir)?;
 
     tar_builder.finish()?;
 
-    let bs = tar_builder.into_inner()?.into_inner();
+    let bs = tar_builder.into_inner()?;
 
     let md5_result = md5::compute(&bs);
     Ok((bs, format!("{:x}", md5_result)))
 }
 
-pub fn compress_bytesmut_to_zip(
-    buf: &BytesMut,
-    file_name_in_zip: &str,
-) -> std::io::Result<Vec<u8>> {
+pub fn compress_bytes_to_zip(file_name_in_zip: &str, buf: &[u8]) -> std::io::Result<Vec<u8>> {
     // https://github.com/zip-rs/zip2/blob/master/examples/write_sample.rs
 
     let bs = std::io::Cursor::new(Vec::new());
@@ -248,8 +261,8 @@ pub fn extract_vec_from_zip(file_name_in_zip: &str, v: Vec<u8>) -> std::io::Resu
     Ok(v)
 }
 
-pub fn get_file_from_tar(b: BytesMut, file_name: &str) -> anyhow::Result<Vec<u8>> {
-    let mut a = tar::Archive::new(b.reader());
+pub fn get_file_from_tar(file_name: &str, b: &Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    let mut a = tar::Archive::new(std::io::Cursor::new(b));
 
     let tp = std::path::Path::new(file_name);
 

@@ -162,7 +162,7 @@ impl StaticConfig {
     }
 
     #[cfg(feature = "route")]
-    pub fn get_rule_route(&self) -> Option<Vec<RuleSet>> {
+    pub fn get_rule_route(&self, file_source: &crate::utils::FileSource) -> Option<Vec<RuleSet>> {
         let mut result = self.rule_route.clone().map(|rr| {
             let x: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
             x
@@ -172,7 +172,7 @@ impl StaticConfig {
             if let Some(mut rs_v) = result {
                 use crate::route::maxmind;
 
-                let r = maxmind::open_mmdb("Country.mmdb", &crate::COMMON_DIRS);
+                let r = maxmind::open_mmdb("Country.mmdb", file_source);
                 match r {
                     Ok(m) => {
                         let am = Some(Arc::new(m));

@@ -401,7 +401,7 @@ fn test_rule_route() -> mlua::Result<()> {
     let c: StaticConfig = load_static(text)?;
 
     println!("{:#?}", c);
-    let tr = c.get_rule_route();
+    let tr = c.get_rule_route(&crate::utils::FileSource::default());
     assert!(tr.is_some());
     println!("{:#?}", tr);
 

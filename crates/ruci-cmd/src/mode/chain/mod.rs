@@ -1,11 +1,10 @@
 use anyhow::bail;
 use rucimp::{
     modes::chain::engine::Engine,
-    utils::{wait_close_sig, wait_close_sig_with_closer},
+    utils::{wait_close_sig, wait_close_sig_with_closer, FileSource},
     DEFAULT_CONFIG_FILE_NAME,
 };
 use tokio::sync::mpsc;
-use tokio_util::bytes::BytesMut;
 use tracing::{debug, info};
 
 #[cfg(feature = "api_server")]
@@ -41,46 +40,51 @@ pub(crate) async fn run(
 
         //获取到文件的 bytes, 或通过下载 或读取文件. 若 in_memory 给出则下载的文件不持久化
 
-        let file_bytes_v = if file_name.starts_with("http://") || file_name.starts_with("https://")
-        {
-            #[cfg(feature = "utils")]
-            {
-                let url: String = file_name.to_string();
+        let mut file_bytes_v =
+            if file_name.starts_with("http://") || file_name.starts_with("https://") {
+                #[cfg(feature = "utils")]
+                {
+                    let url: String = file_name.to_string();
 
-                file_name = url.split('/').last().unwrap().to_string();
+                    file_name = url.split('/').last().unwrap().to_string();
 
-                let v = match args.in_memory {
-                    true => crate::utils::dl_url(&url, None).await?.unwrap(),
-                    false => {
-                        let _ = crate::utils::dl_url(&url, Some(&file_name)).await?;
+                    let v = match args.in_memory {
+                        true => crate::utils::dl_url(&url, None).await?.unwrap(),
+                        false => {
+                            let _ = crate::utils::dl_url(&url, Some(&file_name)).await?;
 
-                        let mut v = vec![];
+                            let mut v = vec![];
 
-                        let mut file = std::fs::File::open(&file_name)?;
-                        file.read_to_end(&mut v)?;
+                            let mut file = std::fs::File::open(&file_name)?;
+                            file.read_to_end(&mut v)?;
 
-                        v
-                    }
-                };
-                v
-            }
+                            v
+                        }
+                    };
+                    v
+                }
 
-            #[cfg(not(feature = "utils"))]
-            {
+                #[cfg(not(feature = "utils"))]
+                {
+                    get_file_f()?
+                }
+            } else {
                 get_file_f()?
-            }
-        } else {
-            get_file_f()?
-        };
+            };
 
-        //zip, tar, lua 三种情况
+        //tar.zip, tar, lua 三种情况. .tar.zip 要解压成 tar 之后，按 tar 的逻辑处理
+        // 若为 tar, 则会将 Engine 的 FileSource 设为 该tar, 后续 Engine 访问文件都会只在该tar 中寻找
 
-        let contents = if file_name.ends_with(".tar.zip") {
-            todo!()
-        } else if file_name.ends_with(".tar") {
-            let b = BytesMut::from(file_bytes_v.as_slice());
+        if file_name.ends_with(".tar.zip") {
+            let real_fn = &file_name[..file_name.len() - 4];
 
-            let md5_s = format!("{:x}", rucimp::utils::md5::compute(&b));
+            file_bytes_v = rucimp::utils::extract_vec_from_zip(real_fn, file_bytes_v)?;
+
+            file_name = real_fn.to_string();
+        }
+
+        let contents = if file_name.ends_with(".tar") {
+            let md5_s = format!("{:x}", rucimp::utils::md5::compute(file_bytes_v.as_slice()));
 
             let should_be = file_name.split_once('.').unwrap().0;
 
@@ -94,8 +98,13 @@ pub(crate) async fn run(
                 debug!("md5 match")
             }
 
-            let bs = rucimp::utils::get_file_from_tar(b, DEFAULT_CONFIG_FILE_NAME)?;
-            String::from_utf8_lossy(bs.as_slice()).to_string()
+            //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua
+            let v = rucimp::utils::get_file_from_tar(DEFAULT_CONFIG_FILE_NAME, &file_bytes_v)?;
+
+            let s = String::from_utf8_lossy(v.as_slice()).to_string();
+            e.file_source = FileSource::Tar(v);
+
+            s
         } else {
             String::from_utf8_lossy(file_bytes_v.as_slice()).to_string()
         };
@@ -130,6 +139,7 @@ pub(crate) async fn run(
     Ok(())
 }
 
+/// 阻塞运行Engine, 其运行结束后 会自动对 Engine 调用 reset
 async fn run_engine(e: &mut Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow::Result<()> {
     let mut js = e.run().await?;
 

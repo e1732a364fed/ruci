@@ -40,7 +40,7 @@ pub enum Commands {
     /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
     PackZ { folder: String },
 
-    /// serve folder "static".
+    /// serve folder "static" in plain http.
     ///
     /// default listen is "0.0.0.0:18143"
     #[cfg(feature = "file_server")]
@@ -71,36 +71,20 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         #[cfg(any(feature = "lua", feature = "lua54"))]
         Commands::Repl => rucimp::utils::lua_repl(),
         Commands::Pack { folder } => {
-            info!("packing into tar...");
-            let (bs, mut md5) = rucimp::utils::tar_folder_and_compute_md5(folder)?;
-            info!("md5: {md5}");
+            let (v, md5) = pack_tar(&folder)?;
 
-            md5.push_str(".tar");
-
-            let mut file = fs::File::create(md5)?;
-            use std::io::Write;
-            file.write_all(&bs)?;
-
-            info!("saved ok");
+            write_file(v, md5)?;
         }
         Commands::PackZ { folder } => {
-            info!("packing into tar...");
-            let (bs, mut md5) = rucimp::utils::tar_folder_and_compute_md5(folder)?;
-            info!("md5: {md5}");
-
-            md5.push_str(".tar");
+            let (v, mut md5) = pack_tar(&folder)?;
 
             info!("compressing into zip...");
 
-            let data = rucimp::utils::compress_bytesmut_to_zip(&bs, &md5)?;
+            let data = rucimp::utils::compress_bytes_to_zip(&md5, &v)?;
 
             md5.push_str(".zip");
 
-            let mut file = fs::File::create(md5)?;
-            use std::io::Write;
-            file.write_all(&data)?;
-
-            info!("saved ok");
+            write_file(data, md5)?;
         }
 
         #[cfg(feature = "file_server")]
@@ -110,6 +94,22 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             let _ = rucimp::utils::wait_close_sig().await;
         } // Commands::Test => {}
     };
+    Ok(())
+}
+
+fn pack_tar(folder: &str) -> anyhow::Result<(Vec<u8>, String)> {
+    info!("packing into tar...");
+    let (bs, mut md5) = rucimp::utils::tar_folder_and_compute_md5(folder)?;
+    info!("md5: {md5}");
+
+    md5.push_str(".tar");
+    Ok((bs, md5))
+}
+fn write_file(v: Vec<u8>, name: String) -> anyhow::Result<()> {
+    let mut file = fs::File::create(&name)?;
+    use std::io::Write;
+    file.write_all(&v)?;
+    info!("saved ok, {name}");
     Ok(())
 }
 
