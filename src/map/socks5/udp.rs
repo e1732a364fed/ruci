@@ -4,7 +4,7 @@ use std::{
     net::SocketAddr,
     pin::Pin,
     sync::Arc,
-    task::{Context, Poll},
+    task::{ready, Context, Poll},
 };
 
 use tokio::{io::ReadBuf, net::UdpSocket};
@@ -92,37 +92,31 @@ impl AsyncReadAddr for Conn {
 
         let mut r_buf = ReadBuf::new(&mut new_buf);
         let r = self.base.poll_recv_from(cx, &mut r_buf);
-        match r {
-            Poll::Pending => Poll::Pending,
+        match ready!(r) {
+            Err(e) => Poll::Ready(Err(e)),
+            Ok(so) => {
+                if !eq_socket_addr(&so, &self.peer_soa) {
+                    // 读到不来自peer的信息时不报错, 直接舍弃
+                    info!("socks5 udp got msg not from peer, will ignore discard it. is: {:?}, should be: {:?}", so, self.peer_soa);
+                    return Poll::Pending;
+                }
 
-            Poll::Ready(r) => {
+                let bs = r_buf.filled();
+
+                let r = decode_read(bs);
+
                 match r {
-                    Err(e) => Poll::Ready(Err(e)),
-                    Ok(so) => {
-                        if !eq_socket_addr(&so, &self.peer_soa) {
-                            // 读到不来自peer的信息时不报错, 直接舍弃
-                            info!("socks5 udp got msg not from peer, will ignore discard it. is: {:?}, should be: {:?}", so, self.peer_soa);
-                            return Poll::Pending;
-                        }
+                    Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
 
-                        let bs = r_buf.filled();
+                    Ok((mut actual_buf, a)) => {
+                        let w_len = min(buf.len(), actual_buf.len());
+                        actual_buf.copy_to_slice(&mut buf[..w_len]);
 
-                        let r = decode_read(bs);
+                        // if tracing::enabled!(tracing::Level::DEBUG)  {
+                        //     debug!("socks5 udp got msg,{w_len} {soa}, {:?}", &buf[..w_len])
+                        // }
 
-                        match r {
-                            Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
-
-                            Ok((mut actual_buf, a)) => {
-                                let w_len = min(buf.len(), actual_buf.len());
-                                actual_buf.copy_to_slice(&mut buf[..w_len]);
-
-                                // if tracing::enabled!(tracing::Level::DEBUG)  {
-                                //     debug!("socks5 udp got msg,{w_len} {soa}, {:?}", &buf[..w_len])
-                                // }
-
-                                Poll::Ready(Ok::<(usize, net::Addr), io::Error>((w_len, a)))
-                            }
-                        }
+                        Poll::Ready(Ok::<(usize, net::Addr), io::Error>((w_len, a)))
                     }
                 }
             }

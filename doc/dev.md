@@ -28,6 +28,5 @@ macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关
      2. 转为 AsyncConn 后 用 tokio 的 split
      3. 转为 Frame 后 分成 sink 和 stream
     
-实测第一种情况 会在 向 tun 写入时卡住, 第2、3种情况效果相同。
-但是都卡顿,效果与 smoltcp 类似.因此认为是tun 包的问题,与 tcp/ip 栈无关
+实测3种情况效果相同 但是都卡顿, 且 无论是 netstack-lwip 还是 smoltcp 都有此问题。因此认为是tun 包的问题,与 tcp/ip 栈无关
 

@@ -11,6 +11,7 @@ use std::io;
 use std::os::raw::c_void;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::task::ready;
 use std::task::Context;
 use std::task::Poll;
 
@@ -420,12 +421,9 @@ impl AsyncWrite for LuaConn {
 
         let pr: Poll<Result<(), LuaError>> = Future::poll(std::pin::pin!(f), cx);
 
-        match pr {
-            Poll::Ready(r) => match r {
-                Ok(_) => Poll::Ready(Ok(())),
-                Err(e) => Poll::Ready(Err(io::Error::other(e))),
-            },
-            Poll::Pending => Poll::Pending,
+        match ready!(pr) {
+            Ok(_) => Poll::Ready(Ok(())),
+            Err(e) => Poll::Ready(Err(io::Error::other(e))),
         }
     }
 
@@ -441,12 +439,9 @@ impl AsyncWrite for LuaConn {
 
         let pr: Poll<Result<(), LuaError>> = Future::poll(std::pin::pin!(f), cx);
 
-        match pr {
-            Poll::Ready(r) => match r {
-                Ok(_) => Poll::Ready(Ok(())),
-                Err(e) => Poll::Ready(Err(io::Error::other(e))),
-            },
-            Poll::Pending => Poll::Pending,
+        match ready!(pr) {
+            Ok(_) => Poll::Ready(Ok(())),
+            Err(e) => Poll::Ready(Err(io::Error::other(e))),
         }
     }
 }

@@ -7,6 +7,7 @@ use crate::utils::io_error;
 use super::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use super::*;
 use std::io;
+use std::task::ready;
 use std::{
     pin::Pin,
     task::{Context, Poll},
@@ -140,26 +141,23 @@ impl AsyncWriteAddr for Conn {
         } else {
             let sor_f = addr.get_socket_addr_or_resolve(self.opt_dns_client.as_deref());
             let pr = std::future::Future::poll(std::pin::pin!(sor_f), cx);
-            match pr {
-                Poll::Ready(sor) => match sor {
-                    Ok(so) => {
-                        if let Mode::FixTargetListen = self.mode {
-                            let laddr = match &self.last_laddr {
-                                Some(a) => a.read().get_socket_addr().unwrap(),
-                                None => {
-                                    return Poll::Ready(Err(io_error(
-                                        "udp write mode FixTargetListen, no last_laddr",
-                                    )))
-                                }
-                            };
-                            self.u.poll_send_to(cx, buf, laddr)
-                        } else {
-                            self.u.poll_send_to(cx, buf, so)
-                        }
+            match ready!(pr) {
+                Ok(so) => {
+                    if let Mode::FixTargetListen = self.mode {
+                        let laddr = match &self.last_laddr {
+                            Some(a) => a.read().get_socket_addr().unwrap(),
+                            None => {
+                                return Poll::Ready(Err(io_error(
+                                    "udp write mode FixTargetListen, no last_laddr",
+                                )))
+                            }
+                        };
+                        self.u.poll_send_to(cx, buf, laddr)
+                    } else {
+                        self.u.poll_send_to(cx, buf, so)
                     }
-                    Err(e) => Poll::Ready(Err(io::Error::other(e))),
-                },
-                Poll::Pending => Poll::Pending,
+                }
+                Err(e) => Poll::Ready(Err(io::Error::other(e))),
             }
         }
     }
@@ -174,40 +172,34 @@ impl AsyncReadAddr for Conn {
         let mut r_buf = ReadBuf::new(buf);
         if let Some(pa) = self.peer_addr.as_ref() {
             let r = self.u.poll_recv(cx, &mut r_buf);
-            match r {
-                Poll::Ready(r) => match r {
-                    Ok(_) => {
-                        let r_len = r_buf.filled().len();
-                        //trace!("udp with peer_addr read got {}", r_len);
+            match ready!(r) {
+                Ok(_) => {
+                    let r_len = r_buf.filled().len();
+                    //trace!("udp with peer_addr read got {}", r_len);
 
-                        Poll::Ready(Ok((r_len, pa.clone())))
-                    }
-                    Err(e) => Poll::Ready(Err(e)),
-                },
-                Poll::Pending => Poll::Pending,
+                    Poll::Ready(Ok((r_len, pa.clone())))
+                }
+                Err(e) => Poll::Ready(Err(e)),
             }
         } else {
             let r = self.u.poll_recv_from(cx, &mut r_buf);
-            match r {
-                Poll::Ready(r) => match r {
-                    Ok(so) => {
-                        let r_len = r_buf.filled().len();
-                        //trace!("udp read got {} {so}", r_len);
+            match ready!(r) {
+                Ok(so) => {
+                    let r_len = r_buf.filled().len();
+                    //trace!("udp read got {} {so}", r_len);
 
-                        let addr = crate::net::Addr {
-                            addr: NetAddr::Socket(so),
-                            network: Network::UDP,
-                        };
-                        if let Mode::FixTargetListen = self.mode {
-                            let mut mg = self.last_laddr.as_mut().unwrap().write();
-                            *mg = addr.clone()
-                        }
-
-                        Poll::Ready(Ok((r_len, addr)))
+                    let addr = crate::net::Addr {
+                        addr: NetAddr::Socket(so),
+                        network: Network::UDP,
+                    };
+                    if let Mode::FixTargetListen = self.mode {
+                        let mut mg = self.last_laddr.as_mut().unwrap().write();
+                        *mg = addr.clone()
                     }
-                    Err(e) => Poll::Ready(Err(e)),
-                },
-                Poll::Pending => Poll::Pending,
+
+                    Poll::Ready(Ok((r_len, addr)))
+                }
+                Err(e) => Poll::Ready(Err(e)),
             }
         }
     }

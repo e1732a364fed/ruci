@@ -5,7 +5,7 @@ use std::{
     net::SocketAddr,
     pin::Pin,
     sync::Arc,
-    task::{Context, Poll},
+    task::{ready, Context, Poll},
 };
 
 use bytes::{Buf, BytesMut};
@@ -278,23 +278,20 @@ impl AsyncReadAddr for Reader {
                     let r = self.rx.poll_recv(cx);
                     trace!("udp_fix,read,Rx,{r:?}");
 
-                    match r {
-                        Poll::Ready(rx) => match rx {
-                            Some(b) => {
-                                trace!("udp_fix,read,Rx, {}", b.len());
+                    match ready!(r) {
+                        Some(b) => {
+                            trace!("udp_fix,read,Rx, {}", b.len());
 
-                                //debug!("udp_fixed r read got {}", b.len());
-                                self.last_buf = Some(b);
-                                self.state = ReadState::Buf;
-                            }
-                            None => {
-                                return Poll::Ready(Err(io::Error::new(
-                                    io::ErrorKind::ConnectionAborted,
-                                    "udp_fixed_r r closed",
-                                )))
-                            }
-                        },
-                        Poll::Pending => return Poll::Pending,
+                            //debug!("udp_fixed r read got {}", b.len());
+                            self.last_buf = Some(b);
+                            self.state = ReadState::Buf;
+                        }
+                        None => {
+                            return Poll::Ready(Err(io::Error::new(
+                                io::ErrorKind::ConnectionAborted,
+                                "udp_fixed_r r closed",
+                            )))
+                        }
                     }
                 }
             } //match

@@ -9,7 +9,7 @@ use std::{
     net::SocketAddr,
     pin::Pin,
     sync::{atomic::AtomicBool, Arc},
-    task::{Context, Poll},
+    task::{ready, Context, Poll},
 };
 
 use bytes::BytesMut;
@@ -324,21 +324,18 @@ impl AsyncReadAddr for Reader {
                 }
                 ReadState::Rx => {
                     let r = self.rx.poll_recv(cx);
-                    match r {
-                        Poll::Ready(rx) => match rx {
-                            Some(b) => {
-                                //debug!("tproxy_udp r read got {}", b.len());
-                                self.last_buf = Some(b);
-                                self.state = ReadState::Buf;
-                            }
-                            None => {
-                                return Poll::Ready(Err(io::Error::new(
-                                    io::ErrorKind::ConnectionAborted,
-                                    "tproxy_udp read got rx closed",
-                                )))
-                            }
-                        },
-                        Poll::Pending => return Poll::Pending,
+                    match ready!(r) {
+                        Some(b) => {
+                            //debug!("tproxy_udp r read got {}", b.len());
+                            self.last_buf = Some(b);
+                            self.state = ReadState::Buf;
+                        }
+                        None => {
+                            return Poll::Ready(Err(io::Error::new(
+                                io::ErrorKind::ConnectionAborted,
+                                "tproxy_udp read got rx closed",
+                            )))
+                        }
                     }
                 }
             } //match

@@ -2,7 +2,12 @@
 Defines some address related helper functions, some wrappers that wraps AsyncConn to provide more features, and some fake Stream implementations for debugging.
  */
 
-use std::{io, net::Ipv4Addr, pin::Pin, task::Poll};
+use std::{
+    io,
+    net::Ipv4Addr,
+    pin::Pin,
+    task::{ready, Poll},
+};
 
 use crate::Name;
 
@@ -124,19 +129,16 @@ impl AsyncRead for MpscRWrapper {
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         let r = Pin::new(&mut self.r).poll_recv(cx);
-        match r {
-            Poll::Ready(r) => match r {
-                Some(mut b) => {
-                    b.truncate(buf.capacity());
-                    buf.put(b);
-                    Poll::Ready(Ok(()))
-                }
-                None => Poll::Ready(Err(io::Error::new(
-                    io::ErrorKind::ConnectionAborted,
-                    "MpscRWrapper r got none",
-                ))),
-            },
-            Poll::Pending => Poll::Pending,
+        match ready!(r) {
+            Some(mut b) => {
+                b.truncate(buf.capacity());
+                buf.put(b);
+                Poll::Ready(Ok(()))
+            }
+            None => Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::ConnectionAborted,
+                "MpscRWrapper r got none",
+            ))),
         }
     }
 }
@@ -309,22 +311,19 @@ impl AsyncRead for PrintWrapper {
     ) -> Poll<io::Result<()>> {
         let r = self.base.as_mut().poll_read(cx, buf);
 
-        match &r {
-            Poll::Ready(r) => match r {
-                Ok(_) => {
-                    let slice = buf.filled();
-                    let sl = slice.len();
-                    debug!(
-                        "read: {} {}",
-                        sl,
-                        String::from_utf8_lossy(&slice[..min(sl, 64)])
-                    )
-                }
-                Err(e) => {
-                    debug!("PrintWrapper read got e: {e}")
-                }
-            },
-            Poll::Pending => {}
+        match ready!(&r) {
+            Ok(_) => {
+                let slice = buf.filled();
+                let sl = slice.len();
+                debug!(
+                    "read: {} {}",
+                    sl,
+                    String::from_utf8_lossy(&slice[..min(sl, 64)])
+                )
+            }
+            Err(e) => {
+                debug!("PrintWrapper read got e: {e}")
+            }
         }
 
         r
@@ -339,38 +338,35 @@ impl AsyncWrite for PrintWrapper {
     ) -> Poll<io::Result<usize>> {
         let r = self.base.as_mut().poll_write(cx, buf);
         const MAX_DISPLAY_LEN: usize = 64;
-        match &r {
-            Poll::Ready(r) => match r {
-                Ok(n) => match self.mode {
-                    BytesDisplayMode::UTF8 => {
-                        debug!(
-                            "write: {}, {}",
-                            *n,
-                            String::from_utf8_lossy(&buf[..min(*n, MAX_DISPLAY_LEN)])
-                        )
-                    }
-                    BytesDisplayMode::Bytes => {
-                        let buf = crate::utils::HexSlice(&buf[..min(*n, MAX_DISPLAY_LEN)]);
-                        let str = format!("{buf}");
-                        debug!("write: {}, {str}", *n,)
-                    }
-                },
-                Err(e) => match self.mode {
-                    BytesDisplayMode::UTF8 => {
-                        debug!(
-                            "PrintWrapper write got e:{} {}, {e}",
-                            buf.len(),
-                            String::from_utf8_lossy(&buf[..min(buf.len(), MAX_DISPLAY_LEN)])
-                        );
-                    }
-                    BytesDisplayMode::Bytes => {
-                        let buf2 = crate::utils::HexSlice(buf);
-                        let str = format!("{buf2}");
-                        debug!("PrintWrapper write got e:{} {}, {e}", buf.len(), str,)
-                    }
-                },
+        match ready!(&r) {
+            Ok(n) => match self.mode {
+                BytesDisplayMode::UTF8 => {
+                    debug!(
+                        "write: {}, {}",
+                        *n,
+                        String::from_utf8_lossy(&buf[..min(*n, MAX_DISPLAY_LEN)])
+                    )
+                }
+                BytesDisplayMode::Bytes => {
+                    let buf = crate::utils::HexSlice(&buf[..min(*n, MAX_DISPLAY_LEN)]);
+                    let str = format!("{buf}");
+                    debug!("write: {}, {str}", *n,)
+                }
             },
-            Poll::Pending => {}
+            Err(e) => match self.mode {
+                BytesDisplayMode::UTF8 => {
+                    debug!(
+                        "PrintWrapper write got e:{} {}, {e}",
+                        buf.len(),
+                        String::from_utf8_lossy(&buf[..min(buf.len(), MAX_DISPLAY_LEN)])
+                    );
+                }
+                BytesDisplayMode::Bytes => {
+                    let buf2 = crate::utils::HexSlice(buf);
+                    let str = format!("{buf2}");
+                    debug!("PrintWrapper write got e:{} {}, {e}", buf.len(), str,)
+                }
+            },
         };
 
         r

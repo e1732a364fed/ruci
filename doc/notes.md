@@ -1,3 +1,5 @@
+本文档是一个很长的文本文件，分为 user note , lib note 和 dev note 三部分
+
 # user note 
 
 链式配置中, 每条链都必须标一个 tag
@@ -489,7 +491,7 @@ https://docs.rs/futures/latest/futures/index.html
 
 ### vscode 中为 rust-analyzer 启用feature:
 
-创建 .vscode/settings.json
+创建 .vscode/settings.json , 内容如下：
 
 ```json
 {
@@ -560,4 +562,8 @@ smoltcp 代码参考了 trojan-rs.
 
 ruci 项目架构与运行逻辑 参考了 ruci 的前身项目 verysimple。（ruci 乃 rucimple 缩写）
 
+没有ruci 所参考的其它项目 与引用的依赖，就不可能有 ruci 项目。在此对所有相关项目表示感谢。
 
+整个项目中所应用的 rust 代码较为初级，实属一个初学者所创建的项目，故错误百出。且代码文档中英混用，不是一个国际项目。
+故明显不应在真实的生产环境下使用，也不应对本项目作任何宣传。不过也许对一些看到本项目的人有一定的参考价值。
+如果您发现了本项目的任何问题，还望多发issue, 共同提高。

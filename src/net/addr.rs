@@ -37,7 +37,7 @@ pub fn gen_random_higher_port() -> u16 {
 
 /// work better than use a.eq(b).
 ///
-/// it checks if a or b is unspecified (this will be equal too)
+/// If a and b are all unspecified then `true` will also be returned)
 ///
 pub fn eq_socket_addr(a: &SocketAddr, b: &SocketAddr) -> bool {
     if a.eq(b) {
@@ -672,23 +672,23 @@ impl Display for Addr {
     }
 }
 
-pub struct OptAddrRef<'a>(pub &'a Option<Addr>);
-pub struct OptAddr(pub Option<Addr>);
+// pub struct OptAddrRef<'a>(pub &'a Option<Addr>);
+// pub struct OptAddr(pub Option<Addr>);
 
-impl Display for OptAddr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.0 {
-            Some(value) => write!(f, "{}", value),
-            None => write!(f, "EmptyAddr"),
-        }
-    }
-}
+// impl Display for OptAddr {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         match &self.0 {
+//             Some(value) => write!(f, "{}", value),
+//             None => write!(f, "EmptyAddr"),
+//         }
+//     }
+// }
 
-impl<'a> Display for OptAddrRef<'a> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.0 {
-            Some(value) => write!(f, "{}", value),
-            None => write!(f, "EmptyAddr"),
-        }
-    }
-}
+// impl<'a> Display for OptAddrRef<'a> {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         match &self.0 {
+//             Some(value) => write!(f, "{}", value),
+//             None => write!(f, "EmptyAddr"),
+//         }
+//     }
+// }

@@ -7,7 +7,10 @@ Defines a [`Map`] that writes and reads stdio (标准输入输出, 即命令行)
 use crate::map;
 use async_trait::async_trait;
 use macro_map::{map_ext_fields, MapExt};
-use std::{pin::Pin, task::Poll};
+use std::{
+    pin::Pin,
+    task::{ready, Poll},
+};
 use tracing::debug;
 
 use crate::{net::CID, Name};
@@ -77,18 +80,15 @@ impl AsyncWrite for Conn {
             }
         };
 
-        match r {
-            Poll::Ready(r) => match r {
-                Ok(u) => {
-                    if sb_len == u {
-                        Poll::Ready(Ok(old_len))
-                    } else {
-                        Poll::Ready(Ok(old_len - sb_len + u))
-                    }
+        match ready!(r) {
+            Ok(u) => {
+                if sb_len == u {
+                    Poll::Ready(Ok(old_len))
+                } else {
+                    Poll::Ready(Ok(old_len - sb_len + u))
                 }
-                Err(e) => Poll::Ready(Err(e)),
-            },
-            Poll::Pending => Poll::Pending,
+            }
+            Err(e) => Poll::Ready(Err(e)),
         }
     }
 

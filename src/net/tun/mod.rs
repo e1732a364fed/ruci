@@ -1,5 +1,5 @@
 /*!
-Defines an adapter for tun2 to create the tun device.
+Defines an adapter for crate `tun` to create the tun device.
 
 It also has a submodule 'route' for system level auto routing for the tun device.
 */

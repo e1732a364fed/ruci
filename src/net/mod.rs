@@ -259,17 +259,19 @@ impl CID {
 }
 
 /// Receiver 中的元素为 MapResult, 是为了
-///
-/// 方便传递其它信息, 如 RLAddr 由 MapResult.d 标识, 见
+/// 方便传递其它信息, 如 `RLAddr` 由 `MapResult.d` 标识, 见
 ///
 /// [`crate::map::network::accept`]
 pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 
+/// 与 [`Conn`] 类似，不过 RW 是 已经分裂好的，这就避免了以用 tokio::io::split
+/// 时引入了锁 而 降低性能的问题
 pub type RW = (
     Box<dyn AsyncRead + Unpin + Send + Sync>,
     Box<dyn AsyncWrite + Unpin + Send + Sync>,
 );
 
+/// it calls `tokio::io::split` then wraps as Box and then wraps as [`RW`].
 pub fn split(conn: Conn) -> RW {
     let (r, w) = tokio::io::split(conn);
     (Box::new(r), Box::new(w))

@@ -2,7 +2,7 @@ use std::{
     cmp::max,
     io,
     pin::Pin,
-    task::{Context, Poll},
+    task::{ready, Context, Poll},
 };
 
 use bytes::{Buf, BufMut, BytesMut};
@@ -98,35 +98,29 @@ impl AsyncReadAddr for Reader {
 
                     //debug!("trojan reader read called");
 
-                    match re.0 {
-                        Poll::Pending => {
-                            return Poll::Pending;
-                        }
+                    match ready!(re.0) {
+                        Ok(_) => {
+                            let data_len = re.1;
+                            //debug!("trojan read base got {}", data_len);
 
-                        Poll::Ready(r) => match r {
-                            Ok(_) => {
-                                let data_len = re.1;
-                                //debug!("trojan read base got {}", data_len);
+                            if data_len == 0 {
+                                return Poll::Ready(Err(io::Error::new(
+                                    io::ErrorKind::BrokenPipe,
+                                    "trojan read base got 0",
+                                )));
+                            } else {
+                                self.buf.truncate(data_len);
 
-                                if data_len == 0 {
-                                    return Poll::Ready(Err(io::Error::new(
-                                        io::ErrorKind::BrokenPipe,
-                                        "trojan read base got 0",
-                                    )));
+                                if self.left_data_len > 0 {
+                                    self.state = ReadState::LeftBuf;
                                 } else {
-                                    self.buf.truncate(data_len);
-
-                                    if self.left_data_len > 0 {
-                                        self.state = ReadState::LeftBuf;
-                                    } else {
-                                        self.state = ReadState::Buf;
-                                    }
+                                    self.state = ReadState::Buf;
                                 }
                             }
-                            Err(e) => {
-                                return Poll::Ready(Err(e));
-                            }
-                        },
+                        }
+                        Err(e) => {
+                            return Poll::Ready(Err(e));
+                        }
                     }
                 }
                 ReadState::Buf => {
@@ -297,28 +291,24 @@ impl AsyncWriteAddr for Writer {
         buf2.clear();
         self.last_buf = Some(buf2);
 
-        match r {
-            Poll::Pending => Poll::Pending,
+        match ready!(r) {
+            Ok(n) => match n.cmp(&actual_l) {
+                std::cmp::Ordering::Less => {
+                    let diff = actual_l - n;
+                    debug!(
+                        "trojan writer write got short write {} {} {}",
+                        actual_l, n, diff
+                    );
 
-            Poll::Ready(r) => match r {
-                Ok(n) => match n.cmp(&actual_l) {
-                    std::cmp::Ordering::Less => {
-                        let diff = actual_l - n;
-                        debug!(
-                            "trojan writer write got short write {} {} {}",
-                            actual_l, n, diff
-                        );
-
-                        Poll::Ready(Ok(data_l - diff))
-                    }
-                    std::cmp::Ordering::Equal => Poll::Ready(Ok(data_l)),
-                    std::cmp::Ordering::Greater => Poll::Ready(Err(io_error(format!(
-                        "trojan udp write got impossible n > actual_l, {} {}",
-                        n, actual_l
-                    )))),
-                },
-                Err(e) => Poll::Ready(Err(e)),
+                    Poll::Ready(Ok(data_l - diff))
+                }
+                std::cmp::Ordering::Equal => Poll::Ready(Ok(data_l)),
+                std::cmp::Ordering::Greater => Poll::Ready(Err(io_error(format!(
+                    "trojan udp write got impossible n > actual_l, {} {}",
+                    n, actual_l
+                )))),
             },
+            Err(e) => Poll::Ready(Err(e)),
         }
     }
 

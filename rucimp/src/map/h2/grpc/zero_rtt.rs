@@ -94,16 +94,13 @@ impl AsyncRead for Stream {
                     rv
                 } else {
                     let r = self.resp_f.as_mut().unwrap().poll(cx);
-                    match r {
-                        Poll::Ready(r) => match r {
-                            Ok(r) => {
-                                self.recv = Some(r.into_body());
-                                self.resp_f = None;
-                                self.recv.as_mut().unwrap()
-                            }
-                            Err(e) => return Poll::Ready(Err(io_error(e.to_string()))),
-                        },
-                        Poll::Pending => return Poll::Pending,
+                    match ready!(r) {
+                        Ok(r) => {
+                            self.recv = Some(r.into_body());
+                            self.resp_f = None;
+                            self.recv.as_mut().unwrap()
+                        }
+                        Err(e) => return Poll::Ready(Err(io_error(e.to_string()))),
                     }
                 };
                 ready!(rv.poll_data(cx))
