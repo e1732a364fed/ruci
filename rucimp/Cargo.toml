@@ -60,7 +60,7 @@ webpki-roots = { version = "0.22.6", optional = true }
 
 quinn = { version = "0.10.2", optional = true }
 
-s2n-quic = { version = "1", default-features = false, features = [
+s2n-quic = { version = "=1.34.0", default-features = false, features = [
     "provider-address-token-default",
     "provider-tls-rustls",
 ], optional = true }

@@ -2358,7 +2358,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
- "rustls-pemfile 1.0.4",
+ "rustls-pemfile",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -2446,7 +2446,7 @@ dependencies = [
  "pin-project-lite",
  "rand 0.8.5",
  "rustls 0.22.4",
- "rustls-pemfile 1.0.4",
+ "rustls-pemfile",
  "scopeguard",
  "serde",
  "sha2",
@@ -2516,9 +2516,9 @@ dependencies = [
  "rlimit",
  "ruci",
  "rustls 0.21.12",
- "rustls-pemfile 1.0.4",
+ "rustls-pemfile",
  "s2n-quic",
- "s2n-quic-rustls 0.34.0",
+ "s2n-quic-rustls",
  "serde",
  "serde_json",
  "smoltcp",
@@ -2593,28 +2593,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustls"
-version = "0.23.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c58f8c84392efc0a126acce10fa59ff7b3d2ac06ab451a33f2741989b806b044"
-dependencies = [
- "aws-lc-rs",
- "log",
- "once_cell",
- "rustls-pki-types",
- "rustls-webpki 0.102.6",
- "subtle",
- "zeroize",
-]
-
-[[package]]
 name = "rustls-native-certs"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9aace74cb666635c918e9c12bc0d348266037aa8eb599b5cba565709a8dff00"
 dependencies = [
  "openssl-probe",
- "rustls-pemfile 1.0.4",
+ "rustls-pemfile",
  "schannel",
  "security-framework",
 ]
@@ -2626,16 +2611,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c74cae0a4cf6ccbbf5f359f08efdf8ee7e1dc532573bf0db71968cb56b1448c"
 dependencies = [
  "base64 0.21.7",
-]
-
-[[package]]
-name = "rustls-pemfile"
-version = "2.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29993a25686778eb88d4189742cd713c9bce943bc54251a33509dc63cbacf73d"
-dependencies = [
- "base64 0.22.1",
- "rustls-pki-types",
 ]
 
 [[package]]
@@ -2660,7 +2635,6 @@ version = "0.102.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e6b52d4fda176fd835fdc55a835d4a89b8499cad995885a21149d5ad62f852e"
 dependencies = [
- "aws-lc-rs",
  "ring 0.17.8",
  "rustls-pki-types",
  "untrusted 0.9.0",
@@ -2685,25 +2659,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "205561de389f2fa82b645aeba11bccfa6aca15443fea02b5f2b2883df65cd330"
 dependencies = [
  "byteorder",
- "zerocopy",
-]
-
-[[package]]
-name = "s2n-codec"
-version = "0.43.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "040317c98aabdc7f648d8904e2856c766fd6edb52dcc4258b876758f534f560f"
-dependencies = [
- "byteorder",
  "bytes",
  "zerocopy",
 ]
 
 [[package]]
 name = "s2n-quic"
-version = "1.43.0"
+version = "1.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa3f30313aa72cab43daa46ca42e3586988f34136a2059e1e0586d8e42a618aa"
+checksum = "bf9b26e3c0206360a6317d4e4f27c86002b9095e84b452a683d96f986e0ad666"
 dependencies = [
  "bytes",
  "cfg-if",
@@ -2712,11 +2676,11 @@ dependencies = [
  "hash_hasher",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
- "s2n-codec 0.43.0",
- "s2n-quic-core 0.43.0",
- "s2n-quic-crypto 0.43.0",
+ "s2n-codec",
+ "s2n-quic-core",
+ "s2n-quic-crypto",
  "s2n-quic-platform",
- "s2n-quic-rustls 0.43.0",
+ "s2n-quic-rustls",
  "s2n-quic-transport",
  "tokio",
  "zerocopy",
@@ -2737,29 +2701,9 @@ dependencies = [
  "hex-literal",
  "num-rational",
  "num-traits",
- "pin-project-lite",
- "s2n-codec 0.34.0",
- "subtle",
- "zerocopy",
-]
-
-[[package]]
-name = "s2n-quic-core"
-version = "0.43.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "478797df7c39635a109900ccdcd1616120ccd2c25715ee7af0caaf2ff628e103"
-dependencies = [
- "atomic-waker",
- "byteorder",
- "bytes",
- "cfg-if",
- "crossbeam-utils",
- "hex-literal",
- "num-rational",
- "num-traits",
  "once_cell",
  "pin-project-lite",
- "s2n-codec 0.43.0",
+ "s2n-codec",
  "subtle",
  "zerocopy",
 ]
@@ -2774,37 +2718,22 @@ dependencies = [
  "cfg-if",
  "lazy_static",
  "ring 0.16.20",
- "s2n-codec 0.34.0",
- "s2n-quic-core 0.34.0",
- "zeroize",
-]
-
-[[package]]
-name = "s2n-quic-crypto"
-version = "0.43.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5257f6ae9aa6034a4b4dabf579f37e05db9d7682024b3fd33cbe23f9ff814bf3"
-dependencies = [
- "aws-lc-rs",
- "cfg-if",
- "lazy_static",
- "ring 0.16.20",
- "s2n-codec 0.43.0",
- "s2n-quic-core 0.43.0",
+ "s2n-codec",
+ "s2n-quic-core",
  "zeroize",
 ]
 
 [[package]]
 name = "s2n-quic-platform"
-version = "0.43.0"
+version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbbdae2a7f06948b8c49b47f16d08a7c4ab6d90c501339c9aefbd27170e0341d"
+checksum = "205dd85d25ec826477ffe50d6de2a66a5be852caefb5dcad7bdf7b5ccc6f12ca"
 dependencies = [
  "cfg-if",
  "futures",
  "lazy_static",
  "libc",
- "s2n-quic-core 0.43.0",
+ "s2n-quic-core",
  "socket2",
  "tokio",
 ]
@@ -2817,31 +2746,17 @@ checksum = "ffa23e0512dd773341b7d257232c6b70eeacd3214ecb3388b4add608649fd5b9"
 dependencies = [
  "bytes",
  "rustls 0.21.12",
- "rustls-pemfile 1.0.4",
- "s2n-codec 0.34.0",
- "s2n-quic-core 0.34.0",
- "s2n-quic-crypto 0.34.0",
-]
-
-[[package]]
-name = "s2n-quic-rustls"
-version = "0.43.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c58bbe3fe19470f711f3c713814576741c3b18b0d60c5082d1daa606e8cf70b3"
-dependencies = [
- "bytes",
- "rustls 0.23.12",
- "rustls-pemfile 2.1.2",
- "s2n-codec 0.43.0",
- "s2n-quic-core 0.43.0",
- "s2n-quic-crypto 0.43.0",
+ "rustls-pemfile",
+ "s2n-codec",
+ "s2n-quic-core",
+ "s2n-quic-crypto",
 ]
 
 [[package]]
 name = "s2n-quic-transport"
-version = "0.43.0"
+version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c09952cb869eda37280fb06df1534772478bb5f5abac3dd48b228c97b35c6ba3"
+checksum = "1cdaaa23b51e1515cc81a1628af53b5a9d01590be99b97b7f84e3cd242eaa6f8"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -2849,8 +2764,8 @@ dependencies = [
  "hashbrown",
  "intrusive-collections",
  "once_cell",
- "s2n-codec 0.43.0",
- "s2n-quic-core 0.43.0",
+ "s2n-codec",
+ "s2n-quic-core",
  "siphasher",
  "smallvec",
 ]
