@@ -16,7 +16,7 @@ use rucimp::{
     suit::engine2::SuitEngine,
 };
 
-/// 使用 config.suit.toml, resource/config.suit.toml, 或 用户提供的参数作为配置文件
+/// 使用 config.suit.toml, resource/local.suit.toml, 或 用户提供的参数作为配置文件
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("rucimp~ suit2\n");

@@ -57,7 +57,7 @@ impl StaticEngine {
     }
 
     /// non-blocking
-    pub async fn run(&'static mut self) -> io::Result<()> {
+    pub async fn run(&self) -> io::Result<()> {
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
                 tokio::spawn(task.0);
@@ -68,7 +68,7 @@ impl StaticEngine {
 
     /// blocking
     pub async fn block_run(
-        &'static mut self,
+        &self,
     ) -> io::Result<Vec<Result<io::Result<()>, tokio::task::JoinError>>> {
         let mut hv = Vec::new();
         self.start_with_tasks().await.map(|tasks| {
@@ -82,7 +82,7 @@ impl StaticEngine {
     }
 
     pub async fn start_with_tasks(
-        &'static mut self,
+        &self,
     ) -> std::io::Result<
         Vec<(
             impl Future<Output = Result<(), std::io::Error>>,
@@ -107,13 +107,13 @@ impl StaticEngine {
 
         let out_selector = self.get_out_selector();
 
-        self.inbounds.iter().for_each(|inmappers| {
+        self.inbounds.clone().into_iter().for_each(|inmappers| {
             let (tx, rx) = oneshot::channel();
 
             let (atx, arx) = mpsc::channel(100); //todo: change this
 
             let oti = self.ti.clone();
-            let t1 = async {
+            let t1 = async move {
                 acc2::accumulate_from_start(atx, rx, inmappers.clone(), Some(oti)).await;
                 Ok(())
             };
@@ -149,14 +149,14 @@ impl StaticEngine {
         Ok(())
     }
 
-    fn get_out_selector(&mut self) -> Arc<Box<dyn OutSelector>> {
+    fn get_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
         if self.tag_routes.is_some() {
             self.get_tag_route_out_selector()
         } else {
             self.get_fixed_out_selector()
         }
     }
-    fn get_tag_route_out_selector(&mut self) -> Arc<Box<dyn OutSelector>> {
+    fn get_tag_route_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
         let t = TagOutSelector {
             outbounds_tag_route_map: self.tag_routes.clone().expect("has tag_routes"),
             outbounds_map: self.outbounds.clone(),
@@ -166,7 +166,7 @@ impl StaticEngine {
         Arc::new(Box::new(t))
     }
 
-    fn get_fixed_out_selector(&mut self) -> Arc<Box<dyn OutSelector>> {
+    fn get_fixed_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
         let ib = self.default_outbound.clone().expect("has default_outbound");
         let fixed_selector = FixedOutSelector { default: ib };
 
