@@ -25,7 +25,8 @@ pub struct CommonConfig {
 
 const MAX_PARSE_URL_LEN: usize = 3000;
 const HEADER_ENDING_BYTES: &[u8] = b"\r\n\r\n";
-const HEADER_ENDING_STR: &str = "\r\n\r\n";
+pub const HEADER_ENDING_STR: &str = "\r\n\r\n";
+const HEADER_SPLIT_STR: &str = "\r\n";
 const HEADER_ENDING_BYTES_LEN: usize = HEADER_ENDING_BYTES.len();
 
 #[derive(Debug)]
@@ -242,11 +243,11 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
 
                 let header_string = String::from_utf8_lossy(header_bytes);
 
-                let header_str_list: Vec<&str> = header_string.split(HEADER_ENDING_STR).collect();
+                let header_str_list: Vec<&str> = header_string.split(HEADER_SPLIT_STR).collect();
 
                 for header in header_str_list {
                     let hs = header.to_string();
-                    let ss: Vec<&str> = hs.splitn(2, ':').collect();
+                    let ss: Vec<&str> = hs.splitn(2, ": ").collect();
 
                     if ss.len() != 2 {
                         request.parse_result = Err(ParseError::HeaderNoColon);

@@ -223,10 +223,17 @@ pub async fn handle_in_fold_result(
     if tracing::enabled!(tracing::Level::INFO) {
         if let Some(rta) = &dial_result.a {
             if rta.eq(&Addr::default()) {
-                info!(
-                    cid = %cid, is_fallback = is_fallback,
-                    "fold outbound succeed with empty target_addr",
-                );
+                if is_fallback {
+                    info!(
+                        cid = %cid,
+                        "fallback to outbound succeed",
+                    );
+                } else {
+                    info!(
+                        cid = %cid, is_fallback = is_fallback,
+                        "fold outbound succeed with empty target_addr",
+                    );
+                }
             } else {
                 info!( cid = %cid, is_fallback = is_fallback,
                 "fold outbound succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
