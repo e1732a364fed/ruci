@@ -39,6 +39,8 @@ make:
 make BUILD_VERSION=my_version BUILD_TRIPLET=aarch64-apple-darwin
 ```
 
+详见 Makefile, build_cross.sh 和 .github/workflows/ 中的 脚本
+
 # api server
 
 默认api 监听为 127.0.0.1:40681 , file_server 监听默认为 0.0.0.0:18143
