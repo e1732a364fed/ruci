@@ -87,17 +87,26 @@ impl Map for Embedder {
             ProxyBehavior::ENCODE => {
                 let b = ruci::utils::ob_to_buf(ob);
                 if !b.is_empty() {
-                    info_conn.write_state = Some(WriteState::FirstBufToWrite(b))
+                    if self.is_tail_of_chain() {
+                        info_conn.write_state = Some(WriteState::FirstBufToWrite(b));
+
+                        return MapResult::new_c(Box::new(info_conn)).a(params.a).build();
+                    }
                 }
+
+                MapResult::new_c(Box::new(info_conn))
+                    .b(Some(b))
+                    .a(params.a)
+                    .build()
             }
             ProxyBehavior::DECODE => {
                 info_conn.read_state.cur_info_read_buf = ruci::utils::ob_to_buf(ob);
                 //第一个包被认为是完全的
+
+                MapResult::new_c(Box::new(info_conn)).a(params.a).build()
             }
             ProxyBehavior::UNSPECIFIED => panic!("shoudn't happen"),
         }
-
-        MapResult::new_c(Box::new(info_conn)).a(params.a).build()
     }
 }
 
@@ -223,7 +232,10 @@ impl AsyncRead for EmbedConn {
             let vec = self.file.clone();
             let cur_info = vec.get(current_packet_index).unwrap();
 
-            if !direction_match_write(self.behavior, cur_info.direction) {
+            debug!("EmbedConn::poll_read: cur_info: {:?}", cur_info);
+
+            if direction_match_write(self.behavior, cur_info.direction) {
+                debug!("read pending {:?} {}", self.behavior, cur_info.direction);
                 return Poll::Pending;
             }
 
@@ -304,6 +316,7 @@ impl AsyncRead for EmbedConn {
                             let cirb = self.cur_info_read_buf();
 
                             let cirb_len = cirb.len();
+                            debug!("parse cirb_len: {}", cirb_len);
 
                             if content_len <= cirb_len {
                                 let remaining = rbuf.remaining();
@@ -315,6 +328,8 @@ impl AsyncRead for EmbedConn {
 
                                     self.advance_packet_index();
                                     self.read_state.content_len = None;
+
+                                    debug!("read parse ok");
                                     return Poll::Ready(Ok(()));
                                 } else {
                                     // 给的 rbuf 太短 的情况
@@ -369,12 +384,19 @@ impl AsyncRead for EmbedConn {
                             }
                             let cl = self.cur_info_read_buf().get_u16() as usize;
 
+                            debug!("read got cl: {}", cl);
+
+                            self.read_state.content_len = Some(cl);
+
                             if n < info_len {
                                 // 一个 info 包 没有 读完整 的情况
-                                self.read_state.content_len = Some(cl);
+
                                 self.read_state.content_read_buf_filled_state = FilledState::None;
+                                debug!("read got n < info_len ");
                             } else {
                                 debug_assert_eq!(n, info_len);
+
+                                debug!("read got n == info_len ");
 
                                 self.read_state.content_read_buf_filled_state = FilledState::Parse;
                             }
@@ -411,6 +433,7 @@ impl EmbedConn {
         buf: &[u8],
         is_first_buf: bool,
     ) -> Poll<WriteBufResult> {
+        debug!("want to write buf len: {}", buf.len());
         // 太小了就直接写入 padding 包
         if cur_info.length < 2 {
             let mut tmp = BytesMut::with_capacity(cur_info.length);
@@ -486,7 +509,10 @@ impl AsyncWrite for EmbedConn {
         loop {
             let cur_info = self.get_cur_info();
 
+            debug!("EmbedConn::poll_write: cur_info: {:?}", cur_info);
+
             if !direction_match_write(self.behavior, cur_info.direction) {
+                debug!("write pending {:?} {}", self.behavior, cur_info.direction);
                 return Poll::Pending;
             }
 
@@ -494,13 +520,20 @@ impl AsyncWrite for EmbedConn {
                 None => {
                     let r = self.write_buf(cur_info, cx, buf, false);
                     match ready!(r) {
-                        WriteBufResult::Continue => continue,
+                        WriteBufResult::Continue => {
+                            debug!("write continue");
+                            continue;
+                        }
                         WriteBufResult::Done(r) => return Poll::Ready(r),
                     }
                 }
                 Some(state) => {
                     match state {
                         WriteState::FirstBufToWrite(first_buf) => {
+                            debug!(
+                                "write first buf {}",
+                                &first_buf[..50.min(first_buf.len())].escape_ascii()
+                            );
                             let r = self.write_buf(cur_info, cx, &first_buf, true);
 
                             let rl = first_buf.len();

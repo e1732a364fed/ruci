@@ -72,8 +72,14 @@ impl Client {
                 }
             }
         }
+
+        debug!(
+            "trojan client writing buf {}",
+            &buf[..50.min(buf.len())].escape_ascii()
+        );
         base.write_all(&buf).await?;
         base.flush().await?;
+        debug!("trojan client write done");
 
         if is_udp {
             let u = udp::from(base);
