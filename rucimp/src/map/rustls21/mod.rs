@@ -14,8 +14,8 @@ use std::{
     time::SystemTime,
 };
 
-use anyhow::{bail, Result};
 use crate::utils::FileSource;
+use anyhow::{bail, Result};
 use rustls::{
     client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerConfig, ServerName,
 };

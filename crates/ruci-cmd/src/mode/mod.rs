@@ -115,7 +115,6 @@ mod test {
     use rucimp::modes::chain::config::{
         DirectConfig, InMapConfig, InMapConfigChain, OutMapConfig, OutMapConfigChain, StaticConfig,
     };
-    use std::collections::HashMap;
 
     #[test]
     fn serialize_toml() {
@@ -140,7 +139,7 @@ mod test {
                         dns_client: Some(ClientConfig {
                             dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
                             ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
-                            static_pairs: HashMap::new(),
+                            ..Default::default()
                         }),
                         ..Default::default()
                     }),
