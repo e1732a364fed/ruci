@@ -222,10 +222,38 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
         std::env::var(RL).map_or_else(|_| String::new(), |v| v)
     );
 
+    let mut fl = Vec::new();
+
+    #[cfg(feature = "api_server")]
+    fl.push("api_server");
+
+    #[cfg(feature = "api_client")]
+    fl.push("api_client");
+
+    #[cfg(feature = "utils")]
+    fl.push("utils");
+
+    #[cfg(feature = "lua")]
+    fl.push("lua");
+
+    #[cfg(feature = "lua54")]
+    fl.push("lua54");
+
+    #[cfg(feature = "trace")]
+    fl.push("trace");
+
+    #[cfg(feature = "use-native-tls")]
+    fl.push("native-tls");
+
+    #[cfg(feature = "native-tls-vendored")]
+    fl.push("native-tls-vendored");
+
     info!(
         ruci_cmd = env!("CARGO_PKG_VERSION"),
-        rucimp = rucimp::VERSION
+        rucimp = rucimp::VERSION,
+        features = ?fl
     );
+
     if no_file {
         info!("Empty log-file name specified, no log file would be generated.")
     }
