@@ -18,7 +18,7 @@ local listen_fixed_target = {
         -- ruci 中, Listener,TcpOptListener, BindDialer, Stdio, Fileio 都能如此配置
 
         ext = {
-            fixed_target_addr = "udp://114.114.114.114:53"
+            fixed_target_addr = "udp://8.8.8.8:53"
             --fixed_target_addr = "1.1.1.1:80" -- 不给://时 默认为 tcp
         }
         --]]
@@ -213,13 +213,13 @@ local out_stdio_show_bytes_chain = { {
 
 local direct = { Direct = {} }
 
--- 该配置 和 listen_fixed_target 联动 (0.0.0.0:20800)
+-- 该配置 和 listen_fixed_target 联动 (127.0.0.1:20800, 指定本地地址时不要写0.0.0.0， 否则会卡住)
 -- 该配置 会 在该 Direct 所属的 chain 中创建一个 新的 dns client, 对于 域名请求将使用 指定的
 -- dns_server 来 解析. 注意这里 dns_server 就不要再用 域名了，否则就会造成无限循环
 local direct_with_dns = {
     Direct = {
         dns_client = {
-            dns_server_list = { { "0.0.0.0:20800", "udp" } }, -- 8.8.8.8:53
+            dns_server_list = { { "127.0.0.1:20800", "udp" } }, -- 8.8.8.8:53
             ip_strategy = "Ipv4Only",
             static_pairs = {
                 ['www.baidu.com'] = "103.235.47.188"

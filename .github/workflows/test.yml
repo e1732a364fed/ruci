@@ -35,7 +35,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: taiki-e/install-action@cargo-hack
     - name: Build
       run: cargo build --verbose
 

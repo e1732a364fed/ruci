@@ -56,7 +56,7 @@ impl FixedTargetAddrUDPListener {
             loop {
                 tokio::select! {
                     _ = &mut shutdown_rx=>{
-                        debug!("UdpListener got shutdown, will break");
+                        debug!("FixedUdpListener got shutdown, will break");
                         break;
                     }
 
@@ -64,7 +64,7 @@ impl FixedTargetAddrUDPListener {
                         let (n, a) = match r {
                             Ok(r) => r,
                             Err(e) => {
-                                debug!("UdpListener loop recv_from got e, will break: {e}");
+                                debug!("FixedUdpListener loop recv_from got e, will break: {e}");
                                 break;
                             }
                         };
@@ -80,7 +80,7 @@ impl FixedTargetAddrUDPListener {
                             let tx = mg.get(&a).unwrap();
                             let r = tx.send(new_buf).await;
                             if let Err(e) = r {
-                                debug!("UdpListener tx send got e: {e}");
+                                debug!("FixedUdpListener tx send got e: {e}");
                                 continue;
                             }
                         } else {
@@ -100,7 +100,7 @@ impl FixedTargetAddrUDPListener {
 
                             let r = new_conn_tx.send((ac, a)).await;
                             if let Err(e) = r {
-                                debug!("UdpListener loop got e: {e}");
+                                debug!("FixedUdpListener loop got e: {e}");
                                 break;
                             }
                         }
