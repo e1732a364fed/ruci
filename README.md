@@ -171,7 +171,7 @@ o2node-.->collector
 ### ruci
 
 - [x] 链式架构 
-- [x] tcp, udp, unix domain socket, ip (tun)([tun example](rucimp/examples/README.md#tun))
+- [x] tcp, udp, unix domain socket, ip (tun, with auto_route)([tun example](rucimp/examples/README.md#tun))
 - [x] 流量记录 (两种实现, 分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
 - [x] Direct, Blackhole, Listener, BindDialer, Stdio, Fileio
 - [x] fixed_target_addr
@@ -194,7 +194,7 @@ o2node-.->collector
 - [x] http_filter, websocket(including early data)
 - [x] h2, grpc
 - [x] quic
-- [ ] ip relay protocol test1
+- [x] ip relay protocol test1
 - [ ] tcp/ip netstack (smoltcp)
 - [ ] ss?, vmess?
 

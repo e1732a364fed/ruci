@@ -30,7 +30,7 @@ use ruci::{
         network::{echo::Echo, BlackHole, Direct},
         *,
     },
-    net::{self, http::CommonConfig, tun},
+    net::{self, http::CommonConfig},
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -204,10 +204,10 @@ pub struct DialerConfig {
     dial_addr: Option<String>,
 
     #[cfg(feature = "tun")]
-    in_auto_route: Option<tun::route::InAutoRouteParams>,
+    in_auto_route: Option<ruci::net::tun::route::InAutoRouteParams>,
 
     #[cfg(feature = "tun")]
-    out_auto_route: Option<tun::route::OutAutoRouteParams>,
+    out_auto_route: Option<ruci::net::tun::route::OutAutoRouteParams>,
 
     ext: Option<Ext>,
 }
