@@ -81,11 +81,10 @@ impl Server {
         }
     }
 
-    async fn handshake(
+    pub async fn handshake(
         &self,
         cid: CID,
         mut base: Conn,
-        _: Option<Addr>,
         pre_read_data: Option<bytes::BytesMut>,
     ) -> io::Result<map::MapResult> {
         /*
@@ -489,7 +488,7 @@ impl map::Mapper for Server {
     ) -> map::MapResult {
         match params.c {
             map::Stream::TCP(c) => {
-                let r = self.handshake(cid, c, params.a, params.b).await;
+                let r = self.handshake(cid, c, params.b).await;
 
                 MapResult::from_result(r)
             }

@@ -31,6 +31,7 @@ pub mod http;
 pub mod math;
 pub mod network;
 pub mod socks5;
+pub mod socks5http;
 pub mod tls;
 pub mod trojan;
 

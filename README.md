@@ -44,9 +44,24 @@ rucimple 是最终的全功能的可执行文件，利用rucimp中的实现构�
 
 ruci根项目只提供 TLS, Socks5, Trojan 这三种主要的 流映射函数, 以及一些辅助的 流映射函数（如 Counter, MathAdder 等）, 以及一些流发生器 (listen tcp, dial tcp 等)，其它第三方协议要在 rucimp中实现
 
+## 配置模式
+
+由下文可知，ruci现在支持两种配置格式，
+
+1. "suit模式"，是扁平配置，兼容verysimple的 toml格式
+2. "chain模式", 链式配置，是新的lua格式。
+
+lua格式可参考 [普通示例](resource/config.chain.lua)  和 [lua配置功能](doc/lua.md) 
+
+项目还在开发中，功能会陆续添加
+
+两种配置模式目前可由不同的示例程序运行，如下。
+
 ## 目前的编译执行方式
 
 rucimp 子项目提供若干示例程序, suit, suit2, chain
+
+linux/macOS 上的shell编译命令
 
 ```sh
 cd rucimp
@@ -70,6 +85,7 @@ cp target/release/examples/chain .
 
 为了避免有人说笔者抄袭，在项目初期笔者选用了 async_std。
 后来才创建的 tokio 分支，可查看commit历史 求证。
+不过难以维护两套异步架构，现在async_std分支只能作为参考了。
 
 ### 链式结构
 

@@ -8,7 +8,7 @@ pub mod lua;
 use std::path::PathBuf;
 
 use ruci::{
-    map::{http, socks5, tls, trojan, MapperSync, ToMapper},
+    map::{http, socks5, socks5http, tls, trojan, MapperSync, ToMapper},
     net,
 };
 use serde::{Deserialize, Serialize};
@@ -79,6 +79,7 @@ pub enum InMapperConfig {
     TLS(TlsIn),
     Http(UserPass),
     Socks5(UserPass),
+    Socks5Http(UserPass),
     Trojan(TrojanIn),
 }
 
@@ -168,6 +169,19 @@ impl ToMapper for InMapperConfig {
             }
             InMapperConfig::Socks5(c) => {
                 let mut so = socks5::server::Config::default();
+                so.user_whitespace_pass = c.userpass.clone();
+                so.user_passes = c.more.as_ref().map_or(None, |up_v| {
+                    Some(
+                        up_v.iter()
+                            .map(|up| ruci::user::UserPass::from(up.to_string()))
+                            .collect::<Vec<_>>(),
+                    )
+                });
+
+                so.to_mapper()
+            }
+            InMapperConfig::Socks5Http(c) => {
+                let mut so = socks5http::Config::default();
                 so.user_whitespace_pass = c.userpass.clone();
                 so.user_passes = c.more.as_ref().map_or(None, |up_v| {
                     Some(
