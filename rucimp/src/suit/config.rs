@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize,Clone,Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct Config {
     pub listen: Vec<LDConfig>,
     pub dial: Vec<LDConfig>,
@@ -12,7 +12,7 @@ pub struct Config {
 
 impl Config {
     //panic if the toml_str is invalid
-    pub fn from_toml(toml_str: &str)->Self{
+    pub fn from_toml(toml_str: &str) -> Self {
         toml::from_str(toml_str).unwrap()
     }
 }
@@ -30,13 +30,13 @@ pub enum FallbackItem {
 }
 
 /// LDConfig 是 listen 和 dial 共用的 配置结构，配置是扁平化的
-/// 
+///
 /// tls 的最低版本号配置填在这里：
 ///extra = { tls_minv = "1.2" }, 或 extra.tls_minv = "1.2"
-/// 
-/// 
+///
+///
 #[allow(unused)]
-#[derive(Debug, Deserialize, Serialize, Clone,Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct LDConfig {
     pub tag: Option<String>,
     pub host: Option<String>,
@@ -55,6 +55,8 @@ pub struct LDConfig {
     pub version: Option<u16>,         // protocol 的 version
     pub encrypt_algo: Option<String>, //protocol 内部的加密算法选择
 
+    pub number_arg: Option<i64>, //for math adder
+
     /// listen part
     //noroute 意味着 传入的数据 不会被分流，一定会被转发到默认的 dial
     // 这一项是针对 分流功能的. 如果不设noroute, 则所有listen 得到的流量都会被 试图 进行分流
@@ -66,7 +68,6 @@ pub struct LDConfig {
     /// dial part
     pub send_through: Option<String>, //用于发送数据的 IP 地址, 可以是ip:port, 或者 tcp:ip:port\nudp:ip:port
 }
-
 
 #[cfg(test)]
 mod test {

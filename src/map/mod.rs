@@ -303,13 +303,13 @@ pub trait Mapper: crate::Name {
     ) -> MapResult;
 }
 
-//令 Adder 实现 Sync，否则报错
+//令 Mapper 实现 Sync，否则报错
 pub trait MapperSync: Mapper + Send + Sync + Debug {}
 impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能是 Arc
 
-/// 一种 Adders 的容器
+/// 一种 Mapper 的容器
 pub trait MappersVec {
     fn get_mappers_vec(&self) -> &Vec<MapperBox>;
 

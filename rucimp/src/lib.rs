@@ -20,16 +20,23 @@ use suit::*;
 /// 可作为 SuitEngine::new 的参数
 pub fn load_in_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<MapperBox> {
     match s {
+        "adder" => {
+            let a = ruci::map::math::Adder {
+                addnum: c.number_arg.unwrap_or(1) as i8,
+            };
+            Some(Box::new(a))
+        }
+        "counter" => {
+            let a = ruci::map::counter::Counter;
+            Some(Box::new(a))
+        }
         "socks5" => {
             let a = block_on(socks5::server::Server::new(
                 suit::config::adapter::get_socks5_server_option_from_ldconfig(c),
             ));
-            return Some(Box::new(a));
+            Some(Box::new(a))
         }
-        "counter" => {
-            let a = ruci::map::counter::Counter;
-            return Some(Box::new(a));
-        }
+
         _ => None,
     }
 }

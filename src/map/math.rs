@@ -92,6 +92,7 @@ impl AsyncWrite for AdderConn {
 }
 
 // 可生成一个 AdderConn, 其对输入进行加(减)法操作
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Adder {
     pub addnum: i8,
 }
