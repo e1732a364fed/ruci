@@ -18,7 +18,7 @@ use super::*;
 
 #[should_panic]
 #[tokio::test]
-async fn tls_in_mem() {
+async fn dial_tls_in_mem() {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 

@@ -11,7 +11,7 @@ pub struct Config {
 }
 
 impl Config {
-    //panic if the toml_str is invalid
+    ///panic if the toml_str is invalid
     pub fn from_toml(toml_str: &str) -> Self {
         toml::from_str(toml_str).unwrap()
     }
@@ -56,6 +56,7 @@ pub struct LDConfig {
     pub encrypt_algo: Option<String>, //protocol 内部的加密算法选择
 
     pub number_arg: Option<i64>, //for math adder
+    pub early_data: Option<bool>,
 
     /// listen part
     //noroute 意味着 传入的数据 不会被分流，一定会被转发到默认的 dial
