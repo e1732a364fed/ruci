@@ -24,7 +24,7 @@ impl ToMapper for Config {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Server {
     pub um: UsersMap<User>,
 }

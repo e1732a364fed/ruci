@@ -36,6 +36,7 @@ use crate::net::{self, addr_conn::AddrConn, Stream};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
+use dyn_clone::DynClone;
 use tokio::{net::TcpStream, sync::Mutex};
 
 use std::{
@@ -265,7 +266,7 @@ pub enum ProxyBehavior {
 ///
 ///
 #[async_trait]
-pub trait Mapper: crate::Name {
+pub trait Mapper: crate::Name + DynClone {
     /// InAdder 与 OutAdder 由 behavior 区分。
     ///
     /// # InAdder

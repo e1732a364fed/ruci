@@ -17,6 +17,7 @@ impl ToMapper for ServerOptions {
 }
 
 // todo: 添加 alpn 和 tls_minv
+#[derive(Clone)]
 pub struct Server {
     pub option_cache: ServerOptions,
     ta: TlsAcceptor,
