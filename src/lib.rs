@@ -20,7 +20,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // 重新导出一些包，以方便其它引用 ruci 的 包 使用
 
-pub use tokio_rustls;
+// pub use tokio_rustls;
 
 /// many types in ruci have a name.
 /// use lower case letters + underline

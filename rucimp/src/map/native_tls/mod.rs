@@ -30,7 +30,7 @@ pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &FileSource) -> anyhow::R
 
 impl Server {
     pub fn from(
-        sc: &ruci::map::tls::server::TlsServerOptions,
+        sc: &ruci_tls::server::TlsServerOptions,
         fs: &FileSource,
     ) -> anyhow::Result<Server> {
         let id = load(sc.cert.clone(), sc.key.clone(), fs).context("load cert or key failed")?;
@@ -110,7 +110,7 @@ impl map::Map for Server {
 #[map_ext_fields]
 #[derive(Clone, Debug, MapExt)]
 pub struct Client {
-    pub config: ruci::map::tls::client::TlsClientOptions,
+    pub config: ruci_tls::client::TlsClientOptions,
 }
 
 impl Name for Client {

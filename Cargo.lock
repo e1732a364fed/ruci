@@ -2837,30 +2837,23 @@ dependencies = [
  "futures",
  "futures-util",
  "hickory-resolver",
- "http 1.1.0",
  "lazy_static",
  "macro_map",
  "parking_lot",
  "pin-project-lite",
  "rand",
- "rcgen",
- "rustls 0.22.4",
- "rustls-pemfile 1.0.4",
  "scopeguard",
  "serde",
  "sha2",
  "smallvec",
  "tar",
- "time",
  "tokio",
- "tokio-rustls",
  "tokio-util",
  "tracing",
  "tun",
  "typed-builder",
  "typetag",
  "url",
- "webpki-roots",
 ]
 
 [[package]]
@@ -2892,6 +2885,33 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "ruci-tls"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bytes",
+ "criterion",
+ "env_logger",
+ "futures",
+ "http 1.1.0",
+ "macro_map",
+ "parking_lot",
+ "rand",
+ "rcgen",
+ "ruci",
+ "rustls 0.22.4",
+ "rustls-pemfile 1.0.4",
+ "serde",
+ "thiserror 1.0.63",
+ "time",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -2930,6 +2950,7 @@ dependencies = [
  "reqwest 0.11.27",
  "rlimit",
  "ruci",
+ "ruci-tls",
  "rustls 0.21.12",
  "rustls-pemfile 1.0.4",
  "rustyline",

@@ -3,6 +3,7 @@ workspace = { members = [
     "./",
     "crates/macro_map",
     "crates/ruci-cmd",
+    "crates/ruci-tls",
 ] }
 [package]
 name = "ruci"
@@ -22,7 +23,7 @@ incremental = false
 #opt-level = 'z' # use this and upx will get the smallest binary
 
 [dependencies]
-tracing = "0.1.40"
+tracing = "0.1"
 rand = { version = "0.8.5", features = ["small_rng"] }
 bytes = "1"
 futures = "0.3"
@@ -47,22 +48,15 @@ url = "2"
 base64 = "0.21.7"
 sha2 = "0.10.8"
 
-time = "0.3.6"
-http = "1.1.0"
-rcgen = { version = "0.13.1", features = ["pem", "x509-parser"] }
-
 
 hickory-resolver = { version = "0.24.1", features = ["serde-config"] }
-tokio-rustls = "0.25.0"
-rustls = { version = "0.22" }
-rustls-pemfile = "1.0"
-webpki-roots = "0.22.6"
 
 macro_map = { path = "crates/macro_map" }
 
 tun = { version = "0.7.5", features = ["async"], optional = true }
 
 tar = { version = "0.4.43", optional = true }
+
 
 [features]
 
@@ -77,8 +71,4 @@ criterion = { version = "0.5.1", features = ["async_tokio"] }
 
 [[bench]]
 name = "mathadd"
-harness = false
-
-[[bench]]
-name = "tls"
 harness = false

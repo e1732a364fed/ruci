@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use macro_map::{map_ext_fields, MapExt};
 use rustls::{
     client::danger::ServerCertVerified,
@@ -8,10 +10,16 @@ use rustls::{
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt;
 
-use self::{
-    map::{MapExt, MapExtFields, CID},
+use ruci::{
+    map::{self, MapResult, ProxyBehavior},
+    net::{self, CID},
+};
+use ruci::{
+    map::{MapExt, MapExtFields},
     net::Stream,
 };
+use tokio_rustls::TlsConnector;
+use tracing::debug;
 
 use super::*;
 
@@ -23,11 +31,11 @@ pub struct Client {
     client_config: Arc<ClientConfig>,
 }
 
-impl<IO> crate::Name for tokio_rustls::client::TlsStream<IO> {
-    fn name(&self) -> &str {
-        "tokio_rustls_client_stream"
-    }
-}
+// impl<IO> ruci::Name for tokio_rustls::client::TlsStream<IO> {
+//     fn name(&self) -> &str {
+//         "tokio_rustls_client_stream"
+//     }
+// }
 
 fn default_cc() -> ClientConfig {
     ClientConfig::builder()
@@ -158,11 +166,11 @@ impl Client {
     }
 }
 
-impl Name for Client {
-    fn name(&self) -> &'static str {
-        "tls_client"
-    }
-}
+// impl Name for Client {
+//     fn name(&self) -> &'static str {
+//         "tls_client"
+//     }
+// }
 #[async_trait]
 impl map::Map for Client {
     async fn maps(
@@ -172,7 +180,7 @@ impl map::Map for Client {
         params: map::MapParams,
     ) -> map::MapResult {
         let conn = params.c;
-        if let map::Stream::Conn(conn) = conn {
+        if let ruci::net::Stream::Conn(conn) = conn {
             let r = self.handshake(conn, params.b, params.a).await;
             match r {
                 Ok(r) => r,

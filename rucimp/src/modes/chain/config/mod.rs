@@ -35,8 +35,8 @@ use ruci::{
     net::{self, dns, http::CommonConfig},
     utils::FileSource,
 };
+use ruci_tls::server::ServerPEMOptions;
 use serde::{Deserialize, Serialize};
-use tls::server::ServerPEMOptions;
 use tracing::warn;
 
 use crate::map::{recorder, ws};
@@ -357,10 +357,10 @@ pub enum InMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(tls::server::TlsServerOptions),
+    TLS(ruci_tls::server::TlsServerOptions),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(tls::server::TlsServerOptions),
+    NativeTLS(ruci_tls::server::TlsServerOptions),
     H2 {
         is_grpc: Option<bool>,
         http_config: Option<CommonConfig>,
@@ -397,7 +397,7 @@ pub enum InMapConfig {
         handshake_function: String, // 用于 handshake 的 函数名
     },
 
-    MITM(tls::server::TlsServerOptions),
+    MITM(ruci_tls::server::TlsServerOptions),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
@@ -410,7 +410,7 @@ pub enum OutMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(ruci::map::tls::client::TlsClientOptions),
+    TLS(ruci_tls::client::TlsClientOptions),
 
     #[cfg(feature = "sockopt")]
     OptDirect {
@@ -423,7 +423,7 @@ pub enum OutMapConfig {
     OptDialer(crate::map::opt_net::OptDialerOption),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(ruci::map::tls::client::TlsClientOptions),
+    NativeTLS(ruci_tls::client::TlsClientOptions),
 
     Http,
     Socks5(Socks5Out),
@@ -719,7 +719,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::MITM(c) => {
                 let sc = ServerPEMOptions::from(&c, &file_source)?;
 
-                Ok(Box::new(ruci::map::tls::mitm::MITM {
+                Ok(Box::new(ruci_tls::mitm::MITM {
                     sc,
                     ext_fields: None,
                 }))
@@ -747,6 +747,7 @@ impl TryFrom<OutMapConfig> for MapBox {
 impl TryFrom<OutMapConfigWithFileSource> for MapBox {
     type Error = anyhow::Error;
 
+    #[allow(unused)]
     fn try_from(value: OutMapConfigWithFileSource) -> Result<Self, Self::Error> {
         use anyhow::Context;
 

@@ -2,11 +2,11 @@ use self::map::MapParams;
 
 use std::path::PathBuf;
 
-use crate::{
+use crate::server::ServerPEMOptions;
+use ruci::{
     map::{self, *},
     net::{self, AsyncConn, CID},
 };
-use tls::server::ServerPEMOptions;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -38,7 +38,9 @@ async fn dial_future(
                 CID::default(),
                 ProxyBehavior::DECODE,
                 MapParams {
-                    c: Stream::Conn(last_result.c.try_unwrap_tcp().expect("last_result as c")),
+                    c: ruci::net::Stream::Conn(
+                        last_result.c.try_unwrap_tcp().expect("last_result as c"),
+                    ),
                     a: Some(ta.clone()),
                     ..Default::default()
                 },
@@ -62,8 +64,10 @@ async fn listen_future(
     listen_port: u16,
     layer_num: u8,
 ) -> anyhow::Result<()> {
-    std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/dev_res"))?;
+    let d = concat!(env!("CARGO_MANIFEST_DIR"), "/../../dev_res");
+    std::env::set_current_dir(d)?;
 
+    println!("cwd: {:?}", std::env::current_dir()?);
     let mut path = PathBuf::new();
     path.push("test.crt");
 
@@ -79,7 +83,7 @@ async fn listen_future(
 
     let a = super::server::Server::new(ServerPEMOptions::from(
         &sc,
-        &utils::FileSource::StdReadFile,
+        &ruci::utils::FileSource::StdReadFile,
     )?);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
@@ -96,7 +100,9 @@ async fn listen_future(
                     CID::default(),
                     ProxyBehavior::DECODE,
                     MapParams {
-                        c: Stream::Conn(last_result.c.try_unwrap_tcp().expect("last_result as c")),
+                        c: ruci::net::Stream::Conn(
+                            last_result.c.try_unwrap_tcp().expect("last_result as c"),
+                        ),
                         ..Default::default()
                     },
                 )

@@ -1,27 +1,25 @@
-use std::{env::set_var, sync::Arc, time::Duration};
+use std::{env::set_var, path::PathBuf, sync::Arc, time::Duration};
 
-use crate::{
-    map::{
-        tls::{self, client::TlsClientOptions},
-        Map, MapParams, CID,
-    },
-    net::{self, gen_random_higher_port, helpers::mock::MockTcpStream},
-};
+use client::TlsClientOptions;
 use futures::{join, FutureExt};
 use parking_lot::Mutex;
+use ruci::{
+    map::{Map, MapParams, ProxyBehavior},
+    net::{self, gen_random_higher_port, helpers::mock::MockTcpStream, CID},
+};
 use server::ServerPEMOptions;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     task,
 };
-use tracing::info;
+use tracing::{debug, info};
 
 use super::*;
 
 #[should_panic]
 #[tokio::test]
-async fn dial_tls_in_mem() {
+pub async fn dial_tls_in_mem() {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
@@ -32,7 +30,7 @@ async fn dial_tls_in_mem() {
         write_target: Some(write_v),
     };
 
-    let a = tls::client::Client::new(TlsClientOptions {
+    let a = crate::client::Client::new(TlsClientOptions {
         host: Some("www.baidu.com".to_string()),
         insecure: true,
         ..Default::default()
@@ -46,7 +44,7 @@ async fn dial_tls_in_mem() {
             CID::default(),
             ProxyBehavior::ENCODE,
             MapParams {
-                c: map::Stream::Conn(Box::new(client_tcp_s)),
+                c: ruci::net::Stream::Conn(Box::new(client_tcp_s)),
                 a: Some(ta),
                 ..Default::default()
             },
@@ -65,13 +63,13 @@ async fn dial_tls_in_mem() {
     println!("{}, {:?}", n, &buf[..n]);
 }
 
-async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<()> {
+pub async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<()> {
     tokio::time::sleep(Duration::from_secs(1)).await;
     let cs = TcpStream::connect((listen_host_str, listen_port))
         .await
         .unwrap();
 
-    let a = tls::client::Client::new(TlsClientOptions {
+    let a = crate::client::Client::new(TlsClientOptions {
         host: Some("www.baidu.com".to_string()),
         insecure: true,
         ..Default::default()
@@ -84,7 +82,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
             CID::default(),
             ProxyBehavior::ENCODE,
             MapParams {
-                c: map::Stream::Conn(Box::new(cs)),
+                c: ruci::net::Stream::Conn(Box::new(cs)),
                 a: Some(ta),
                 ..Default::default()
             },
@@ -106,7 +104,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
     Ok(())
 }
 
-async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<()> {
+pub async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<()> {
     std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/dev_res"))?;
 
     let mut path = PathBuf::new();
@@ -115,15 +113,15 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Resul
     let mut path2 = PathBuf::new();
     path2.push("test.key");
 
-    let sc = tls::server::TlsServerOptions {
+    let sc = crate::server::TlsServerOptions {
         cert: path,
         key: path2,
         ..Default::default()
     };
 
-    let a = tls::server::Server::new(ServerPEMOptions::from(
+    let a = crate::server::Server::new(ServerPEMOptions::from(
         &sc,
-        &map::utils::FileSource::StdReadFile,
+        &ruci::utils::FileSource::StdReadFile,
     )?);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
@@ -161,7 +159,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Resul
 }
 
 #[tokio::test]
-async fn tls_local_loopback() -> anyhow::Result<()> {
+pub async fn tls_local_loopback() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 

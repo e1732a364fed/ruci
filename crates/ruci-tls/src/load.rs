@@ -96,7 +96,7 @@ pub fn load_ser_config(
     options: &TlsServerOptions,
     opt_authority: Option<&http::uri::Authority>,
 ) -> anyhow::Result<ServerConfig> {
-    let pem_opts = ServerPEMOptions::from(options, &crate::utils::FileSource::StdReadFile)?;
+    let pem_opts = ServerPEMOptions::from(options, &ruci::utils::FileSource::StdReadFile)?;
     load_ser_config_from_pem(&pem_opts, opt_authority)
 }
 
@@ -153,9 +153,10 @@ mod test {
 
     #[test]
     fn test_load_key() {
-        //println!("{:?}", env::current_dir()); //ruci
-        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/dev_res"))
-            .expect("go to dev_res folder");
+        let d = concat!(env!("CARGO_MANIFEST_DIR"), "/../../dev_res");
+        std::env::set_current_dir(d).expect(format!("go to {}", d).as_str());
+
+        println!("cwd: {:?}", std::env::current_dir().unwrap());
 
         let mut path = PathBuf::new();
         path.push("test.key");
@@ -171,8 +172,10 @@ mod test {
 
     #[test]
     fn test_load_cert() {
-        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/dev_res"))
-            .expect("go to dev_res folder");
+        let d = concat!(env!("CARGO_MANIFEST_DIR"), "/../../dev_res");
+        std::env::set_current_dir(d).expect(format!("go to {}", d).as_str());
+
+        println!("cwd: {:?}", std::env::current_dir().unwrap());
 
         let mut path = PathBuf::new();
         path.push("test.crt");

@@ -1,8 +1,16 @@
+use std::{path::PathBuf, sync::Arc};
+
 use macro_map::*;
-use map::utils::FileSource;
+use ruci::{
+    map::{self, MapResult, ProxyBehavior},
+    net::{helpers::EarlyDataWrapper, CID},
+    utils::FileSource,
+};
 use serde::{Deserialize, Serialize};
 
-use self::map::{MapExtFields, CID};
+use ruci::map::MapExtFields;
+use tokio_rustls::TlsAcceptor;
+use tracing::debug;
 
 use super::*;
 
@@ -44,16 +52,16 @@ pub struct Server {
     ta: TlsAcceptor,
 }
 
-impl fmt::Debug for Server {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Debug for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "ruci::tls::Server, {:?}", self.option_cache)
     }
 }
-impl<IO> crate::Name for tokio_rustls::server::TlsStream<IO> {
-    fn name(&self) -> &str {
-        "tokio_rustls_server_stream"
-    }
-}
+// impl<IO> ruci::Name for tokio_rustls::server::TlsStream<IO> {
+//     fn name(&self) -> &str {
+//         "tokio_rustls_server_stream"
+//     }
+// }
 
 impl Server {
     pub fn new(c: ServerPEMOptions) -> Self {
@@ -67,11 +75,11 @@ impl Server {
 
     async fn handshake(
         &self,
-        _cid: CID,
-        mut conn: net::Conn,
+        _cid: ruci::net::CID,
+        mut conn: ruci::net::Conn,
         b: Option<BytesMut>,
-        a: Option<net::Addr>,
-    ) -> anyhow::Result<map::MapResult> {
+        a: Option<ruci::net::Addr>,
+    ) -> anyhow::Result<ruci::map::MapResult> {
         if let Some(pre_read_data) = b {
             debug!("tls server got pre_read_data, init with EarlyDataWrapper");
             let nc = EarlyDataWrapper::from(pre_read_data, conn);
@@ -88,11 +96,11 @@ impl Server {
 
 // pub struct SeverTLSConnDescriber {}
 
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "tls_server"
-    }
-}
+// impl Name for Server {
+//     fn name(&self) -> &'static str {
+//         "tls_server"
+//     }
+// }
 #[async_trait]
 impl map::Map for Server {
     async fn maps(
@@ -102,7 +110,7 @@ impl map::Map for Server {
         params: map::MapParams,
     ) -> map::MapResult {
         let conn = params.c;
-        if let crate::net::Stream::Conn(conn) = conn {
+        if let ruci::net::Stream::Conn(conn) = conn {
             let r = self.handshake(cid, conn, params.b, params.a).await;
             match r {
                 anyhow::Result::Ok(r) => r,

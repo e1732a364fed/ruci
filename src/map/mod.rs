@@ -36,7 +36,6 @@ pub mod socks5;
 pub mod socks5http;
 pub mod stdio;
 pub mod tee;
-pub mod tls;
 pub mod trojan;
 
 #[cfg(test)]
@@ -287,8 +286,8 @@ pub trait Map {
 /// 令 Map 实现 Send + Sync, 否则异步/多线程报错
 ///
 /// 且添加了 [`MapExt`] 等 对代码 必要的 trait
-pub trait MapSync: Name + Debug + MapExt + Send + Sync {}
-impl<T: Name + Debug + MapExt + Send + Sync> MapSync for T {}
+pub trait MapSync: Debug + MapExt + Send + Sync {}
+impl<T: Debug + MapExt + Send + Sync> MapSync for T {}
 
 /// 代码最终使用的是 MapBox
 pub type MapBox = Box<dyn MapSync>;

@@ -199,7 +199,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
         };
 
         if tracing::enabled!(Level::DEBUG) {
-            debug!(cid = %cid, map = adder.name(), behavior = ?params.behavior, "folding")
+            debug!(cid = %cid, map = ?adder, behavior = ?params.behavior, "folding")
         }
         last_r = adder
             .maps(
@@ -230,7 +230,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
         calculated_output_vec.push(last_r.d);
 
         #[cfg(feature = "trace")]
-        trace.push(adder.name().to_string());
+        trace.push(format!("{:?}", adder));
 
         if last_r.c.is_none_or_generator() {
             break;

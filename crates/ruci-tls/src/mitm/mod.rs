@@ -12,16 +12,16 @@
  * 如果 用户数据不是 tls client hello, 则原样传递下去。
  */
 
-use crate::map::*;
-use crate::net::helpers::EarlyDataWrapper;
-use crate::net::CID;
-use crate::Name;
-use crate::{map, net::MTU};
 use ::http::uri::Authority;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use macro_map::{map_ext_fields, MapExt};
+use ruci::map::*;
+use ruci::net::helpers::EarlyDataWrapper;
+use ruci::net::CID;
+use ruci::Name;
+use ruci::{map, net::MTU};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tracing::{debug, error, info};
@@ -29,7 +29,7 @@ use tracing::{debug, error, info};
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
 pub struct MITM {
-    pub sc: crate::map::tls::server::ServerPEMOptions,
+    pub sc: crate::server::ServerPEMOptions,
 }
 
 impl Name for MITM {
@@ -92,7 +92,7 @@ impl Map for MITM {
                 debug_assert!(b.len() >= 4);
 
                 if b[..2] == *b"\x16\x03" {
-                    let authority = if let Some(host) = tls::extract_host_from_client_hello(&b) {
+                    let authority = if let Some(host) = crate::extract_host_from_client_hello(&b) {
                         host
                     } else {
                         panic!("MITM: No SNI host found");
@@ -101,7 +101,7 @@ impl Map for MITM {
                     // let alpn = { tls::extract_alpn_from_clinet_hello(&b) };
                     // debug!("MITM: client shown alpn is {:?}", alpn);
 
-                    let sc = crate::map::tls::load::load_ser_config_from_pem(
+                    let sc = crate::load::load_ser_config_from_pem(
                         &self.sc,
                         Some(&Authority::from_maybe_shared(authority.clone()).unwrap()),
                     )
@@ -109,7 +109,7 @@ impl Map for MITM {
 
                     let ec = EarlyDataWrapper::from(b, c);
 
-                    let mut stream = match crate::tokio_rustls::TlsAcceptor::from(Arc::new(sc))
+                    let mut stream = match tokio_rustls::TlsAcceptor::from(Arc::new(sc))
                         .accept(ec)
                         .await
                     {
@@ -146,7 +146,7 @@ impl Map for MITM {
                             authority
                         );
 
-                        Some(crate::net::Addr::from_addr_str("tcp", &(authority + ":443")).unwrap())
+                        Some(ruci::net::Addr::from_addr_str("tcp", &(authority + ":443")).unwrap())
                     };
 
                     // 重新读取一次，得到 tls 的首包用户数据
