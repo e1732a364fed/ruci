@@ -6,6 +6,7 @@ use std::{str::FromStr, sync::Arc};
 
 use data_source::DataSource;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use tokio::sync::mpsc;
 use tracing::{info, Level};
 
 use crate::DEFAULT_LUA_CONFIG_FILE_NAME;
@@ -102,6 +103,7 @@ pub struct CoreArgs {
     #[serde(skip)]
     pub data_source: Option<Arc<DataSource>>,
 
+    #[serde(default)]
     pub in_memory: bool,
 
     pub log_level: Option<LevelWrapper>,
@@ -123,13 +125,16 @@ pub struct CoreArgs {
     /// Use infinite dynamic chain that is written in the lua config file (the "Infinite"
     /// global variable must exist)
     #[cfg(any(feature = "lua", feature = "lua54"))]
+    #[serde(default)]
     pub infinite: bool,
 
     /// Enable flux trace (might slow down performance)
     #[cfg(feature = "trace")]
+    #[serde(default)]
     pub trace: bool,
 
     #[cfg(feature = "api_server")]
+    #[serde(default)]
     pub api_server: bool,
 
     /// Default is "127.0.0.1:40681"
@@ -137,14 +142,31 @@ pub struct CoreArgs {
     pub api_addr: Option<String>,
 }
 
+/// blocking until engine loop stopped
 pub async fn run(
     args: CoreArgs,
-    #[cfg(feature = "api_server")] api_server_opts: Option<(
+    #[cfg(feature = "api_server")] api_server_opts: Option<&mut (
         crate::api::Server,
         tokio::sync::mpsc::Receiver<()>,
         Arc<ruci::net::GlobalTrafficRecorder>,
     )>,
 ) -> anyhow::Result<()> {
+    let (mut e, r) = init_engine(args, api_server_opts).await?;
+    e.run_with_close_rx(r, true).await
+}
+
+/// returns the engine and the close_rx
+pub async fn init_engine(
+    args: CoreArgs,
+    #[cfg(feature = "api_server")] mut api_server_opts: Option<&mut (
+        crate::api::Server,
+        tokio::sync::mpsc::Receiver<()>,
+        Arc<ruci::net::GlobalTrafficRecorder>,
+    )>,
+) -> anyhow::Result<(
+    crate::modes::chain::engine::Engine,
+    Option<mpsc::Receiver<()>>,
+)> {
     match args.mode {
         Mode::Chain => {
             info!("starting rucimp chain engine...");
@@ -174,32 +196,32 @@ pub async fn run(
                 let c: chain::config::StaticConfig =
                     crate::serde_json::from_str(&args.config_file_content)
                         .context("json to StaticConfig failed")?;
-                e.init_static(c)?;
+                e.init_static(c).context("init static failed")?;
             } else {
                 anyhow::bail!("unsupported file extension: {}", file_name);
             }
 
             #[cfg(feature = "api_server")]
             {
-                if let Some((mut server, close_rx, recorder)) = api_server_opts {
+                if let Some(api_server_opts) = api_server_opts.as_mut() {
                     crate::api::setup_api_server_with_chain_engine(
                         &mut e,
                         #[cfg(feature = "trace")]
                         args.trace,
-                        &mut server,
-                        recorder,
+                        &mut api_server_opts.0,
+                        api_server_opts.2.clone(),
                     )
                     .await;
 
-                    e.run_with_close_rx(Some(close_rx)).await?;
-
-                    return Ok(());
+                    let r = {
+                        let (_t, r) = mpsc::channel(1);
+                        std::mem::replace(&mut api_server_opts.1, r)
+                    };
+                    return Ok((e, Some(r)));
                 }
             }
 
-            e.run_with_close_rx(None).await?;
-
-            Ok(())
+            Ok((e, None))
         }
     }
 }

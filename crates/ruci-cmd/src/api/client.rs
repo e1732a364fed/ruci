@@ -44,7 +44,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         Commands::Stop { addr } => {
             let ad = get_real_addr(addr);
 
-            let response = timeout_get(ad, "/stop_core").await?;
+            let response = timeout_get(ad, "/stop_engine").await?;
 
             println!("response:{}", response.text().await?)
         }

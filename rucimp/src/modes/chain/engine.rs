@@ -73,7 +73,7 @@ impl Engine {
 
         let run_instance_id = rng.random();
 
-        debug!("new Engine {run_instance_id}");
+        info!("new Engine {run_instance_id}");
 
         Engine {
             global_data: GlobalData {
@@ -81,6 +81,7 @@ impl Engine {
                 instance_start_time: Some(time::SystemTime::now()),
                 ..Default::default()
             },
+            data_source: crate::utils::default_file_source().into(),
             ..Default::default()
         }
     }
@@ -448,9 +449,12 @@ impl Engine {
     }
 
     /// 阻塞运行Engine, 其运行结束后 会自动对 Engine 调用 reset
+    ///
+    /// if force_exit == true, the program will exit after 10 seconds.
     pub async fn run_with_close_rx(
         &mut self,
         close_rx: Option<mpsc::Receiver<()>>,
+        force_exit: bool,
     ) -> anyhow::Result<()> {
         use anyhow::Context;
         let mut js = self.run().await.context("run_engine got error")?;
@@ -462,13 +466,15 @@ impl Engine {
             None => crate::utils::wait_close_sig().await?,
         }
 
-        std::thread::spawn(|| {
-            const WAIT_SEC: u64 = 10;
-            std::thread::sleep(time::Duration::from_secs(WAIT_SEC));
-            tracing::warn!("Force shutdown after {WAIT_SEC} secs!");
-            println!("Force shutdown after {WAIT_SEC} secs!");
-            std::process::exit(1);
-        });
+        if force_exit {
+            std::thread::spawn(|| {
+                const WAIT_SEC: u64 = 10;
+                std::thread::sleep(time::Duration::from_secs(WAIT_SEC));
+                tracing::warn!("Force shutdown after {WAIT_SEC} secs!");
+                println!("Force shutdown after {WAIT_SEC} secs!");
+                std::process::exit(1);
+            });
+        }
 
         self.stop().await;
 

@@ -3,11 +3,14 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
+use axum::response::IntoResponse;
+use axum::routing::post;
 use axum::{routing::get, Router};
 use chrono::{DateTime, Utc};
 use parking_lot::RwLock;
 use ruci::net::{GlobalTrafficRecorder, CID};
 use ruci::relay::NewConnInfo;
+use serde::Serialize;
 use tokio::sync::{mpsc, Mutex};
 use tracing::info;
 
@@ -214,7 +217,7 @@ fn instant_data_to_str(v: Vec<(tokio::time::Instant, u64)>) -> String {
 }
 
 /// stop rucimp core
-async fn stop_core(State(tx): State<mpsc::Sender<()>>) -> String {
+async fn stop_engine(State(tx): State<mpsc::Sender<()>>) -> String {
     let r = tx.try_send(());
     format!("{:?}", r)
 }
@@ -229,18 +232,38 @@ pub type Opts = Arc<
     >,
 >;
 
-async fn start_core(
+async fn start_engine(
     State(api_server_opts): State<Opts>,
     axum::Json(args): axum::Json<crate::modes::CoreArgs>,
 ) -> String {
-    let opts = api_server_opts.lock().await.take();
-    match opts {
-        Some(opts) => {
-            let r = crate::modes::run(args, Some(opts)).await;
-            format!("{:?}", r)
+    let mut api_server_opts = api_server_opts.lock().await;
+
+    let opts = api_server_opts.as_mut();
+
+    let opts = opts.unwrap();
+
+    let r = crate::modes::init_engine(args, Some(opts)).await;
+    match r {
+        Ok((mut e, r)) => {
+            let id = e.global_data.run_instance_id;
+            tokio::spawn(async move { e.run_with_close_rx(r, false).await });
+            return id.to_string();
         }
-        None => "server not started".to_string(),
+        Err(r) => format!("{:?}", r),
     }
+}
+
+#[derive(Serialize)]
+struct StatusResponse {
+    status: String,
+}
+
+pub async fn get_status() -> impl IntoResponse {
+    let status = StatusResponse {
+        status: "running".to_string(),
+    };
+
+    axum::Json(status)
 }
 
 /// non-blocking, it calls tokio::spawn
@@ -256,11 +279,15 @@ pub async fn serve(
     info!("api server starting {addr}");
 
     let mut app = Router::new().route(
-        "/stop_core",
-        get(stop_core).with_state(s.close_engine_tx.clone()),
+        "/stop_engine",
+        get(stop_engine).with_state(s.close_engine_tx.clone()),
     );
     app = app
-        .route("/start", get(start_core).with_state(start_core_opts))
+        .route("/status", get(get_status))
+        .route(
+            "/start_engine",
+            post(start_engine).with_state(start_core_opts),
+        )
         .route(
             "/gt/acc",
             get(get_alive_conn_count).with_state(global_traffic.clone()),

@@ -28,6 +28,7 @@ use std::{
 // #[cfg(feature = "s2n-quic")]
 // use crate::map::quic;
 
+use anyhow::Context;
 use bytes::BytesMut;
 use ruci::{
     map::{
@@ -746,7 +747,8 @@ impl TryFrom<InMapConfigWithDataSource> for MapBox {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {
-                let sc = init_tls_server_pem_option(&c, &data_source)?;
+                let sc = init_tls_server_pem_option(&c, &data_source)
+                    .context("MITM init_tls_server_pem_option failed")?;
 
                 Ok(Box::new(ruci_rustls22::mitm::MITM {
                     sc,

@@ -4,7 +4,6 @@ Provides some helper functions to read a certain resource file or to wait the sh
 
 use std::{io, path::Path};
 
-use anyhow::Context;
 use tokio::signal;
 use tracing::{debug, info};
 
@@ -27,6 +26,9 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
         None => default_file,
     };
     let fs = default_file_source();
+
+    use anyhow::Context;
+
     let r = fs
         .get_file_content(Path::new(filename))
         .context(format!("get file failed: {}", filename))?;
@@ -243,10 +245,16 @@ pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
 pub fn init_tls_server_pem_option(
     opts: &ruci::map::tls_config::ServerOptions,
     fs: &DataSource,
-) -> std::io::Result<ruci_rustls22::server::ServerPEMOptions> {
+) -> anyhow::Result<ruci_rustls22::server::ServerPEMOptions> {
+    use anyhow::Context;
+
     Ok(ruci_rustls22::server::ServerPEMOptions {
-        cert: fs.read_to_string(opts.cert.clone())?,
-        key: fs.read_to_string(opts.key.clone())?,
+        cert: fs
+            .read_to_string(opts.cert.clone())
+            .context("read cert failed")?,
+        key: fs
+            .read_to_string(opts.key.clone())
+            .context("read key failed")?,
         alpn: opts.alpn.clone(),
     })
 }

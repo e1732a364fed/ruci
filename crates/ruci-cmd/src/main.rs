@@ -161,13 +161,14 @@ async fn main() -> anyhow::Result<()> {
                 let epots = std::sync::Arc::new(Mutex::new(None));
 
                 if args.api_server {
-                    let opts = rucimp::api::Server::new(args.api_addr.clone(), epots.clone()).await;
+                    let mut opts =
+                        rucimp::api::Server::new(args.api_addr.clone(), epots.clone()).await;
                     api_server_started = true;
 
                     if args.config == DEFAULT_LUA_CONFIG_FILE_NAME {
                         api_server_opts = Some(opts);
                     } else {
-                        start_engine(args.clone(), Some(opts)).await?;
+                        start_engine(args.clone(), Some(&mut opts)).await?;
                         engine_started = true;
                     }
                 }
@@ -352,7 +353,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 /// blocking
 pub async fn start_engine(
     args: Args,
-    #[cfg(feature = "api_server")] api_server_opts: Option<(
+    #[cfg(feature = "api_server")] api_server_opts: Option<&mut (
         rucimp::api::Server,
         tokio::sync::mpsc::Receiver<()>,
         std::sync::Arc<ruci::net::GlobalTrafficRecorder>,

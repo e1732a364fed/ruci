@@ -152,7 +152,7 @@ pack是打包为 tar 文件， pack-z 是在打包为 tar.zip 文件。
 
 api:
 
-/stop_core
+/stop_engine
 
     stop rucimp core
 
