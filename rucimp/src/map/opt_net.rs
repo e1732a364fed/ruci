@@ -65,18 +65,86 @@ impl Mapper for TcpOptListener {
                 .expect("tcp_opt_listener always has a fixed_target_addr"),
         };
 
-        if tracing::enabled!(tracing::Level::DEBUG) {
-            debug!(cid = %cid,addr= %a, "tcp_opt_listener start listen")
-        }
-
         let r = match params.shutdown_rx {
             Some(rx) => self.listen_addr(a, rx).await,
             None => self.listen_addr_forever(a).await,
         };
 
         match r {
-            Ok(rx) => MapResult::builder().c(Stream::g(rx)).build(),
+            Ok(rx) => {
+                if tracing::enabled!(tracing::Level::DEBUG) {
+                    debug!(cid = %cid,addr= %a, "tcp_opt_listener started listen")
+                }
+                MapResult::builder().c(Stream::g(rx)).build()
+            }
             Err(e) => MapResult::from_e(e),
+        }
+    }
+}
+
+#[mapper_ext_fields]
+#[derive(Clone, Debug, Default, MapperExt)]
+pub struct OptDirect {
+    pub sopt: SockOpt,
+}
+impl Name for OptDirect {
+    fn name(&self) -> &'static str {
+        "opt_direct"
+    }
+}
+
+#[async_trait]
+impl Mapper for OptDirect {
+    /// dial params.a.
+    async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        let a = match params.a {
+            Some(a) => a,
+            None => {
+                return MapResult::err_str(&format!("{}, opt_direct need params.a, got empty", cid))
+            }
+        };
+
+        if tracing::enabled!(tracing::Level::DEBUG) {
+            let buf = params.b.as_ref().map(|b| b.len());
+            debug!(
+                cid = %cid,
+                addr = %a,
+                behavior = ?behavior,
+                buf = ?buf,
+                "opt_direct dial",
+
+            );
+        }
+
+        let dial_r: anyhow::Result<Stream> = match behavior {
+            ProxyBehavior::ENCODE => match a.network {
+                Network::UDP => todo!(),
+                Network::TCP => so2::dial_tcp(&a, &self.sopt)
+                    .await
+                    .map(|s| Stream::Conn(Box::new(s))),
+                _ => todo!(),
+            },
+            _ => todo!(),
+        };
+        match dial_r {
+            Ok(mut stream) => {
+                if matches!(stream, Stream::Conn(_))
+                    && self.is_tail_of_chain()
+                    && params.b.is_some()
+                {
+                    let rw = stream
+                        .write_all(params.b.as_ref().expect("param.b is some"))
+                        .await;
+                    if let Err(re) = rw {
+                        let mut e: anyhow::Error = re.into();
+                        e = e.context("opt_direct try write early data");
+                        return MapResult::from_e(e);
+                    }
+                    return MapResult::builder().c(stream).build();
+                }
+                return MapResult::builder().c(stream).b(params.b).build();
+            }
+            Err(e) => return MapResult::from_e(e.context(format!("opt_direct dial {} failed", a))),
         }
     }
 }

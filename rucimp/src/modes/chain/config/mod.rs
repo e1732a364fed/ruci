@@ -35,7 +35,7 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{quic_common, ws};
+use crate::map::{quic_common, tproxy::TproxyResolver, ws};
 
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
@@ -209,6 +209,9 @@ pub enum InMapperConfig {
         ext: Ext,
     },
 
+    #[cfg(all(feature = "sockopt", target_os = "linux"))]
+    TproxyResolver,
+
     Adder(i8),
     Counter,
     TLS(TlsIn),
@@ -242,6 +245,8 @@ pub enum OutMapperConfig {
     Adder(i8),
     Counter,
     TLS(TlsOut),
+
+    OptDirect(crate::net::so2::SockOpt),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
     NativeTLS(TlsOut),
@@ -457,6 +462,9 @@ impl ToMapperBox for InMapperConfig {
                     ext_fields: Some(ext.to_ext_fields()),
                 })
             }
+            InMapperConfig::TproxyResolver => Box::new(TproxyResolver {
+                ext_fields: Some(MapperExtFields::default()),
+            }),
         }
     }
 }
@@ -562,6 +570,12 @@ impl ToMapperBox for OutMapperConfig {
                 crate::map::quinn::client::Client::new(c.clone())
                     .expect("legal quic client config"),
             ),
+
+            #[cfg(all(feature = "sockopt", target_os = "linux"))]
+            OutMapperConfig::OptDirect(sopt) => Box::new(crate::map::opt_net::OptDirect {
+                sopt: sopt.clone(),
+                ext_fields: Some(MapperExtFields::default()),
+            }),
         }
     }
 }

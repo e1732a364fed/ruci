@@ -172,6 +172,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
     let mut last_r: MapResult = initial_state;
 
     let mut calculated_output_vec: Vec<Option<Box<dyn Data>>> = Vec::new();
+    calculated_output_vec.push(last_r.d);
 
     let mut tag: String = String::new();
 

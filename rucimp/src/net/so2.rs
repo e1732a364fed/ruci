@@ -1,22 +1,25 @@
+use std::net::{Ipv4Addr, SocketAddrV4};
+
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 
 use ruci::net::{self, Network, Stream};
 use socket2::{Domain, Protocol, Socket, Type};
+use tracing::debug;
 
 use super::so_opts;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SockOpt {
-    tproxy: bool,
+    tproxy: Option<bool>,
     so_mark: Option<u8>,
     bind_to_device: Option<String>,
 }
 
 /// can listen tcp or dial udp, regard to na.network
 ///
-pub async fn new_socket2(na: &net::Addr, so: &SockOpt) -> anyhow::Result<Socket> {
+pub async fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Result<Socket> {
     let a = na
         .get_socket_addr()
         .context("listen_tcp failed, requires a has socket addr")?;
@@ -40,7 +43,8 @@ pub async fn new_socket2(na: &net::Addr, so: &SockOpt) -> anyhow::Result<Socket>
 
     let socket = Socket::new(domain, typ, Some(protocol))?;
 
-    if so.tproxy {
+    if so.tproxy.unwrap_or_default() {
+        debug!("calls set_tproxy_socket_opts");
         so_opts::set_tproxy_socket_opts(is_v4, is_udp, &socket)?;
     }
     if let Some(m) = so.so_mark {
@@ -49,22 +53,38 @@ pub async fn new_socket2(na: &net::Addr, so: &SockOpt) -> anyhow::Result<Socket>
     if let Some(d) = &so.bind_to_device {
         socket.bind_device(Some(d.as_bytes()))?;
     }
-    socket.set_nonblocking(true)?;
+    if is_listen {
+        socket.set_nonblocking(true)?;
+    }
     socket.set_reuse_address(true)?;
 
-    socket.bind(&a.into())?;
+    if is_listen {
+        socket.bind(&a.into())?;
 
-    if na.network == Network::TCP {
-        socket.listen(128)?;
+        if na.network == Network::TCP {
+            debug!("calls socket.listen");
+            socket.listen(128)?;
+        }
+    } else {
+        let zeroa = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
+        socket.bind(&zeroa.into()).context("bind failed")?;
+
+        socket.connect(&a.into()).context("connect failed")?;
     }
 
     Ok(socket)
 }
 
 pub async fn listen_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpListener> {
-    let socket = new_socket2(na, so).await?;
+    let socket = new_socket2(na, so, true).await?;
     let listener: TcpListener = TcpListener::from_std(std::net::TcpListener::from(socket))?;
     Ok(listener)
+}
+
+pub async fn dial_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpStream> {
+    let socket = new_socket2(na, so, false).await?;
+    let s: TcpStream = TcpStream::from_std(std::net::TcpStream::from(socket))?;
+    Ok(s)
 }
 
 /// returns stream, raddr, laddr
