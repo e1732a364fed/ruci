@@ -30,7 +30,6 @@ pub mod acc;
 pub mod counter;
 pub mod fileio;
 pub mod http;
-/// math 中有一些基本数学运算的 adder
 pub mod math;
 pub mod network;
 pub mod socks5;
@@ -69,18 +68,9 @@ pub enum AnyData {
 
 pub type OptData = Option<AnyData>;
 
-// pub struct InputData {
-//     pub calculated_data: OptData, //由上层计算得到的数据
-//     pub hyperparameter: OptData,  // 超参数, 即不上层计算决定的数据
-// }
-
 /// the parameter for Mapper's maps method
 #[derive(Default, TypedBuilder)]
 pub struct MapParams {
-    ///base conn
-    #[builder(default)]
-    pub c: Stream,
-
     ///target_addr
     #[builder(default, setter(strip_option))]
     pub a: Option<net::Addr>,
@@ -88,6 +78,10 @@ pub struct MapParams {
     ///pre_read_buf
     #[builder(default, setter(strip_option))]
     pub b: Option<BytesMut>,
+
+    ///base conn
+    #[builder(default)]
+    pub c: Stream,
 
     #[builder(default, setter(strip_option))]
     pub d: Option<AnyData>,
@@ -103,7 +97,7 @@ impl MapParams {
         MapParams::builder().c(Stream::Conn(c)).build()
     }
 
-    pub fn newc(c: net::Conn) -> MapParamsBuilder<((Stream,), (), (), (), ())> {
+    pub fn newc(c: net::Conn) -> MapParamsBuilder<((), (), (Stream,), (), ())> {
         MapParams::builder().c(Stream::Conn(c))
     }
 
@@ -226,48 +220,37 @@ pub enum ProxyBehavior {
 ///
 #[async_trait]
 pub trait Mapper: crate::Name + Debug {
-    /// Mapper 在代理逻辑上分 in 和 out 两种
+    /// Mapper 在代理逻辑上分 DECODE 和 ENCODE 两种
     ///
-    /// InAdder 与 OutAdder 由 behavior 区分。
+    ///   由 behavior 区分。
     ///
-    /// # InAdder
+    /// # DECODE
     ///
-    /// 可选地返回 解析出的“目标地址”。一般只在InAdder最后一级产生。
-    /// 且InAdder试图生产出 target_addr 和 pre_read_data
+    ///  DECODE 试图生产 MapResult.a 和 MapResult.b ,
+    ///
     /// 一旦某一层中获得了 target_addr, 就要继续将它传到下一层。参阅累加器部分。
     ///
+    /// 返回值的 MapResult.d 用于 获取关于该层连接的额外信息
     ///
-    /// 返回值的 MapResult.d: OptData 用于 获取关于该层连接的额外信息, 一般情况为None即可
-    ///
-    /// 因为客户端有可能发来除握手数据以外的用户数据(earlydata), 所以返回值里有 Option<BytesMut>,
-    /// 其不为None时, 下一级的 maps 就要将其作为 pre_read_buf 调用
-    ///
-    ///
-    ///
-    /// 约定：如果一个代理在代理时切换了内部底层连接, 其返回的 extra_data 需为一个
-    /// NewConnectionOptData ,  这样 ruci::relay 包才能对其进行识别并处理
-    ///
-    /// 如果其不是 NewConnectionOptData ,  则不能使用 ruci::relay 作转发逻辑
+    /// 因为客户端有可能发来除握手数据以外的用户数据(earlydata), 所以返回值里有 MapResult.b,
+    /// 其不为None时, 下一级的 maps 就要将其作为 params.b 调用
     ///
     /// 注：切换底层连接是有的协议中会发生的情况, 比如先用 tcp 握手, 之后采用udp; 或者
     /// 先用tcp1 握手, 再换一个端口得到新的tcp2, 用新的连接去传输数据
     ///
-    /// 一旦切换连接, 则原连接将不再被 ruci::relay 包控制关闭, 其关闭将由InAdder自行处理.
-    /// 这种情况下, 如果 socks5 支持 udp associate, 则 socks5必须为 代理链的最终端。此时base会被关闭, 返回的 AddResult.c 应为 None
+    /// 一旦切换连接, 则原连接将不再被 ruci::relay 包控制关闭, 该 Mapper 自行处理.
     ///
     /// 这里不用 Result<...> 的形式, 是因为 在有错误的同时也可能返回一些有用的数据, 比如用于路由,回落等
     ///
-    /// # OutAdder
+    /// # ENCODE
     ///
-    /// OutAdder 是 out client 的 mapper, 从拨号基本连接开始,
+    ///   是 out client 的 mapper, 从拨号基本连接开始,
     ///  以 targetAddr (不是direct时就不是拔号的那个地址) 为参数创建新层
     ///
-    /// 与InAdder 相比, InAdder是试图生产 target_addr 和 earlydata 的机器, 而OutAdder 就是 试图消耗 target_addr 和 earlydata 的机器
+    /// 与 DECODE 相比, ENCODE 试图消耗 params.a 和 params.b
     ///
-    /// 如果传入的 target_addr不为空, 且 该 层的add 将 其消耗掉了, 则返回的 Option<net::Addr> 为None;
-    /// 如果没消耗掉, 或是仅对 target_addr 做了修改, 则 返回的 Option<net::Addr> 不为 None.
-    ///
-    /// 与 InAdder 一样, 它返回一个可选的额外数据  OptData
+    /// 如果传入的 params.a 不为空, 且 该 层的 maps 将 其消耗掉了, 则返回的 MapResult.a 为None;
+    /// 如果没消耗掉, 或是仅对 params.a 做了修改, 则 返回的 MapResult.a 不为 None.
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult;
 }

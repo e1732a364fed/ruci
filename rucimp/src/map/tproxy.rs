@@ -29,11 +29,13 @@ impl Mapper for Tproxy {
                         )
                     }
                 };
-                let (raddr, laddr) = match ap {
+                let (_, laddr) = match ap {
                     AnyData::RLAddr(a) => a,
                     _ => return MapResult::err_str("Tproxy needs RLAddr , got other data."),
                 };
-                MapResult::newc(c).build()
+
+                // laddr in tproxy is in fact target_addr
+                MapResult::newc(c).a(Some(laddr)).build()
             }
             Stream::AddrConn(_) => todo!(),
             _ => MapResult::err_str(&format!("Tproxy needs a stream, got {}", params.c)),
