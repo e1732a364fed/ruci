@@ -109,7 +109,8 @@ impl Map for Direct {
 enum AutoRouteState {
     #[default]
     None,
-    Up(Option<Vec<String>>),
+    InUp(Option<Vec<String>>),
+    OutUp,
     Down,
 }
 
@@ -122,6 +123,9 @@ pub struct BindDialer {
 
     #[cfg(feature = "tun")]
     pub in_auto_route: Option<tun::route::InAutoRouteParams>,
+
+    #[cfg(feature = "tun")]
+    pub out_auto_route: Option<tun::route::OutAutoRouteParams>,
 
     auto_route_state: Arc<Mutex<AutoRouteState>>,
 }
@@ -149,13 +153,23 @@ impl BindDialer {
     pub fn down_route(&mut self) {
         let mut mg = self.auto_route_state.lock();
         match &*mg {
-            AutoRouteState::Up(opt_dns_list) => {
-                debug!("BindDialer down auto route");
+            AutoRouteState::InUp(opt_dns_list) => {
+                debug!("BindDialer down in auto route");
 
-                let mut params = self.in_auto_route.take().unwrap();
+                let mut params = self.in_auto_route.clone().unwrap();
                 params.dns_list = opt_dns_list.to_owned();
                 let r = tun::route::in_down_route(&params);
-                debug!("BindDialer down route {r:?}");
+                debug!("BindDialer down in auto route {r:?}");
+                if r.is_ok() {
+                    *mg = AutoRouteState::Down;
+                }
+            }
+            AutoRouteState::OutUp => {
+                debug!("BindDialer down out auto route");
+
+                let params = self.out_auto_route.clone().unwrap();
+                let r = tun::route::out_down_route(&params);
+                debug!("BindDialer down out auto route {r:?}");
                 if r.is_ok() {
                     *mg = AutoRouteState::Down;
                 }
@@ -182,19 +196,39 @@ impl BindDialer {
                         if let Some(c) = &self.in_auto_route {
                             let mut mg = self.auto_route_state.lock();
                             match &*mg {
-                                AutoRouteState::Up(_) => {
-                                    info!("BindDialer called after AutoRouteState::Up")
+                                AutoRouteState::InUp(_) => {
+                                    info!("BindDialer called after AutoRouteState::InUp")
                                 }
                                 _ => {
                                     let r = tun::route::in_auto_route(c);
                                     match r {
                                         Ok(opt_dns_list) => {
-                                            *mg = AutoRouteState::Up(opt_dns_list);
+                                            *mg = AutoRouteState::InUp(opt_dns_list);
                                         }
                                         Err(e) => {
-                                            return MapResult::from_e(
-                                                e.context(format!("BindDialer auto_route failed")),
-                                            )
+                                            return MapResult::from_e(e.context(format!(
+                                                "BindDialer in auto_route failed"
+                                            )))
+                                        }
+                                    }
+                                }
+                            }
+                        } else if let Some(c) = &self.out_auto_route {
+                            let mut mg = self.auto_route_state.lock();
+                            match &*mg {
+                                AutoRouteState::OutUp => {
+                                    info!("BindDialer called after AutoRouteState::OutUp")
+                                }
+                                _ => {
+                                    let r = tun::route::out_auto_route(c);
+                                    match r {
+                                        Ok(_) => {
+                                            *mg = AutoRouteState::OutUp;
+                                        }
+                                        Err(e) => {
+                                            return MapResult::from_e(e.context(format!(
+                                                "BindDialer out auto_route failed"
+                                            )))
                                         }
                                     }
                                 }

@@ -70,7 +70,11 @@ echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf && sysctl -p
 
 该命令确保 /etc/sysctl.conf 文件中 包含 `net.ipv4.ip_forward=1` 且生效
 
+## tun
 
+tun 在 server 端使用时, 也必须要运行上面 tproxy 的 ip_forward 命令
+
+ip_forward 不仅用于转发局域网设备流量, 也用于从 本机的 tun 转发到 本机的 网卡
 
 ## 名词
 

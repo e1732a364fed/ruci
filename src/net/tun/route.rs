@@ -4,7 +4,7 @@ use tracing::{info, warn};
 
 use crate::{
     net::dns::{get_sys_dns, set_sys_dns},
-    utils::{self, sync_run_command_list_stop},
+    utils::{self, sync_run_command_list_no_stop, sync_run_command_list_stop},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
@@ -17,8 +17,70 @@ pub struct InAutoRouteParams {
     pub dns_list: Option<Vec<String>>,
 }
 
-// const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct OutAutoRouteParams {
+    pub tun_dev_name: Option<String>,
+    pub original_dev_name: Option<String>,
+    pub router_ip: Option<String>,
+}
+
+const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
 const DEFAULT_ORIGINAL_DEV_NAME: &str = "enp0s1";
+
+pub fn out_auto_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        info!("tun up out auto route for linux...");
+        let tun_dev_name = params.tun_dev_name.as_deref().unwrap_or("utun321");
+        let original_dev_name = params
+            .original_dev_name
+            .as_deref()
+            .unwrap_or(DEFAULT_ORIGINAL_DEV_NAME);
+
+        let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
+
+        let list = format!(
+            r#"ip route del default
+ip route add default via {router_ip} dev enp0s1
+iptables -I FORWARD -i {tun_dev_name} -o {original_dev_name} -m conntrack --ctstate NEW -j ACCEPT
+iptables -I FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+iptables -t nat -I POSTROUTING -o {original_dev_name} -j MASQUERADE"#,
+        );
+        let list: Vec<_> = list.split('\n').map(String::from).collect();
+
+        let r = sync_run_command_list_stop(list.iter().map(String::as_str).collect());
+
+        if let Err(e) = r {
+            warn!("auto_route run command got e, will down_route: {}", e);
+
+            let _ = out_down_route(params);
+            return Err(e);
+        }
+    }
+    Ok(())
+}
+
+pub fn out_down_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        info!("tun out down auto route for linux...");
+
+        let tun_dev_name = params.tun_dev_name.as_deref().unwrap_or("utun321");
+        let original_dev_name = params
+            .original_dev_name
+            .as_deref()
+            .unwrap_or(DEFAULT_ORIGINAL_DEV_NAME);
+        let list = format!(
+            r#"iptables -D FORWARD -i {tun_dev_name} -o {original_dev_name} -m conntrack --ctstate NEW -j ACCEPT
+iptables -D FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+iptables -t nat -D POSTROUTING -o {original_dev_name} -j MASQUERADE"#,
+        );
+        let list: Vec<_> = list.split('\n').map(String::from).collect();
+
+        sync_run_command_list_no_stop(list.iter().map(String::as_str).collect(), false)?;
+    }
+    Ok(())
+}
 
 pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<String>>> {
     #[cfg(target_os = "linux")]
@@ -92,7 +154,7 @@ pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
             }
         }
 
-        sync_run_command_list_stop(list.iter().map(String::as_str).collect())?;
+        sync_run_command_list_no_stop(list.iter().map(String::as_str).collect(), false)?;
 
         if let Some(d) = &params.dns_list {
             let d = d.iter().map(String::as_str).collect();

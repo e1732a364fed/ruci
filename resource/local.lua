@@ -639,6 +639,8 @@ end
 -- generator, generator 根据参数内容来动态生成 [Map], 如果不想
 -- 重复生成以前生成过的Map, 则可以返回一个已创建过的Map (参见其它包含 Infinite 的配置文件中的示例)
 
+-- 完全动态链需要在 ruci-cmd 运行时 加 --infinite 来启用
+
 -- local inspect = require("inspect")
 
 -- my_cid_record = {}

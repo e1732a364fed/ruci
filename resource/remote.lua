@@ -169,7 +169,8 @@ Config = {
     --]]
 
     ---[[
-    -- 对应 local.lua 使用 tun+IpRelayTest1 的 outbound 配置
+    -- 对应 local.lua 使用 tun+IpRelayTest1 的 outbound 配置. 
+    --  注意, 不像 tproxy, tun 示例不能本机自连测试
 
     outbounds = { {
         tag = "dial1",
@@ -177,6 +178,15 @@ Config = {
             {
                 BindDialer = {
                     bind_addr = "ip://10.0.0.2:24#utun321",
+
+                    -- out_auto_route 会自动配置路由表使得 utun321 中的流量走 enp0s1. 
+                    -- 注意要确保开启了 ip_forward
+
+                    out_auto_route = {
+                        tun_dev_name = "utun321",
+                        original_dev_name = "enp0s1",
+                        router_ip = "192.168.0.1",
+                    }
                 }
             }
         }
