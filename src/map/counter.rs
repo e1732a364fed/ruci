@@ -15,11 +15,12 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
-    task::Poll,
+    task::{Context, Poll},
 };
 
 use crate::map;
 use crate::{net::*, Name};
+use addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use async_trait::async_trait;
 use tokio::io::{AsyncRead, AsyncWrite};
 
@@ -115,28 +116,27 @@ impl Map for Counter {
     ///
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        let mut db = 0;
+
+        if behavior == ProxyBehavior::DECODE {
+            if let Some(ed) = params.b.as_ref() {
+                db = ed.len() as u64;
+            }
+        };
+
+        let cd = CounterData {
+            cid,
+            ub: Arc::new(AtomicU64::new(0)),
+            db: Arc::new(AtomicU64::new(db)),
+        };
+        let output_data: Vec<Arc<AtomicU64>> = vec![cd.ub.clone(), cd.db.clone()];
+
         match params.c {
             Stream::Conn(c) => {
-                let mut db = 0;
-
-                if behavior == ProxyBehavior::DECODE {
-                    if let Some(ed) = params.b.as_ref() {
-                        db = ed.len() as u64;
-                    }
-                };
-
-                let cd = CounterData {
-                    cid,
-                    ub: Arc::new(AtomicU64::new(0)),
-                    db: Arc::new(AtomicU64::new(db)),
-                };
-
                 let cc = CounterConn {
                     data: cd.clone(),
                     base: Box::pin(c),
                 };
-
-                let output_data: Vec<Arc<AtomicU64>> = vec![cd.ub.clone(), cd.db.clone()];
 
                 MapResult::builder()
                     .a(params.a)
@@ -145,11 +145,98 @@ impl Map for Counter {
                     .dynamic_data(output_data)
                     .build()
             }
-            Stream::AddrConn(_) => {
-                todo!()
+            Stream::AddrConn(ac) => {
+                let cc = AddrConn {
+                    r: Box::new(CounterAddrConnR {
+                        base: Box::pin(ac.r),
+                        data: cd.clone(),
+                    }),
+                    w: Box::new(CounterAddrConnW {
+                        base: Box::pin(ac.w),
+                        data: cd,
+                    }),
+                    default_write_to: ac.default_write_to,
+                    cached_name: "record_ac".to_string(),
+                };
+                MapResult::builder()
+                    .a(params.a)
+                    .b(params.b)
+                    .c(Stream::AddrConn(cc))
+                    .dynamic_data(output_data)
+                    .build()
             }
             Stream::None => MapResult::err_str("counter: can't init without a stream"),
             _ => MapResult::err_str("counter: can't init with a stream generator"),
         }
+    }
+}
+
+struct CounterAddrConnR {
+    base: Pin<Box<dyn addr_conn::AddrReadTrait>>,
+    pub data: CounterData,
+}
+
+impl crate::Name for CounterAddrConnR {
+    fn name(&self) -> &str {
+        "counter_ac_r"
+    }
+}
+
+struct CounterAddrConnW {
+    base: Pin<Box<dyn addr_conn::AddrWriteTrait>>,
+    pub data: CounterData,
+}
+
+impl crate::Name for CounterAddrConnW {
+    fn name(&self) -> &str {
+        "counter_ac_w"
+    }
+}
+
+impl AsyncReadAddr for CounterAddrConnR {
+    fn poll_read_addr(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<(usize, Addr)>> {
+        let r = self.base.as_mut().poll_read_addr(cx, buf);
+        if let Poll::Ready(Ok((n, ad))) = r {
+            let db = self.data.db.fetch_add(n as u64, Ordering::Relaxed);
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                debug!("{}, counter : db: {}, ", self.data.cid, db,);
+            }
+            Poll::Ready(io::Result::Ok((n, ad)))
+        } else {
+            r
+        }
+    }
+}
+
+impl AsyncWriteAddr for CounterAddrConnW {
+    fn poll_write_addr(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+        addr: &Addr,
+    ) -> Poll<io::Result<usize>> {
+        let r = self.base.as_mut().poll_write_addr(cx, buf, addr);
+
+        if let Poll::Ready(Ok(u)) = r {
+            let ub = self.data.ub.fetch_add(u as u64, Ordering::Relaxed);
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                debug!("{}, counter : ub: {}, ", self.data.cid, ub,);
+            }
+            Poll::Ready(io::Result::Ok(u))
+        } else {
+            r
+        }
+    }
+
+    fn poll_flush_addr(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        self.base.as_mut().poll_flush_addr(cx)
+    }
+
+    fn poll_close_addr(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        self.base.as_mut().poll_close_addr(cx)
     }
 }
