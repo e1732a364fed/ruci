@@ -122,6 +122,8 @@ pub enum NewReadType {
     None,
 }
 
+pub type AMap<K, V> = Arc<Mutex<HashMap<K, V>>>;
+
 /// 实现 smoltcp 的 Device trait.
 ///
 /// Device trait 的 receive 方法会在 smoltcp 的 iface.poll 被调用 后自动触发.
@@ -155,16 +157,16 @@ pub struct SmoltcpDevice {
     tcp_handle_set: Arc<Mutex<HashSet<SocketHandle>>>,
     udp_handle_set: Arc<Mutex<HashSet<SocketHandle>>>,
 
-    tcp_src_handle_map: Arc<Mutex<HashMap<IpEndpoint, SocketHandle>>>,
-    tcp_handle_src_map: Arc<Mutex<HashMap<SocketHandle, IpEndpoint>>>,
+    tcp_src_handle_map: AMap<IpEndpoint, SocketHandle>,
+    tcp_handle_src_map: AMap<SocketHandle, IpEndpoint>,
 
-    udp_src_handle_map: Arc<Mutex<HashMap<IpEndpoint, SocketHandle>>>,
-    udp_handle_src_map: Arc<Mutex<HashMap<SocketHandle, IpEndpoint>>>,
+    udp_src_handle_map: AMap<IpEndpoint, SocketHandle>,
+    udp_handle_src_map: AMap<SocketHandle, IpEndpoint>,
 
     /// write the data read from smoltcp to tx, whose rx is inside TcpStream to be read
-    tcp_read_data_tx_map: Arc<Mutex<HashMap<SocketHandle, Sender<BytesMut>>>>,
+    tcp_read_data_tx_map: AMap<SocketHandle, Sender<BytesMut>>,
 
-    udp_read_data_tx_map: Arc<Mutex<HashMap<IpEndpoint, Sender<(IpEndpoint, BytesMut)>>>>,
+    udp_read_data_tx_map: AMap<IpEndpoint, Sender<(IpEndpoint, BytesMut)>>,
 
     /// only here to be cloned for new TcpStream
     tcp_write_data_tx: Sender<(SocketHandle, SocketAddr, BytesMut)>,
@@ -229,7 +231,6 @@ impl Device for SmoltcpDevice {
 pub struct DeviceAndReceivers {
     pub iface: smoltcp::iface::Interface,
     pub device: SmoltcpDevice,
-    // pub w: tokio::io::WriteHalf<Conn>,
     pub tcp_rx: Receiver<(SocketHandle, SocketAddr, BytesMut)>,
     pub udp_rx: Receiver<(SocketHandle, IpEndpoint, BytesMut)>,
 }
@@ -775,9 +776,9 @@ impl SmoltcpDevice {
 
         let is_removing = !sh_list.is_empty() || !src_list.is_empty();
 
-        if is_removing {
-            tracing::debug!("remove tcp {:?}", sh_list);
-        }
+        // if is_removing {
+        //     tracing::debug!("remove tcp {:?}", sh_list);
+        // }
 
         let mut tcp_src_handle_map_lock = self.tcp_src_handle_map.lock();
         let mut tcp_read_data_tx_map_lock = self.tcp_read_data_tx_map.lock();
@@ -817,9 +818,9 @@ impl SmoltcpDevice {
 
     fn remove_udp_list(&mut self, sh_list: &Vec<SocketHandle>, mut src_list: Vec<IpEndpoint>) {
         let is_removing = !src_list.is_empty();
-        if is_removing {
-            tracing::debug!("remove udp {:?}", src_list);
-        }
+        // if is_removing {
+        //     tracing::debug!("remove udp {:?}", src_list);
+        // }
 
         let mut udp_src_handle_map_lock = self.udp_src_handle_map.lock();
         let mut udp_read_data_tx_map_lock = self.udp_read_data_tx_map.lock();

@@ -44,7 +44,7 @@ pub enum Commands {
     ///
     /// default listen is "0.0.0.0:18143"
     #[cfg(feature = "file_server")]
-    ServeFolder { addr: Option<String> },
+    ServeStatic { addr: Option<String> },
 
     /// print the QrCode of a string in the console.
     QR { str: String },
@@ -91,7 +91,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         }
 
         #[cfg(feature = "file_server")]
-        Commands::ServeFolder { addr } => {
+        Commands::ServeStatic { addr } => {
             folder_serve::serve_static(addr).await;
 
             let _ = rucimp::utils::wait_close_sig().await;
@@ -220,5 +220,5 @@ fn print_qrcode_of(str: &str) {
         .dark_color(unicode::Dense1x2::Light)
         .light_color(unicode::Dense1x2::Dark)
         .build();
-    println!("{}", image);
+    println!("{image}");
 }
