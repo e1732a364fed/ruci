@@ -79,12 +79,21 @@ impl AsyncWriteAddr for Conn {
         buf: &[u8],
         addr: &Addr,
     ) -> Poll<io::Result<usize>> {
+        // debug!(
+        //     "udp write called {} {addr} {}",
+        //     buf.len(),
+        //     self.peer_addr.is_some()
+        // );
         if self.peer_addr.is_some() || addr.eq(&Addr::default()) {
             self.u.poll_send(cx, buf)
         } else {
             let sor = addr.get_socket_addr_or_resolve();
             match sor {
-                Ok(so) => self.u.poll_send_to(cx, buf, so),
+                Ok(so) => {
+                    let r = self.u.poll_send_to(cx, buf, so);
+                    //debug!("udp poll_send_to got {:?}", r);
+                    r
+                }
                 Err(e) => Poll::Ready(Err(io::Error::other(e))),
             }
         }
@@ -110,7 +119,12 @@ impl AsyncReadAddr for Conn {
             let r = self.u.poll_recv(cx, &mut r_buf);
             match r {
                 Poll::Ready(r) => match r {
-                    Ok(_) => Poll::Ready(Ok((r_buf.filled().len(), pa.clone()))),
+                    Ok(_) => {
+                        let r_len = r_buf.filled().len();
+                        // debug!("udp read got {}", r_len);
+
+                        Poll::Ready(Ok((r_len, pa.clone())))
+                    }
                     Err(e) => Poll::Ready(Err(e)),
                 },
                 Poll::Pending => Poll::Pending,
@@ -119,13 +133,18 @@ impl AsyncReadAddr for Conn {
             let r = self.u.poll_recv_from(cx, &mut r_buf);
             match r {
                 Poll::Ready(r) => match r {
-                    Ok(so) => Poll::Ready(Ok((
-                        r_buf.filled().len(),
-                        crate::net::Addr {
-                            addr: NetAddr::Socket(so),
-                            network: Network::UDP,
-                        },
-                    ))),
+                    Ok(so) => {
+                        let r_len = r_buf.filled().len();
+                        // debug!("udp read got {}", r_len);
+
+                        Poll::Ready(Ok((
+                            r_len,
+                            crate::net::Addr {
+                                addr: NetAddr::Socket(so),
+                                network: Network::UDP,
+                            },
+                        )))
+                    }
                     Err(e) => Poll::Ready(Err(e)),
                 },
                 Poll::Pending => Poll::Pending,

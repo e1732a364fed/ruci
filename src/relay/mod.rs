@@ -376,7 +376,7 @@ pub async fn cp_udp(
 
     if let Some(real_ed) = ed {
         if let Some(real_first_target) = first_target {
-            debug!("cp_udp: writing ed");
+            debug!("cp_udp: writing ed {:?}", real_ed);
             let r = out_conn.w.write(&real_ed, &real_first_target).await;
             if let Err(e) = r {
                 warn!("cp_udp: writing ed failed: {e}");
@@ -384,7 +384,7 @@ pub async fn cp_udp(
                 return;
             }
         } else {
-            debug!("cp_udp: writing ed without real_first_target");
+            debug!("cp_udp: writing ed without real_first_target {:?}", real_ed);
             let r = out_conn.w.write(&real_ed, &Addr::default()).await;
             if let Err(e) = r {
                 warn!("cp_udp: writing ed failed: {e}");

@@ -7,12 +7,16 @@ use std::{
 
 use bytes::{Buf, BufMut, BytesMut};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf, ReadHalf, WriteHalf};
+use tracing::debug;
 
-use crate::net::{
-    self,
-    addr_conn::{AsyncReadAddr, AsyncWriteAddr},
-    helpers::{self, MAX_LEN_SOCKS5_BYTES},
-    Addr, Network,
+use crate::{
+    net::{
+        self,
+        addr_conn::{AsyncReadAddr, AsyncWriteAddr},
+        helpers::{self, MAX_LEN_SOCKS5_BYTES},
+        Addr, Network,
+    },
+    utils::io_error,
 };
 
 use super::*;
@@ -37,39 +41,46 @@ impl AsyncReadAddr for Reader {
         let mut inner = BytesMut::zeroed(r_buf.len() + helpers::MAX_LEN_SOCKS5_BYTES);
         let mut buf2 = ReadBuf::new(&mut inner[..]);
 
+        //debug!("trojan reader read called");
+
         let r = self.base.as_mut().poll_read(cx, &mut buf2);
+
+        //debug!("trojan reader read got {:?}", r);
 
         match r {
             Poll::Ready(re) => {
                 match re {
                     Ok(_) => {
-                        let mut buf2 = inner;
+                        //debug!("trojan reader read got len {:?}", buf2.filled().len());
 
-                        let addr_r = helpers::socks5_bytes_to_addr(&mut buf2);
+                        let mut the_buf2 = inner;
+
+                        let addr_r = helpers::socks5_bytes_to_addr(&mut the_buf2);
                         match addr_r {
                             Ok(mut ad) => {
-                                if buf2.len() < 2 {
+                                if the_buf2.len() < 2 {
                                     return Poll::Ready(Err(io::Error::other(
                                         "buf len short of data length part",
                                     )));
                                 }
 
-                                let l = buf2.get_u16() as usize;
-                                if buf2.len() - 2 < l {
-                                    return Poll::Ready(Err(io::Error::other(format!("buf len short of data , marked length+2:{}, real length: {}", l+2, buf2.len()))));
+                                let l = the_buf2.get_u16() as usize;
+                                if the_buf2.len() - 2 < l {
+                                    return Poll::Ready(Err(io::Error::other(format!("buf len short of data , marked length+2:{}, real length: {}", l+2, the_buf2.len()))));
                                 }
-                                let crlf = buf2.get_u16();
+                                let crlf = the_buf2.get_u16();
                                 if crlf != CRLF {
                                     return Poll::Ready(Err(io::Error::other(format!(
                                         "no crlf! {}",
                                         crlf
                                     ))));
                                 }
-                                buf2.truncate(l);
+                                the_buf2.truncate(l);
 
                                 let real_len = min(l, r_buf.len());
+                                debug!("trojan reader read got real_len {:?}", real_len);
 
-                                r_buf.put(&buf2[..real_len]);
+                                r_buf.put(&the_buf2[..real_len]);
                                 ad.network = Network::UDP;
 
                                 Poll::Ready(Ok((real_len, ad)))
@@ -88,10 +99,20 @@ impl AsyncReadAddr for Reader {
 //Writer 包装 WriteHalf<net::Conn>, 使其可以按trojan 格式写入 数据和Addr
 pub struct Writer {
     pub base: Pin<Box<WriteHalf<net::Conn>>>,
+
+    pub last_buf: Option<BytesMut>,
 }
 impl crate::Name for Writer {
     fn name(&self) -> &str {
         "trojan_udp(w)"
+    }
+}
+impl Writer {
+    pub fn new(base: WriteHalf<net::Conn>) -> Self {
+        Self {
+            base: Box::pin(base),
+            last_buf: None,
+        }
     }
 }
 
@@ -102,15 +123,64 @@ impl AsyncWriteAddr for Writer {
         buf: &[u8],
         addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        let mut buf2 = BytesMut::with_capacity(MAX_LEN_SOCKS5_BYTES + buf.len());
+        // debug!("trojan writer called {}", buf.len());
+        let supposed_cap = MAX_LEN_SOCKS5_BYTES + buf.len();
+        let mut buf2 = if let Some(mut b) = self.last_buf.take() {
+            let c = b.capacity();
+            if c < supposed_cap {
+                b.reserve(supposed_cap);
+            }
+
+            b
+        } else {
+            BytesMut::with_capacity(supposed_cap)
+        };
 
         helpers::addr_to_socks5_bytes(addr, &mut buf2);
 
-        buf2.put_u16(buf.len() as u16);
+        let data_l = buf.len();
+
+        buf2.put_u16(data_l as u16);
         buf2.put_u16(CRLF);
         buf2.put(buf);
 
-        self.base.as_mut().poll_write(cx, &buf2)
+        let actual_l = buf2.len();
+
+        let r = self.base.as_mut().poll_write(cx, &buf2);
+        // debug!("trojan writer write got {:?}", r);
+
+        buf2.clear();
+        self.last_buf = Some(buf2);
+
+        match r {
+            Poll::Pending => {
+                return Poll::Pending;
+            }
+
+            Poll::Ready(r) => match r {
+                Ok(n) => {
+                    if n == actual_l {
+                        return Poll::Ready(Ok(data_l));
+                    } else {
+                        if n > actual_l {
+                            return Poll::Ready(Err(io_error(format!(
+                                "trojan udp write got impossible n > actual_l, {} {}",
+                                n, actual_l
+                            ))));
+                        } else {
+                            let diff = actual_l - n;
+                            debug!(
+                                "trojan writer write got short write {} {} {}",
+                                actual_l, n, diff
+                            );
+
+                            return Poll::Ready(Ok(data_l - diff));
+                        }
+                    }
+                }
+                Err(e) => return Poll::Ready(Err(e)),
+            },
+        }
     }
 
     fn poll_flush_addr(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -126,7 +196,7 @@ pub fn from(c: net::Conn) -> net::addr_conn::AddrConn {
     let (r, w) = tokio::io::split(c);
 
     let ar = Reader { base: Box::pin(r) };
-    let aw = Writer { base: Box::pin(w) };
+    let aw = Writer::new(w);
 
     net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw))
 }
@@ -157,7 +227,7 @@ mod test {
 
         let (_r, w) = tokio::io::split(conn);
 
-        let mut aw = Writer { base: Box::pin(w) };
+        let mut aw = Writer::new(w);
 
         let ad = net::Addr {
             network: net::Network::UDP,

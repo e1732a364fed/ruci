@@ -10,7 +10,7 @@ ruci pronounced lucy.
 
 ## Intro
 
-A network proxy framework uses rust(Rust 2021 edition 1.75+)
+A network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+)
 
 See [notes.md](doc/notes.md) for more notes.
 
@@ -19,7 +19,7 @@ See [notes.md](doc/notes.md) for more notes.
 
 一个好的解决问题的模式: 有暂时不懂的问题可以先进群问, 确定问题后再发 issue
 
-Developer chat:    https://t.me/+6yL4ggeyKY0yNjIx
+Developer chat:     https://t.me/+6yL4ggeyKY0yNjIx
 User channel:       https://t.me/+r5hKQKYyeuowMTcx
 
 The project is work in progress, 功能会陆续添加
@@ -57,7 +57,7 @@ See [ruci-cmd](crates/ruci-cmd/README.md)
 
 ### rucimp/examples
 
-rucimp 提供若干示例程序, suit, chain 等
+rucimp provides some example binaries, like suit, chain etc.
 
 See [exmaples](rucimp/examples/README.md)
 

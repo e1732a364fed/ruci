@@ -70,7 +70,13 @@ impl Client {
 
         if is_udp {
             let u = udp::from(base);
-            Ok(MapResult::new_u(u).b(first_payload).build())
+
+            // first target 依然要有, 因为 trojan udp 传输格式中没有省略 target addr 的情况
+            Ok(MapResult::new_u(u)
+                .b(first_payload)
+                .a(Some(ta))
+                .no_timeout(true)
+                .build())
         } else {
             Ok(MapResult::new_c(base).b(first_payload).build())
         }

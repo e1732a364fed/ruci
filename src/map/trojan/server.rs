@@ -11,6 +11,7 @@ use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
 use macro_mapper::*;
 use tokio::io::AsyncReadExt;
+use tracing::debug;
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -208,6 +209,33 @@ impl Server {
 
         if is_udp {
             let u = udp::from(base);
+
+            if !buf.is_empty() {
+                debug!("decode first udp head {}", buf.len());
+                //解析一遍 udp 包头
+                ta = match helpers::socks5_bytes_to_addr(&mut buf) {
+                    Ok(ta) => ta,
+                    Err(e) => return Ok(MapResult::buf_err(buf, e)),
+                };
+                ta.network = Network::UDP;
+
+                let l = buf.get_u16() as usize;
+                if buf.len() - 2 < l {
+                    return Ok(MapResult::err_str(&format!(
+                        "buf len short of data , marked length+2:{}, real length: {}",
+                        l + 2,
+                        buf.len()
+                    )));
+                }
+                let crlf = buf.get_u16();
+                if crlf != CRLF {
+                    return Ok(MapResult::err_str(&format!("no crlf! {}", crlf)));
+                }
+                buf.truncate(l);
+
+                // debug!("left buf len {}", buf.len());
+            }
+
             let mut mr = MapResult::new_u(u)
                 .a(Some(ta))
                 .b(utils::buf_to_ob(buf))
