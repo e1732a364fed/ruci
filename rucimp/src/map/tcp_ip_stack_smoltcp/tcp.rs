@@ -96,13 +96,13 @@ impl AsyncRead for TcpReadHalf {
             let dst_buffer = buf.initialize_unfilled();
             let len = dst_buffer.len().min(me.buf.len());
 
-            debug!("smoltcp tcp read got len {len}");
+            // debug!("smoltcp tcp read got len {len}");
             let _ = &dst_buffer[..len].copy_from_slice(&me.buf.as_ref()[..len]);
             me.buf.advance(len);
             buf.set_filled(buf.filled().len() + len);
             Poll::Ready(Ok(()))
         } else if let Some(data) = ready!(me.rx.poll_recv(cx)) {
-            debug!("smoltcp tcp poll ready, got data {}", data.len());
+            // debug!("smoltcp tcp poll ready, got data {}", data.len());
             if data.is_empty() {
                 return Poll::Ready(Ok(()));
             }
@@ -137,7 +137,7 @@ impl AsyncWrite for TcpWriteHalf {
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        debug!("smoltcp tcp shutdown called");
+        // debug!("smoltcp tcp shutdown called");
         self.poll_write(cx, &[]).map(|ret| ret.map(|_| ()))
     }
 }
@@ -150,7 +150,7 @@ impl AsyncRead for TcpStream {
     ) -> Poll<std::io::Result<()>> {
         let me = self.get_mut();
         if me.is_closed {
-            debug!("smoltcp read got is closed");
+            // debug!("smoltcp read got is closed");
             return Poll::Ready(Ok(()));
         }
         Pin::new(&mut me.r).poll_read(cx, buf)
@@ -171,7 +171,7 @@ impl AsyncWrite for TcpStream {
         Pin::new(&mut me.w).poll_flush(cx)
     }
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        debug!("smoltcp tcpstream shutdown called");
+        // debug!("smoltcp tcpstream shutdown called");
         let me = self.get_mut();
         me.is_closed = true;
         me.r.rx.close();

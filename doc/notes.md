@@ -192,7 +192,7 @@ ruci chain 模式中,
 
 在ruci 中, 你可以:  dial 一个由 host1 解析得的ip, 然后 tls 里的 sni 写 host2, 然后 ws/grpc 的请求 url 中 写 host3
 
-## tun 模式的一些实测信息
+## tun模式的一些实测信息
 
 tun 是用 如下配置启用
 
@@ -208,12 +208,40 @@ tun 是用 如下配置启用
 
 详见 local.lua 中对应示例
 
-windows 上需要 wintun.dll. 可用ruci-cmd `ruci-cmd utils wintun` 来自动下载 wintun.zip
+windows 上需要 wintun.dll. 可用ruci-cmd `ruci-cmd utils wintun` 来自动下载 wintun.zip，wintun.zip 中还有子文件夹，
+一般要进入 amd64 文件夹中，解压出里面的 wintun.dll
 
 在windows上, 可以在控制面板中找到所建立的虚拟网卡
 
 
 实测, 在 windows 上, 就算不配置任何路由, 系统也会识别到它建立的虚拟网卡, 并向其发送一些信息；在 linux 和 macos 上, 也会收到少量信息（即会在log中显示一些输出）
+
+在 linux/macOS 上，运行要用 sudo , 在 windows 上，要用管理员权限运行程序，这样ruci-cmd 才能启动虚拟网卡。
+
+
+在  in_auto_route 的  ` original_dev_name = "en0"` 项 和  `sockopt` 的 `bind_to_device = "en0"` 项中,均要填写网卡名称信息
+
+在 linux/macOS 上用 ifconfig 查看, 在 windows 上用 ipconfig 查看。
+
+windows 上，根据系统语言不同，网卡名称也不同，比如 "ETHERNET" 在中文系统中为 "以太网"
+
+## smoltcp/lwip 与 tun
+
+smoltcp 和 lwip 是两种 tcp/ip stack 的实现
+
+lwip 无法在 windows 上编译。
+
+二者均需要使用 tun 包 或 tun2 包来作为底层tun device.
+
+一开始，先有 tun包，后来作者不维护了，又出现了tun2包，但是到了 24年年底，
+tun2包的作者又开始维护 tun 包，因此 此时 tun 包就更新了。
+
+tun 包在 windows 平台使用 wintun, 而在 其它平台使用 系统调用。
+
+经测试发现，windows 上的 wintun 性能很强，而在其它平台则用起来很卡顿，也许是平台问题，
+也许是tun 包的 异步实现代码的问题。
+
+smoltcp 的实现 在实践中比 lwip 实现快一些。因此 ruci-cmd 只采用了 smoltcp 的网络栈。
 
 
 # lib note
@@ -356,6 +384,9 @@ quinn (代码在 rucimp/src/map/quinn):全没问题
 （两个依赖包的接口代码几乎是相同的，只能说明s2n-quic 互通性还不完善)
 
 而且 s2n-quic 在 windows 无法编译通过
+
+
+
 
 ## 编译运行问题
 

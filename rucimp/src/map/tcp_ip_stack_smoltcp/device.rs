@@ -488,7 +488,7 @@ impl SmoltcpDevice {
                             network: Network::UDP,
                         };
 
-                        let ac = super::udp2::new(sa, sh, read_rx, self.udp_write_data_tx.clone());
+                        let ac = super::udp::new(sa, sh, read_rx, self.udp_write_data_tx.clone());
 
                         //debug!("smoltcp got new udp connection {dst_ipe} {src_ipe}");
 
@@ -510,14 +510,14 @@ impl SmoltcpDevice {
 
     /// check timeout udp and remove from device's SocketSet
     pub fn udp_health_check(&mut self) {
-        debug!("udp_health_check");
+        // debug!("udp_health_check");
         let mut udp_src_to_remove = Vec::new();
 
         {
             let m = self.udp_read_data_tx_map.lock();
 
             for (src, sender) in m.iter() {
-                debug!("checking udp for {:?}", src);
+                // debug!("checking udp for {:?}", src);
                 if sender.is_closed() {
                     //debug!("udp_health_check got a closed");
                     udp_src_to_remove.push(src.to_owned());
@@ -545,12 +545,12 @@ impl SmoltcpDevice {
 
                 let so: &mut smoltcp::socket::tcp::Socket = self.tcp_sockets.get_mut(h);
 
-                debug!(
-                    "checking {h}, {:?}, {:?} {}",
-                    so.local_endpoint(),
-                    so.remote_endpoint(),
-                    so.state()
-                );
+                // debug!(
+                //     "checking {h}, {:?}, {:?} {}",
+                //     so.local_endpoint(),
+                //     so.remote_endpoint(),
+                //     so.state()
+                // );
                 if !so.can_recv() {
                     debug!("cant recv {h}");
                 }
@@ -572,13 +572,13 @@ impl SmoltcpDevice {
                     let tcp_stream_read_data_sender = m.get(&h).unwrap();
 
                     if tcp_stream_read_data_sender.is_closed() {
-                        debug!("{h}, will delete tcp because sender closed");
+                        // debug!("{h}, will delete tcp because sender closed");
                         tcp_handles_to_remove.push(h);
                         tcp_src_to_remove.push(src);
                     } else {
-                        if !so.can_recv() {
-                            debug!("{h}, has src but cant recv, {}", so.state());
-                        }
+                        // if !so.can_recv() {
+                        //     debug!("{h}, has src but cant recv, {}", so.state());
+                        // }
 
                         while so.can_recv() && tcp_stream_read_data_sender.capacity() > 0 {
                             let mut buffer = BytesMut::with_capacity(so.recv_queue());
@@ -602,16 +602,16 @@ impl SmoltcpDevice {
                                     break;
                                 }
                             } else {
-                                debug!("tcp_read_data_tx so.recv_slice failed");
+                                // debug!("tcp_read_data_tx so.recv_slice failed");
                                 so.close();
                                 break;
                             }
                         }
                         if so.state() == State::CloseWait && so.send_queue() == 0 {
-                            debug!(
-                                "{h}, so.state() == State::CloseWait
-                                        && so.send_queue() == 0"
-                            );
+                            // debug!(
+                            //     "{h}, so.state() == State::CloseWait
+                            //             && so.send_queue() == 0"
+                            // );
                             let _ =
                                 tcp_stream_read_data_sender.try_send(BytesMut::with_capacity(0));
                             //这里将令 TcpStream 的 read端 收到一个 0字节，表示EOF
