@@ -15,8 +15,6 @@ use tokio::sync::{mpsc, Mutex};
 use tracing::{debug, info};
 use utoipa_swagger_ui::SwaggerUi;
 
-pub const DEFAULT_API_ADDR: &str = "127.0.0.1:40681";
-
 type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, (DateTime<Utc>, NewConnInfo)>>>;
 
 /// 缓存 某cid的 某时间点的流量
@@ -443,7 +441,7 @@ pub async fn serve(
     let addr = s
         .listen_addr
         .clone()
-        .unwrap_or_else(|| String::from(DEFAULT_API_ADDR));
+        .unwrap_or_else(|| String::from(crate::DEFAULT_API_ADDR));
     info!("api server starting {addr}");
 
     let mut app = Router::new().route("/api/status", get(get_status));

@@ -40,3 +40,5 @@ pub const COMMON_DIRS: [&str; 12] = [
 
 /// Default name for Lua configuration files
 pub const DEFAULT_LUA_CONFIG_FILE_NAME: &str = "local.lua";
+
+pub const DEFAULT_API_ADDR: &str = "127.0.0.1:40681";
