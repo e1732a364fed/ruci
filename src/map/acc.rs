@@ -27,11 +27,11 @@ pub struct AccumulateResult {
 
     pub chain_tag: String,
 
-    #[cfg(feature = "trace")]
-    pub trace: Vec<String>, // table of Names of each Mapper during accumulation.
-
     // 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
     pub left_mappers_iter: MIterBox,
+
+    #[cfg(feature = "trace")]
+    pub trace: Vec<String>, // table of Names of each Mapper during accumulation.
 }
 
 impl Debug for AccumulateResult {
@@ -53,6 +53,9 @@ pub struct AccumulateParams {
     pub behavior: ProxyBehavior,
     pub initial_state: MapResult,
     pub mappers: MIterBox,
+
+    #[cfg(feature = "trace")]
+    pub trace: Vec<String>,
 }
 
 ///  accumulate 是一个作用很强的函数,是 mappers 的累加器
@@ -78,7 +81,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
     let mut mappers = params.mappers;
 
     #[cfg(feature = "trace")]
-    let mut trace = Vec::new();
+    let mut trace = params.trace;
 
     let mut last_r: MapResult = initial_state;
 
@@ -150,9 +153,10 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
         },
         left_mappers_iter: mappers,
 
+        chain_tag: tag,
+
         #[cfg(feature = "trace")]
         trace,
-        chain_tag: tag,
     }
 }
 
@@ -189,7 +193,17 @@ pub async fn accumulate_from_start(
     }
 
     if let Stream::Generator(rx) = first_r.c {
-        in_iter_accumulate_forever(CID::default(), rx, tx, inmappers, oti).await;
+        in_iter_accumulate_forever(InIterAccumulateForeverParams {
+            cid: CID::default(),
+            rx,
+            tx,
+            miter: inmappers,
+            oti,
+
+            #[cfg(feature = "trace")]
+            trace: vec![first.name().to_string()],
+        })
+        .await;
     } else {
         match &first_r.c {
             Stream::None => {
@@ -206,12 +220,26 @@ pub async fn accumulate_from_start(
                 behavior: ProxyBehavior::DECODE,
                 initial_state: first_r,
                 mappers: inmappers,
+
+                #[cfg(feature = "trace")]
+                trace: vec![first.name().to_string()],
             })
             .await;
             let _ = tx.send(r).await;
         });
     };
     Ok(())
+}
+
+struct InIterAccumulateForeverParams {
+    cid: CID,
+    rx: tokio::sync::mpsc::Receiver<MapResult>,
+    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
+    miter: MIterBox,
+    oti: Option<Arc<TrafficRecorder>>,
+
+    #[cfg(feature = "trace")]
+    pub trace: Vec<String>,
 }
 
 /// blocking until rx got closed.
@@ -224,13 +252,13 @@ pub async fn accumulate_from_start(
 ///
 /// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
 ///
-pub async fn in_iter_accumulate_forever(
-    cid: CID,
-    mut rx: tokio::sync::mpsc::Receiver<MapResult>,
-    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
-    miter: MIterBox,
-    oti: Option<Arc<TrafficRecorder>>,
-) {
+async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
+    let mut rx = params.rx;
+    let cid = params.cid;
+    let tx = params.tx;
+    let miter = params.miter;
+    let oti = params.oti;
+
     loop {
         let opt_stream_info = rx.recv().await;
 
@@ -243,32 +271,48 @@ pub async fn in_iter_accumulate_forever(
             info!("{cid}, new accepted stream");
         }
 
-        spawn_acc_forever(
-            cid.clone_push(oti.clone()),
+        spawn_acc_forever(SpawnAccForeverParams {
+            cid: cid.clone_push(oti.clone()),
             new_stream_info,
-            miter.clone(),
-            tx.clone(),
-            oti.clone(),
-        );
+            miter: miter.clone(),
+            tx: tx.clone(),
+            oti: oti.clone(),
+
+            #[cfg(feature = "trace")]
+            trace: params.trace.clone(),
+        });
     }
+}
+
+struct SpawnAccForeverParams {
+    cid: CID,
+    new_stream_info: MapResult,
+    miter: Box<dyn MIter>,
+    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
+    oti: Option<Arc<TrafficRecorder>>,
+
+    #[cfg(feature = "trace")]
+    pub trace: Vec<String>,
 }
 
 // solve async recursive spawn issue by :
 //
 // https://github.com/tokio-rs/tokio/issues/2394
-fn spawn_acc_forever(
-    cid: CID,
-    new_stream_info: MapResult,
-    miter: Box<dyn MIter>,
-    txc: tokio::sync::mpsc::Sender<AccumulateResult>,
-    oti: Option<Arc<TrafficRecorder>>,
-) {
+fn spawn_acc_forever(params: SpawnAccForeverParams) {
+    let cid = params.cid;
+    let tx = params.tx;
+    let miter = params.miter;
+    let oti = params.oti;
+
     tokio::spawn(async move {
         let r = accumulate(AccumulateParams {
             cid,
             behavior: ProxyBehavior::DECODE,
-            initial_state: new_stream_info,
+            initial_state: params.new_stream_info,
             mappers: miter,
+
+            #[cfg(feature = "trace")]
+            trace: params.trace,
         })
         .await;
 
@@ -276,9 +320,20 @@ fn spawn_acc_forever(
             let cid = r.id;
 
             debug!("{cid} spawn_acc_forever recursive");
-            in_iter_accumulate_forever(cid, rx, txc, r.left_mappers_iter.clone(), oti).await;
+            in_iter_accumulate_forever(InIterAccumulateForeverParams {
+                cid,
+
+                rx,
+                tx,
+                miter: r.left_mappers_iter.clone(),
+                oti,
+
+                #[cfg(feature = "trace")]
+                trace: r.trace,
+            })
+            .await;
         } else {
-            let _ = txc.send(r).await;
+            let _ = tx.send(r).await;
         }
     });
 }

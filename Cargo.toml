@@ -27,25 +27,25 @@ tokio = { version = "1", features = ["full"] }
 pin-project-lite = "0.2.13"
 scopeguard = "1.2.0"
 parking_lot = "0.12.1"
+lazy_static = "1"
+
 dyn-clone = "1"
 anyhow = "1"
 typed-builder = "0.18.1"
 
-tun2 = { version = "1", features = ["async"] ,optional = true}
-
 url = "2"
 base64 = "0.21.7"
+sha2 = "0.10.8"
 
 tokio-rustls = "0.25.0"
 rustls = { version = "0.22" }  
 rustls-pemfile = "1.0"
 webpki-roots = "0.22.6"
 
-lazy_static = "1"
-
-sha2 = "0.10.8"
-
 macro_mapper ={ path = "crates/macro_mapper" }
+
+tun2 = { version = "1", features = ["async"] ,optional = true}
+
 
 [features]
 tun = ["tun2"]

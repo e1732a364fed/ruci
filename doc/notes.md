@@ -33,7 +33,7 @@ ruci中有三种 route 实现 fixed, tag, info; 而 rucimp 有一种完整的 ro
 
 rucimp 中有很多feature :
 
-"lua", "route","geoip"
+"lua", "route","geoip", "tun", "sockopt"
 
 
 
@@ -103,4 +103,21 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 不过这些公司应该都是美国的
 
 我想这应该就是 Loyalsoldier/geoip 的readme 中说明了 添加了 "geoip:cloudflare" 等类别的原因
+
+## "trace" feature
+
+在0.0.3，添加 "trace" feature, 对每条连接加以监视、记录, 其可能导处性能下降, 但
+又在另一些用例中有用，所以要做
+
+trace 会将chain 中经过的每一个 Mapper的 name 记录下来, 放到 `Vec<String> ` 中. 它只对于动态链有用
+如果是静态链, 则记录一个 chain_tag 就能知道完整的 链信息
+
+trace 还会将每条连接的 ub, db 信息记录下来
+
+
+## 其它
+
+使用 anyhow 的 context 会导致变慢，要改用 with_context
+
+再比如，要用 ok_or_else, 而不是 ok_or
 

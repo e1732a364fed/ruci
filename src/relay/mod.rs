@@ -46,6 +46,9 @@ pub async fn handle_in_stream(
                 behavior: ProxyBehavior::DECODE,
                 initial_state: MapResult::builder().c(in_conn).build(),
                 mappers: ins_iterator,
+
+                #[cfg(feature = "trace")]
+                trace: Vec::new(),
             })
             .await
         })
@@ -134,6 +137,9 @@ pub async fn handle_in_accumulate_result(
                     ..Default::default()
                 },
                 mappers: outbound,
+
+                #[cfg(feature = "trace")]
+                trace: Vec::new(),
             })
             .await
         })

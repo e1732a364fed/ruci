@@ -67,7 +67,7 @@ pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
     lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct CIDChain {
     pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
 }
@@ -94,7 +94,7 @@ impl Display for CIDChain {
 }
 
 /// stream id ('c' for conn as convention)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub enum CID {
     Unit(u32),
     Chain(CIDChain),
@@ -847,7 +847,7 @@ use crate::Name;
 use self::addr_conn::AddrConn;
 use self::addr_conn::AsyncWriteAddrExt;
 
-/// 用于状态监视和流量统计；可以用 Arc<TrafficRecorder> 进行全局的监视和统计。
+/// 用于全局状态监视和流量统计
 ///
 /// ## About Real Data Traffic and Original Traffic
 ///
