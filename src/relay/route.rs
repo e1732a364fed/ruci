@@ -1,10 +1,21 @@
+/*!
+ * route 模块定义了一些 如何由inbound 的各种信息判断应该选哪个 outbound 作为出口 的方法
+ */
 use std::{collections::HashMap, sync::Arc};
 
-use crate::map::{AnyData, MIterBox};
+use crate::{
+    map::{AnyData, MIterBox},
+    net,
+};
 
 /// Send + Sync to use in async
 pub trait OutSelector: Send + Sync {
-    fn select(&self, in_chain_tag: &str, params: Vec<Option<AnyData>>) -> MIterBox;
+    fn select(
+        &self,
+        addr: &net::Addr,
+        in_chain_tag: &str,
+        params: Vec<Option<AnyData>>,
+    ) -> MIterBox;
 }
 
 #[derive(Debug)]
@@ -13,7 +24,12 @@ pub struct FixedOutSelector {
 }
 
 impl OutSelector for FixedOutSelector {
-    fn select(&self, _in_chain_tag: &str, _params: Vec<Option<AnyData>>) -> MIterBox {
+    fn select(
+        &self,
+        _addr: &net::Addr,
+        _in_chain_tag: &str,
+        _params: Vec<Option<AnyData>>,
+    ) -> MIterBox {
         self.default.clone()
     }
 }
@@ -26,7 +42,12 @@ pub struct TagOutSelector {
 }
 
 impl OutSelector for TagOutSelector {
-    fn select(&self, in_chain_tag: &str, _params: Vec<Option<AnyData>>) -> MIterBox {
+    fn select(
+        &self,
+        _addr: &net::Addr,
+        in_chain_tag: &str,
+        _params: Vec<Option<AnyData>>,
+    ) -> MIterBox {
         let ov = self.outbounds_route_map.get(in_chain_tag);
         match ov {
             Some(out_k) => {
@@ -45,6 +66,7 @@ impl OutSelector for TagOutSelector {
 mod test {
     use crate::map::math::*;
     use crate::map::*;
+    use crate::net::Addr;
 
     use super::*;
     #[test]
@@ -81,10 +103,10 @@ mod test {
             outbounds_map,
             default: m2,
         };
-        let x = t.select("l1", Vec::new());
+        let x = t.select(&Addr::default(), "l1", Vec::new());
         println!("{:?}", x);
         assert_eq!(x.count(), 2);
-        let x = t.select("l11", Vec::new());
+        let x = t.select(&Addr::default(), "l11", Vec::new());
         println!("{:?}", x);
         assert_eq!(x.count(), 1);
     }
