@@ -122,8 +122,8 @@ struct InnerLuaNextGenerator {
     lua: Lua,
     generator_key: LuaRegistryKey,
     behavior: ProxyBehavior,
-    thread_map: HashMap<CID, LuaOwnedThread>,
-    create_thread_func_map: HashMap<CID, LuaOwnedFunction>,
+    thread_map: HashMap<CID, LuaThread>,
+    create_thread_func_map: HashMap<CID, LuaFunction>,
 }
 unsafe impl Send for InnerLuaNextGenerator {}
 unsafe impl Sync for InnerLuaNextGenerator {}
@@ -181,14 +181,14 @@ impl InnerLuaNextGenerator {
 
         match rst.1 {
             LuaMapRepresentation::OT(t) => {
-                if let Ok(g) = t.to_ref().get::<_, Value>("stream_generator") {
+                if let Ok(g) = t.get::<Value>("stream_generator") {
                     if let Value::Nil = g {
-                        self.get_result_by_value(i, Value::Table(t.to_ref()))
+                        self.get_result_by_value(i, Value::Table(t))
                     } else {
                         let r = self.get_result_by_value(i, g);
 
-                        if let Ok(f) = t.to_ref().get::<_, LuaFunction>("new_thread_fn") {
-                            let of = f.into_owned();
+                        if let Ok(f) = t.get::<LuaFunction>("new_thread_fn") {
+                            let of = f;
 
                             //debug!(cid = %cid,"storing thread_fn");
                             self.create_thread_func_map.insert(cid, of);
@@ -197,10 +197,10 @@ impl InnerLuaNextGenerator {
                         r
                     }
                 } else {
-                    self.get_result_by_value(i, Value::Table(t.to_ref()))
+                    self.get_result_by_value(i, Value::Table(t))
                 }
             }
-            LuaMapRepresentation::OS(s) => self.get_result_by_value(i, Value::String(s.to_ref())),
+            LuaMapRepresentation::OS(s) => self.get_result_by_value(i, Value::String(s)),
             LuaMapRepresentation::OU(ud) => {
                 let m = ud.take::<LuaMapWrapper>().expect("ok");
                 Some((i, Some(m.0)))
@@ -210,9 +210,9 @@ impl InnerLuaNextGenerator {
 }
 
 enum LuaMapRepresentation {
-    OT(LuaOwnedTable),
-    OS(LuaOwnedString),
-    OU(LuaOwnedAnyUserData),
+    OT(LuaTable),
+    OS(LuaString),
+    OU(LuaAnyUserData),
 }
 
 impl dynamic::IndexNextMapGenerator for LuaNextGenerator {
@@ -238,7 +238,7 @@ impl dynamic::IndexNextMapGenerator for LuaNextGenerator {
                     if let LuaThreadStatus::Resumable = t.status() {
                         let cid_v = mg.lua.to_value(&cid).ok()?;
 
-                        let r = t.resume::<_, (i64, Value)>((
+                        let r = t.resume::<(i64, Value)>((
                             cid_v,
                             this_state_index,
                             mg.lua.to_value(&data),
@@ -246,15 +246,9 @@ impl dynamic::IndexNextMapGenerator for LuaNextGenerator {
 
                         let r = r.ok()?;
                         match r.1 {
-                            LuaValue::String(t) => {
-                                Some((r.0, LuaMapRepresentation::OS(t.into_owned())))
-                            }
-                            LuaValue::Table(t) => {
-                                Some((r.0, LuaMapRepresentation::OT(t.into_owned())))
-                            }
-                            LuaValue::UserData(t) => {
-                                Some((r.0, LuaMapRepresentation::OU(t.into_owned())))
-                            }
+                            LuaValue::String(t) => Some((r.0, LuaMapRepresentation::OS(t))),
+                            LuaValue::Table(t) => Some((r.0, LuaMapRepresentation::OT(t))),
+                            LuaValue::UserData(t) => Some((r.0, LuaMapRepresentation::OU(t))),
 
                             _ => None,
                         }
@@ -277,30 +271,27 @@ impl dynamic::IndexNextMapGenerator for LuaNextGenerator {
                 let (t, r) = {
                     let r = {
                         let l = &mg.lua;
-                        let t = l.create_thread(f.to_ref()).ok()?;
+                        let t = l.create_thread(f.clone()).ok()?;
 
                         let cid_v = mg.lua.to_value(&cid).ok()?;
 
-                        let r = t.resume::<_, (i64, Value)>((
-                            cid_v,
-                            this_state_index,
-                            l.to_value(&data),
-                        ));
+                        let r =
+                            t.resume::<(i64, Value)>((cid_v, this_state_index, l.to_value(&data)));
 
                         let r = r.ok()?;
 
                         let v = match r.1 {
-                            LuaValue::String(t) => LuaMapRepresentation::OS(t.into_owned()),
+                            LuaValue::String(t) => LuaMapRepresentation::OS(t),
                             LuaValue::Table(t) => {
                                 // debug!("thread resume got table");
-                                LuaMapRepresentation::OT(t.into_owned())
+                                LuaMapRepresentation::OT(t)
                             }
-                            LuaValue::UserData(t) => LuaMapRepresentation::OU(t.into_owned()),
+                            LuaValue::UserData(t) => LuaMapRepresentation::OU(t),
                             _ => panic!("get lua value not string or table"),
                         };
 
                         let r = (r.0, v);
-                        (t.into_owned(), r)
+                        (t, r)
                     };
 
                     let new_r = mg.get_result(cid.clone(), r.1);
@@ -324,13 +315,13 @@ impl dynamic::IndexNextMapGenerator for LuaNextGenerator {
             let r = l
                 .registry_value::<LuaFunction>(&mg.generator_key)
                 .expect("must get generator from lua")
-                .call::<_, (i64, Value)>((cid_v, this_state_index, l.to_value(&data)));
+                .call::<(i64, Value)>((cid_v, this_state_index, l.to_value(&data)));
             let r = r.ok()?;
 
             let v = match r.1 {
-                LuaValue::String(t) => LuaMapRepresentation::OS(t.into_owned()),
-                LuaValue::Table(t) => LuaMapRepresentation::OT(t.into_owned()),
-                LuaValue::UserData(t) => LuaMapRepresentation::OU(t.into_owned()),
+                LuaValue::String(t) => LuaMapRepresentation::OS(t),
+                LuaValue::Table(t) => LuaMapRepresentation::OT(t),
+                LuaValue::UserData(t) => LuaMapRepresentation::OU(t),
 
                 _ => panic!("get lua value not string or table"),
             };

@@ -36,12 +36,11 @@ iprange = { version = "0.6.7", optional = true }
 regex = { version = "1.10.3", optional = true }
 maxminddb = { version = "0.24", optional = true }
 
-mlua = { version = "0.9.5", features = [
+mlua = { version = "0.10.1", features = [
     "serialize",
     "async",
-    "parking_lot",
     "macros",
-    "unstable",
+    'send',
 ], optional = true }
 
 libc = { version = "0.2", optional = true }

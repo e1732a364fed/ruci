@@ -26,8 +26,8 @@ use ruci::{
 #[derive(Clone)]
 pub struct LuaMapWrapper(pub Arc<MapBox>);
 
-impl<'lua> FromLua<'lua> for LuaMapWrapper {
-    fn from_lua(value: Value<'lua>, _: &'lua Lua) -> LuaResult<Self> {
+impl FromLua for LuaMapWrapper {
+    fn from_lua(value: Value, _lua: &Lua) -> LuaResult<Self> {
         match value {
             Value::UserData(ud) => Ok(ud.take::<Self>()?),
             _ => unreachable!(),
@@ -35,7 +35,7 @@ impl<'lua> FromLua<'lua> for LuaMapWrapper {
     }
 }
 impl UserData for LuaMapWrapper {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("clone", |_, m, ()| Ok(m.clone()));
     }
 }
@@ -43,7 +43,7 @@ impl UserData for LuaMapWrapper {
 pub struct LuaAddr(pub Addr);
 
 impl UserData for LuaAddr {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("network", |_, a, ()| Ok(a.0.network.to_string()));
     }
 }
@@ -51,7 +51,7 @@ impl UserData for LuaAddr {
 pub struct LuaBytesMut(pub BytesMut);
 
 impl UserData for LuaBytesMut {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut("put_u16", |_, b, u| Ok(b.0.put_u16(u)));
     }
 }
@@ -109,7 +109,7 @@ impl Map for LuaMap {
 
                     let cid_v = lua.to_value(&cid).ok().unwrap();
 
-                    let r = handshake_f.call::<_, (LuaString, Value)>((cid_v, 1));
+                    let r = handshake_f.call::<(LuaString, Value)>((cid_v, 1));
                     match r {
                         Ok(_) => todo!(),
                         Err(e) => MapResult::from_e(e),

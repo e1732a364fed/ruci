@@ -477,7 +477,7 @@ async fn test_pass_in_data() -> anyhow::Result<()> {
 
     let f: Function = lua.registry_value(&key).expect("cannot get Lua handler");
 
-    if let Err(err) = f.call_async::<_, ()>(lua.to_value(&ovod)?).await {
+    if let Err(err) = f.call_async::<()>(lua.to_value(&ovod)?).await {
         eprintln!("{}", err);
     }
 
@@ -569,8 +569,8 @@ fn test_userdata() -> anyhow::Result<()> {
     struct Vec2(f32, f32);
 
     // We can implement `FromLua` trait for our `Vec2` to return a copy
-    impl<'lua> FromLua<'lua> for Vec2 {
-        fn from_lua(value: Value<'lua>, _: &'lua Lua) -> LuaResult<Self> {
+    impl FromLua for Vec2 {
+        fn from_lua(value: Value, _: &Lua) -> LuaResult<Self> {
             match value {
                 Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
                 _ => unreachable!(),
@@ -579,7 +579,7 @@ fn test_userdata() -> anyhow::Result<()> {
     }
 
     impl UserData for Vec2 {
-        fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
             methods.add_method("magnitude", |_, vec, ()| {
                 let mag_squared = vec.0 * vec.0 + vec.1 * vec.1;
                 Ok(mag_squared.sqrt())

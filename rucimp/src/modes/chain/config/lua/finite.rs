@@ -156,8 +156,8 @@ impl LuaNextSelector {
         lua.load(lua_text).eval::<()>()?;
 
         let selectors: LuaFunction = lua.globals().get(DYN_SELECTORS_STR)?;
-        let selectors = selectors.into_owned();
-        let f = match selectors.call::<&str, LuaFunction>(tag) {
+        //let selectors = selectors.into_owned();
+        let f = match selectors.call::<String>(tag) {
             Ok(rst) => rst,
             Err(err) => {
                 panic!("get Dyn_Selectors for {tag} err: {}", err);
@@ -182,7 +182,7 @@ impl dynamic::NextSelector for LuaNextSelector {
             .registry_value(&mg.1)
             .expect("must get selector from lua");
 
-        match f.call::<_, i64>((this_index, lua.to_value(&data))) {
+        match f.call::<i64>((this_index, lua.to_value(&data))) {
             Ok(rst) => Some(rst),
             Err(err) => {
                 warn!("{}", err);
