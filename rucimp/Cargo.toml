@@ -28,10 +28,13 @@ mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lo
 
 
 [features]
-default = ["lua", "route"]
+default = ["lua", "route","geoip"]
 lua = ["mlua"]
 
-route = ["maxminddb" ,"ipnet" ,"iprange" ,"regex" ,]
+route = ["ipnet" ,"iprange" ,"regex"]
+
+geoip = ["maxminddb", "route"]
+
 
 [[example]]
 name = "chain"

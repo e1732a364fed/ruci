@@ -69,6 +69,7 @@ pub fn bget_user_from_anydata(anys: &AnyBox) -> Option<Box<dyn User>> {
     a.map(|u| u.clone())
 }
 
+/// 实现了 Hash
 #[derive(Clone)]
 pub struct UserBox(pub Box<dyn User>);
 
@@ -105,6 +106,7 @@ impl PartialEq for UserBox {
 
 impl Eq for UserBox {}
 
+/// 实现了 Hash
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserVec(pub Vec<UserBox>);
 
@@ -124,6 +126,7 @@ impl UserVec {
 }
 
 impl Hash for UserVec {
+    /// hash 为所有 user 的 hash 相加
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.iter().for_each(|b| {
             b.hash(state);

@@ -1,3 +1,8 @@
+# user note 
+
+链式配置中，每条链都必须标一个 tag
+
+
 # dev note
 
 ## is_tail_of_chain
