@@ -80,7 +80,7 @@ impl Server {
                         let r = URL_SAFE_NO_PAD.decode(given_early_data);
                         match r {
                             Ok(v) => {
-                                debug!("ws got early data {}", v.len());
+                                debug!("ws server got early data {}", v.len());
                                 real_early_data = Some(BytesMut::from(v.as_slice()))
                             }
                             Err(e) => {

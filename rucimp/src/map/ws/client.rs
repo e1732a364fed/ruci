@@ -1,4 +1,4 @@
-use ::http::HeaderValue;
+use ::http::{HeaderValue, Uri};
 use anyhow::{bail, Context};
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -29,6 +29,13 @@ impl ruci::Name for Client {
 
 impl Client {
     pub fn new(c: CommonConfig) -> Self {
+        let url = Uri::builder()
+            .scheme(c.scheme.as_deref().unwrap_or("ws"))
+            .authority(c.host.as_str())
+            .path_and_query(&c.path)
+            .build()
+            .expect("uri ok");
+
         let mut request = Request::builder()
             .method("GET")
             .header("Host", c.host.as_str())
@@ -39,7 +46,7 @@ impl Client {
                 "Sec-WebSocket-Key",
                 tokio_tungstenite::tungstenite::handshake::client::generate_key(),
             )
-            .uri("ws://".to_string() + c.host.as_str() + &c.path);
+            .uri(url);
 
         if let Some(h) = c.headers {
             for (k, v) in h.iter() {

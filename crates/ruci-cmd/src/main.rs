@@ -231,6 +231,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
         std::env::var(RL).map_or_else(|_| String::new(), |v| v)
     );
 
+    #[allow(unused_mut)]
     let mut fl: Vec<&str> = Vec::new();
 
     #[cfg(feature = "api_server")]

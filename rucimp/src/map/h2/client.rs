@@ -104,7 +104,10 @@ async fn new_stream_by_send_request(
         tokio::spawn(async move {
             // 在连接被强制断开时，connection 就会 返回
 
-            if !is_mux {
+            if is_mux {
+                let r = connection.await;
+                debug!(cid = %cid, r=?r, "h2 stream disconnected");
+            } else {
                 tokio::select! {
                     r = connection=>{
                         debug!(cid = %cid, r=?r, "h2 stream disconnected");
@@ -113,9 +116,6 @@ async fn new_stream_by_send_request(
                         debug!(cid = %cid, "h2 stream got shutdown signal");
                     }
                 }
-            } else {
-                let r = connection.await;
-                debug!(cid = %cid, r=?r, "h2 stream disconnected");
             }
         });
     }
@@ -131,13 +131,13 @@ async fn new_stream_by_send_request(
         Box::new(super::grpc::Stream::new(
             recv_stream,
             send_stream,
-            if !is_mux { Some(tx) } else { None },
+            if is_mux { None } else { Some(tx) },
         ))
     } else {
         Box::new(super::H2Stream::new(
             recv_stream,
             send_stream,
-            if !is_mux { Some(tx) } else { None },
+            if is_mux { None } else { Some(tx) },
         ))
     };
 
@@ -238,7 +238,7 @@ impl MuxClient {
                     *cache = Some(send_request);
                     Ok(m)
                 } else {
-                    bail!("can't handshake multiple times")
+                    bail!("h2_mux_client can't handshake multiple times")
                 }
             }
             None => {
