@@ -11,9 +11,10 @@ use async_trait::async_trait;
 use rustls::pki_types::IpAddr;
 
 use crate::{
-    map::{AnyBox, AnyData, AnyS, MIterBox},
+    map::{AnyData, MIterBox},
     net,
     user::{self, User, UserVec},
+    AnyBox, AnyS,
 };
 
 /// Send + Sync to use in async
@@ -169,7 +170,7 @@ pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<Use
     {
         match anyd {
             AnyData::A(arc) => {
-                let anyv = arc.lock().await;
+                let anyv = arc.lock();
                 let oub = get_user_from_anydata(&*anyv);
                 if let Some(ub) = oub {
                     v.0.push(user::UserBox(ub));

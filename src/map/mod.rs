@@ -38,21 +38,21 @@ pub mod trojan;
 #[cfg(test)]
 mod test;
 
-use crate::net::{
-    self, addr_conn::AddrConn, new_ordered_cid, new_rand_cid, CIDChain, Stream, TransmissionInfo,
-    CID,
+use crate::{
+    net::{
+        self, addr_conn::AddrConn, new_ordered_cid, new_rand_cid, CIDChain, Stream,
+        TransmissionInfo, CID,
+    },
+    AnyArc, AnyBox,
 };
 
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
 use log::{info, log_enabled, warn};
-use tokio::{
-    net::TcpStream,
-    sync::{oneshot, Mutex},
-};
+use tokio::{net::TcpStream, sync::oneshot};
 
-use std::{any::Any, fmt::Debug, io, sync::Arc};
+use std::{fmt::Debug, io, sync::Arc};
 
 /// 如果新连接不是udp, 则内含新连接
 pub enum NewConnection {
@@ -66,10 +66,6 @@ pub struct NewConnectionOptData {
     pub new_connection: NewConnection,
     pub data: OptData,
 }
-
-pub type AnyS = dyn Any + Send + Sync; // 加 Send+ Sync 以支持多线程
-pub type AnyBox = Box<AnyS>;
-pub type AnyArc = Arc<Mutex<AnyS>>;
 
 #[derive(Debug)]
 pub enum AnyData {

@@ -6,6 +6,10 @@
 async_std的 UdpSocket 少了 poll 方法 (until 24.2.18)
 */
 
+use std::{any::Any, sync::Arc};
+
+use parking_lot::Mutex;
+
 pub mod map;
 pub mod net;
 pub mod relay;
@@ -24,3 +28,7 @@ impl<T: Name + ?Sized> Name for Box<T> {
         (**self).name()
     }
 }
+
+pub type AnyS = dyn Any + Send + Sync; // 加 Send+ Sync 以支持多线程
+pub type AnyBox = Box<AnyS>;
+pub type AnyArc = Arc<Mutex<AnyS>>;

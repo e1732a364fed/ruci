@@ -7,8 +7,8 @@ use tokio::{
 };
 
 use super::*;
-use crate::map;
 use crate::Name;
+use crate::{map, net::Addr};
 
 #[derive(DefaultMapperExt, Debug, Default, Clone)]
 pub struct BlackHole {}
@@ -125,11 +125,15 @@ impl Mapper for TcpDialer {
                                 return TcpDialer::dial_addr(&a, params.a, params.b).await
                             }
                             AnyData::A(arc) => {
-                                let mut v = arc.lock().await;
-                                let a = v.downcast_mut::<net::Addr>();
+                                let a: Option<Addr>;
+                                {
+                                    let v = arc.lock();
+                                    let aa = v.downcast_ref::<net::Addr>();
+                                    a = aa.map(|x| x.clone());
+                                }
                                 match a {
                                     Some(a) => {
-                                        return TcpDialer::dial_addr(a, params.a, params.b).await
+                                        return TcpDialer::dial_addr(&a, params.a, params.b).await;
                                     }
                                     None => {
                                         return MapResult::err_str(
