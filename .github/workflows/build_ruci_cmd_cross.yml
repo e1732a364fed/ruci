@@ -26,20 +26,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
 
-      - name: Install gcc
+      - name: Install Rust
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+          rustup set profile minimal
+          rustup toolchain install stable
+          rustup default stable
+          rustup override set stable
 
+      - name: Install cross
+        run: cargo install cross
+      
       - name: Build ${{ matrix.target }}
         run: |
+
+          compile_target=${{ matrix.target }}
+          #compile_features=" -f api_server -f api_client -f utils -f native-tls-vendored"
+
           cd crates/ruci-cmd
-          make vendor BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+          ./build_cross.sh -v ${{ inputs.tag || github.ref_name }} -t ${{ matrix.target }} -f api_server -f api_client -f utils -f native-tls-vendored
 
       - name: Upload Github Assets
         uses: softprops/action-gh-release@v1
