@@ -11,16 +11,14 @@ use std::{io, sync::Arc};
 
 use futures::{future::select_all, Future};
 use log::{debug, info};
+use parking_lot::Mutex;
 use ruci::{map::*, net::TransmissionInfo};
 use suit::config::LDConfig;
 use suit::*;
 
 use serde::{Deserialize, Serialize};
 use tokio::{
-    sync::{
-        oneshot::{self, Sender},
-        Mutex,
-    },
+    sync::oneshot::{self, Sender},
     task,
 };
 
@@ -156,7 +154,7 @@ where
     pub async fn start_with_tasks(
         &self,
     ) -> std::io::Result<Vec<impl Future<Output = Result<(), std::io::Error>>>> {
-        let mut running = self.running.lock().await;
+        let mut running = self.running.lock();
         if let None = *running {
         } else {
             return Err(io::Error::other("already started!"));
@@ -192,7 +190,7 @@ where
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
     pub async fn stop(&self) {
         info!("stop called");
-        let mut running = self.running.lock().await;
+        let mut running = self.running.lock();
         let opt = running.take();
 
         if let Some(v) = opt {
