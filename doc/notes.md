@@ -2,6 +2,13 @@
 
 链式配置中，每条链都必须标一个 tag
 
+## 名词
+
+在 suit 模式中, 使用 server, client 这样的形式, 而在 chain 模式中, 使用 inbound 和 
+outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不同, 因此叫法不同
+
+在 suit 模式中, server 的行为是 listen, client 的行为是 dial; 而在 chain 模式中, inbound
+和 outbound 行为都叫做 map (映射) 
 
 # dev note
 

@@ -13,3 +13,6 @@ port = 10801
 tls = true
 insecure = true
 uuid = "mypassword"
+
+# [[dial]]
+# protocol = "direct"

@@ -2,16 +2,13 @@ use std::{io, sync::Arc};
 
 use crate::suit::*;
 use config::LDConfig;
-use futures::{future::select_all, Future};
+use futures::Future;
 use log::{debug, info};
 use parking_lot::Mutex;
 use ruci::{
     map::*,
     net::TransmissionInfo,
-    relay::{
-        conn2,
-        route2::{FixedOutSelector, OutSelector},
-    },
+    relay::{conn2, route2::*},
 };
 
 use tokio::{
@@ -132,18 +129,15 @@ impl SuitEngine {
     /// calls start_with_tasks
     ///
     /// 该方法不能用 block_on 调用, 只能用 await
-    pub async fn block_run(&self) -> io::Result<()> {
-        /*
-        let rtasks = self.start_with_tasks().await;
-        (join_all(rtasks?).await);
-        */
-        use futures_lite::future::FutureExt;
-
+    pub async fn block_run(&self) -> io::Result<Vec<io::Result<()>>> {
         let rtasks = self.start_with_tasks().await?;
-        let (result, _, _remaining_tasks) =
-            select_all(rtasks.into_iter().map(|task| task.boxed())).await;
+        Ok(futures::future::join_all(rtasks).await)
 
-        result
+        // use futures_lite::future::FutureExt;
+
+        // let rtasks = self.start_with_tasks().await?;
+        // let (result, _, _remaining_tasks) =
+        //     select_all(rtasks.into_iter().map(|task| task.boxed())).await;
     }
 
     /// called by block_run and run. Must call after calling load_config

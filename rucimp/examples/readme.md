@@ -1,7 +1,7 @@
 
 rucimp 提供数个示例可执行文件, 若要全功能, 用 rucimple
 
-suit, suit2, chain 分为以不同的代码运行 suit模式和 chain 模式
+suit2, chain 分为以不同的代码运行 suit模式和 chain 模式
 
 
 
@@ -17,8 +17,8 @@ cargo run --example chain -- local.lua
 cargo run --example chain -- remove.lua
 
 # suit mode
-cargo run --example suit -- local.suit.toml
-cargo run --example suit -- remote.suit.toml
+cargo run --example suit2 -- local.suit.toml
+cargo run --example suit2 -- remote.suit.toml
 ```
 
 # chain 程序
