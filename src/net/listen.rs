@@ -115,7 +115,7 @@ impl Listener {
         match self {
             #[cfg(unix)]
             Listener::UNIX((_, file_n)) => {
-                let p = PathBuf::from(file_n.clone());
+                let p = std::path::PathBuf::from(file_n.clone());
                 let r = remove_unix(&p, false);
                 if let Err(e) = r {
                     tracing::warn!("{}", e)
