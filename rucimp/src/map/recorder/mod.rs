@@ -253,33 +253,33 @@ pub struct InfoData {
     pub payload: Vec<PayloadInfo>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum PayloadInfo {
-    /// 0 为 时间戳， 1 为 数据(1:upload, -1:download), 2 为 数据长度
-    Tcp(u128, i8, usize),
-    /// 0 为 时间戳， 1 为 地址， 2 为 数据方向(1:upload, -1:download), 3 为 数据长度
-    Udp(u128, Addr, i8, usize),
-}
-
-impl Default for PayloadInfo {
-    fn default() -> Self {
-        PayloadInfo::Tcp(0, 0, 0)
-    }
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct PayloadInfo {
+    pub timestamp: u128,
+    pub direction: i8,
+    pub length: usize,
+    pub opt_addr: Option<Addr>,
 }
 
 impl InfoRecorder {
     pub fn record_u(&mut self, data: &[u8]) {
         let d = self.since(self.start);
-        self.data
-            .payload
-            .push(PayloadInfo::Tcp(d, UPLOAD_DIRECTION, data.len()));
+        self.data.payload.push(PayloadInfo {
+            timestamp: d,
+            direction: UPLOAD_DIRECTION,
+            length: data.len(),
+            opt_addr: None,
+        });
     }
 
     pub fn record_d(&mut self, data: &[u8]) {
         let d = self.since(self.start);
-        self.data
-            .payload
-            .push(PayloadInfo::Tcp(d, DOWNLOAD_DIRECTION, data.len()));
+        self.data.payload.push(PayloadInfo {
+            timestamp: d,
+            direction: DOWNLOAD_DIRECTION,
+            length: data.len(),
+            opt_addr: None,
+        });
     }
 }
 
@@ -617,50 +617,28 @@ impl Data for har::Har {
 }
 impl From<PayloadInfo> for har::v1_2::Entries {
     fn from(val: PayloadInfo) -> Self {
-        match val {
-            PayloadInfo::Tcp(t, d, l) => {
-                let mut e = har::v1_2::Entries {
-                    time: t as f64,
-                    ..Default::default()
-                };
+        let mut e = har::v1_2::Entries {
+            time: val.timestamp as f64,
+            ..Default::default()
+        };
 
-                if d == 1 {
-                    e.request = har::v1_2::Request {
-                        body_size: l as i64,
-                        ..Default::default()
-                    };
-                } else {
-                    e.response = har::v1_2::Response {
-                        body_size: l as i64,
-                        ..Default::default()
-                    };
-                }
+        let addr = val.opt_addr.map(|a| a.to_string());
 
-                e
-            }
-            PayloadInfo::Udp(t, a, d, l) => {
-                let mut e = har::v1_2::Entries {
-                    time: t as f64,
-                    ..Default::default()
-                };
-
-                if d == 1 {
-                    e.request = har::v1_2::Request {
-                        body_size: l as i64,
-                        url: a.to_string(),
-                        ..Default::default()
-                    };
-                } else {
-                    e.response = har::v1_2::Response {
-                        body_size: l as i64,
-                        redirect_url: Some(a.to_string()),
-                        ..Default::default()
-                    };
-                }
-
-                e
-            }
+        if val.direction == 1 {
+            e.request = har::v1_2::Request {
+                body_size: val.length as i64,
+                url: addr.unwrap_or_default(),
+                ..Default::default()
+            };
+        } else {
+            e.response = har::v1_2::Response {
+                body_size: val.length as i64,
+                redirect_url: addr,
+                ..Default::default()
+            };
         }
+
+        e
     }
 }
 
@@ -692,7 +670,12 @@ impl From<SimplifiedRecordData> for har::Har {
         let entries = val
             .data
             .into_iter()
-            .map(|(direction, data)| PayloadInfo::Tcp(0, direction, data.len()))
+            .map(|(direction, data)| PayloadInfo {
+                timestamp: 0,
+                direction,
+                length: data.len(),
+                opt_addr: None,
+            })
             .collect::<Vec<_>>();
 
         let entries = entries.into_iter().map(|p| p.into()).collect::<Vec<_>>();
