@@ -1,7 +1,6 @@
 use self::dynamic::NextSelector;
 
 use super::*;
-use async_trait::async_trait;
 use lua::dynamic::Bounded;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Result, Value};
@@ -185,13 +184,8 @@ pub struct LuaNextSelector {
     func_name: String,
 }
 
-#[async_trait]
 impl NextSelector for LuaNextSelector {
-    async fn next_index(
-        &self,
-        this_index: i64,
-        data: Option<Vec<ruci::map::OptVecData>>,
-    ) -> Option<i64> {
+    fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64> {
         let w = OptVecOptVecDataLuaWrapper(data);
         let lua = self.lua.lock();
 
@@ -220,13 +214,8 @@ pub struct LuaNextSelector2<'a>(Arc<parking_lot::Mutex<LuaFunction<'a>>>);
 unsafe impl<'a> Send for LuaNextSelector2<'a> {}
 unsafe impl<'a> Sync for LuaNextSelector2<'a> {}
 
-#[async_trait]
 impl<'a> NextSelector for LuaNextSelector2<'a> {
-    async fn next_index(
-        &self,
-        this_index: i64,
-        data: Option<Vec<ruci::map::OptVecData>>,
-    ) -> Option<i64> {
+    fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64> {
         let w = OptVecOptVecDataLuaWrapper(data);
 
         match self.0.lock().call::<_, i64>((this_index, w)) {

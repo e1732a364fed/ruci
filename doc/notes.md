@@ -121,3 +121,4 @@ trace 还会将每条连接的 ub, db 信息记录下来
 
 再比如，要用 ok_or_else, 而不是 ok_or
 
+使用 mlua 跨线程时要用 `Arc<parking_lot::Mutex<Lua>>`, 否则mac 上报错会类似 zsh: trace trap 
