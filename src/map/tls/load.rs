@@ -1,5 +1,3 @@
-//https://github.com/async-rs/async-tls/blob/master/examples/server/src/main.rs
-
 use rustls::{
     pki_types::{
         CertificateDer, PrivateKeyDer, PrivatePkcs1KeyDer, PrivatePkcs8KeyDer, PrivateSec1KeyDer,

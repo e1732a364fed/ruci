@@ -1,5 +1,5 @@
 /*!
- * 先试 socks5, 不是 socks5协议的话, 再试 http proxy
+ * first try socks5, if not socks5, fallback to http proxy
  */
 
 use futures::executor::block_on;

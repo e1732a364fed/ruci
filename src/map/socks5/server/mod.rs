@@ -1,12 +1,10 @@
 /*
 
-udp 给出了 两种实现, udp 模块中, 使用同一端口监听 来自 user 和 others 的 信息
-
-udp2 模块中, 使用的udp 端口只用于监听 来自 user 的信息.
-
-udp2 模块是符合 ruci::net::addr_conn 中的定义的, 更加通用.
+has 2 sub mods for udp.
 
 */
+
+/// udp 模块中, 使用同一端口监听 来自 user 和 others 的 信息
 pub mod udp;
 pub mod udp2;
 

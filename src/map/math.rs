@@ -73,15 +73,6 @@ impl Name for AdderConn {
     }
 }
 
-#[test]
-fn set_size_tocap() {
-    let mut bytes_mut = BytesMut::with_capacity(10);
-
-    // 设置 size 等于 cap
-    bytes_mut.resize(bytes_mut.capacity(), 0);
-    assert_eq!(bytes_mut.len(), bytes_mut.capacity());
-}
-
 impl AsyncRead for AdderConn {
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -142,7 +133,7 @@ impl AsyncWrite for AdderConn {
     }
 }
 
-// 可生成一个 AdderConn, 其对输入进行加(减)法操作
+/// maps generates an AdderConn stream, which does add or sub for the input
 #[derive(Debug, Clone, Copy, Default, NoMapperExt)]
 pub struct Adder {
     pub addnum: i8,

@@ -35,6 +35,12 @@ impl<T: Name + ?Sized> Name for Box<T> {
     }
 }
 
+impl<T: Name + ?Sized> Name for &mut T {
+    fn name(&self) -> &str {
+        (**self).name()
+    }
+}
+
 pub type AnyS = dyn Any + Send + Sync; // 加 Send+ Sync 以支持多线程
 pub type AnyBox = Box<AnyS>;
 pub type AnyArc = Arc<Mutex<AnyS>>;

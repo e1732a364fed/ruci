@@ -1,3 +1,10 @@
+/*!
+ *
+udp2 模块中, 使用的udp 端口只用于监听 来自 user 的信息.
+
+udp2 模块是符合 ruci::net::addr_conn 中的定义的, 更加通用.
+
+ */
 use core::time;
 
 use anyhow::bail;

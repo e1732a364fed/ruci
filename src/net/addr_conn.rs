@@ -15,7 +15,7 @@ use tokio::io::ReadBuf;
 // 只是加了一个 Addr 参数. 这一部分比较难懂。
 
 /// 每一次读都获取到一个 Addr,
-pub trait AsyncReadAddr {
+pub trait AsyncReadAddr: crate::Name {
     fn poll_read_addr(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -24,7 +24,7 @@ pub trait AsyncReadAddr {
 }
 
 /// 每一次写都写入一个 Addr
-pub trait AsyncWriteAddr {
+pub trait AsyncWriteAddr: crate::Name {
     fn poll_write_addr(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -42,18 +42,25 @@ pub struct AddrConn {
     pub w: Box<dyn AddrWriteTrait>,
 
     pub default_write_to: Option<Addr>,
+
+    cached_name: String,
 }
 impl Name for AddrConn {
     fn name(&self) -> &str {
-        "addr_conn"
+        &self.cached_name
     }
 }
 impl AddrConn {
     pub fn new(r: Box<dyn AddrReadTrait>, w: Box<dyn AddrWriteTrait>) -> Self {
+        let cached_name = match r.name() == w.name() {
+            true => String::from(r.name()),
+            false => format!("({}_{})", r.name(), w.name()),
+        };
         AddrConn {
             r,
             w,
             default_write_to: None,
+            cached_name,
         }
     }
 }
@@ -446,6 +453,11 @@ mod test {
 
     struct MyType {
         counter: u32,
+    }
+    impl crate::Name for MyType {
+        fn name(&self) -> &str {
+            "mytype"
+        }
     }
 
     impl AsyncReadAddr for MyType {

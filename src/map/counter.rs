@@ -19,7 +19,7 @@ use crate::{net::*, Name};
 use async_trait::async_trait;
 use log::{debug, log_enabled};
 use tokio::io::{AsyncRead, AsyncWrite};
-/// 持有上层Conn的所有权, 用于计数
+/// takes ownership of base Conn, for counting
 pub struct CounterConn {
     pub data: CounterData,
     base: Pin<net::Conn>,
@@ -115,9 +115,12 @@ impl Name for Counter {
 
 #[async_trait]
 impl Mapper for Counter {
-    /// 生成的 MapResult 中的 d 为  Box<CounterData>
+    /// ignores behavior
     ///
-    /// 计统量不分 behavior
+    /// ## return value
+    ///  MapResult.d is  Box<CounterData>
+    ///
+    ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::TCP(c) => {

@@ -19,6 +19,11 @@ pub struct Conn {
     u: Arc<UdpSocket>,
     peer_addr: Option<Addr>,
 }
+impl crate::Name for Conn {
+    fn name(&self) -> &str {
+        "udp"
+    }
+}
 
 impl Conn {
     /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
@@ -127,6 +132,11 @@ pub struct MockStream {
     pub read_data: Vec<u8>,
     pub write_data: Vec<u8>,
     pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
+}
+impl crate::Name for MockStream {
+    fn name(&self) -> &str {
+        "mockstream"
+    }
 }
 
 impl AsyncWriteAddr for MockStream {

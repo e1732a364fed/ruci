@@ -190,24 +190,24 @@ impl Mapper for Dialer {
     }
 }
 
-/// StreamGenerator can listen tcp and unix domain socket
+/// Listener can listen tcp and unix domain socket
 #[mapper_ext_fields]
 #[derive(MapperExt, Clone, Debug, Default)]
-pub struct StreamGenerator {}
+pub struct Listener {}
 
-impl Name for StreamGenerator {
+impl Name for Listener {
     fn name(&self) -> &'static str {
         "listener"
     }
 }
-impl StreamGenerator {
+impl Listener {
     pub async fn listen_addr(
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
     ) -> anyhow::Result<Receiver<MapResult>> {
         let listener = match listen::listen(a).await {
             Ok(l) => l,
-            Err(e) => return Err(e.context(format!("listen failed for {}", a))),
+            Err(e) => return Err(e.context(format!("Listener failed for {}", a))),
         };
 
         let r = accept::loop_accept(listener, shutdown_rx).await;
@@ -226,14 +226,14 @@ impl StreamGenerator {
 }
 
 #[async_trait]
-impl Mapper for StreamGenerator {
+impl Mapper for Listener {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
             None => self
                 .configured_target_addr()
                 .as_ref()
-                .expect("StreamGenerator always has a fixed_target_addr"),
+                .expect("Listener always has a fixed_target_addr"),
         };
 
         if log_enabled!(log::Level::Debug) {
@@ -241,8 +241,8 @@ impl Mapper for StreamGenerator {
         }
 
         let r = match params.shutdown_rx {
-            Some(rx) => StreamGenerator::listen_addr(a, rx).await,
-            None => StreamGenerator::listen_addr_forever(a).await,
+            Some(rx) => Listener::listen_addr(a, rx).await,
+            None => Listener::listen_addr_forever(a).await,
         };
 
         match r {

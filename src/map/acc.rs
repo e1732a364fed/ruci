@@ -138,10 +138,10 @@ pub async fn accumulate(
         c: last_r.c,
         d: calculated_output_vec,
         e: last_r.e,
-        id: if last_r.new_id.is_some() {
-            last_r.new_id.expect("is some")
-        } else {
-            cid
+
+        id: match last_r.new_id {
+            Some(nid) => nid,
+            None => cid,
         },
         left_mappers_iter: mappers,
         chain_tag: tag,

@@ -13,10 +13,13 @@ use tokio::{io::ReadBuf, net::UdpSocket};
 use self::map::{addr_conn::MAX_DATAGRAM_SIZE, helpers::MAX_LEN_SOCKS5_BYTES};
 
 use super::*;
-use crate::net::{
-    self,
-    addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr},
-    *,
+use crate::{
+    net::{
+        self,
+        addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr},
+        *,
+    },
+    Name,
 };
 
 /// socks5 udp conn
@@ -24,6 +27,11 @@ use crate::net::{
 pub struct Conn {
     base: Arc<UdpSocket>,
     peer_soa: SocketAddr,
+}
+impl Name for Conn {
+    fn name(&self) -> &str {
+        "socks5_udp"
+    }
 }
 
 impl Conn {

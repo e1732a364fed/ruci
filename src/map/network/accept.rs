@@ -8,6 +8,7 @@ use tokio::sync::{
 
 use super::MapResult;
 
+/// non-blocking
 pub async fn loop_accept(
     listener: Listener,
     shutdown_rx: oneshot::Receiver<()>,
@@ -30,6 +31,7 @@ pub async fn loop_accept(
     rx
 }
 
+/// non-blocking
 pub async fn loop_accept_forever(listener: Listener) -> Receiver<MapResult> {
     let (tx, rx) = mpsc::channel(100);
 
@@ -38,6 +40,7 @@ pub async fn loop_accept_forever(listener: Listener) -> Receiver<MapResult> {
     rx
 }
 
+/// blocking
 async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::Result<()> {
     let lastr;
 

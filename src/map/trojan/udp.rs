@@ -22,6 +22,12 @@ pub struct Reader {
     pub base: Pin<Box<ReadHalf<net::Conn>>>,
 }
 
+impl crate::Name for Reader {
+    fn name(&self) -> &str {
+        "trojan_udp(r)"
+    }
+}
+
 impl AsyncReadAddr for Reader {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
@@ -82,6 +88,11 @@ impl AsyncReadAddr for Reader {
 //Writer 包装 WriteHalf<net::Conn>，使其可以按trojan 格式写入 数据和Addr
 pub struct Writer {
     pub base: Pin<Box<WriteHalf<net::Conn>>>,
+}
+impl crate::Name for Writer {
+    fn name(&self) -> &str {
+        "trojan_udp(w)"
+    }
 }
 
 impl AsyncWriteAddr for Writer {

@@ -269,7 +269,7 @@ impl ToMapper for InMapperConfig {
             }
             InMapperConfig::Listener(l_str) => {
                 let a = net::Addr::from_network_addr_str(l_str).expect("network_addr is valid");
-                let mut g = ruci::map::network::StreamGenerator::default();
+                let mut g = ruci::map::network::Listener::default();
                 g.set_configured_target_addr(Some(a));
                 Box::new(g)
             }
