@@ -25,8 +25,11 @@ pub mod opt_net;
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 pub mod tproxy;
 
+// #[cfg(feature = "smoltcp")]
+// pub mod tcp_ip_stack_smoltcp2;
+
 #[cfg(feature = "smoltcp")]
-pub mod tcp_ip_stack_smoltcp2;
+pub mod tcp_ip_stack_smoltcp;
 
 #[cfg(feature = "lwip")]
 pub mod tcp_ip_stack_lwip;

@@ -409,11 +409,11 @@ pub enum InMapConfig {
     Quic(crate::map::quic_common::ServerConfig),
 
     /// tcp/ip stack
-    #[cfg(feature = "smoltcp")]
-    Stack2,
-
     // #[cfg(feature = "smoltcp")]
-    // Stack,
+    // Stack2,
+
+    #[cfg(feature = "smoltcp")]
+    StackSmoltcp,
     #[cfg(feature = "lwip")]
     StackLwip,
 
@@ -716,9 +716,8 @@ impl TryFrom<InMapConfigWithDataSource> for MapBox {
                 sopt: sockopt,
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             })),
-            #[cfg(feature = "smoltcp")]
-            InMapConfig::Stack2 => Ok(Box::<crate::map::tcp_ip_stack_smoltcp2::Stack>::default()),
-
+            // #[cfg(feature = "smoltcp")]
+            // InMapConfig::Stack2 => Ok(Box::<crate::map::tcp_ip_stack_smoltcp2::Stack>::default()),
             #[cfg(feature = "steganography")]
             InMapConfig::SPE1 { qa } => Ok(Box::new(spe1::ClientOrServer {
                 qa: Arc::new(match qa {
@@ -744,6 +743,10 @@ impl TryFrom<InMapConfigWithDataSource> for MapBox {
             }
             #[cfg(feature = "lwip")]
             InMapConfig::StackLwip => Ok(Box::new(crate::map::tcp_ip_stack_lwip::Stack {
+                ext_fields: Some(MapExtFields::default()),
+            })),
+            #[cfg(feature = "smoltcp")]
+            InMapConfig::StackSmoltcp => Ok(Box::new(crate::map::tcp_ip_stack_smoltcp::Stack {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {

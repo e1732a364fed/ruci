@@ -26,7 +26,7 @@ local tun_config = {
 
 Config = {
   inbounds = {
-    listen1 = { tun_config, { type = "StackLwip" } }
+    listen1 = { tun_config, { type = "StackSmoltcp" } } --StackLwip,StackSmoltcp
   },
   outbounds = { dial1 = outbound_opt_direct }
 }

@@ -167,6 +167,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d62b7694a562cdf5a74227903507c56ab2cc8bdd1f781ed5cb4cf9c9f810bfc"
 
 [[package]]
+name = "arrayvec"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+
+[[package]]
 name = "asn1-rs"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1119,6 +1125,15 @@ name = "error-code"
 version = "3.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5d9305ccc6942a704f4335694ecd3de2ea531b114ac2d51f5f843750787a92f"
+
+[[package]]
+name = "etherparse"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "827292ea592108849932ad8e30218f8b1f21c0dfd0696698a18b5d0aed62d990"
+dependencies = [
+ "arrayvec",
+]
 
 [[package]]
 name = "event-listener"
@@ -2378,6 +2393,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "netstack-smoltcp"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47547e71d6cbe0903996fa7dcd9e2d2d1c8b8090a68603f2fcfcb098b1b51368"
+dependencies = [
+ "etherparse",
+ "futures",
+ "rand 0.8.5",
+ "smoltcp",
+ "spin 0.9.8",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "nibble_vec"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3304,6 +3335,7 @@ dependencies = [
  "mlua",
  "native-tls",
  "netstack-lwip",
+ "netstack-smoltcp",
  "parking_lot",
  "pin-project",
  "quinn 0.10.2",
@@ -3320,7 +3352,6 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "serde_path_to_error",
- "smoltcp",
  "socket2",
  "strum",
  "strum_macros",
@@ -3861,9 +3892,9 @@ dependencies = [
 
 [[package]]
 name = "smoltcp"
-version = "0.12.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dad095989c1533c1c266d9b1e8d70a1329dd3723c3edac6d03bbd67e7bf6f4bb"
+checksum = "5a1a996951e50b5971a2c8c0fa05a381480d70a933064245c4a223ddc87ccc97"
 dependencies = [
  "bitflags 1.3.2",
  "byteorder",
@@ -3895,6 +3926,9 @@ name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+dependencies = [
+ "lock_api",
+]
 
 [[package]]
 name = "stable_deref_trait"

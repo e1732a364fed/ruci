@@ -17,7 +17,7 @@ debug:
 ```sh
 
 # 指定不生成 log 
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography lwip" -- --log-file ""
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography lwip smoltcp" -- --log-file ""
 
 # 指定lua配置
 RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography lwip"  -- --log-file "" -c remote.lua
