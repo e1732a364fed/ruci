@@ -68,5 +68,5 @@ end
 
 # 接下来
 
-- [路由配置](lua/route_config.md)
+- [路由配置](route_config.md)
 

@@ -158,3 +158,7 @@ end
 
 ```
 
+## 其它
+
+ruci还在lua中注册了 `Debug_print`,`Info_print`,`Warn_print` 函数，可以用于向日志打印自定义输出（以debug,info,warn 级别)
+

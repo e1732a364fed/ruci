@@ -52,6 +52,8 @@ chain = [{ Direct = {} }]
 [InMapConfig初探](../lua/config_intro.md#InMapConfig初探)
 [OutMapConfig初探](../lua/config_intro.md#OutMapConfig初探)
 
+需要注意的是，lua 中的 列表外面的大括号是 `{}`, 而 toml 中的列表的大括号是 `[]`
+
 # 接下来
 
 - [lua配置](../lua/lua.md)
