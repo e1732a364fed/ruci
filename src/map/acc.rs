@@ -1,6 +1,8 @@
 /*!
 * provide facilities for accumulating dynamic chain
 
+the mod won't store dynamic data during accumulating.
+
 trait: DynIterator, MIter, DMIter
 
 struct DynMIterWrapper, DynVecIterWrapper, AccumulateResult, AccumulateParams
@@ -96,6 +98,7 @@ impl DynIterator for DynVecIterWrapper {
     }
 }
 
+/// AccumulateResult won't store dynamic data
 pub struct AccumulateResult {
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
