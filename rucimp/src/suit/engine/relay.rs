@@ -305,7 +305,7 @@ pub async fn handle_conn<'a>(
     };
 
     if is_direct {
-        cp_stream(cid, listen_result.c, out_stream, listen_result.b.take(), ti).await;
+        cp_stream(cid, listen_result.c, out_stream, listen_result.b.take(), ti);
     } else {
         let cidc = cid.clone();
         let dial_result =
@@ -349,7 +349,7 @@ pub async fn handle_conn<'a>(
         if let Some(rta) = dial_result.a {
             warn!("{state}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
         }
-        cp_stream(cid, listen_result.c, dial_result.c, None, ti).await;
+        cp_stream(cid, listen_result.c, dial_result.c, None, ti);
     }
 
     Ok(())

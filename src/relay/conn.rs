@@ -14,6 +14,7 @@ use crate::net;
 use crate::net::Stream;
 use crate::net::CID;
 
+/// block until in and out handshake is over.
 /// utilize handle_in_accumulate_result and  route::OutSelector
 pub async fn handle_conn_clonable<'a, T, T2>(
     in_conn: net::Conn,
@@ -55,6 +56,7 @@ where
     handle_in_accumulate_result(listen_result, selector, ti).await
 }
 
+/// block until out handshake is over
 pub async fn handle_in_accumulate_result<'a, T, T2>(
     mut listen_result: AccumulateResult<'a, T>,
 
@@ -126,7 +128,7 @@ where
     if let Some(rta) = dial_result.a {
         warn!("{cid}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
     }
-    cp_stream(cid.clone(), listen_result.c, dial_result.c, None, ti).await;
+    cp_stream(cid.clone(), listen_result.c, dial_result.c, None, ti);
 
     Ok(())
 }

@@ -474,6 +474,7 @@ where
     };
 }
 
+/// blocking.
 /// 先调用第一个 mapper 生成 流, 然后调用 in_iter_accumulate_forever
 pub async fn accumulate_from_start<IterMapperBoxRef>(
     tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
@@ -513,6 +514,7 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
     }
 }
 
+/// blocking.block until rx got closed.
 /// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
 ///
@@ -520,7 +522,7 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
 /// Clone + Send + 'static
 ///
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去;
-/// block until rx got closed.
+///
 /// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
 pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
     cid: CID,

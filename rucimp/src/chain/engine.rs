@@ -120,7 +120,11 @@ impl StaticEngine {
                         break;
                     }
                     let ar = ar.unwrap();
-                    let _r = handle_in_accumulate_result(ar, selector, Some(self.ti.clone())).await;
+                    tokio::spawn(handle_in_accumulate_result(
+                        ar,
+                        selector,
+                        Some(self.ti.clone()),
+                    ));
                 }
                 Ok(())
             };

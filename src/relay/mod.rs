@@ -17,7 +17,8 @@ use crate::net::{self, Stream, CID};
 
 pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间。 //todo: 修改这里
 
-pub async fn cp_stream(
+/// non-blocking,
+pub fn cp_stream(
     cid: CID,
     s1: Stream,
     s2: Stream,
@@ -25,14 +26,16 @@ pub async fn cp_stream(
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
     match (s1, s2) {
-        (Stream::TCP(i), Stream::TCP(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti).await,
+        (Stream::TCP(i), Stream::TCP(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti),
         (Stream::TCP(i), Stream::UDP(o)) => {
-            let _ = cp_udp::cp_udp_tcp(cid, o, i, false, ed, ti).await;
+            tokio::spawn(cp_udp::cp_udp_tcp(cid, o, i, false, ed, ti));
         }
         (Stream::UDP(i), Stream::TCP(o)) => {
-            let _ = cp_udp::cp_udp_tcp(cid, i, o, true, ed, ti).await;
+            tokio::spawn(cp_udp::cp_udp_tcp(cid, i, o, true, ed, ti));
         }
-        (Stream::UDP(i), Stream::UDP(o)) => cp_udp(cid, i, o, ti).await,
+        (Stream::UDP(i), Stream::UDP(o)) => {
+            tokio::spawn(cp_udp(cid, i, o, ti));
+        }
         _ => {
             warn!("can't cp stream when either of them is None");
         }

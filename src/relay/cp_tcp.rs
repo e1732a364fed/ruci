@@ -12,10 +12,9 @@ use scopeguard::defer;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
-use tokio::task;
 
-//non-blocking
-pub async fn cp_conn(
+//non-blocking, spawns new task to do actual relay
+pub fn cp_conn(
     cid: CID,
     in_conn: net::Conn,
     out_conn: net::Conn,
@@ -25,16 +24,16 @@ pub async fn cp_conn(
     debug!("{cid}, relay start");
 
     match (pre_read_data, ti) {
-        (None, None) => task::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
-        (None, Some(t)) => task::spawn(ti_no_ed(cid, in_conn, out_conn, t)),
-        (Some(ed), None) => task::spawn(no_ti_ed(cid, in_conn, out_conn, ed)),
-        (Some(ed), Some(t)) => task::spawn(ti_ed(cid, in_conn, out_conn, t, ed)),
+        (None, None) => tokio::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
+        (None, Some(t)) => tokio::spawn(ti_no_ed(cid, in_conn, out_conn, t)),
+        (Some(ed), None) => tokio::spawn(no_ti_ed(cid, in_conn, out_conn, ed)),
+        (Some(ed), Some(t)) => tokio::spawn(ti_ed(cid, in_conn, out_conn, t, ed)),
     };
 }
 
 async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
     let _ = net::cp(in_conn, out_conn, &cid, None).await;
-    debug!("{}, relay end", cid);
+    debug!("{cid}, relay end",);
 }
 
 async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TransmissionInfo>) {
@@ -42,7 +41,7 @@ async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<Tra
 
     defer! {
         ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-        debug!("{}, relay end", cid);
+        debug!("{cid}, relay end", );
     }
 
     let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;
@@ -55,17 +54,17 @@ async fn no_ti_ed(
     earlydata: bytes::BytesMut,
 ) {
     if log_enabled!(Debug) {
-        debug!("{}, relay with earlydata, {}", cid, earlydata.len());
+        debug!("{cid}, relay with earlydata, {}", earlydata.len());
     }
     let r = out_conn.write(&earlydata).await;
     match r {
         Ok(upload_bytes) => {
             if log_enabled!(Debug) {
-                debug!("{}, upload earlydata ok, {}", cid, upload_bytes);
+                debug!("{cid}, upload earlydata ok, {}", upload_bytes);
             }
         }
         Err(e) => {
-            warn!("{}, upload early_data failed: {}", cid, e);
+            warn!("{cid}, upload early_data failed: {}", e);
 
             let _ = in_conn.shutdown().await;
             let _ = out_conn.shutdown().await;
@@ -86,19 +85,19 @@ async fn ti_ed(
     earlydata: bytes::BytesMut,
 ) {
     if log_enabled!(Debug) {
-        debug!("{}, relay with earlydata, {}", cid, earlydata.len());
+        debug!("{cid}, relay with earlydata, {}", earlydata.len());
     }
     let r = out_conn.write(&earlydata).await;
     match r {
         Ok(upload_bytes) => {
             if log_enabled!(Debug) {
-                debug!("{}, upload earlydata ok, {}", cid, upload_bytes);
+                debug!("{cid}, upload earlydata ok, {}", upload_bytes);
             }
 
             ti.ub.fetch_add(upload_bytes as u64, Ordering::Relaxed);
         }
         Err(e) => {
-            warn!("{}, upload early_data failed: {}", cid, e);
+            warn!("{cid}, upload early_data failed: {}", e);
 
             let _ = in_conn.shutdown().await;
             let _ = out_conn.shutdown().await;
@@ -110,7 +109,7 @@ async fn ti_ed(
 
     defer! {
         ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-        debug!("{}, relay end", cid);
+        debug!("{cid}, relay end");
     }
 
     let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;
