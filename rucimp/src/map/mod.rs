@@ -16,5 +16,8 @@ pub mod ws;
 #[cfg(feature = "quic")]
 pub mod quic;
 
-#[cfg(feature = "quic")]
+#[cfg(any(feature = "quic", feature = "quinn"))]
 pub mod rustls21;
+
+#[cfg(feature = "quinn")]
+pub mod quinn;
