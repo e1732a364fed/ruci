@@ -117,12 +117,21 @@ fn response_to_async_read(resp: reqwest::Response) -> impl tokio::io::AsyncRead 
 ///
 /// will print download progress inline during downloading.
 ///
-pub async fn dl_url(url: &str, file_name: &str) -> anyhow::Result<()> {
-    info!("try downloading {file_name} from {url} ");
+pub async fn dl_url(url: &str, file_name: Option<&str>) -> anyhow::Result<Option<Vec<u8>>> {
+    match file_name {
+        Some(file_name) => {
+            info!("try downloading {file_name} from {url} ");
+        }
+        None => info!("try downloading {url} as bytes"),
+    }
     use bytesize::ByteSize;
-    let response = tokio::time::timeout(Duration::from_secs(10), reqwest::get(url))
+
+    const WAIT_TIME: u64 = 10;
+    let response = tokio::time::timeout(Duration::from_secs(WAIT_TIME), reqwest::get(url))
         .await
-        .context("dl waiting for too long")??;
+        .context(format!(
+            "dl waiting for too long, more than {WAIT_TIME} secs"
+        ))??;
 
     info!("got response");
     let size = response.content_length().unwrap_or_default();
@@ -130,7 +139,6 @@ pub async fn dl_url(url: &str, file_name: &str) -> anyhow::Result<()> {
 
     info!("file size is {}", ByteSize(size),);
 
-    let mut file = tokio::fs::File::create(file_name).await?;
     let mut content = response_to_async_read(response);
 
     let (tx, mut rx) = mpsc::channel(10);
@@ -158,20 +166,33 @@ pub async fn dl_url(url: &str, file_name: &str) -> anyhow::Result<()> {
     });
 
     let cid = net::CID::default();
-    net::cp::cp_rw_with_updater(&cid, &mut content, &mut file, tx).await?;
-    info!("download {file_name} succeed");
 
-    Ok(())
+    match file_name {
+        Some(file_name) => {
+            let mut file = tokio::fs::File::create(file_name).await?;
+            net::cp::cp_rw_with_updater(&cid, &mut content, &mut file, tx).await?;
+            info!("download {file_name} succeed");
+
+            Ok(None)
+        }
+        None => {
+            let mut v = vec![];
+            net::cp::cp_rw_with_updater(&cid, &mut content, &mut v, tx).await?;
+            info!("download succeed");
+
+            Ok(Some(v))
+        }
+    }
 }
 
 async fn download_mmdb() -> anyhow::Result<()> {
     const GEOIP_COUNTRY: &str = "Country.mmdb";
-    dl_url(MMDB_DOWNLOAD_LINK, GEOIP_COUNTRY).await?;
+    dl_url(MMDB_DOWNLOAD_LINK, Some(GEOIP_COUNTRY)).await?;
     Ok(())
 }
 
 async fn download_wintun() -> anyhow::Result<()> {
     const WINTUN_ZIP: &str = "wintun.zip";
-    dl_url(WINTUN_DOWNLOAD_LINK, WINTUN_ZIP).await?;
+    dl_url(WINTUN_DOWNLOAD_LINK, Some(WINTUN_ZIP)).await?;
     Ok(())
 }

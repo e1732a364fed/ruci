@@ -5,6 +5,7 @@ ruci_config/
 .vscode/
 crates/ruci-cmd/static/
 testfile.txt
+*.tar
 *.log
 *.mmdb
 wintun.*
