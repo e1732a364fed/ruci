@@ -54,6 +54,8 @@ use typed_builder::TypedBuilder;
 
 use std::{fmt::Debug, sync::Arc};
 
+use self::addr_conn::AddrConn;
+
 /// 如果新连接不是udp, 则内含新连接
 pub enum NewConnection {
     TcpConnection(TcpStream),
@@ -156,6 +158,9 @@ impl MapResult {
 
     pub fn newc(c: net::Conn) -> MapResultBuilder<((), (), (Stream,), (), (), ())> {
         MapResult::builder().c(Stream::c(c))
+    }
+    pub fn newu(u: AddrConn) -> MapResultBuilder<((), (), (Stream,), (), (), ())> {
+        MapResult::builder().c(Stream::u(u))
     }
 
     pub fn cb(c: net::Conn, b: Option<BytesMut>) -> Self {
