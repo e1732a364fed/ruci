@@ -43,11 +43,9 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             use rcgen::generate_simple_self_signed;
 
             let cert = generate_simple_self_signed(names).unwrap();
-            let c = cert.serialize_pem()?;
-            let k = cert.serialize_private_key_pem();
+            let c = cert.key_pair.serialize_pem();
 
-            fs::write("generated.crt", c)?;
-            fs::write("generated.key", k)?;
+            fs::write("generated_crt_and_key.crt", c)?;
         }
     };
     Ok(())
