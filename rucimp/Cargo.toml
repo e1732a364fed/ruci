@@ -83,13 +83,15 @@ smoltcp = { version = "0.11", optional = true, default-features = false, feature
     "socket-tcp",
 ] }
 
+array-init = "2.1.0"
+
 [dev-dependencies]
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [features]
 default = ["route", "geoip", "sockopt"]
-
+steganography = []
 rustls21 = ["dep:rustls", "rustls-pemfile", "webpki-roots"]
 
 quic = ["s2n-quic", "s2n-quic-rustls", "rustls21"]

@@ -808,8 +808,19 @@ local config_19_recorder_trojans = {
 
 }
 
+-- steganography protocol example 1
+local config_20_spe1 = {
+    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
+    outbounds = {
+        {
+            tag = "dial1",
+            chain = { dial, "SPE1", trojan_out }
+        }
+    }
+}
 
-Config = config_18_recorder
+
+Config = config_20_spe1
 
 --[[
 

@@ -7,6 +7,9 @@ pub mod quic_common;
 pub mod recorder;
 pub mod ws;
 
+#[cfg(feature = "steganography")]
+pub mod spe1;
+
 #[cfg(feature = "quic")]
 pub mod quic;
 

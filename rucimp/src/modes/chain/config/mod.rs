@@ -328,6 +328,9 @@ pub enum InMapConfig {
     /// tcp/ip stack
     #[cfg(feature = "smoltcp")]
     Stack,
+
+    #[cfg(feature = "steganography")]
+    SPE1,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -371,6 +374,9 @@ pub enum OutMapConfig {
     },
     #[cfg(any(feature = "quic", feature = "quinn"))]
     Quic(crate::map::quic_common::ClientConfig),
+
+    #[cfg(feature = "steganography")]
+    SPE1,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -583,6 +589,13 @@ impl ToMapBox for InMapConfig {
             }),
             #[cfg(feature = "smoltcp")]
             InMapConfig::Stack => Box::<crate::map::tcp_ip_stack_smoltcp::Stack>::default(),
+
+            #[cfg(feature = "steganography")]
+            InMapConfig::SPE1 => Box::new(crate::map::spe1::ClientOrServer {
+                qa: Arc::new(crate::map::spe1::QaData::new_simple()),
+                is_server: true,
+                ext_fields: Some(MapExtFields::default()),
+            }),
         }
     }
 }
@@ -704,6 +717,13 @@ impl ToMapBox for OutMapConfig {
             OutMapConfig::OptDialer(sopt) => {
                 Box::new(crate::map::opt_net::OptDialer::new(sopt.clone()).expect("ok"))
             }
+
+            #[cfg(feature = "steganography")]
+            OutMapConfig::SPE1 => Box::new(crate::map::spe1::ClientOrServer {
+                qa: Arc::new(crate::map::spe1::QaData::new_simple()),
+                is_server: false,
+                ext_fields: Some(MapExtFields::default()),
+            }),
         }
     }
 }

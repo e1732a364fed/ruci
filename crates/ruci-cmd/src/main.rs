@@ -272,6 +272,9 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     #[cfg(feature = "smoltcp")]
     features_list.push("smoltcp");
 
+    #[cfg(feature = "steganography")]
+    features_list.push("steganography");
+
     info!(
         ruci_cmd = env!("CARGO_PKG_VERSION"),
         rucimp = rucimp::VERSION,
