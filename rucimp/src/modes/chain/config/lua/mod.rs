@@ -13,7 +13,27 @@ use parking_lot::Mutex;
 use ruci::map::fold::OVOD;
 use ruci::net::CID;
 
-/// set global func create_in_mapper_func for lua
+#[derive(Clone)]
+pub struct LuaMapperWrapper(Arc<MapperBox>);
+
+use mlua::UserData;
+
+impl<'lua> FromLua<'lua> for LuaMapperWrapper {
+    fn from_lua(value: Value<'lua>, _: &'lua Lua) -> LuaResult<Self> {
+        match value {
+            Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            _ => unreachable!(),
+        }
+    }
+}
+use mlua::UserDataMethods;
+impl UserData for LuaMapperWrapper {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("clone", |_, m, ()| Ok(m.clone()));
+    }
+}
+
+/// set global func create_in_mapper for lua
 pub fn set_lua_create_in_mapper_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
         let c = lua.from_value::<InMapperConfig>(v)?;
@@ -21,11 +41,11 @@ pub fn set_lua_create_in_mapper_func(lua: &Lua) -> anyhow::Result<()> {
         let m = LuaMapperWrapper(Arc::new(m));
         Ok(m)
     })?;
-    lua.globals().set("create_in_mapper_func", f)?;
+    lua.globals().set("create_in_mapper", f)?;
     Ok(())
 }
 
-/// set global func create_out_mapper_func for lua
+/// set global func create_out_mapper for lua
 pub fn set_lua_create_out_mapper_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
         let c = lua.from_value::<OutMapperConfig>(v)?;
@@ -33,7 +53,7 @@ pub fn set_lua_create_out_mapper_func(lua: &Lua) -> anyhow::Result<()> {
         let m = LuaMapperWrapper(Arc::new(m));
         Ok(m)
     })?;
-    lua.globals().set("create_out_mapper_func", f)?;
+    lua.globals().set("create_out_mapper", f)?;
     Ok(())
 }
 
@@ -370,18 +390,13 @@ impl InnerLuaNextGenerator {
         if i < 0 {
             return None;
         }
-        // if (i as usize) < cache_len {
-        //     return Some((i, None));
-        // }
+
         match rst.1 {
             LuaMapperRepresentation::OT(t) => {
                 if let Ok(g) = t.to_ref().get::<_, Value>("stream_generator") {
                     if let Value::Nil = g {
-                        // debug!("will get r by table");
                         self.get_result_by_value(i, Value::Table(t.to_ref()))
                     } else {
-                        // debug!("will get r by g");
-
                         let r = self.get_result_by_value(i, g);
 
                         if let Ok(f) = t.to_ref().get::<_, LuaFunction>("new_thread_fn") {
@@ -394,13 +409,10 @@ impl InnerLuaNextGenerator {
                         r
                     }
                 } else {
-                    // debug!("will get r by table");
                     self.get_result_by_value(i, Value::Table(t.to_ref()))
                 }
             }
             LuaMapperRepresentation::OS(s) => {
-                // debug!("will get r by str");
-
                 self.get_result_by_value(i, Value::String(s.to_ref()))
             }
             LuaMapperRepresentation::OU(ud) => {
@@ -537,25 +549,5 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
         };
 
         mg.get_result(cid, r)
-    }
-}
-
-#[derive(Clone)]
-pub struct LuaMapperWrapper(Arc<MapperBox>);
-
-use mlua::UserData;
-
-impl<'lua> FromLua<'lua> for LuaMapperWrapper {
-    fn from_lua(value: Value<'lua>, _: &'lua Lua) -> LuaResult<Self> {
-        match value {
-            Value::UserData(ud) => Ok(ud.take::<Self>()?),
-            _ => unreachable!(),
-        }
-    }
-}
-use mlua::UserDataMethods;
-impl UserData for LuaMapperWrapper {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("clone", |_, m, ()| Ok(m.clone()));
     }
 }

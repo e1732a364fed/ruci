@@ -1,4 +1,3 @@
-#[allow(unused)]
 pub mod client;
 pub mod server;
 
@@ -13,6 +12,8 @@ use futures::ready;
 use h2::{RecvStream, SendStream};
 use tokio::io::{AsyncRead, AsyncWrite};
 
+// https://github.com/zephyrchien/midori/blob/master/src/transport/h2/stream.rs
+
 pub struct H2Stream {
     recv: RecvStream,
     send: SendStream<Bytes>,
@@ -25,7 +26,7 @@ impl H2Stream {
         H2Stream {
             recv,
             send,
-            buffer: BytesMut::with_capacity(1024), //todo: change this
+            buffer: BytesMut::with_capacity(0x1000), //todo: change this
         }
     }
 }

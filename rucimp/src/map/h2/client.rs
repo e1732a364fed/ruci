@@ -1,19 +1,18 @@
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
 use bytes::BytesMut;
-use futures::stream;
 use h2::client::{Connection, SendRequest};
-use http::{Request, Response, StatusCode};
+use http::Request;
 use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
-    net::{self, helpers::EarlyDataWrapper, http::CommonConfig, Conn, CID},
+    net::{self, Conn, CID},
 };
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::Mutex;
 
-use tracing::{debug, info};
+use tracing::debug;
 
 use super::*;
 
@@ -30,7 +29,7 @@ impl SingleClient {
     async fn handshake(
         &self,
         cid: net::CID,
-        mut conn: net::Conn,
+        conn: net::Conn,
         a: Option<net::Addr>,
         early_data: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
@@ -51,7 +50,7 @@ impl SingleClient {
             .a(a)
             .b(early_data)
             .build();
-        (Ok(m))
+        Ok(m)
     }
 }
 
@@ -70,7 +69,7 @@ async fn new_stream_by_send_request(
         });
     }
 
-    let mut request = Request::builder().body(()).unwrap();
+    let request = Request::builder().body(()).unwrap();
 
     let (resp, send_stream) = send_request.send_request(request, false)?;
 

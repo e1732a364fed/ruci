@@ -168,7 +168,8 @@ config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },
 
-    -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+h2+trojan 的情况
+    -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+h2+trojan 的情况 
+    -- (非多路复用. mux的情况见 local_mux_h2.lua)
 }
 
 --]=]
