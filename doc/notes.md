@@ -374,6 +374,8 @@ windows上运行 gnu 版会报 应用程序无法正常启动, 0xc00007b
 
 `The application was unable to start correctly (0xc000007b).`
 
+此问题已在 ruci-cmd v0.0.7-alpha.3 及以后的版本解决，是使用 -Clink-self-contained=yes -Ctarget-feature=+crt-static 解决的
+
 ### 3
 linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 
@@ -382,6 +384,8 @@ linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 3. 自己编译
 
 更新系统的 glibc 是比较危险的做法, 此时推荐使用 musl
+
+此问题已在 ruci-cmd v0.0.7-alpha.3 及以后的版本解决，是使用  RUSTFLAGS=-Ctarget-feature=+crt-static 解决的
 
 ## tproxy: Too many open files
 
