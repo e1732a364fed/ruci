@@ -13,7 +13,7 @@ use rucimp::{
     suit::config::adapter::{
         load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
     },
-    suit::engine2::SuitEngine,
+    suit::engine::SuitEngine,
 };
 
 /// 使用 config.suit.toml, resource/local.suit.toml, 或 用户提供的参数作为配置文件

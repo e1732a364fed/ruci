@@ -25,7 +25,7 @@ use rucimp::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
 use rucimp::suit::config::{Config, LDConfig};
-use rucimp::suit::engine2::{listen_ser2, SuitEngine};
+use rucimp::suit::engine::{listen_ser2, SuitEngine};
 use rucimp::suit::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -802,7 +802,7 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
     let c: Config = get_nl_config(3);
     let cc = c.clone();
 
-    let se = rucimp::suit::engine2::SuitEngine::new();
+    let se = rucimp::suit::engine::SuitEngine::new();
     let se = Arc::new(Mutex::new(Box::new(se)));
     {
         let mut lo = se.lock();

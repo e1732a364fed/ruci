@@ -1,13 +1,13 @@
 /*!
- * suit 模块定义了一个 实现 SuitConfigHolder, ruci::proxy::AddersVec  的结构
+ * suit defines a struct that impls SuitConfigHolder+ MappersVec
  *
- * 通过套装, 我们得以将一串代理传播链扁平化
+ * 通过套装, 我们得以将一串固定套路的代理传播链扁平化
  *
  */
 pub mod config;
 
 /// uses self-defined relay procedure, which is similar to what's in verysimple project.
-pub mod engine2;
+pub mod engine;
 
 #[cfg(test)]
 mod test;
