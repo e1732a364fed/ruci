@@ -637,6 +637,11 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
         std::env::var(RL).unwrap_or_else(|_| String::new())
     );
 
+    info!(
+        "Log Level: {:?}",
+        std::env::var(RL).unwrap_or_else(|_| String::new())
+    );
+    info!("working dir: {:?}", c_dir);
     #[allow(unused_mut)]
     let mut features_list: Vec<&str> = vec![
         #[cfg(feature = "api_server")]
