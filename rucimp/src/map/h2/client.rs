@@ -42,8 +42,6 @@ impl SingleClient {
             }
         };
 
-        //let cc = cid.clone();
-
         let stream =
             new_stream_by_send_request(cid, false, &mut send_request, None, Some(connection))
                 .await?;
@@ -165,8 +163,6 @@ impl MuxClient {
                     }
                 };
                 let (mut send_request, connection) = r;
-
-                //let cc = cid.clone();
 
                 let stream = new_stream_by_send_request(
                     cid,

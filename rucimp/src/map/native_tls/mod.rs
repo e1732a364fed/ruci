@@ -11,7 +11,6 @@ use ruci::{
 
 use macro_mapper::*;
 use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
-use tracing::debug;
 
 pub fn load(cert_path: &str, key_path: &str) -> anyhow::Result<Identity> {
     let mut cert_file = File::open(cert_path)?;
@@ -54,7 +53,7 @@ pub struct Server {
 
 impl fmt::Debug for Server {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "rucimp::native_tls::Server,")
+        write!(f, "rucimp::map::native_tls::Server")
     }
 }
 
@@ -73,7 +72,7 @@ impl Server {
         a: Option<net::Addr>,
     ) -> anyhow::Result<map::MapResult> {
         if let Some(pre_read_data) = b {
-            debug!("tls server got pre_read_data, init with EarlyDataWrapper");
+            //debug!("tls server got pre_read_data, init with EarlyDataWrapper");
             let nc = EarlyDataWrapper::from(pre_read_data, conn);
 
             conn = Box::new(nc);
@@ -98,7 +97,7 @@ impl map::Mapper for Server {
             let r = self.handshake(cid, conn, params.b, params.a).await;
             match r {
                 anyhow::Result::Ok(r) => r,
-                Err(e) => MapResult::from_e(e.context("TLS server handshake failed")),
+                Err(e) => MapResult::from_e(e.context("NativeTLS server handshake failed")),
             }
         } else {
             MapResult::err_str("tls only support tcplike stream")

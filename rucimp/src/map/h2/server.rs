@@ -48,7 +48,7 @@ impl Server {
         }
         let mut conn = server::handshake(conn)
             .await
-            .context("h2::server handshake failed")?;
+            .context("h2::Server handshake failed")?;
 
         let (tx, rx) = mpsc::channel(100);
 
@@ -67,15 +67,15 @@ impl Server {
                         // 如果客户端发来的请求uri不带正确的 authority, h2
                         // 会在debug 中报 malformed headers: malformed authority
                         // 并对 accept 返回 None
-                        warn!(cid = %cid, "accept h2 got none");
+                        warn!(cid = %cid, "accept h2 got None, will break");
                         break;
                     }
                 };
                 let r = match r {
                     Ok(r) => r,
                     Err(e) => {
-                        warn!(cid = %cid, "accept h2 got e {}", e);
-                        break;
+                        warn!(cid = %cid, "accept h2 got error, will continue: {}", e);
+                        continue;
                     }
                 };
                 let (req, mut resp) = r;
@@ -90,7 +90,7 @@ impl Server {
                             warn!(
                                 cid = %cid,
                                 e= %e,
-                                "h2 grpc server got wrong grpc header"
+                                "h2 grpc server accept got wrong grpc header"
                             );
                             let _ = resp.send_response(
                                 Response::builder()
@@ -109,7 +109,7 @@ impl Server {
                         warn!(
                             cid = %cid,
                             e= %e,
-                            "h2 server got wrong http header"
+                            "h2 server accept got wrong http header"
                         );
                         let _ = resp.send_response(
                             Response::builder()
@@ -143,7 +143,7 @@ impl Server {
                 let send = match send {
                     Ok(send) => send,
                     Err(e) => {
-                        warn!(cid = %cid, "accept h2 got e2 {}", e);
+                        warn!(cid = %cid, "accept h2 succeed but send response got error: {}", e);
                         break;
                     }
                 };
@@ -164,7 +164,7 @@ impl Server {
                 let m = MapResult::new_c(stream).new_id(ncid).build();
                 let r = tx.send(m).await;
                 if let Err(e) = r {
-                    warn!(cid = %cid, "accept h2 got e3 {}", e);
+                    warn!(cid = %cid, "accept h2 tx got error: {}", e);
                     break;
                 }
             }
