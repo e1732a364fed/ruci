@@ -199,7 +199,6 @@ impl Device for SmoltcpDevice {
         match self.r_state {
             Poll::Pending => None,
             Poll::Ready(n) => {
-                self.check_read_buf_for_new_conn(n);
                 let data = &mut self.rbuf[..n];
 
                 let rx = MyRxToken { data };
@@ -305,17 +304,6 @@ pub fn create(
         }
     });
 
-    // tokio::spawn(async {
-    //     let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
-
-    //     loop {
-    //         tokio::select! {
-    //             _ = interval.tick() =>{
-    //                 device.udp_health_check();
-    //             }
-    //         }
-    //     }
-    // });
     DeviceAndReceivers {
         iface,
         device,
@@ -335,6 +323,7 @@ impl SmoltcpDevice {
         let n = self.r.read(self.rbuf.as_mut()).await?;
 
         //debug!("smoltcp device read {n}");
+        self.check_read_buf_for_new_conn(n);
 
         self.r_state = Poll::Ready(n);
 

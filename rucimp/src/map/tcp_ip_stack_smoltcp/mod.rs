@@ -14,6 +14,7 @@ use ruci::net::*;
 use ruci::Name;
 
 use macro_map::*;
+use smoltcp::iface::PollIngressSingleResult;
 use tokio::sync::mpsc;
 use tracing::debug;
 
@@ -69,22 +70,8 @@ impl Map for Stack {
                                         break;
                                     },
                                     Ok(_) => {
-                                        let now = smoltcp::time::Instant::now();
-
-                                        //先给一个 空列表，只利用它调用到 device.receive
-                                        // 之后拿到 new_read_type 后，再按实际类型走
-
-                                        let fake_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 
                                         //poll->socket_ingress->device.receive->rx_token.consume->process_ip->process_ipv4->process_tcp
-
-                                        iface.poll_ingress_single(now,&mut device, unsafe {
-                                            &mut *fake_sockets
-                                        });
-
-
-
-
 
                                         match device.new_read_handle{
                                             device::NewReadType::None => {},
@@ -92,18 +79,22 @@ impl Map for Stack {
                                             device::NewReadType::TCP(_) =>{
                                                 let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 
-                                                iface.poll(now,&mut device, unsafe {
-                                                    &mut *tcp_sockets
-                                                });
+                                                while iface.poll_ingress_single(smoltcp::time::Instant::now(), &mut device, unsafe { &mut *tcp_sockets })
+                                                != PollIngressSingleResult::None
+                                                {
+                                                    device.process_ingress();
 
-                                                device.process_ingress();
+                                                    iface.poll_egress(smoltcp::time::Instant::now(), &mut device, unsafe { &mut *tcp_sockets });
+                                                    //poll_egress followed by process_ingress is necessary for tcp
+                                                }
+
 
                                             },
                                             device::NewReadType::UDP(_) =>{
 
                                                 let sockets = &mut device.udp_sockets as *mut smoltcp::iface::SocketSet;
 
-                                                iface.poll(now,&mut device, unsafe {
+                                                iface.poll_ingress_single(smoltcp::time::Instant::now(),&mut device, unsafe {
                                                     &mut *sockets
                                                 });
                                                 device.process_ingress();
