@@ -400,7 +400,7 @@ async fn load_finite_dynamic1() -> anyhow::Result<()> {
 async fn load_infinite() -> anyhow::Result<()> {
     let text = r#"
         
-dyn_config = {
+infinite = {
     inbounds = {{
         tag = "listen1",
         generator = function(this_index, data)

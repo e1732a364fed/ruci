@@ -335,7 +335,7 @@ end
 -- generator, generator 根据参数内容来动态生成 [Mapper], 如果不想
 -- 重复生成以前生成过的Mapper, 则可以返回一个已存在的索引
 
-dyn_config = {
+infinite = {
 
     -- 下面这个演示 与第一个普通示例 形式上等价
 

@@ -37,6 +37,12 @@ struct Args {
     #[arg(short, long)]
     log_level: Option<log::Level>,
 
+    /// use infinite dynamic chain that is written in the lua config file (the "infinite"
+    /// global variable must exist)
+    #[cfg(feature = "lua")]
+    #[arg(long)]
+    infinite: bool,
+
     /// enable flux trace (might slow down performance)
     #[cfg(feature = "trace")]
     #[arg(long)]

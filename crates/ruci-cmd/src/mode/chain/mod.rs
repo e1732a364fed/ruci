@@ -33,7 +33,11 @@ pub(crate) async fn run(
         let contents = rucimp::cmd_common::try_get_filecontent("local.lua", Some(f))
             .context(format!("run chain engine try get file {} failed", f))?;
 
-        se.init_lua(contents)?;
+        if args.infinite {
+            se.init_lua_infinite_dynamic(contents)?;
+        } else {
+            se.init_lua(contents)?;
+        }
     }
 
     #[cfg(feature = "api_server")]
