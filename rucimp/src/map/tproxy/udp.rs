@@ -6,6 +6,7 @@ use std::{
     pin::Pin,
     sync::{atomic::AtomicBool, Arc},
     task::{Context, Poll},
+    time::{Duration, Instant},
 };
 
 use bytes::{Buf, BytesMut};
@@ -138,34 +139,67 @@ pub struct AcceptData {
     pub first_buf: BytesMut,
 }
 
+/// 新增连接信息结构体
+struct ConnInfo {
+    tx: Sender<BytesMut>,
+    last_active: Instant,
+}
+
+/// 修改 ConnMap 类型定义
+type ConnMap = Arc<Mutex<HashMap<(Addr, Addr), ConnInfo>>>;
+
 impl Listener {
     pub async fn new(listen_a: Addr, sopt: SockOpt) -> anyhow::Result<Self> {
         let udp = so2::block_listen_udp_socket(&listen_a, &sopt)?;
         let fd = udp.as_raw_fd();
 
         let (udp_msg_tx, mut udp_msg_rx) = mpsc::channel(4096);
-
         let shutdown_thread_atomic = Arc::new(AtomicBool::new(false));
 
         {
             let stac = shutdown_thread_atomic.clone();
-
             std::thread::spawn(move || loop_accept_udp(&udp, udp_msg_tx, stac));
         }
 
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
         let (new_ac_tx, new_ac_rx) = mpsc::channel(4096);
 
+        let conn_map: ConnMap = Arc::new(Mutex::new(HashMap::new()));
+
+        // 添加清理任务
+        {
+            let cleanup_map = conn_map.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(60));
+                loop {
+                    interval.tick().await;
+
+                    let mut map = cleanup_map.lock().await;
+                    let now = Instant::now();
+                    let timeout = Duration::from_secs(300); // 5分钟超时
+
+                    // 删除超时连接
+                    map.retain(|k, conn_info| {
+                        let is_active = now.duration_since(conn_info.last_active) < timeout;
+                        if !is_active {
+                            debug!("Removing inactive UDP connection: {:?}", k);
+                        }
+                        is_active
+                    });
+                }
+            });
+        }
+
         tokio::spawn(async move {
             let conn_map: ConnMap = Arc::new(Mutex::new(HashMap::new()));
             loop {
                 tokio::select! {
-                    _ = &mut shutdown_rx=>{
+                    _ = &mut shutdown_rx => {
                         debug!("tproxy UdpListener got shutdown, will break");
                         break;
                     }
 
-                    r =  udp_msg_rx.recv() =>{
+                    r = udp_msg_rx.recv() => {
                         let ((i,lb,rb), dst,src) = match r {
                             Some(r) => r,
                             None => {
@@ -175,23 +209,20 @@ impl Listener {
                         };
 
                         let b = unsafe {
-                            if i == 0 {
-                                &mut *std::ptr::addr_of_mut!(BUF1)
-                            } else {
-                                &mut *std::ptr::addr_of_mut!(BUF2)
-                            }
+                            if i == 0 { &mut *std::ptr::addr_of_mut!(BUF1) }
+                            else { &mut *std::ptr::addr_of_mut!(BUF2) }
                         };
                         let buf = &b[lb..rb];
 
                         let mut map_mg = conn_map.lock().await;
                         let k = (dst.clone(),src.clone());
 
-                        if map_mg.contains_key(&k) {
+                        if let Some(conn_info) = map_mg.get_mut(&k) {
+                            // 更新已存在连接的最后活动时间
+                            conn_info.last_active = Instant::now();
 
                             let new_buf = BytesMut::from(buf);
-
-                            let msg_tx = map_mg.get(&k).unwrap();
-                            let r = msg_tx.send(new_buf).await;
+                            let r = conn_info.tx.send(new_buf).await;
                             if let Err(e) = r {
                                 debug!("tproxy UdpListener tx send got e: {e}");
                                 map_mg.remove(&k);
@@ -200,7 +231,13 @@ impl Listener {
                         } else {
                             let (msg_tx, msg_rx) = mpsc::channel(100);
 
-                            map_mg.insert(k.clone(), msg_tx);
+                            // 创建新的连接信息
+                            let conn_info = ConnInfo {
+                                tx: msg_tx,
+                                last_active: Instant::now(),
+                            };
+
+                            map_mg.insert(k.clone(), conn_info);
                             let first_buf = BytesMut::from(buf);
 
                             let ac = new_addr_conn(
@@ -210,16 +247,15 @@ impl Listener {
                                 conn_map.clone(),
                             );
 
-                            let r = new_ac_tx.send(AcceptData{ac,dst, src,first_buf}).await;
+                            let r = new_ac_tx.send(AcceptData{ac,dst,src,first_buf}).await;
                             if let Err(e) = r {
                                 debug!("tproxy UdpListener loop got e: {e}");
                                 break;
                             }
                         }
-
                     }
                 }
-            } //loop
+            }
         });
 
         Ok(Self {
@@ -271,8 +307,6 @@ impl Drop for Listener {
     }
 }
 
-type ConnMap = Arc<Mutex<HashMap<(Addr, Addr), Sender<BytesMut>>>>;
-
 /// init a AddrConn from a UdpSocket
 ///
 /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
@@ -309,24 +343,15 @@ impl AsyncWriteAddr for Writer {
         buf: &[u8],
         dst: &Addr,
     ) -> Poll<io::Result<usize>> {
-        //debug!("tproxy_udp_w write called {} {dst} {}", buf.len(), self.src);
+        // 更新连接的最后活动时间
+        if let Ok(mut map) = self.conn_map.try_lock() {
+            if let Some(conn_info) = map.get_mut(&(self.dst.clone(), self.src.clone())) {
+                conn_info.last_active = Instant::now();
+            }
+        }
 
         let us = so2::connect_tproxy_udp(dst, &self.src).unwrap();
-
         let r = us.send(buf);
-
-        // socket2 is automatically closed when dropped
-
-        // let fd = us.as_raw_fd();
-        // unsafe {
-        //     libc::close(fd);
-        // }
-
-        // 没必要 用 一个 "hashmap with timeout" 缓存. 因为 udp 最一般的用途是 dns,
-        // 而 dns 都是一次性的 连接
-
-        // 如果要大量传 udp 单连接 大数据, 用 tun 是更好的选择
-
         Poll::Ready(r)
     }
 

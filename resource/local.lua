@@ -77,7 +77,7 @@ local opt_direct_chain = {
         OptDirect = {
             sockopt = {
                 so_mark = 255,
-                bind_to_device = "en0" --"enp0s1"
+                bind_to_device = "wlp3s0" --"en0" --"enp0s1"
             }
         }
     }
@@ -886,7 +886,7 @@ local config_23_tcp_ip_stack_lwip = {
 --]]
 
 
-Config = config_4_trojan
+Config = config_2_tproxy1
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)

@@ -10,6 +10,7 @@ use std::{
     pin::Pin,
     sync::{atomic::AtomicBool, Arc},
     task::{ready, Context, Poll},
+    time::Instant,
 };
 
 use bytes::BytesMut;
@@ -125,7 +126,13 @@ impl Listener {
                         if let std::collections::hash_map::Entry::Vacant(e) = map_mg.entry(k) {
                             let (msg_tx, msg_rx) = mpsc::channel(100);
 
-                            e.insert( msg_tx);
+                           // 创建新的 ConnInfo
+                            let conn_info = ConnInfo {
+                                tx: msg_tx,
+                                last_active: Instant::now(),
+                            };
+
+                            e.insert(conn_info);
                             let first_buf = BytesMut::from(data.as_slice());
 
                             let ac = new_addr_conn(
@@ -143,12 +150,15 @@ impl Listener {
                             }
 
                         } else {
-                            let msg_tx = map_mg.get(&k).unwrap();
-                            let r = msg_tx.send(data).await;
-                            if let Err(e) = r {
-                                debug!("lwip UdpListener tx send got e: {e}");
-                                map_mg.remove(&k);
-                                continue;
+                            // 更新已存在连接的最后活动时间
+                            if let Some(conn_info) = map_mg.get_mut(&k) {
+                                conn_info.last_active = Instant::now();
+                                let r = conn_info.tx.send(data).await;
+                                if let Err(e) = r {
+                                    debug!("lwip UdpListener tx send got e: {e}");
+                                    map_mg.remove(&k);
+                                    continue;
+                                }
                             }
                         }
 
@@ -191,7 +201,13 @@ impl Drop for Listener {
     }
 }
 
-type ConnMap = Arc<Mutex<HashMap<(std::net::SocketAddr, std::net::SocketAddr), Sender<Vec<u8>>>>>;
+struct ConnInfo {
+    tx: Sender<Vec<u8>>,
+    last_active: Instant,
+}
+
+// 修改 ConnMap 类型定义
+type ConnMap = Arc<Mutex<HashMap<(SocketAddr, SocketAddr), ConnInfo>>>;
 
 /// init a AddrConn from a UdpSocket
 ///
@@ -242,10 +258,15 @@ impl AsyncWriteAddr for Writer {
         buf: &[u8],
         dst: &Addr,
     ) -> Poll<io::Result<usize>> {
+        if let Ok(mut map) = self.conn_map.try_lock() {
+            if let Some(conn_info) = map.get_mut(&(self.dst, self.src)) {
+                conn_info.last_active = Instant::now();
+            }
+        }
+
         let r = self
             .w
             .try_send((buf.to_vec(), dst.get_socket_addr().unwrap(), self.src));
-
         match r {
             Ok(_) => Poll::Ready(Ok(buf.len())),
             Err(e) => Poll::Ready(Err(io::Error::other(e))),
@@ -278,7 +299,7 @@ pub struct Reader {
 }
 impl ruci::Name for Reader {
     fn name(&self) -> &str {
-        "tproxy_udp_w"
+        "tproxy_udp_r"
     }
 }
 
