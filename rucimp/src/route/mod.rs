@@ -265,7 +265,7 @@ impl RuleSet {
                     NetAddr::Socket(so) | NetAddr::NameAndSocket(_, so, _) => {
                         let ip = so.ip();
                         let str = &maxmind::get_ip_iso_by_reader(ip, mr);
-                        let country = maxmind::filter_iso_string(str);
+                        let country = maxmind::filter_iso_string_to_iso3166(str);
                         cs.contains(country)
                     }
                     _ => true_if_empty,
@@ -278,9 +278,57 @@ impl RuleSet {
 #[cfg(test)]
 mod test {
 
+    use std::net::Ipv4Addr;
+
     use crate::COMMON_DIRS;
 
     use super::*;
+
+    #[test]
+    fn tst_iprange() -> anyhow::Result<()> {
+        let ip_range: IpRange<Ipv4Net> = ["172.16.0.0/16", "192.168.1.0/24"]
+            .iter()
+            .map(|s| s.parse().unwrap())
+            .collect();
+
+        for network in &ip_range {
+            println!("{:?}", network);
+        }
+
+        let ip: Ipv4Addr = "192.168.1.1".parse()?;
+        let r = ip_range.contains(&ip);
+        assert!(r);
+
+        let ip: Ipv4Addr = "192.168.1.100".parse()?;
+        let r = ip_range.contains(&ip);
+        assert!(r);
+
+        let ip: Ipv4Addr = "192.168.2.1".parse()?;
+        let r = ip_range.contains(&ip);
+        assert!(!r);
+        Ok(())
+    }
+
+    #[test]
+    fn tst_net() -> anyhow::Result<()> {
+        let mut rs = RuleSet::default();
+
+        let mut nets = HashSet::new();
+        nets.insert(Network::UDP);
+
+        rs.ta_networks = Some(nets);
+        let a = Addr::from_network_addr_str("tcp://104.193.88.123:80")?;
+
+        let r = rs.is_in_networks(false, &a);
+        assert!(!r);
+
+        let a = Addr::from_network_addr_str("udp://1.1.1.1:80")?;
+
+        let r = rs.is_in_networks(false, &a);
+        assert!(r);
+
+        Ok(())
+    }
 
     #[test]
     #[cfg(feature = "geoip")]

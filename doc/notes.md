@@ -93,15 +93,17 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 
 ## maxmind db 的 geoip
 
-在测试中发现(24.2.28), 最新的 mmdb ,
+在(24.2.28)测试中发现, 最新的 mmdb ,
 从 https://github.com/Loyalsoldier/geoip/releases 下载的,
 
-202402220055, 202310260055 , 202301050111中, 它对大公司的 ip 的 iso 的返回值是 特殊的值, 如 GOOGLE, TWITTER
+如 202402220055, 202310260055 , 202301050111 中, 它对大公司的 ip 的 iso 的返回值是 特殊的值, 如 GOOGLE, TWITTER
 
-重新从 https://github.com/Loyalsoldier/geoip 下载旧的 mmdb, 发现旧的  202203250801,  202209150159
+重新从其下载旧的 mmdb, 发现旧的  202203250801,  202209150159
  版是正常的 ( 返回值为 US)
 
-这说明, mmdb 的的文件内容在2022年9月以后, 23年1月 以前 的某个时间上 发生了变化.
+这说明, mmdb 的的文件内容在2022年9月以后, 23年1月 以前 的某个时间上 发生了变化. (没全测, 时间有限)
 
 不过这些公司应该都是美国的
+
+我想这应该就是 Loyalsoldier/geoip 的readme 中说明了 添加了 "geoip:cloudflare" 等类别的原因
 

@@ -76,7 +76,7 @@ pub fn get_ip_iso_by_reader(ip: IpAddr, reader: &maxminddb::Reader<Vec<u8>>) -> 
 ///
 /// Convert GOOGLE, TWITTER, TELEGRAM, FACEBOOK, NETFLIX, CLOUDFRONT,CLOUDFLARE etc. to US
 ///
-pub fn filter_iso_string(s: &str) -> &str {
+pub fn filter_iso_string_to_iso3166(s: &str) -> &str {
     if s == "PRIVATE" {
         return s;
     }
@@ -92,7 +92,7 @@ mod test {
 
     use std::env::set_var;
 
-    use crate::{route::maxmind::filter_iso_string, COMMON_DIRS};
+    use crate::{route::maxmind::filter_iso_string_to_iso3166, COMMON_DIRS};
 
     use super::get_ip_iso;
 
@@ -105,7 +105,7 @@ mod test {
         let s = get_ip_iso("127.0.0.1".parse().unwrap(), "Country.mmdb", &COMMON_DIRS);
         println!("{s}");
         assert_eq!(s, "PRIVATE");
-        assert_eq!(filter_iso_string(&s), "PRIVATE");
+        assert_eq!(filter_iso_string_to_iso3166(&s), "PRIVATE");
 
         //www.baidu.com's IP
         let s = get_ip_iso(
@@ -115,7 +115,7 @@ mod test {
         );
         println!("{s}");
         assert_eq!(s, "CN");
-        assert_eq!(filter_iso_string(&s), "CN");
+        assert_eq!(filter_iso_string_to_iso3166(&s), "CN");
 
         // www.google.com's IP
         let s = get_ip_iso(
@@ -125,7 +125,7 @@ mod test {
         );
         println!("{s}");
         assert_eq!(s, "GOOGLE");
-        assert_eq!(filter_iso_string(&s), "US");
+        assert_eq!(filter_iso_string_to_iso3166(&s), "US");
 
         // www.twitter.com's IP
         let s = get_ip_iso(
@@ -144,6 +144,6 @@ mod test {
         );
         println!("{s}");
         assert_eq!(s, "FASTLY");
-        assert_eq!(filter_iso_string(&s), "US");
+        assert_eq!(filter_iso_string_to_iso3166(&s), "US");
     }
 }
