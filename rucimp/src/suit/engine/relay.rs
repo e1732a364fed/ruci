@@ -39,19 +39,21 @@ pub struct RootState {
 impl RootState {
     /// new with random id
     pub fn new(network: &'static str) -> RootState {
-        let mut s = RootState::default();
-        s.cid = net::new_rand_cid();
-        s.network = network;
-        s
+        RootState {
+            cid: net::new_rand_cid(),
+            network,
+            ..Default::default()
+        }
     }
 
     /// new with ordered id
     pub fn new_ordered(network: &'static str, lastid: &std::sync::atomic::AtomicU32) -> RootState {
         let li = lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let mut s = RootState::default();
-        s.cid = li + 1;
-        s.network = network;
-        s
+        RootState {
+            cid: li + 1,
+            network,
+            ..Default::default()
+        }
     }
 }
 

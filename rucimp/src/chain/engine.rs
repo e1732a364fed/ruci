@@ -72,7 +72,7 @@ impl StaticEngine {
         )>,
     > {
         let mut running = self.running.lock();
-        if let None = *running {
+        if running.is_none() {
         } else {
             return Err(io::Error::other("already started!"));
         }
