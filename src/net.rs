@@ -515,6 +515,16 @@ impl Display for Stream {
 }
 
 impl Stream {
+    pub fn c(c: Conn) -> Self {
+        Stream::TCP(c)
+    }
+    pub fn u(u: AddrConn) -> Self {
+        Stream::UDP(u)
+    }
+    pub fn g(g: StreamGenerator) -> Self {
+        Stream::Generator(g)
+    }
+
     pub fn is_none(&self) -> bool {
         matches!(self, Stream::None)
     }
