@@ -18,7 +18,7 @@ use crate::{
     map::{socks5::udp::new_addr_conn, MapExt, MapResult},
     net,
 };
-use anyhow::{anyhow, bail, Ok};
+use anyhow::{bail, Ok};
 
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt, Default)]
@@ -61,12 +61,12 @@ impl Client {
         let mut n = base.read(&mut buf).await?;
 
         if n != 2 || buf[0] != VERSION5 || buf[1] != adopted_method {
-            return Err(anyhow!(
+            bail!(
                 "{}, socks5 client handshake,protocol err, n: {}, buf[1]: {}",
                 cid,
                 n,
                 buf[1]
-            ));
+            );
         }
 
         if adopted_method == AUTH_PASSWORD {
@@ -87,11 +87,7 @@ impl Client {
             n = base.read(&mut buf).await?;
 
             if n != 2 || buf[0] != 1 || buf[1] != 0 {
-                return Err(anyhow!(
-                    "{}, socks5 client handshake,auth failed, {}",
-                    cid,
-                    buf[1]
-                ));
+                bail!("{}, socks5 client handshake,auth failed, {}", cid, buf[1]);
             }
         }
         buf.clear();
@@ -157,10 +153,10 @@ impl Client {
             n = base.read(&mut buf).await?;
 
             if n < 10 || buf[0] != 5 || buf[1] != 0 || buf[2] != 0 {
-                return Err(anyhow!(
+                bail!(
                     "{}, socks5 client handshake failed when reading response",
                     cid
-                ));
+                );
             }
 
             if let Some(ed) = &the_ed {

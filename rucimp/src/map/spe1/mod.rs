@@ -30,7 +30,7 @@ id+1; 如此便可区别不同的客户端 以及 不同的请求连接。
 
 use std::{collections::HashMap, fmt::Write, io, pin::Pin, sync::Arc, task::Poll};
 
-use anyhow::anyhow;
+use anyhow::bail;
 use bytes::BytesMut;
 use itertools::Itertools;
 use macro_map::*;
@@ -211,10 +211,7 @@ impl QaData {
                 let o = self.q_hash_map[1].get(s);
                 match o {
                     Some(i) => Ok((true, *i)),
-                    None => Err(anyhow!(
-                        "match_question err: there is no question, string is: {}",
-                        s
-                    )),
+                    None => bail!("match_question err: there is no question, string is: {}", s),
                 }
             }
         }
@@ -228,7 +225,7 @@ impl QaData {
                 let o = self.a_hash_map[1].get(s);
                 match o {
                     Some(i) => Ok((true, *i)),
-                    None => Err(anyhow!("there is no answer: {}", s)),
+                    None => bail!("there is no answer: {}", s),
                 }
             }
         }
@@ -254,7 +251,7 @@ impl QaData {
         for l in lines {
             if !dealed_first {
                 if l != "Questions:" {
-                    return Err(anyhow!("questions_to_bytes: no 'Questions:' header"));
+                    bail!("questions_to_bytes: no 'Questions:' header");
                 }
                 dealed_first = true;
             } else {

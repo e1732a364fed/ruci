@@ -15,7 +15,7 @@
  */
 use std::net::IpAddr;
 
-use anyhow::anyhow;
+use anyhow::bail;
 use maxminddb::geoip2;
 use tracing::warn;
 
@@ -42,7 +42,7 @@ pub fn open_mmdb(
     }
     match last_e {
         Some(e) => Err(e.into()),
-        None => Err(anyhow!("open_mmdb {file_name} failed and no result err")),
+        None => bail!("open_mmdb {file_name} failed and no result err"),
     }
 }
 

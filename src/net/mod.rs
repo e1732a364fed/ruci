@@ -131,7 +131,7 @@ impl std::str::FromStr for CID {
             let u = s.parse::<u32>();
             match u {
                 Ok(u) => cid.push_num(u),
-                Err(e) => return Err(anyhow!("CID can't parse from {}, {e}", s)),
+                Err(e) => bail!("CID can't parse from {}, {e}", s),
             }
         }
         Ok(cid)
@@ -345,21 +345,21 @@ impl Stream {
         if let Stream::Conn(t) = self {
             return Ok(t);
         }
-        Err(anyhow!("not tcp"))
+        bail!("not tcp")
     }
 
     pub fn try_unwrap_tcp_ref(&self) -> Result<&Conn> {
         if let Stream::Conn(t) = self {
             return Ok(t);
         }
-        Err(anyhow!("not tcp"))
+        bail!("not tcp")
     }
 
     pub fn try_unwrap_udp(self) -> Result<AddrConn> {
         if let Stream::AddrConn(t) = self {
             return Ok(t);
         }
-        Err(anyhow!("not udp"))
+        bail!("not udp")
     }
 
     pub async fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {

@@ -7,7 +7,7 @@ See <https://datatracker.ietf.org/doc/html/rfc2616>
 
 use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::anyhow;
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
 /// used by various Maps in ruci that has a http layer
@@ -54,7 +54,7 @@ impl std::str::FromStr for Header {
                     value: value.to_string(),
                 })
             }
-            None => Err(anyhow!("Header:from_str: format wrong")),
+            None => bail!("Header:from_str: format wrong"),
         }
     }
 }

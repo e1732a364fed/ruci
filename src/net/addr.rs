@@ -88,7 +88,7 @@ impl Network {
             "udp" => Ok(Network::UDP),
             #[cfg(unix)]
             "unix" => Ok(Network::Unix),
-            _ => Err(anyhow!("not supported network string: {}", s)),
+            _ => bail!("not supported network string: {}", s),
         }
     }
 
@@ -230,9 +230,7 @@ impl Addr {
                 let a = Addr::from_network_addr_url(ns[0])?;
                 Ok(a.set_name(ns[1]))
             }
-            _ => Err(anyhow!(
-                "Addr::from_name_network_addr_str, split # got len!=2 && len!=1",
-            )),
+            _ => bail!("Addr::from_name_network_addr_str, split # got len!=2 && len!=1",),
         }
     }
 
@@ -245,9 +243,7 @@ impl Addr {
         match ns.len() {
             1 => Addr::from_addr_str("tcp", s),
             2 => Addr::from_addr_str(ns[0], ns[1]),
-            _ => Err(anyhow!(
-                "Addr::from_network_addr_str, split :// got len!=2 && len!=1",
-            )),
+            _ => bail!("Addr::from_network_addr_str, split :// got len!=2 && len!=1",),
         }
     }
 
@@ -284,7 +280,7 @@ impl Addr {
         };
 
         if ns.len() != 2 {
-            return Err(anyhow!("Addr::from_ip_addr_str, split colon got len!=2",));
+            bail!("Addr::from_ip_addr_str, split colon got len!=2",);
         }
         Addr::from_strs(
             network,
@@ -413,7 +409,7 @@ impl Addr {
 
             so.ok_or(anyhow!("resolve to empty socket_addr from {}", self))
         } else {
-            Err(anyhow!("not possible convert to socket_addr from {}", self))
+            bail!("not possible convert to socket_addr from {}", self)
         }
     }
 

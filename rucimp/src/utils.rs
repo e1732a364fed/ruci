@@ -3,7 +3,7 @@ Provides some helper functions to read a certain resource file or to wait the sh
 */
 use std::io::Read;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use bytes::{Buf, BufMut, BytesMut};
 use tokio::signal;
 use tracing::{debug, info};
@@ -51,7 +51,7 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
 
     match last_e {
         Some(e) => Err(e.into()),
-        None => Err(anyhow!("open {filename} failed and no result err")),
+        None => bail!("open {filename} failed and no result err"),
     }
 }
 
