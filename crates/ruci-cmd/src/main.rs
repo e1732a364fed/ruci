@@ -167,6 +167,7 @@ pub fn env_and_version(ll: Option<Level>) -> tracing_appender::non_blocking::Wor
     let file_appender = rolling::daily("logs", "ruci-cmd.log");
     let (non_blocking_appender, guard) = non_blocking(file_appender);
     let file_layer = fmt::layer()
+        .json()
         .with_ansi(false)
         .with_writer(non_blocking_appender);
 
