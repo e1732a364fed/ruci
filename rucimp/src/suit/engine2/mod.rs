@@ -23,8 +23,8 @@ use super::config;
 
 pub struct SuitEngine<FInadder, FOutadder>
 where
-    FInadder: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
-    FOutadder: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
+    FInadder: Fn(&str, LDConfig) -> Option<MapperBox>,
+    FOutadder: Fn(&str, LDConfig) -> Option<MapperBox>,
 {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<TransmissionInfo>,
@@ -39,8 +39,8 @@ where
 
 impl<LI, LO> SuitEngine<LI, LO>
 where
-    LI: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
-    LO: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
+    LI: Fn(&str, LDConfig) -> Option<MapperBox>,
+    LO: Fn(&str, LDConfig) -> Option<MapperBox>,
 {
     pub fn new(load_inmapper_func: LI, load_outmapper_func: LO) -> Self {
         SuitEngine {
@@ -117,7 +117,7 @@ where
 
     /// non-blocking, return true if run succeed;
     /// calls start_with_tasks
-    pub async fn run(&self) -> io::Result<()> {
+    pub async fn run(&'static self) -> io::Result<()> {
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
                 task::spawn(task);

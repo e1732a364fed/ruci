@@ -799,10 +799,11 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> std::io::Res
     let c: Config = get_nl_config(3);
     let cc = c.clone();
 
-    let mut se = rucimp::suit::engine2::SuitEngine::new(
+    let se = rucimp::suit::engine2::SuitEngine::new(
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
+    let se = Box::leak(Box::new(se));
     se.load_config(c);
 
     let listen_future = async {
