@@ -32,6 +32,63 @@ use tokio::net::TcpStream;
 use tokio::net::UdpSocket;
 use tokio::net::UnixStream;
 
+#[derive(Default)]
+pub enum GenerateCIDBehavior {
+    #[default]
+    Random,
+    Ordered,
+}
+
+pub fn new_rand_cid() -> u32 {
+    const ID_RANGE_START: u32 = 100_000;
+
+    rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
+}
+
+#[derive(Clone)]
+pub struct InStreamCID {
+    id_list: Vec<u32>, //首项为根id，末项为末端stream的id
+}
+impl Display for InStreamCID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match (&self.id_list).len() {
+            0 => {
+                write!(f, "[ empty ]")
+            }
+            1 => {
+                write!(f, "[ cid: {} ]", self.id_list.first().unwrap())
+            }
+            _ => {
+                let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
+                let s = v.join(" ");
+                write!(f, "[ ids: {} ]", s)
+            }
+        }
+    }
+}
+
+/// state id
+#[derive(Clone)]
+pub enum CID {
+    Unit(u32),
+    Chain(InStreamCID),
+}
+
+impl Default for CID {
+    fn default() -> Self {
+        CID::Unit(0)
+    }
+}
+
+impl Display for CID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CID::Unit(u) => std::fmt::Display::fmt(&u, f),
+            CID::Chain(c) => c.fmt(f),
+        }
+    }
+}
+
 pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
     match ip_addr {
         IpAddr::V4(v4) => v4.octets().to_vec(),
@@ -438,7 +495,7 @@ pub type Conn = Box<dyn ConnTrait>;
 pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
     c1: C1,
     c2: C2,
-    cid: u32,
+    cid: &CID,
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     if log_enabled!(log::Level::Debug) {

@@ -1,7 +1,7 @@
 use bytes::BufMut;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use self::map::{MapParams, ProxyBehavior};
+use self::map::{MapParams, ProxyBehavior, CID};
 use super::*;
 use crate::{map::MapResult, net};
 
@@ -16,7 +16,7 @@ impl Client {
     //返回的 extra data 为 server 所选定的 adopted method
     async fn handshake(
         &self,
-        cid: u32,
+        cid: CID,
         mut base: net::Conn,
         a: net::Addr,
         b: Option<BytesMut>,
@@ -104,7 +104,7 @@ impl crate::Name for Client {
 impl map::Mapper for Client {
     async fn maps(
         &self,
-        cid: u32, //state 的 id
+        cid: CID, //state 的 id
         _behavior: ProxyBehavior,
         params: MapParams,
     ) -> MapResult {

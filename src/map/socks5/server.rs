@@ -4,7 +4,7 @@ pub mod udp;
 use super::*;
 
 use crate::{
-    map::{self, MapResult, MapperBox, ProxyBehavior, ToMapper},
+    map::{self, MapResult, MapperBox, ProxyBehavior, ToMapper, CID},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, UserPass, UsersMap},
     Name,
@@ -84,7 +84,7 @@ impl Server {
 
     async fn handshake(
         &self,
-        cid: u32,
+        cid: CID,
         mut base: Conn,
         _: Option<Addr>,
         pre_read_data: Option<bytes::BytesMut>,
@@ -469,7 +469,7 @@ impl Name for Server {
 impl map::Mapper for Server {
     async fn maps(
         &self,
-        cid: u32,
+        cid: CID,
         _behavior: ProxyBehavior,
         params: map::MapParams,
     ) -> map::MapResult {

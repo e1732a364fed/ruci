@@ -1,3 +1,4 @@
+use crate::net::CID;
 use futures::FutureExt;
 use log::info;
 use ruci::{
@@ -62,10 +63,12 @@ async fn f_dial_future_tls_out_adder(
 
     let a = tls::client::Client::new("do.main", true);
 
+    let cid = CID::default();
+
     let ta = net::Addr::from_strs("tcp", the_target_name, "", the_target_port)?;
     let nc = a
         .maps(
-            0,
+            cid.clone(),
             ruci::map::ProxyBehavior::ENCODE,
             MapParams::ca(Box::new(cs), ta.clone()),
         )
@@ -78,7 +81,11 @@ async fn f_dial_future_tls_out_adder(
         use_earlydata: false,
     };
     let mut newconn = a
-        .maps(0, ruci::map::ProxyBehavior::ENCODE, MapParams::ca(nc, ta))
+        .maps(
+            cid.clone(),
+            ruci::map::ProxyBehavior::ENCODE,
+            MapParams::ca(nc, ta),
+        )
         .await
         .c
         .try_unwrap_tcp()?;

@@ -1,6 +1,7 @@
 use crate::net;
 use crate::net::addr_conn::*;
 use crate::net::Addr;
+use crate::net::CID;
 use bytes::BytesMut;
 use futures_util::pin_mut;
 use futures_util::select;
@@ -19,7 +20,7 @@ use tokio::io::ReadBuf;
 //todo: improve code
 
 pub async fn cp_udp_tcp(
-    cid: u32,
+    cid: CID,
     mut ac: net::addr_conn::AddrConn,
     mut c: net::Conn,
     ed_from_ac: bool,

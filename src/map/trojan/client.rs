@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 use tokio::io::AsyncWriteExt;
 
 use crate::{
-    map::{self, MapResult, Mapper},
+    map::{self, MapResult, Mapper, CID},
     net::{self, helpers, Network},
     Name,
 };
@@ -25,7 +25,7 @@ impl Client {
 
     pub async fn handshake(
         &self,
-        _cid: u32,
+        _cid: CID,
         mut base: net::Conn,
         ta: net::Addr,
         first_payload: Option<BytesMut>,
@@ -59,7 +59,7 @@ impl Name for Client {
 impl Mapper for Client {
     async fn maps(
         &self,
-        cid: u32, //state 的 id
+        cid: CID, //state 的 id
         _behavior: map::ProxyBehavior,
         params: map::MapParams,
     ) -> MapResult {

@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    map::{self, MapResult, Mapper, MapperBox, ToMapper},
+    map::{self, MapResult, Mapper, MapperBox, ToMapper, CID},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
     Name,
@@ -51,7 +51,7 @@ impl Server {
         Server { um }
     }
 
-    pub async fn handshake(&self, _cid: u32, mut base: net::Conn) -> io::Result<MapResult> {
+    pub async fn handshake(&self, _cid: CID, mut base: net::Conn) -> io::Result<MapResult> {
         //根据 https://www.ihcblog.com/a-better-tls-obfs-proxy/
         //trojan的 CRLF 是为了模拟http服务器的行为, 所以此时不要一次性Read，而是要Read到CRLF为止
 
@@ -172,7 +172,7 @@ impl Name for Server {
 impl Mapper for Server {
     async fn maps(
         &self,
-        cid: u32, //state 的 id
+        cid: CID, //state 的 id
         _behavior: map::ProxyBehavior,
         params: map::MapParams,
     ) -> MapResult {

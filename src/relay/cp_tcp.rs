@@ -4,6 +4,7 @@
  * （这是将两个条件判断转成状态机的做法）
 */
 
+use crate::net::CID;
 use crate::net::{self, TransmissionInfo};
 use log::Level::Debug;
 use log::{debug, info, log_enabled, warn};
@@ -15,7 +16,7 @@ use tokio::task;
 
 //non-blocking
 pub async fn cp_conn(
-    cid: u32,
+    cid: CID,
     in_conn: net::Conn,
     out_conn: net::Conn,
     pre_read_data: Option<bytes::BytesMut>,
@@ -31,12 +32,12 @@ pub async fn cp_conn(
     };
 }
 
-async fn no_ti_no_ed(cid: u32, in_conn: net::Conn, out_conn: net::Conn) {
-    let _ = net::cp(in_conn, out_conn, cid, None).await;
+async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
+    let _ = net::cp(in_conn, out_conn, &cid, None).await;
     info!("cid: {}, relay end", cid);
 }
 
-async fn ti_no_ed(cid: u32, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TransmissionInfo>) {
+async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TransmissionInfo>) {
     ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
 
     defer! {
@@ -44,11 +45,11 @@ async fn ti_no_ed(cid: u32, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<Tra
         info!("cid: {}, relay end", cid);
     }
 
-    let _ = net::cp(in_conn, out_conn, cid, Some(ti.clone())).await;
+    let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;
 }
 
 async fn no_ti_ed(
-    cid: u32,
+    cid: CID,
     mut in_conn: net::Conn,
     mut out_conn: net::Conn,
     earlydata: bytes::BytesMut,
@@ -72,13 +73,13 @@ async fn no_ti_ed(
         }
     }
 
-    let _ = net::cp(in_conn, out_conn, cid, None).await;
+    let _ = net::cp(in_conn, out_conn, &cid, None).await;
 
     info!("cid: {}, relay end", cid);
 }
 
 async fn ti_ed(
-    cid: u32,
+    cid: CID,
     mut in_conn: net::Conn,
     mut out_conn: net::Conn,
     ti: Arc<TransmissionInfo>,
@@ -112,7 +113,7 @@ async fn ti_ed(
         info!("cid: {}, relay end", cid);
     }
 
-    let _ = net::cp(in_conn, out_conn, cid, Some(ti.clone())).await;
+    let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;
 
     info!("cid: {}, relay end", cid);
 }

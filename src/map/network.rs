@@ -32,7 +32,7 @@ impl TcpDialer {
 impl Mapper for TcpDialer {
     async fn maps(
         &self,
-        cid: u32, //state 的 id
+        cid: CID, //state 的 id
         _behavior: ProxyBehavior,
         params: MapParams,
     ) -> MapResult {

@@ -1,3 +1,5 @@
+use self::map::CID;
+
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -72,7 +74,7 @@ pub struct ClientTLSConnDescriber {}
 impl Client {
     async fn handshake(
         &self,
-        _cid: u32,
+        _cid: CID,
         conn: net::Conn,
         b: Option<BytesMut>,
         a: Option<net::Addr>,
@@ -127,7 +129,7 @@ impl map::Mapper for Client {
     // behavior is always encode
     async fn maps(
         &self,
-        cid: u32, //state 的 id
+        cid: CID, //state 的 id
         _behavior: ProxyBehavior,
         params: map::MapParams,
     ) -> map::MapResult {

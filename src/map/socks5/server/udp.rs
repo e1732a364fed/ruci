@@ -1,7 +1,7 @@
 use super::*;
 
 pub(super) async fn udp_associate(
-    cid: u32,
+    cid: CID,
     mut base: Conn,
     client_future_addr: net::Addr,
 ) -> io::Result<()> {
@@ -40,7 +40,7 @@ pub(super) async fn udp_associate(
 }
 
 pub async fn loop_listen_udp_for_certain_client(
-    cid: u32,
+    cid: CID,
     mut base: Conn,
     client_future_addr: net::Addr,
     udpso_created_to_listen_for_thisuser: UdpSocket,

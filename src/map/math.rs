@@ -1,5 +1,5 @@
 use crate::{
-    net::{self, Stream},
+    net::{self, Stream, CID},
     Name,
 };
 use async_trait::async_trait;
@@ -31,7 +31,7 @@ use super::*;
 ///
 pub struct AdderConn {
     pub add: i8,
-    pub cid: u32,
+    pub cid: CID,
     base: Pin<net::Conn>,
     wbuf: BytesMut,
 }
@@ -118,7 +118,7 @@ impl ToMapper for i8 {
 impl crate::map::Mapper for Adder {
     async fn maps(
         &self,
-        cid: u32, //state 的 id
+        cid: CID, //state 的 id
         _behavior: ProxyBehavior,
         params: MapParams,
     ) -> MapResult {

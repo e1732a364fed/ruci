@@ -1,7 +1,7 @@
 use std::{env::set_var, sync::Arc, time::Duration};
 
 use crate::{
-    map::{tls, MapParams, Mapper},
+    map::{tls, MapParams, Mapper, CID},
     net::{self, gen_random_higher_port, helpers::MockTcpStream},
 };
 use futures::{join, FutureExt};
@@ -35,7 +35,7 @@ async fn dial_tls_in_mem() {
     //should panic here , as the data 111,222,123 is not cool for a server tls response.
     let r = a
         .maps(
-            0,
+            CID::default(),
             ProxyBehavior::ENCODE,
             MapParams {
                 c: map::Stream::TCP(Box::new(client_tcps)),
@@ -70,7 +70,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result
     info!("client will out, {}", ta);
     let r = a
         .maps(
-            0,
+            CID::default(),
             ProxyBehavior::ENCODE,
             MapParams {
                 c: map::Stream::TCP(Box::new(cs)),
@@ -121,7 +121,11 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> std::io::Resu
     info!("server will start");
 
     let add_result = a
-        .maps(0, ProxyBehavior::DECODE, MapParams::new(Box::new(nc)))
+        .maps(
+            CID::default(),
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(nc)),
+        )
         .await;
     if let Some(e) = add_result.e {
         return Err(e);

@@ -32,7 +32,7 @@ pub mod trojan;
 #[cfg(test)]
 mod test;
 
-use crate::net::{self, addr_conn::AddrConn, Stream};
+use crate::net::{self, addr_conn::AddrConn, Stream, CID};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -46,55 +46,12 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Default)]
-pub enum GenerateStateIDBehavior {
-    #[default]
-    Random,
-    Ordered,
-}
-
-fn new_rand_state_id() -> u32 {
-    use rand::Rng;
-    const ID_RANGE_START: u32 = 100_000;
-
-    rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
-}
-
-/// 0 为 parent, 1为自己
-pub struct SubStateID(u32, u32);
-impl Display for SubStateID {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[ cid: {}, parent_cid: {}, ]  ", self.0, self.1)
-    }
-}
-
-pub struct InStreamStateID {
-    id_list: Vec<u32>, //首项为根id，末项为末端stream的id
-}
-impl Display for InStreamStateID {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match (&self.id_list).len() {
-            0 => {
-                write!(f, "[ empty ]")
-            }
-            1 => {
-                write!(f, "[ cid: {} ]", self.id_list.first().unwrap())
-            }
-            _ => {
-                let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
-                let s = v.join(" ");
-                write!(f, "[ ids: {} ]", s)
-            }
-        }
-    }
-}
-
 /// 描述一条代理连接
 pub trait State<T>
 where
     T: Display,
 {
-    fn cid(&self) -> T;
+    fn cid(&self) -> CID;
     fn network(&self) -> &'static str;
     fn ins_name(&self) -> String; // 入口名称
     fn set_ins_name(&mut self, str: String);
@@ -119,7 +76,7 @@ impl RootState {
     /// new with random id
     pub fn new(network: &'static str) -> RootState {
         let mut s = RootState::default();
-        s.cid = new_rand_state_id();
+        s.cid = net::new_rand_cid();
         s.network = network;
         s
     }
@@ -160,8 +117,8 @@ impl Display for RootState {
 }
 
 impl State<u32> for RootState {
-    fn cid(&self) -> u32 {
-        self.cid
+    fn cid(&self) -> CID {
+        CID::Unit(self.cid)
     }
 
     fn network(&self) -> &'static str {
@@ -420,7 +377,7 @@ pub trait Mapper: crate::Name + DynClone {
     ///
     async fn maps(
         &self,
-        cid: u32, //state 的 id
+        cid: CID, //state 的 id
         behavior: ProxyBehavior,
         params: MapParams,
     ) -> MapResult;
@@ -471,7 +428,7 @@ pub struct AccumulateResult {
 /// 能生成 Stream::Generator 说明其 behavior 为 DECODE
 ///
 pub async fn accumulate<'a, IterMapperBoxRef, IterOptData>(
-    cid: u32,
+    cid: CID,
     behavior: ProxyBehavior,
     initial_state: MapResult,
     mut mappers: IterMapperBoxRef,
@@ -517,7 +474,7 @@ where
                 };
                 last_r = adder
                     .maps(
-                        cid,
+                        cid.clone(),
                         behavior,
                         MapParams {
                             c: last_r.c,
@@ -564,7 +521,7 @@ where
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去
 ///
 pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
-    cid: u32,
+    cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     inmappers: IterMapperBoxRef,
@@ -581,6 +538,7 @@ pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
         let mc = inmappers.clone();
         let txc = tx.clone();
         let hvc = hyperparameter_vec.clone();
+        let cid = cid.clone();
         tokio::spawn(async move {
             let r = accumulate::<IterMapperBoxRef, IterOptData>(
                 cid,

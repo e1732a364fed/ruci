@@ -12,6 +12,7 @@
 
 use std::{env::set_var, io, sync::Arc, time::Duration};
 
+use crate::net::CID;
 use bytes::{BufMut, BytesMut};
 use futures::{pin_mut, select, FutureExt};
 use log::{info, warn};
@@ -153,7 +154,7 @@ async fn f_dial_future_out_adder(
     };
     let newconn = a
         .maps(
-            0,
+            CID::default(),
             ruci::map::ProxyBehavior::ENCODE,
             ruci::map::MapParams {
                 c: ruci::net::Stream::TCP(Box::new(cs)),

@@ -14,10 +14,7 @@ use std::{
     task::Poll,
 };
 
-use crate::{
-    net::{self, Stream},
-    Name,
-};
+use crate::{net::*, Name};
 use async_trait::async_trait;
 use log::{debug, log_enabled};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -36,7 +33,7 @@ impl Name for CounterConn {
 
 #[derive(Clone)]
 pub struct CounterData {
-    pub cid: u32,
+    pub cid: CID,
 
     pub ub: Arc<AtomicU64>,
     pub db: Arc<AtomicU64>,
@@ -121,7 +118,7 @@ impl Mapper for Counter {
     /// 不分 behavior
     async fn maps(
         &self,
-        cid: u32, //state 的 id
+        cid: CID, //state 的 id
         _behavior: ProxyBehavior,
         params: MapParams,
     ) -> MapResult {

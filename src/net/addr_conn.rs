@@ -312,7 +312,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
 }
 
 pub async fn cp(
-    cid: u32,
+    cid: CID,
     c1: AddrConn,
     c2: AddrConn,
     opt: Option<Arc<TransmissionInfo>>,
@@ -326,7 +326,7 @@ pub async fn cp_between<
     W1: AddrWriteTrait,
     W2: AddrWriteTrait,
 >(
-    cid: u32,
+    cid: CID,
     r1: R1,
     w1: W1,
     r2: R2,

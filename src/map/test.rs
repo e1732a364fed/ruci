@@ -1,4 +1,4 @@
-use crate::map::{MapParams, Mapper};
+use crate::map::{MapParams, Mapper, CID};
 use crate::net::helpers::MockTcpStream;
 
 use parking_lot::Mutex;
@@ -21,7 +21,7 @@ async fn test_adder1() -> std::io::Result<()> {
     let a = crate::map::math::Adder { addnum: 2 };
     let r = a
         .maps(
-            0,
+            CID::default(),
             ProxyBehavior::UNSPECIFIED,
             MapParams::new(Box::new(client_tcps)),
         )
@@ -67,7 +67,7 @@ async fn test_counter1() -> std::io::Result<()> {
     let a = counter::Counter;
     let r = a
         .maps(
-            0,
+            CID::default(),
             ProxyBehavior::UNSPECIFIED,
             MapParams::new(Box::new(client_tcps)),
         )

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bytes::{BufMut, BytesMut};
 use parking_lot::Mutex;
 
-use crate::map::{MapParams, Mapper, ProxyBehavior};
+use crate::map::{MapParams, Mapper, ProxyBehavior, CID};
 use crate::net::{self, Addr};
 use crate::user::AsyncUserAuthenticator;
 
@@ -96,7 +96,7 @@ async fn auth_tcp_in_mem_earlydata() -> std::io::Result<()> {
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams::new(Box::new(client_tcps)),
         )

@@ -1,5 +1,7 @@
 use crate::map::{MapperBox, ToMapper};
 
+use self::map::CID;
+
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -45,7 +47,7 @@ impl Server {
 
     async fn handshake(
         &self,
-        _cid: u32,
+        _cid: CID,
         mut conn: net::Conn,
         b: Option<BytesMut>,
         a: Option<net::Addr>,
@@ -80,7 +82,7 @@ impl map::Mapper for Server {
     //behavior is always decode
     async fn maps(
         &self,
-        cid: u32,
+        cid: CID,
         _behavior: ProxyBehavior,
         params: map::MapParams,
     ) -> map::MapResult {

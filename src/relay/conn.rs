@@ -11,6 +11,7 @@ use crate::map::*;
 use crate::net;
 
 use crate::net::Stream;
+use crate::net::CID;
 
 /// 初级监听为 net::Conn 的 链式转发.
 ///
@@ -47,10 +48,11 @@ pub async fn handle_conn<'a>(
 
     type ExtraDataIterType = std::vec::IntoIter<OptData>;
 
+    let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             map::accumulate::<_, ExtraDataIterType>(
-                cid,
+                cidc,
                 ProxyBehavior::DECODE,
                 MapResult::c(in_conn),
                 ins_iterator,
@@ -113,10 +115,11 @@ pub async fn handle_conn<'a>(
     if is_direct {
         cp_stream(cid, listen_result.c, out_stream, listen_result.b.take(), ti).await;
     } else {
+        let cidc = cid.clone();
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
                 map::accumulate::<_, ExtraDataIterType>(
-                    cid,
+                    cidc,
                     ProxyBehavior::ENCODE,
                     MapResult {
                         a: Some(target_addr),
@@ -161,7 +164,7 @@ pub async fn handle_conn<'a>(
 }
 
 pub async fn cp_stream(
-    cid: u32,
+    cid: CID,
     s1: Stream,
     s2: Stream,
     ed: Option<BytesMut>, //earlydata
@@ -183,7 +186,7 @@ pub async fn cp_stream(
 }
 
 pub async fn cp_udp(
-    cid: u32,
+    cid: CID,
     in_conn: net::addr_conn::AddrConn,
     out_conn: net::addr_conn::AddrConn,
     ti: Option<Arc<net::TransmissionInfo>>,
@@ -202,5 +205,5 @@ pub async fn cp_udp(
         info!("cid: {cid},udp relay end" );
     }
 
-    let _ = net::addr_conn::cp(cid, in_conn, out_conn, ti).await;
+    let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, ti).await;
 }

@@ -18,6 +18,7 @@ use crate::map::socks5::server::*;
 use crate::map::MapParams;
 use crate::map::Mapper;
 use crate::map::ProxyBehavior;
+use crate::map::CID;
 use crate::net;
 use crate::user::AsyncUserAuthenticator;
 use crate::user::UserPass;
@@ -115,7 +116,7 @@ async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams::new(Box::new(client_tcps)),
         )
@@ -211,7 +212,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> std::io::Result<()> {
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams {
                 c: map::Stream::TCP(Box::new(client_tcps)),
@@ -269,7 +270,11 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
         //     a.add(1, Box::new(ss), None, None).await.unwrap();
 
         let r = a
-            .maps(1, ProxyBehavior::DECODE, MapParams::new(Box::new(ss)))
+            .maps(
+                CID::default(),
+                ProxyBehavior::DECODE,
+                MapParams::new(Box::new(ss)),
+            )
             .await;
 
         let ad = r.a.unwrap();
@@ -389,7 +394,11 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
         //let (mut newc, addr, client_data, _) = a.add(1, Box::new(ss), None, None).await.unwrap();
 
         let r = a
-            .maps(1, ProxyBehavior::DECODE, MapParams::new(Box::new(ss)))
+            .maps(
+                CID::default(),
+                ProxyBehavior::DECODE,
+                MapParams::new(Box::new(ss)),
+            )
             .await;
 
         let ad = r.a.unwrap();
@@ -490,7 +499,11 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
         let r = listener.accept().await;
         let (ss, _) = r.unwrap();
         let r = a
-            .maps(1, ProxyBehavior::DECODE, MapParams::new(Box::new(ss)))
+            .maps(
+                CID::default(),
+                ProxyBehavior::DECODE,
+                MapParams::new(Box::new(ss)),
+            )
             .await;
 
         let ad = r.a.unwrap();
@@ -609,7 +622,7 @@ async fn no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams::new(Box::new(client_tcps)),
         )
@@ -680,7 +693,7 @@ async fn no_auth_tcp_handshake_in_mem_stick_hello() -> std::io::Result<()> {
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams::new(Box::new(client_tcps)),
         )
@@ -742,7 +755,7 @@ async fn wrong0_no_auth_tcp_handshake_in_mem() {
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams::new(Box::new(client_tcps)),
         )
@@ -789,7 +802,7 @@ async fn wrong1_no_auth_tcp_handshake_in_mem() {
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams::new(Box::new(client_tcps)),
         )
@@ -843,7 +856,7 @@ async fn random_bytes_request_no_auth_tcp_handshake_in_mem() -> std::io::Result<
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams::new(Box::new(client_tcps)),
         )
@@ -899,7 +912,7 @@ async fn random_bytes_request_auth_userpass_tcp_handshake_in_mem() -> std::io::R
 
     let r = a
         .maps(
-            1,
+            CID::default(),
             ProxyBehavior::DECODE,
             MapParams::new(Box::new(client_tcps)),
         )
