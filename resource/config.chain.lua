@@ -33,6 +33,6 @@ config = {
         {chain = stdin_adder_chain, tag = "listen1"} ,
     },
 
-    dial = { { tag="dial1", chain = direct_out_chain } }
+    dial = { { tag="dial1", chain = stdout_chain } }
 }
 

@@ -7,9 +7,10 @@
 use std::{
     env::{self, set_var},
     fs,
+    time::Duration,
 };
 
-use log::{info, log_enabled, warn, Level};
+use log::{debug, info, log_enabled, warn, Level};
 use rucimp::chain::{config::lua, engine::StaticEngine};
 
 /// 使用 config.chain.lua, resource/config.chain.lua, 或 用户提供的参数作为配置文件
@@ -41,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let default_file = "config.chain.lua".to_string();
 
-    let filename = if args.len() > 1 {
+    let filename = if args.len() > 1 && args[1] != "-s" {
         &args[1]
     } else {
         &default_file
@@ -49,10 +50,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let mut r_contents = fs::read_to_string(filename);
     if r_contents.is_err() {
-        r_contents = fs::read_to_string("resource/config.chain.lua");
+        r_contents = fs::read_to_string("resource/".to_owned() + &default_file);
+    }
+    if r_contents.is_err() {
+        r_contents = fs::read_to_string("../resource/".to_owned() + &default_file);
     }
 
-    let contents = r_contents.expect("no config.chain.lua");
+    let contents = r_contents.expect(&("no ".to_owned() + &default_file));
 
     let mut se = StaticEngine::default();
     let sc = lua::load(&contents).unwrap();
@@ -67,6 +71,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let r = se.block_run().await;
 
     warn!("r {:?}", r);
+
+    if args.len() > 1 && args[1] == "-s" {
+        info!("will sleep because of -s");
+
+        loop {
+            tokio::time::sleep(Duration::from_secs(60)).await;
+            debug!("sleeped 60s");
+        }
+    }
 
     Ok(())
 }
