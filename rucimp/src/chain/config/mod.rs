@@ -132,8 +132,8 @@ pub struct OutMapperConfigChain {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
-    Stdio(String),
-    Listener(String),
+    Stdio(String),    //单流发生器
+    Listener(String), //多流发生器
     Adder(i8),
     Counter,
     TLS(TlsIn),
@@ -155,18 +155,6 @@ pub enum OutMapperConfig {
     Socks5(Socks5Out),
     Trojan(String),
 }
-
-// #[derive(Debug, Serialize, Deserialize, Clone)]
-// pub enum Dialer {
-//     TcpDialer(String),
-//     UnixDialer(String),
-// }
-
-// #[derive(Debug, Serialize, Deserialize, Clone)]
-// pub enum Listener {
-//     TcpListener(String),
-//     UnixListener(String),
-// }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TlsIn {
@@ -205,7 +193,7 @@ impl ToMapper for InMapperConfig {
                 ruci::map::stdio::Stdio::from(s).expect("s is a  network addr str")
             }
             InMapperConfig::Listener(l_str) => {
-                let a = net::Addr::from_ip_addr_str("tcp", l_str).expect("ip_addr is valid");
+                let a = net::Addr::from_network_addr_str(l_str).expect("network_addr is valid");
                 let mut g = ruci::map::network::StreamGenerator::default();
                 g.set_configured_target_addr(Some(a));
                 Box::new(g)
