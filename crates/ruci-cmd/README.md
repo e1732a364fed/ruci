@@ -26,7 +26,7 @@ cargo run -F lua -F use-native-tls  -- -l trace --log-file ""
 
 RUST_LOG=none,ruci=debug cargo run -F lua -F use-native-tls  -- --log-file "" -c remote.lua
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F use-native-tls  -- --log-file "" -c local_mux_h2.lua --infinite
+RUST_LOG=none,ruci=debug cargo run -F lua -F use-native-tls  -- --log-file "" -c local_mux2_h2.lua --infinite
 
 RUST_LOG=debug cargo run -F lua -F api_server -F api_client -F utils -F trace -- -a run --trace
 
