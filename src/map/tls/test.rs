@@ -56,7 +56,7 @@ async fn tls_in_mem() {
 }
 
 async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result<()> {
-    thread::sleep(Duration::from_secs(1));
+    tokio::time::sleep(Duration::from_secs(1)).await;
     let cs = TcpStream::connect((listen_host_str, listen_port))
         .await
         .unwrap();
@@ -133,7 +133,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> std::io::Resu
     let n = conn.read(&mut buf[..]).await?;
 
     info!("server read {}, {:?}", n, &buf[..n]);
-    thread::sleep(Duration::from_secs(1));
+    tokio::time::sleep(Duration::from_secs(1)).await;
 
     Ok(())
 }

@@ -45,7 +45,7 @@ async fn f_dial_future(
     let mut readbuf = [0u8; 1024];
 
     if rid == WAITID {
-        thread::sleep(Duration::from_secs(WAITSECS));
+        tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     }
 
     cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
@@ -55,7 +55,7 @@ async fn f_dial_future(
 
     assert_eq!(&readbuf[..n], &[5, 2]);
     if rid == WAITID {
-        thread::sleep(Duration::from_secs(WAITSECS));
+        tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     }
     cs.write(&[
         1,
@@ -88,7 +88,7 @@ async fn f_dial_future(
 
     buf.put(&[(the_target_port >> 8) as u8, the_target_port as u8][..]);
     if rid == WAITID {
-        thread::sleep(Duration::from_secs(WAITSECS));
+        tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     }
     cs.write(&buf).await.unwrap();
 
@@ -99,7 +99,7 @@ async fn f_dial_future(
     info!("client{} writing hello...", rid,);
     //发送测试数据
     if rid == WAITID {
-        thread::sleep(Duration::from_secs(WAITSECS));
+        tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     }
     cs.write(&b"hello\n"[..]).await.unwrap();
 
@@ -134,7 +134,7 @@ async fn f_dial_future_out_adder(
     let mut readbuf = [0u8; 1024];
 
     if rid == WAITID {
-        thread::sleep(Duration::from_secs(WAITSECS));
+        tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     }
 
     let a = socks5::client::Client {
@@ -198,7 +198,7 @@ async fn f_dial_future_earlydata(
     let mut readbuf = [0u8; 1024];
 
     // if rid == WAITID {
-    //     thread::sleep(Duration::from_secs(WAITSECS));
+    //     tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     // }
 
     cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
@@ -208,7 +208,7 @@ async fn f_dial_future_earlydata(
 
     assert_eq!(&readbuf[..n], &[5, 2]);
     // if rid == WAITID {
-    //     thread::sleep(Duration::from_secs(WAITSECS));
+    //     tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     // }
     cs.write(&[
         1,
@@ -244,7 +244,7 @@ async fn f_dial_future_earlydata(
     buf.put(&b"hello\n"[..]);
 
     // if rid == WAITID {
-    //     thread::sleep(Duration::from_secs(WAITSECS));
+    //     tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     // }
     cs.write(&buf).await.unwrap();
 
@@ -255,7 +255,7 @@ async fn f_dial_future_earlydata(
     //info!("client{} writing hello...", rid,);
     //发送测试数据
     // if rid == WAITID {
-    //     thread::sleep(Duration::from_secs(WAITSECS));
+    //     tokio::time::sleep(Duration::from_secs(WAITSECS)).await;
     // }
     // cs.write(&b"hello\n"[..]).await.unwrap();
 
@@ -659,7 +659,7 @@ async fn socks5_direct_longwait_write_and_request() {
         },
     }
 
-    thread::sleep(Duration::from_secs(2));
+    tokio::time::sleep(Duration::from_secs(2)).await;
 }
 
 /// 对 block_run 和 non_block run 各测一次
@@ -730,7 +730,7 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
         },
     }
 
-    //thread::sleep(Duration::from_secs(2));
+    //tokio::time::sleep(Duration::from_secs(2)).await;
 
     Ok(())
 }
@@ -792,7 +792,7 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
         },
     }
 
-    //thread::sleep(Duration::from_secs(2));
+    //tokio::time::sleep(Duration::from_secs(2)).await;
 
     Ok(())
 }
@@ -860,7 +860,7 @@ async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
 
     info!("test ok, will return in 2 secs... ");
 
-    thread::sleep(Duration::from_secs(2));
+    tokio::time::sleep(Duration::from_secs(2)).await;
 
     Ok(())
 }

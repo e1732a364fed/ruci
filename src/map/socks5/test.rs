@@ -307,7 +307,7 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
 
         cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
 
-        //thread::sleep(time::Duration::from_secs(1));
+        //tokio::time::sleep(time::Duration::from_secs(1));
 
         // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
@@ -329,7 +329,7 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
         .await
         .unwrap();
 
-        //thread::sleep(time::Duration::from_secs(1));
+        //tokio::time::sleep(time::Duration::from_secs(1));
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
@@ -413,7 +413,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
 
         cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
 
-        //thread::sleep(time::Duration::from_secs(1));
+        //tokio::time::sleep(time::Duration::from_secs(1));
 
         // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
@@ -435,7 +435,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
         .await
         .unwrap();
 
-        //thread::sleep(time::Duration::from_secs(1));
+        //tokio::time::sleep(time::Duration::from_secs(1));
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
@@ -514,7 +514,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
 
         cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
 
-        //thread::sleep(time::Duration::from_secs(1));
+        //tokio::time::sleep(time::Duration::from_secs(1));
 
         // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
@@ -536,7 +536,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
         .await
         .unwrap();
 
-        //thread::sleep(time::Duration::from_secs(1));
+        //tokio::time::sleep(time::Duration::from_secs(1));
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
