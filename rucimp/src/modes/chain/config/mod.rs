@@ -410,8 +410,10 @@ pub enum InMapConfig {
 
     /// tcp/ip stack
     #[cfg(feature = "smoltcp")]
-    Stack,
+    Stack2,
 
+    // #[cfg(feature = "smoltcp")]
+    // Stack,
     #[cfg(feature = "lwip")]
     StackLwip,
 
@@ -715,7 +717,7 @@ impl TryFrom<InMapConfigWithDataSource> for MapBox {
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             })),
             #[cfg(feature = "smoltcp")]
-            InMapConfig::Stack => Ok(Box::<crate::map::tcp_ip_stack_smoltcp::Stack>::default()),
+            InMapConfig::Stack2 => Ok(Box::<crate::map::tcp_ip_stack_smoltcp2::Stack>::default()),
 
             #[cfg(feature = "steganography")]
             InMapConfig::SPE1 { qa } => Ok(Box::new(spe1::ClientOrServer {

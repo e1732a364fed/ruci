@@ -26,7 +26,7 @@ pub mod opt_net;
 pub mod tproxy;
 
 #[cfg(feature = "smoltcp")]
-pub mod tcp_ip_stack_smoltcp;
+pub mod tcp_ip_stack_smoltcp2;
 
 #[cfg(feature = "lwip")]
 pub mod tcp_ip_stack_lwip;
