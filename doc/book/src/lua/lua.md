@@ -36,7 +36,7 @@ Config = {
 
 先学 简单的 [Config 入门](./config_intro.md) 吧。
 
-## 关于 lua语法
+# 关于 lua语法
 
 在lua中，大括号 `{}` 被叫做 table, 它即可以当数组用也可以当"字典"用。
 
@@ -47,5 +47,26 @@ Config = {
 ]]
 ```
 
-如写 x = 1, 则 x会默认成为 全局变量，这不太好。因此一般都写成
-local x = 1
+如写 `x = 1`, 则 x会默认成为 全局变量，这不太好。因此一般都写成
+`local x = 1`
+
+字符串就是 `"abc"`, 块级字符串为:
+```lua
+a = [[
+    abcd
+    abcd
+]]
+```
+
+函数是 :
+
+```lua
+local function(c)
+    return 1
+end
+```
+
+# 接下来
+
+- [路由配置](lua/route_config.md)
+

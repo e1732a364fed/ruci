@@ -513,7 +513,31 @@ ruci 提供的 test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 l
 cert_path：可给出 服务端的 证书, 这样就算 is_insecure = false 也通过验证
 证书须为 真证书, 或真fullchain 证书, 或自签的根证书
 
+## spe1: Steganography Protocol Exmaple1
 
+隐写示例协议1
+
+```lua
+SPE1 = { qa = { { "q1", "a1" }, { "q2", "a2" } } }
+```
+
+qa 中要为 2的偶数次幂个 问答对，问答的内容任意填。但是内容越真实，隐写效果越好。
+
+
+如果不给出qa，则协议会使用自己生成的问答对。
+
+```lua
+SPE1 = {}
+```
+
+
+## lua自定义协议
+
+```lua
+Lua = { file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" }
+```
+
+lua自定义协议 的写法是高级用法，见  [lua自定义协议](user_defined_protocol.md)
 
 # 辅助 Map
 

@@ -1,4 +1,4 @@
-# readme
+# 欢迎使用ruci!
 
 
 本手册 是面向使用ruci 作为 代理的用户 而写的用户手册， 旨在让您快速上手。
@@ -9,12 +9,7 @@
 
 而手册专注于帮助 通过 release 下载程序包的 用户 快速学会使用ruci.
 
-链接：
-
-[命令行参数 与 程序运行](app/cmd.md)
-
-[lua配置](lua/lua.md)
-
-[toml配置](toml/index.md)
+让我们开始吧！
+[入门](get_started.md)
 
 本手册基于 ruci v0.0.7 制作

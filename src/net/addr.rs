@@ -376,8 +376,10 @@ impl Addr {
         }
     }
 
-    //todo: DNS 功能
-    /// 如果没法从已有的 SocketAddr 转, 则尝试用系统方法解析域名, 并使用第一个值.
+    /// 从 self 中提取 SocketAddr.
+    ///
+    /// 如果没法从已有的 SocketAddr 转, 若提供了 dns::AsyncClient 则用其解析；
+    /// 若未提供，则尝试用系统方法解析域名, 并使用第一个值.
     /// 不适用于 UDS
     pub async fn get_socket_addr_or_resolve(
         &self,
@@ -404,12 +406,7 @@ impl Addr {
                     );
                 }
 
-                let x = (format!("{}:{}", n, port)).to_socket_addrs()?.next();
-                tracing::debug!(
-                    name = %n,
-                    "still ok",
-                );
-                x
+                (format!("{}:{}", n, port)).to_socket_addrs()?.next()
             };
 
             so.ok_or(anyhow!("resolve to empty socket_addr from {}", self))

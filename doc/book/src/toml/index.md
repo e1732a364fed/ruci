@@ -18,3 +18,41 @@ tag = "out_tag1"
 chain = []
 
 ```
+
+一个简单示例如下：
+
+```toml
+[[inbounds]]
+chain = [
+    { Listener = { listen_addr = "0.0.0.0:10800" } },
+    "Counter",
+    { Socks5 = {} },
+]
+tag = "in_tag1"
+
+[[outbounds]]
+tag = "out_tag1"
+chain = [{ Direct = {} }]
+
+```
+
+## chain
+
+每个 chain 都是一个 列表:
+
+    chain = [ {}, {}, {}]
+
+它是 `MapConfig` 的列表.
+
+如果在 inbound 中，则它是 `InMapConfig` 的列表, 
+如果在 outbound 中，则它是 `OutMapConfig` 的列表
+
+写法与lua配置中的写法基本相同，见
+
+[InMapConfig初探](../lua/config_intro.md#InMapConfig初探)
+[OutMapConfig初探](../lua/config_intro.md#OutMapConfig初探)
+
+# 接下来
+
+- [lua配置](../lua/lua.md)
+- [路由配置](lua/route_config.md)

@@ -64,7 +64,7 @@ inbounds/outbounds 是 [inbound/outbound](#inboundoutbound) 的列表:
 
 我们先学简单的几个 Config
 
-## InMapConfig 初探
+## InMapConfig初探
 
 先学两种 InMapConfig，Listener 和 Sock5Http
 
@@ -140,7 +140,7 @@ Config = {
 
 这样 我们第一个 inbounds 配置就做好了！
 
-## OutMapConfig 初探
+## OutMapConfig初探
 
 先学 最简单的 `OutMapConfig` Direct:
 
