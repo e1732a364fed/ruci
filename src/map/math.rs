@@ -174,7 +174,7 @@ impl crate::map::Mapper for Adder {
                     direction: self.direction,
                 };
 
-                MapResult::newc(Box::new(cc))
+                MapResult::new_c(Box::new(cc))
                     .a(params.a)
                     .b(params.b)
                     .build()

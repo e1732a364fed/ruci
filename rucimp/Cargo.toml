@@ -16,6 +16,7 @@ parking_lot = "0.12.1"
 dyn-clone = "1"
 anyhow = "1"
 lazy_static = "1"
+base64 = "0.21.7"
 
 itertools = "0.12.1"
 

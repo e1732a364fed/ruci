@@ -13,7 +13,7 @@ use ruci::{
         *,
     },
     net::{GlobalTrafficRecorder, CID},
-    relay::{handle_in_accumulate_result, route::*, *},
+    relay::{handle_in_fold_result, route::*, *},
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{
@@ -235,9 +235,8 @@ impl Engine {
             let (atx, arx) = mpsc::channel(100); //todo: change this
 
             let cid = CID::new(index);
-            debug!(inbound_index = index, "accumulate_from_start");
-            let t1 =
-                acc::accumulate_from_start(cid, atx, rx, miter.clone(), Some(self.gtr.clone()));
+            debug!(inbound_index = index, "fold_from_start");
+            let t1 = acc::fold_from_start(cid, atx, rx, miter.clone(), Some(self.gtr.clone()));
             index += 1;
 
             let t2 = Engine::loop_a(
@@ -259,7 +258,7 @@ impl Engine {
     }
 
     async fn loop_a(
-        mut arx: Receiver<acc::AccumulateResult>,
+        mut arx: Receiver<acc::FoldResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
         gtr: Arc<GlobalTrafficRecorder>,
         conn_info_recorder: OptNewInfoSender,
@@ -268,7 +267,7 @@ impl Engine {
         loop {
             let ar = arx.recv().await;
             if let Some(ar) = ar {
-                tokio::spawn(handle_in_accumulate_result(
+                tokio::spawn(handle_in_fold_result(
                     ar,
                     out_selector.clone(),
                     Some(gtr.clone()),

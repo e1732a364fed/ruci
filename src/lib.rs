@@ -11,8 +11,6 @@ Refer to rucimp sub crate for config file format related implements and for more
 
 */
 
-use bytes::BytesMut;
-
 pub mod map;
 pub mod net;
 pub mod relay;
@@ -36,13 +34,5 @@ impl<T: Name + ?Sized> Name for Box<T> {
 impl<T: Name + ?Sized> Name for &mut T {
     fn name(&self) -> &str {
         (**self).name()
-    }
-}
-
-pub fn buf_to_ob(b: BytesMut) -> Option<BytesMut> {
-    if b.is_empty() {
-        None
-    } else {
-        Some(b)
     }
 }

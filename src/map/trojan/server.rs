@@ -3,7 +3,7 @@ use crate::{
     map::{self, Data, MapResult, Mapper, MapperBox, ToMapperBox, CID},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
-    Name,
+    utils, Name,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -163,12 +163,18 @@ impl Server {
 
         if is_udp {
             let u = udp::from(base);
-            let mut mr = MapResult::newu(u).a(Some(ta)).b(Some(buf)).build();
+            let mut mr = MapResult::new_u(u)
+                .a(Some(ta))
+                .b(utils::buf_to_ob(buf))
+                .build();
 
             mr.d = d;
             Ok(mr)
         } else {
-            let mut mr = MapResult::newc(base).a(Some(ta)).b(Some(buf)).build();
+            let mut mr = MapResult::new_c(base)
+                .a(Some(ta))
+                .b(utils::buf_to_ob(buf))
+                .build();
             mr.d = d;
 
             Ok(mr)

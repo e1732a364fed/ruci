@@ -69,9 +69,9 @@ impl Client {
 
         if is_udp {
             let u = udp::from(base);
-            Ok(MapResult::newu(u).b(first_payload).build())
+            Ok(MapResult::new_u(u).b(first_payload).build())
         } else {
-            Ok(MapResult::newc(base).b(first_payload).build())
+            Ok(MapResult::new_c(base).b(first_payload).build())
         }
     }
 }

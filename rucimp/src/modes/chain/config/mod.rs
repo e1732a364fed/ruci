@@ -424,7 +424,7 @@ impl ToMapperBox for OutMapperConfig {
                     host: c.host.clone(),
                     path: c.path.clone(),
                     headers: c.headers.clone(),
-                    is_early_data: c.is_early_data,
+                    use_early_data: c.use_early_data,
                 });
 
                 Box::new(client)

@@ -11,10 +11,10 @@ pub mod udp2;
 use super::*;
 
 use crate::{
-    buf_to_ob,
     map::{self, MapResult, MapperBox, ProxyBehavior, ToMapperBox, CID},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
+    utils::buf_to_ob,
     utils::io_error,
     Name,
 };

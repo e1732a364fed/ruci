@@ -18,7 +18,7 @@ use tracing::{debug, info, warn};
 use crate::net::addr_conn::AsyncWriteAddrExt;
 use crate::net::{self, Addr, Stream, CID};
 
-use self::acc::{AccumulateParams, DMIterBox};
+use self::acc::{DMIterBox, FoldParams};
 use self::route::OutSelector;
 
 use anyhow::anyhow;
@@ -48,7 +48,7 @@ pub async fn handle_in_stream(
     let cid_c = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            acc::accumulate(AccumulateParams {
+            acc::fold(FoldParams {
                 cid: cid_c,
                 behavior: ProxyBehavior::DECODE,
                 initial_state: MapResult::builder().c(in_conn).build(),
@@ -66,14 +66,14 @@ pub async fn handle_in_stream(
         Err(e) => {
             warn!(
                 cid = %cid,
-                "handshake inbound failed with io::Error, {e}"
+                "fold inbound failed with io::Error, {e}"
             );
 
             return Err(e.into());
         }
     };
 
-    handle_in_accumulate_result(
+    handle_in_fold_result(
         listen_result,
         out_selector,
         gtr,
@@ -85,8 +85,8 @@ pub async fn handle_in_stream(
 }
 
 /// block until out handshake is over
-pub async fn handle_in_accumulate_result(
-    mut listen_result: acc::AccumulateResult,
+pub async fn handle_in_fold_result(
+    mut listen_result: acc::FoldResult,
 
     out_selector: Arc<Box<dyn OutSelector>>,
 
@@ -103,7 +103,7 @@ pub async fn handle_in_accumulate_result(
             let return_e: anyhow::Error;
             match listen_result.e {
                 Some(err) => {
-                    return_e = anyhow!("handshake inbound failed with Error: {:#?}", err);
+                    return_e = anyhow!("fold inbound failed with Error: {:#?}", err);
 
                     warn!(cid = %cid, "{}", return_e);
                     let _ = listen_result.c.try_shutdown().await;
@@ -111,13 +111,13 @@ pub async fn handle_in_accumulate_result(
                 }
                 None => match &listen_result.c {
                     Stream::None => {
-                        return_e = anyhow!("handshake inbound ok and stream got consumed");
+                        return_e = anyhow!("fold inbound ok and stream got consumed");
                         info!(cid = %cid, "{}", return_e);
                         return Ok(());
                     }
                     _ => {
                         return_e =
-                            anyhow!( "handshake inbound succeed but got no target_addr, will use empty target_addr");
+                            anyhow!( "fold inbound succeed but got no target_addr, will use empty target_addr");
                         warn!(cid = %cid, "{}", return_e);
                         Addr::default()
                     }
@@ -130,7 +130,7 @@ pub async fn handle_in_accumulate_result(
             Some(ed) => {
                 info!(
                     cid = %cid,
-                    "handshake inbound succeed with ed, target_addr: {}, ed {}",
+                    "fold inbound succeed with ed, target_addr: {}, ed {}",
                     &target_addr,
                     ed.len()
                 )
@@ -139,7 +139,7 @@ pub async fn handle_in_accumulate_result(
                 info!(
                     cid = %cid,
                     target_addr = %target_addr,
-                    "handshake inbound succeed",
+                    "fold inbound succeed",
                 )
             }
         }
@@ -153,7 +153,7 @@ pub async fn handle_in_accumulate_result(
     let ta_clone = target_addr.clone();
     let dial_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            acc::accumulate(AccumulateParams {
+            acc::fold(FoldParams {
                 cid: cid_c,
                 behavior: ProxyBehavior::ENCODE,
                 initial_state: MapResult {

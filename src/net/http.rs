@@ -18,7 +18,7 @@ pub struct CommonConfig {
     pub path: String,
     pub headers: Option<BTreeMap<String, String>>,
 
-    pub is_early_data: Option<bool>,
+    pub use_early_data: Option<bool>,
 }
 
 const MAX_PARSE_URL_LEN: usize = 3000;

@@ -191,6 +191,6 @@ impl Mapper for FileIO {
             }
         }
 
-        MapResult::newc(Box::new(c)).b(buf).a(a).build()
+        MapResult::new_c(Box::new(c)).b(buf).a(a).build()
     }
 }

@@ -1859,6 +1859,7 @@ version = "0.0.3"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64",
  "bytes",
  "chrono",
  "dyn-clone",

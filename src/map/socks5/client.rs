@@ -137,7 +137,7 @@ impl Client {
 
             let output_data = Box::new(adopted_method);
 
-            Ok(MapResult::newu(ac)
+            Ok(MapResult::new_u(ac)
                 .a(Some(a))
                 .b(the_ed)
                 .d(Some(output_data))
@@ -166,7 +166,10 @@ impl Client {
 
             let output_data = Box::new(adopted_method);
 
-            Ok(MapResult::newc(base).b(the_ed).d(Some(output_data)).build())
+            Ok(MapResult::new_c(base)
+                .b(the_ed)
+                .d(Some(output_data))
+                .build())
         }
     }
 }

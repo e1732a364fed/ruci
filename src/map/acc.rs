@@ -5,9 +5,9 @@ the mod won't store dynamic data during accumulating.
 
 trait: DynIterator, MIter, DMIter
 
-struct DynMIterWrapper, DynVecIterWrapper, AccumulateResult, AccumulateParams
+struct DynMIterWrapper, DynVecIterWrapper, FoldResult, FoldParams
 
-* function accumulate , accumulate_from_start
+* function fold , fold_from_start
 */
 
 use tracing::{debug, info, warn, Level};
@@ -99,8 +99,8 @@ impl DynIterator for DynVecIterWrapper {
     }
 }
 
-/// AccumulateResult won't store dynamic data
-pub struct AccumulateResult {
+/// FoldResult won't store dynamic data
+pub struct FoldResult {
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
     pub c: Stream,
@@ -119,9 +119,9 @@ pub struct AccumulateResult {
     pub trace: Vec<String>, // table of Names of each Mapper during accumulation.
 }
 
-impl Debug for AccumulateResult {
+impl Debug for FoldResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AccumulateResult")
+        f.debug_struct("FoldResult")
             .field("a", &self.a)
             .field("b", &self.b)
             .field("c", &self.c)
@@ -134,7 +134,7 @@ impl Debug for AccumulateResult {
 }
 
 /// cid 为 跟踪 该连接的 标识
-pub struct AccumulateParams {
+pub struct FoldParams {
     pub cid: CID,
     pub behavior: ProxyBehavior,
     pub initial_state: MapResult,
@@ -144,11 +144,11 @@ pub struct AccumulateParams {
     pub trace: Vec<String>,
 }
 
-///  accumulate 是一个作用很强的函数,是 mappers 的累加器
+///  fold 是一个作用很强的函数,是 mappers 的累加器
 ///
 /// 它的做法类似 Iterator 的 fold
 ///
-/// 返回的AccumulateResult包含新的 流 和 可能的目标地址
+/// 返回的 FoldResult 包含新的 流 和 可能的目标地址
 ///
 /// behavior为 DECODE 的 一般行为: 从listen得到的ip/tcp/udp/uds开始, 一层一层往上加, 直到加到能解析出代理目标地址为止
 ///
@@ -156,12 +156,12 @@ pub struct AccumulateParams {
 ///只有代理层会有目标地址】
 ///
 ///
-/// accumulate 只适用于 不含 Stream::Generator 的情况, 即 累加不会
+/// fold 只适用于 不含 Stream::Generator 的情况, 即 累加不会
 /// 造成分支.
 ///
 /// 结果中 Stream为 None 或 一个 Stream::Generator , 或e不为None时, 将退出累加
 ///
-pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
+pub async fn fold(params: FoldParams) -> FoldResult {
     let cid = params.cid;
     let initial_state = params.initial_state;
     let mut mappers = params.mappers;
@@ -228,7 +228,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
         }
     } //for
 
-    AccumulateResult {
+    FoldResult {
         a: last_r.a,
         b: last_r.b,
         c: last_r.c,
@@ -252,12 +252,12 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
 /// 先调用第一个 mapper 生成 流发生器, 然后调用 in_iter_accumulate_forever
 ///
 /// 但如果 第一个 mapper 生成的不是流发生器而是普通的流, 则会调用 普通的
-/// accumulate, 累加结束后就会返回
+/// fold, 累加结束后就会返回
 ///
 ///
-pub async fn accumulate_from_start(
+pub async fn fold_from_start(
     in_cid: CID,
-    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
+    tx: tokio::sync::mpsc::Sender<FoldResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
     mut inmappers: DMIterBox,
@@ -275,7 +275,7 @@ pub async fn accumulate_from_start(
         .await;
     if let Some(e) = first_r.e {
         let e = e.context(format!(
-            "accumulate_from_start failed, tag: {} ",
+            "fold_from_start failed, tag: {} ",
             first.get_chain_tag()
         ));
         //use {:#} to show full chain of anyhow::Error
@@ -301,19 +301,19 @@ pub async fn accumulate_from_start(
             Stream::None => {
                 warn!(
                     cid = %in_cid,
-                    "accumulate_from_start: no input stream, still trying to accumulate"
+                    "fold_from_start: no input stream, still trying to fold"
                 )
             }
             _ => {
                 debug!(
                     cid = %in_cid,
-                    "accumulate_from_start: not a stream generator, will accumulate directly.",
+                    "fold_from_start: not a stream generator, will fold directly.",
                 );
             }
         }
         let cid = in_cid.clone_push(o_gtr);
         tokio::spawn(async move {
-            let r = accumulate(AccumulateParams {
+            let r = fold(FoldParams {
                 cid,
                 behavior: ProxyBehavior::DECODE,
                 initial_state: first_r,
@@ -332,7 +332,7 @@ pub async fn accumulate_from_start(
 struct InIterAccumulateForeverParams {
     cid: CID,
     rx: tokio::sync::mpsc::Receiver<MapResult>,
-    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
+    tx: tokio::sync::mpsc::Sender<FoldResult>,
     dmiter: DMIterBox,
     o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 
@@ -402,7 +402,7 @@ struct SpawnAccForeverParams {
     cid: CID,
     new_stream_info: MapResult,
     miter: DMIterBox,
-    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
+    tx: tokio::sync::mpsc::Sender<FoldResult>,
     o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")]
@@ -419,7 +419,7 @@ fn spawn_acc_forever(params: SpawnAccForeverParams) {
     let o_gtr = params.o_gtr;
 
     tokio::spawn(async move {
-        let r = accumulate(AccumulateParams {
+        let r = fold(FoldParams {
             cid,
             behavior: ProxyBehavior::DECODE,
             initial_state: params.new_stream_info,

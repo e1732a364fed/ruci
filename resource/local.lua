@@ -57,12 +57,13 @@ trojan_out = {
 websocket_out = {
     WebSocket ={
         host = "myhost",
-        path = "/path1"
+        path = "/path1",
+        use_early_data = true
     }
 }
 
 dial_trojan_chain = {dial, tlsout, trojan_out}
-dial_trojan_ws_chain = {dial, tlsout,websocket_out, trojan_out}
+dial_trojan_ws_chain = {dial,websocket_out, trojan_out}
 
 stdio_socks5_chain = {{
     Stdio = {}

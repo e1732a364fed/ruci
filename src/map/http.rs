@@ -11,11 +11,11 @@ use macro_mapper::NoMapperExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
-use crate::buf_to_ob;
 use crate::map::{self, MapResult};
 use crate::net::http::Method;
 use crate::net::CID;
 use crate::user::{self, AsyncUserAuthenticator};
+use crate::utils::buf_to_ob;
 use crate::{
     net::{self, http::FailReason, Conn},
     user::{PlainText, UsersMap},

@@ -1,3 +1,4 @@
+use ::http::HeaderValue;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -10,12 +11,14 @@ use tokio_tungstenite::{
     client_async,
     tungstenite::http::{Request, StatusCode},
 };
+use tracing::debug;
 
-use super::WsStreamToConnWrapper;
+use super::*;
 
 #[derive(Clone, Debug, Default, NoMapperExt)]
 pub struct Client {
     request: Request<()>,
+    use_early_data: bool,
 }
 
 impl ruci::Name for Client {
@@ -23,9 +26,6 @@ impl ruci::Name for Client {
         "websocket_client"
     }
 }
-
-const EARLY_DATA_HEADER_K: &str = "k";
-const EARLY_DATA_HEADER_V: &str = "v";
 
 impl Client {
     pub fn new(c: CommonConfig) -> Self {
@@ -49,11 +49,11 @@ impl Client {
             }
         }
 
-        if c.is_early_data.unwrap_or_default() {
-            request = request.header(EARLY_DATA_HEADER_K, EARLY_DATA_HEADER_V);
-        }
         let r = request.body(()).unwrap();
-        Self { request: r }
+        Self {
+            request: r,
+            use_early_data: c.use_early_data.unwrap_or_default(),
+        }
     }
     async fn handshake(
         &self,
@@ -62,7 +62,21 @@ impl Client {
         a: Option<net::Addr>,
         b: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
-        let (c, resp) = client_async(self.request.clone(), conn)
+        let mut req = self.request.clone();
+        if self.use_early_data {
+            if let Some(ref b) = b {
+                debug!("will use earlydata");
+                use base64::{engine::general_purpose::URL_SAFE, Engine as _};
+
+                let str = URL_SAFE.encode(b);
+                req.headers_mut().insert(
+                    EARLY_DATA_HEADER_KEY,
+                    HeaderValue::from_str(&str).expect("ok"),
+                );
+            }
+        }
+
+        let (c, resp) = client_async(req, conn)
             .await
             .with_context(|| "websocket client handshake failed")?;
 
@@ -72,7 +86,7 @@ impl Client {
                 resp.status()
             ));
         }
-        Ok(MapResult::newc(Box::new(WsStreamToConnWrapper {
+        Ok(MapResult::new_c(Box::new(WsStreamToConnWrapper {
             ws: Box::pin(c),
             r_buf: None,
             w_buf: b,

@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bytes::BytesMut;
 use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
@@ -8,9 +9,9 @@ use tokio_tungstenite::{
     accept_hdr_async,
     tungstenite::http::{HeaderValue, StatusCode},
 };
-use tracing::warn;
+use tracing::{debug, warn};
 
-use super::WsStreamToConnWrapper;
+use super::*;
 
 #[derive(Clone, Debug, NoMapperExt, Default)]
 pub struct Server {
@@ -35,6 +36,8 @@ impl Server {
         conn: net::Conn,
         a: Option<net::Addr>,
     ) -> anyhow::Result<map::MapResult> {
+        let mut ob: Option<BytesMut> = None;
+
         let func = |r: &tokio_tungstenite::tungstenite::handshake::server::Request,
                     response: tokio_tungstenite::tungstenite::handshake::server::Response|
          -> Result<
@@ -82,17 +85,43 @@ impl Server {
                     return Err(r);
                 }
             }
+
+            let given_early_data = r
+                .headers()
+                .get(EARLY_DATA_HEADER_KEY)
+                .unwrap_or(&EMPTY_HV)
+                .to_str()
+                .expect("ok");
+
+            if given_early_data != "" {
+                use base64::{engine::general_purpose::URL_SAFE, Engine as _};
+
+                let r = URL_SAFE.decode(given_early_data);
+                match r {
+                    Ok(v) => {
+                        debug!("ws got early data {}", v.len());
+                        ob = Some(BytesMut::from(v.as_slice()))
+                    }
+                    Err(e) => {
+                        warn!(
+                            "ws server decode early data from {EARLY_DATA_HEADER_KEY} failed: {e}"
+                        )
+                    }
+                }
+            }
+
             Ok(response)
         };
 
         let c = accept_hdr_async(conn, func).await?;
 
-        Ok(MapResult::newc(Box::new(WsStreamToConnWrapper {
+        Ok(MapResult::new_c(Box::new(WsStreamToConnWrapper {
             ws: Box::pin(c),
             r_buf: None,
             w_buf: None,
         }))
         .a(a)
+        .b(ob)
         .build())
     }
 }

@@ -65,6 +65,7 @@ use std::{
 use self::{
     addr_conn::AddrConn,
     user::{PlainText, User},
+    utils::buf_to_ob,
 };
 
 /// the parameter for Mapper's maps method
@@ -154,15 +155,15 @@ impl MapResult {
         MapResult::builder().c(Stream::c(c)).build()
     }
 
-    pub fn newc(c: net::Conn) -> MapResultBuilderStreamFilled {
+    pub fn new_c(c: net::Conn) -> MapResultBuilderStreamFilled {
         MapResult::builder().c(Stream::c(c))
     }
-    pub fn newu(u: AddrConn) -> MapResultBuilderStreamFilled {
+    pub fn new_u(u: AddrConn) -> MapResultBuilderStreamFilled {
         MapResult::builder().c(Stream::u(u))
     }
 
     pub fn cb(c: net::Conn, b: Option<BytesMut>) -> Self {
-        MapResult::newc(c).b(b).build()
+        MapResult::new_c(c).b(b).build()
     }
 
     pub fn err_str(estr: &str) -> Self {
@@ -181,7 +182,7 @@ impl MapResult {
     }
 
     pub fn ebc(e: anyhow::Error, b: BytesMut, c: net::Conn) -> Self {
-        MapResult::newc(c).e(e).b(buf_to_ob(b)).build()
+        MapResult::new_c(c).e(e).b(buf_to_ob(b)).build()
     }
 
     pub fn buf_err(b: BytesMut, e: anyhow::Error) -> Self {

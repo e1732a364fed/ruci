@@ -12,6 +12,10 @@ use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 use ruci::utils::{io_error, io_error2};
 
+pub const MAX_EARLY_DATA_LEN_BASE64: usize = 2732;
+pub const MAX_EARLY_DATA_LEN: usize = 2048;
+pub const EARLY_DATA_HEADER_KEY: &str = "Sec-WebSocket-Protocol";
+
 pub struct WsStreamToConnWrapper<T: ConnTrait> {
     ws: Pin<Box<WebSocketStream<T>>>,
     r_buf: Option<Bytes>,

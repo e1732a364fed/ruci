@@ -64,7 +64,7 @@ impl Server {
         let c = self.ta.accept(conn).await?;
 
         // todo add SeverTLSConnDescriber as data
-        Ok(MapResult::newc(Box::new(c)).a(a).build())
+        Ok(MapResult::new_c(Box::new(c)).a(a).build())
     }
 }
 
