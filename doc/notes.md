@@ -540,7 +540,6 @@ ruci 中的基本结构 Map 的先例是 YtFlowCore中的 Plugin，（ruci并未
 http2代码实现 参考了 midori，
 so_opts 代码参考了 trojan-rs 和 shadowsocks-rust . 
 smoltcp 代码参考了 trojan-rs.
-vmess 代码参考了 ytflow.
 所有参考项目均使用 MIT 协议。
 
 ruci 项目架构与运行逻辑 参考了 ruci 的前身项目 verysimple。（ruci 乃 rucimple 缩写）

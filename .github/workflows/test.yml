@@ -3,24 +3,23 @@ name: Test
 on:
   workflow_dispatch:
   push:
-    branches: [ "tokio" ]
-    paths-ignore: 
-      - 'doc/**'
-      - 'resource/**'
-      - '**.md'
-      - '.github/workflows/*.yml'
-      - '**/Makefile'
-      - '**/Cross.toml'
-      
-  pull_request:
-    branches: [ "tokio" ]
-    paths-ignore: 
-      - '**.md'
+    branches: ["tokio"]
+    paths-ignore:
+      - "doc/**"
+      - "resource/**"
+      - "**.md"
+      - ".github/workflows/*.yml"
+      - "**/Makefile"
 
-concurrency: 
+  pull_request:
+    branches: ["tokio"]
+    paths-ignore:
+      - "**.md"
+
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-  
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -36,15 +35,15 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose
 
-    - name: Run Ruci tests
-      run: cargo test --verbose
+      - name: Run Ruci tests
+        run: cargo test --verbose
 
-    - name: Run Rucimp tests
-      run: cd rucimp && cargo test --verbose
+      - name: Run Rucimp tests
+        run: cd rucimp && cargo test --verbose
 
-    - name: Run Ruci-cmd tests
-      run: cd crates/ruci-cmd && cargo test --verbose
+      - name: Run Ruci-cmd tests
+        run: cd crates/ruci-cmd && cargo test --verbose

@@ -3,6 +3,7 @@ name: Test Features
 on:
   workflow_dispatch:
   push:
+    branches: ["tokio"]
     tags:
       - "v*"
 
@@ -10,6 +11,9 @@ on:
     branches: ["tokio"]
     paths-ignore:
       - "**.md"
+      - "doc/**"
+      - "resource/**"
+      - "**/Makefile"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
