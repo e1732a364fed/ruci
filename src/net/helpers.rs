@@ -12,6 +12,9 @@ use futures::task::Context;
 
 use std::cmp::min;
 
+///max len is 2 + 2 + 255 (domain)
+pub const MAX_LEN_SOCKS5_BYTES: usize = 2 + 2 + 255;
+
 //todo: add unit test
 pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> io::Result<Addr> {
     if buf.len() < 7 {

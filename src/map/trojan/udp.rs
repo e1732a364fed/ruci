@@ -1,4 +1,5 @@
 use std::{
+    cmp::min,
     io,
     pin::Pin,
     task::{Context, Poll},
@@ -10,7 +11,7 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf, ReadHalf, WriteHalf};
 use crate::net::{
     self,
     addr_conn::{AsyncReadAddr, AsyncWriteAddr},
-    helpers, Addr,
+    helpers, Addr, Network,
 };
 
 use super::*;
@@ -28,7 +29,7 @@ impl AsyncReadAddr for Reader {
         cx: &mut Context<'_>,
         mut rbuf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        let mut inner = [0u8; CAP];
+        let mut inner = BytesMut::zeroed(rbuf.len() + helpers::MAX_LEN_SOCKS5_BYTES);
         let mut buf2 = ReadBuf::new(&mut inner[..]);
 
         let r = self.base.as_mut().poll_read(cx, &mut buf2);
@@ -37,11 +38,11 @@ impl AsyncReadAddr for Reader {
             Poll::Ready(re) => {
                 match re {
                     Ok(_) => {
-                        let mut buf2 = BytesMut::from(buf2.filled());
+                        let mut buf2 = inner;
 
-                        let x = helpers::socks5_bytes_to_addr(&mut buf2);
-                        match x {
-                            Ok(ad) => {
+                        let addr_r = helpers::socks5_bytes_to_addr(&mut buf2);
+                        match addr_r {
+                            Ok(mut ad) => {
                                 if buf2.len() < 2 {
                                     return Poll::Ready(Err(io::Error::other(
                                         "buf len short of data lenth part",
@@ -61,9 +62,12 @@ impl AsyncReadAddr for Reader {
                                 }
                                 buf2.truncate(l);
 
-                                rbuf.put(buf2);
+                                let real_len = min(l, rbuf.len());
 
-                                Poll::Ready(Ok((l, ad)))
+                                rbuf.put(&buf2[..real_len]);
+                                ad.network = Network::UDP;
+
+                                Poll::Ready(Ok((real_len, ad)))
                             }
                             Err(e) => Poll::Ready(Err(e)),
                         }
@@ -127,13 +131,14 @@ mod test {
 
     use tokio::{net::TcpStream, sync::Mutex};
 
+    use crate::net::addr_conn::AsyncReadAddrExt;
+
     use self::net::{addr_conn::AsyncWriteAddrExt, helpers::MockTcpStream};
 
     use super::*;
 
     #[tokio::test]
-    async fn test1() -> std::io::Result<()> {
-        let ps = net::gen_random_higher_port();
+    async fn test_w() -> std::io::Result<()> {
         let writev = Arc::new(Mutex::new(Vec::new()));
         let writevc = writev.clone();
 
@@ -159,6 +164,52 @@ mod test {
         let r = aw.write(&b"hello"[..], &ad).await;
 
         println!("r, {:?}, writev {:?}", r, writevc);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_r1() -> std::io::Result<()> {
+        test_r_with_buflen(1024).await
+    }
+
+    #[tokio::test]
+    async fn test_r2_short() -> std::io::Result<()> {
+        test_r_with_buflen(2).await
+    }
+
+    async fn test_r_with_buflen(rbuflen: usize) -> std::io::Result<()> {
+        let cs = MockTcpStream {
+            read_data: vec![
+                3, 5, 119, 119, 119, 46, 98, 0, 43, 0, 5, 13, 10, 104, 101, 108, 108, 111,
+            ], //www.b:43, hello
+            write_data: Vec::new(),
+            write_target: None,
+        };
+
+        let conn: net::Conn = Box::new(cs);
+
+        let (r, w) = tokio::io::split(conn);
+
+        let mut ar = Reader { base: Box::pin(r) };
+
+        let mut aw = Writer { base: Box::pin(w) };
+
+        let ad = net::Addr {
+            network: net::Network::UDP,
+            addr: net::NetAddr::Name("www.b".to_string(), 43),
+        };
+
+        let mut buf = BytesMut::zeroed(rbuflen); //[0u8; rbuflen];
+
+        let r = ar.read(&mut buf).await;
+
+        println!("r, {:?},  ", r,);
+        if let Ok((l, addr)) = r {
+            println!("a,b, {:?},{:?},{:?},  ", l, addr, &buf[..l]);
+
+            assert_eq!(addr, ad);
+        }
 
         Ok(())
     }
