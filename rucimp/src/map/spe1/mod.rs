@@ -400,8 +400,15 @@ pub enum WriteState {
 pub enum ReadState {
     #[default]
     ReadyForNew,
-    ContinueReadRemote(usize, usize, usize), //Content-Length, body_start_index, filled_data_len
-    ContinueReadLocalCache(usize, usize),    // from, to
+    ContinueReadRemote {
+        content_len: usize,
+        body_start_index: usize,
+        filled_data_len: usize,
+    },
+    ContinueReadLocalCache {
+        from: usize,
+        to: usize,
+    },
     Closed,
 }
 
@@ -450,11 +457,7 @@ impl Conn {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<Result<()>> {
-        let mut rc = self.as_mut().read_cache.take();
-        if rc.is_none() {
-            rc = Some(BytesMut::zeroed(READ_CAP));
-        }
-        let mut rc = rc.unwrap();
+        let rc = self.as_mut().read_cache.take();
 
         match self.read_state {
             ReadState::Closed => Poll::Ready(Err(io::Error::new(
@@ -463,6 +466,8 @@ impl Conn {
             ))),
 
             ReadState::ReadyForNew => {
+                let mut rc = rc.unwrap_or(BytesMut::zeroed(READ_CAP));
+
                 unsafe {
                     rc.set_len(READ_CAP);
                 }
@@ -501,7 +506,13 @@ impl Conn {
                     },
                 }
             }
-            ReadState::ContinueReadRemote(content_len, body_start_index, filled_data_len) => {
+            ReadState::ContinueReadRemote {
+                content_len,
+                body_start_index,
+                filled_data_len,
+            } => {
+                let mut rc = rc.unwrap_or(BytesMut::zeroed(READ_CAP));
+
                 unsafe {
                     rc.set_len(READ_CAP);
                 }
@@ -538,11 +549,11 @@ impl Conn {
                                     "spe1 partial read2: {} {content_len}", real_len
                                 );
 
-                                self.read_state = ReadState::ContinueReadRemote(
+                                self.read_state = ReadState::ContinueReadRemote {
                                     content_len,
                                     body_start_index,
-                                    dl,
-                                );
+                                    filled_data_len: dl,
+                                };
 
                                 let _ = self.read_cache.insert(rc);
 
@@ -566,10 +577,10 @@ impl Conn {
                                 let _ = self.read_cache.insert(rc);
 
                                 if real_len > content_len {
-                                    self.read_state = ReadState::ContinueReadLocalCache(
-                                        body_start_index + content_len,
-                                        dl,
-                                    )
+                                    self.read_state = ReadState::ContinueReadLocalCache {
+                                        from: body_start_index + content_len,
+                                        to: dl,
+                                    }
                                 } else {
                                     self.read_state = ReadState::ReadyForNew;
                                 }
@@ -580,7 +591,9 @@ impl Conn {
                     },
                 }
             }
-            ReadState::ContinueReadLocalCache(from, to) => {
+            ReadState::ContinueReadLocalCache { from, to } => {
+                let rc = rc.unwrap_or(BytesMut::zeroed(READ_CAP));
+
                 trace!(cid=%self.cid,"ContinueReadLocalCache, {}, {}",from, to);
 
                 self.common_read_header(cx, rc, from, to, buf)
@@ -607,7 +620,10 @@ impl Conn {
             std::cmp::Ordering::Less => {
                 let r = self.common_real_read(si, content_len, buf, data);
 
-                self.read_state = ReadState::ContinueReadLocalCache(from + si + content_len, to);
+                self.read_state = ReadState::ContinueReadLocalCache {
+                    from: from + si + content_len,
+                    to,
+                };
                 let _ = self.read_cache.insert(rc);
 
                 r
@@ -627,7 +643,11 @@ impl Conn {
 
                 new_rc.extend_from_slice(data);
 
-                self.read_state = ReadState::ContinueReadRemote(content_len, si, data.len());
+                self.read_state = ReadState::ContinueReadRemote {
+                    content_len,
+                    body_start_index: si,
+                    filled_data_len: data.len(),
+                };
 
                 let _ = self.read_cache.insert(new_rc);
 
@@ -649,8 +669,6 @@ impl Conn {
         trace!( cid=%self.cid,"spe1 common_real_read called ");
 
         if self.is_server {
-            self.read_state = ReadState::ReadyForNew;
-
             Poll::Ready(match self.qa.questions_to_bytes(&real_string, true, true) {
                 Ok(bm) => {
                     trace!(cid=%self.cid, "spe1server server_real_read {}, {}",bm.0.len(),&data[..si + content_len].len() );

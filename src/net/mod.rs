@@ -27,7 +27,6 @@ pub mod tun;
 mod test;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Result;
 use futures::io::Error;
 use rand::Rng;
 use serde::Deserialize;
@@ -345,7 +344,7 @@ impl Stream {
 
     /// try shutdown the underlying stream. If there's no
     /// stream, no behavior.
-    pub async fn try_shutdown(&mut self) -> Result<()> {
+    pub async fn try_shutdown(&mut self) -> anyhow::Result<()> {
         match self {
             Stream::Conn(ref mut t) => t.shutdown().await?,
             Stream::AddrConn(ref mut c) => c.w.shutdown().await?,
@@ -357,21 +356,21 @@ impl Stream {
         Ok(())
     }
 
-    pub fn try_unwrap_tcp(self) -> Result<Conn> {
+    pub fn try_unwrap_tcp(self) -> anyhow::Result<Conn> {
         if let Stream::Conn(t) = self {
             return Ok(t);
         }
         bail!("not tcp")
     }
 
-    pub fn try_unwrap_tcp_ref(&self) -> Result<&Conn> {
+    pub fn try_unwrap_tcp_ref(&self) -> anyhow::Result<&Conn> {
         if let Stream::Conn(t) = self {
             return Ok(t);
         }
         bail!("not tcp")
     }
 
-    pub fn try_unwrap_udp(self) -> Result<AddrConn> {
+    pub fn try_unwrap_udp(self) -> anyhow::Result<AddrConn> {
         if let Stream::AddrConn(t) = self {
             return Ok(t);
         }
