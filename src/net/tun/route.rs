@@ -42,7 +42,7 @@ pub fn out_auto_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
 
         let list = format!(
             r#"ip route del default
-ip route add default via {router_ip} dev enp0s1
+ip route add default via {router_ip} dev {original_dev_name}
 iptables -I FORWARD -i {tun_dev_name} -o {original_dev_name} -m conntrack --ctstate NEW -j ACCEPT
 iptables -I FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 iptables -t nat -I POSTROUTING -o {original_dev_name} -j MASQUERADE"#,
@@ -140,9 +140,18 @@ pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
     {
         info!("tun down auto route for linux...");
-        let mut list = vec![];
 
-        //let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
+        let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
+
+        let original_dev_name = params
+            .original_dev_name
+            .as_deref()
+            .unwrap_or(DEFAULT_ORIGINAL_DEV_NAME);
+
+        let mut list = vec![format!(
+            "ip route add default via {router_ip} dev {original_dev_name}"
+        )];
+
         let original_dev_name = params
             .original_dev_name
             .as_deref()

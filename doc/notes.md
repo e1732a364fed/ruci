@@ -413,6 +413,16 @@ ruci-cmd tproxy 在启动监听后, 进程所打开的文件在12个左右.
 
 在转发 ip 包时，如果通过tcp 传, 注意粘包问题. 可通过套 ws/h2 等 有 长度包头的 协议来解决
 
+### direct_list 路由问题记录(linux)
+
+发现不能是
+ip route add {v} via {router_ip} dev {original_dev_name} metric 1
+
+而要为
+
+ip route add {v} dev {original_dev_name} metric 100
+
+
 ## 其它
 
 使用 anyhow 的 context 会导致变慢, 若有初始化开销 则要改用 with_context

@@ -194,7 +194,6 @@ o2node-.->collector
 - [x] http_filter, websocket(including early data)
 - [x] h2, grpc
 - [x] quic
-- [x] ip relay protocol (test1)
 - [ ] tcp/ip netstack (smoltcp)
 - [ ] ss?, vmess?
 

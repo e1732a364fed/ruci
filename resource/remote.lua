@@ -126,7 +126,7 @@ Config = {
         -- { chain = in_quic_chain, tag = "listen1" }
         -- { chain = socks5http_chain, tag = "listen1"} ,
         -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
-         { chain =  { tcp,tls, ws,  "IpRelayTest1" }, tag = "listen1"} ,
+         { chain =  { tcp,tls, ws}, tag = "listen1"} ,
         --[[
         {
             chain = {{

@@ -35,7 +35,7 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{ip, ws};
+use crate::map::ws;
 
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 use crate::map::tproxy::{self, TcpResolver};
@@ -309,8 +309,6 @@ pub enum InMapConfig {
     },
     #[cfg(any(feature = "quic", feature = "quinn"))]
     Quic(crate::map::quic_common::ServerConfig),
-
-    IpRelayTest1,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -351,8 +349,6 @@ pub enum OutMapConfig {
     },
     #[cfg(any(feature = "quic", feature = "quinn"))]
     Quic(crate::map::quic_common::ClientConfig),
-
-    IpRelayTest1,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -562,7 +558,6 @@ impl ToMapBox for InMapConfig {
                 sopt: sockopt.clone(),
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             }),
-            InMapConfig::IpRelayTest1 => Box::<ip::IpTest1>::default(),
         }
     }
 }
@@ -669,7 +664,6 @@ impl ToMapBox for OutMapConfig {
             OutMapConfig::OptDialer(sopt) => {
                 Box::new(crate::map::opt_net::OptDialer::new(sopt.clone()).expect("ok"))
             }
-            OutMapConfig::IpRelayTest1 => Box::<ip::IpTest1>::default(),
         }
     }
 }

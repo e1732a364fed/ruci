@@ -600,12 +600,13 @@ local config_16_tun = {
                 --     bind_to_device = "enp0s1"
                 -- }
             }
-        }, tlsout, websocket_out,  "IpRelayTest1" }
+        }, tlsout, websocket_out}
     } }
 
     --[[
 
-        演示 inbound 是 ip, outbound 是 IpRelayTest1
+        演示 inbound 是 ip+ 自动路由, outbound 是 tcp+tls+ws
+        这就做出了一个简单的VPN. 注意, 这种情况不可通过 tcp/udp 目标分流, 因为传递的直接是ip, 且未经任何探查和修改
 
     --]]
 
