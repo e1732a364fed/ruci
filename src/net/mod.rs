@@ -1,7 +1,7 @@
 /*!
  * module net defines some important parts for proxy.
  *
- * important parts: [`CID`], [`Network`], [`Addr`], [`ConnTrait`], [`Conn`], [`Stream`], [`GlobalTrafficRecorder`],
+ * important parts: [`CID`], [`Network`], [`Addr`], [`AsyncConn`], [`Conn`], [`Stream`], [`GlobalTrafficRecorder`],
  *  and a cp mod for copying data between [`Conn`]
 
 

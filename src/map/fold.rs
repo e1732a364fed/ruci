@@ -282,7 +282,7 @@ pub async fn fold_from_start(
     }
 
     if let Stream::Generator(rx) = first_r.c {
-        in_iter_accumulate_forever(InIterAccumulateForeverParams {
+        in_iter_fold_forever(InIterFoldForeverParams {
             cid: in_cid,
             rx,
             tx,
@@ -326,7 +326,7 @@ pub async fn fold_from_start(
     Ok(())
 }
 
-pub struct InIterAccumulateForeverParams {
+pub struct InIterFoldForeverParams {
     pub cid: CID,
     pub rx: tokio::sync::mpsc::Receiver<MapResult>,
     pub tx: tokio::sync::mpsc::Sender<FoldResult>,
@@ -349,7 +349,7 @@ pub struct InIterAccumulateForeverParams {
 ///
 /// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
 ///
-pub async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
+pub async fn in_iter_fold_forever(params: InIterFoldForeverParams) {
     let mut rx = params.rx;
     let cid = params.cid;
     let tx = params.tx;
@@ -382,7 +382,7 @@ pub async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
             }
         }
 
-        spawn_acc_forever(SpawnAccForeverParams {
+        spawn_fold_forever(SpawnFoldForeverParams {
             cid: new_cid,
             new_stream_info,
             miter: dmiter.clone(),
@@ -395,7 +395,7 @@ pub async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
     }
 }
 
-struct SpawnAccForeverParams {
+struct SpawnFoldForeverParams {
     cid: CID,
     new_stream_info: MapResult,
     miter: DMIterBox,
@@ -409,7 +409,7 @@ struct SpawnAccForeverParams {
 // solve async recursive spawn issue by :
 //
 // https://github.com/tokio-rs/tokio/issues/2394
-fn spawn_acc_forever(params: SpawnAccForeverParams) {
+fn spawn_fold_forever(params: SpawnFoldForeverParams) {
     let cid = params.cid;
     let tx = params.tx;
     let miter = params.miter;
@@ -431,7 +431,7 @@ fn spawn_acc_forever(params: SpawnAccForeverParams) {
             let cid = r.id;
 
             debug!(cid = %cid, "spawn_acc_forever recursive");
-            in_iter_accumulate_forever(InIterAccumulateForeverParams {
+            in_iter_fold_forever(InIterFoldForeverParams {
                 cid,
 
                 rx,
