@@ -419,6 +419,8 @@ where
         // 用 write_rx 接收 要写入的真实信息
         let mut index = 0;
 
+        let mut period = 0;
+
         let mut last_rbuf = BytesMut::new();
         loop {
             if self
@@ -461,7 +463,8 @@ where
                                 // 允许实际 write 端发送最长为 length 的真实数据
                                 permit.send(length);
 
-                                let r = write_once(self.writer, length, self.write_rx).await;
+                                let r = write_once(self.writer, length, self.write_rx, period > 0)
+                                    .await;
 
                                 match r {
                                     Ok(_) => debug!("write_once got ok"),
@@ -471,7 +474,8 @@ where
                             Err(e) => {
                                 debug!("write_once,  write_info_tx got ERR {e}, will keep calling");
 
-                                let r = write_once(self.writer, length, self.write_rx).await;
+                                let r = write_once(self.writer, length, self.write_rx, period > 0)
+                                    .await;
 
                                 match r {
                                     Ok(_) => debug!("write_once got ok"),
@@ -480,11 +484,9 @@ where
                             }
                         }
                     } else {
-                        debug!("write_once, send write_info_tx, not ready");
-
                         // 此时实际 write 端还没准备好，只能发隐写包
 
-                        let r = write_once(self.writer, length, self.write_rx).await;
+                        let r = write_once(self.writer, length, self.write_rx, period > 0).await;
 
                         match r {
                             Ok(_) => debug!("write_once got ok"),
@@ -540,6 +542,7 @@ where
             index += 1;
             if index == self.file.len() {
                 index = 0;
+                period += 1;
             }
         }
     }
@@ -595,11 +598,17 @@ async fn write_once<W>(
     writer: &mut W,
     length: usize,
     write_rx: &mut Receiver<BytesMut>,
+    one_period_over: bool,
 ) -> io::Result<()>
 where
     W: AsyncWrite + Unpin + ?Sized,
 {
-    let timer = tokio::time::sleep(WRITE_SLEEP_TIME);
+    let timer = tokio::time::sleep(if one_period_over {
+        // 一周期过后，避免频繁发送隐写包。但是又不能不发，因为对面可能等待 此包 以 发给我们真包
+        WRITE_SLEEP_TIME * 10
+    } else {
+        WRITE_SLEEP_TIME
+    });
     use tokio::io::AsyncWriteExt;
 
     tokio::select! {
