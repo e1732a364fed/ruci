@@ -5,7 +5,7 @@ Defines some [`ruci::map::Map`]s.
 pub mod h2;
 pub mod quic_common;
 // pub mod recorder;
-pub mod recorder2;
+pub mod recorder;
 pub mod ws;
 
 #[cfg(feature = "steganography")]

@@ -75,7 +75,7 @@ impl AsyncRead for RecorderConn {
                                 let cid = self.record.cid().to_string();
                                 info!(
                                     cid = %cid,
-                                    "recorder read got EOF(len=0), Saving to file",
+                                    "super read got EOF(len=0), Saving to file",
                                 );
                                 self.as_mut().start_save();
                             } else {
@@ -86,7 +86,7 @@ impl AsyncRead for RecorderConn {
                             let cid = self.record.cid().to_string();
                             info!(
                                 cid = %cid,
-                                "recorder read got err, Saving to file; err: {e}",
+                                "super read got err, Saving to file; err: {e}",
                             );
                             self.as_mut().start_save();
                         }
@@ -118,7 +118,7 @@ impl AsyncWrite for RecorderConn {
             }
             _ => Poll::Ready(Err(io::Error::new(
                 io::ErrorKind::Other,
-                "recorder is not in normal state",
+                "super is not in normal state",
             ))),
         }
     }
@@ -142,14 +142,14 @@ impl AsyncWrite for RecorderConn {
                 info!(
                     cid = %self.record.cid(),
                     label = %self.record.label(),
-                    "recorder got shutdown, Saving to file",
+                    "super got shutdown, Saving to file",
                 );
 
                 self.as_mut().start_save();
 
                 let r = self.as_mut().poll_save_future(cx);
                 if r.is_ready() {
-                    debug!("recorder save ready {:?}", r);
+                    debug!("super save ready {:?}", r);
                     self.project().base.poll_shutdown(cx)
                 } else {
                     Poll::Pending
@@ -158,7 +158,7 @@ impl AsyncWrite for RecorderConn {
             State::SavingToFile => {
                 let r = self.as_mut().poll_save_future(cx);
                 if r.is_ready() {
-                    debug!("recorder save ready {:?}", r);
+                    debug!("super save ready {:?}", r);
 
                     self.project().base.poll_shutdown(cx)
                 } else {

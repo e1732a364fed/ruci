@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::{
-    map::{recorder2, ws},
+    map::{recorder, ws},
     utils::{init_tls_server_pem_option, FileSource},
 };
 
@@ -357,7 +357,7 @@ pub enum InMapConfig {
 
     Adder(i8),
     Counter,
-    Recorder(recorder2::Config),
+    Recorder(recorder::Config),
     TLS(ruci_tls::server::TlsServerOptions),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
@@ -410,7 +410,7 @@ pub enum OutMapConfig {
     BindDialer(Box<BindDialerConfig>), //单流发生器
     Adder(i8),
     Counter,
-    Recorder(recorder2::Config),
+    Recorder(recorder::Config),
     TLS(ruci_tls::client::TlsClientOptions),
 
     #[cfg(feature = "sockopt")]
