@@ -6,15 +6,13 @@ ruci项目的终极目标是利用人工神经网络针对用户自己的流量�
 
 原理是, 为了穿过【可能的】墙, 我们首先要造一个墙出来, 我们的第一步是, 用机器学习来判断用户的流量属于什么流量. 第二步是, 用机器学习做一个“AI协议”, 让自己的墙去看它是什么流量. 如果自己的墙分不出AI协议与普通上网流量的区别, 我们就赢了. 
 
-计划是最终会用到 pytorch. 
+用 pytorch 设计神经网络, 子项目可叫 rucinet, 分为 ruciwall 和 ruciprotocol 两部分. python 项目叫 ruci-py.
 
-未来如果设计神经网络, 子项目可叫 rucinet ~, 分为 ruciwall 和 ruciprotocol 两部分. 
+尽管AI协议还只是概念阶段, 但第一步的自造一个墙（ruciwall）是完全可以实现的.  所以 至少我们肯定能有一个通用的验证任意协议是否安全的方法. 
 
-尽管AI协议还只是概念阶段, 但第一步的自造一个墙（ruciwall）是完全可以实现的.  所以, 至少我们肯定能有一个通用的验证任意协议是否安全的方法. 
+而且, 如果我们能手工做出一个成功让ruciwall识别不出的协议, 我们也不需要AI协议了, 因为它和AI协议等价. 不过 前提是ruciwall足够强大. 所以, ruciwall是更重要的存在. 
 
-而且, 如果我们能手工做出一个成功让ruciwall识别不出的协议, 我们也不需要AI协议了, 因为它和AI协议等价. 不过, 前提是ruciwall足够强大. 所以, ruciwall是更重要的存在. 
-
-最终一定要实现所有现有的主流的代理协议, 实现之后, 我们的墙才能就检测它们, 
+最终一定要实现所有现有的主流的代理协议, 实现之后 我们的墙才能就检测它们, 
 实现的越多, 墙越高级.  
 
 ## 为什么？
@@ -31,15 +29,6 @@ ruci项目的终极目标是利用人工神经网络针对用户自己的流量�
 
 你需要自行采集数据, 自行用显卡训练网络, 项目本身暂不会为你提供任何生成好的东西. 
 不过, 不用AI协议的话, 完全可以拿本项目退化作为一个日常代理使用
-
-
-
-## 能否做到
-
-做不到也没事, 如果能启发别人, 让别的项目做出来, 那我们项目依然有了意义. 
-如果早已有别的项目做出来了, 那也没事. 
-如果对别人没有了意义, 那么写代码读代码本身也是一种智力训练, 对开发者还是有用的. 
-
 
 ## 准确描述
 
@@ -64,10 +53,27 @@ Deep Packet Inspection,数据分析,加密流量识别, 流量分类, 流量分�
 
 Steganography, cryptography, Provable Perfect Security 
 
-有很多大量的论文和相关的开源项目存在. 有的流量识别网络还有国家专利呢~
-具体就不提了, 以免给读者压力太大. 作为初学者, 我们要慢慢学. 
+有很多大量的论文和相关的开源项目存在. 很多的流量识别网络有国家（中国）专利
+https://patents.google.com/patent/CN101741744B/zh
+(接着看 Cited By 即可找到更多)
 
 可能有用的论文
 
+Perfectly Secure Steganography Using Minimum Entropy Coupling
 https://arxiv.org/abs/2210.14889
+
+Deep Packet: A Novel Approach For Encrypted Traffic Classification Using Deep Learning
+https://arxiv.org/abs/1709.02656
+
+一些项目与资源
+
+
+https://github.com/munhouiani/Deep-Packet
+https://blog.munhou.com/2020/04/05/Pytorch-Implementation-of-Deep-Packet-A-Novel-Approach-For-Encrypted-Tra%EF%AC%83c-Classi%EF%AC%81cation-Using-Deep-Learning/
+
+https://github.com/mrazimi99/deep-packet
+
+https://github.com/Srinivas11789/PcapXray
+
+https://wiki.wireshark.org/SampleCaptures
 

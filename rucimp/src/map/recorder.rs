@@ -13,6 +13,7 @@ use std::{io, pin::Pin, task::Poll};
 use addr_conn::AddrConn;
 use async_trait::async_trait;
 use chrono::DateTime;
+use itertools::Itertools;
 use ruci::map::{self, *};
 use ruci::net::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use ruci::{net::*, Name};
@@ -63,6 +64,49 @@ impl From<&SerializableGlobalData> for GlobalData {
     }
 }
 
+/// for export data for machine learning
+#[derive(Deserialize, Serialize, Debug, Default, Clone)]
+pub struct SimplifiedRecordData {
+    pub label: Option<String>,
+    pub data: Vec<(i8, Vec<u8>)>, // 1:upload, -1: download
+}
+
+impl From<&mut RecordData> for SimplifiedRecordData {
+    /// 本转换会 拿走 RecordData 中 download_data 和 upload_data
+    fn from(d: &mut RecordData) -> Self {
+        fn convert(d: Vec<DataPiece>, i: i8) -> Vec<(i8, u128, Vec<u8>)> {
+            d.into_iter()
+                .map(|dp| {
+                    let data = match dp.data {
+                        PayloadData::Pure(d) => d,
+                        PayloadData::Addr(add) => add.1,
+                    };
+                    (i, dp.nanos_since_start, data)
+                })
+                .collect()
+        }
+        let mut dd = Vec::new();
+        std::mem::swap(&mut d.download_data, &mut dd);
+
+        let mut ud = Vec::new();
+        std::mem::swap(&mut d.upload_data, &mut ud);
+
+        let mut a = convert(dd, -1);
+        let mut ua = convert(ud, 1);
+
+        a.append(&mut ua);
+
+        a.sort_by(|a, b| a.1.cmp(&b.1));
+
+        let data = a.into_iter().map(|x| (x.0, x.2)).collect_vec();
+
+        SimplifiedRecordData {
+            data,
+            label: d.custom_str.clone(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct RecordData {
     pub cid: String,
@@ -75,12 +119,14 @@ pub struct RecordData {
     pub serialize_format: Option<String>,
 
     #[serde(skip)]
-    pub global_data: Option<GlobalData>,
+    pub full_record: Option<bool>,
 
-    pub serializable_global_data: Option<SerializableGlobalData>,
+    // #[serde(skip)]
+    // pub global_data: Option<GlobalData>,
+    pub global_data: Option<SerializableGlobalData>,
 
     /// customized by user (as a marker)
-    pub custom_str: String,
+    pub custom_str: Option<String>,
     pub upload_data: Vec<DataPiece>,
     pub download_data: Vec<DataPiece>,
 }
@@ -106,17 +152,60 @@ impl Default for PayloadData {
 }
 
 impl RecordData {
-    fn save_json(&self) {
-        let mut name = if let Some(g) = &self.serializable_global_data {
-            format!("record_{}_{}.log", g.run_instance_id, self.cid)
+    /// log/name.log
+    fn save_name(&self) -> String {
+        let tail = format!(
+            "{}.{}.log",
+            self.cid,
+            self.serialize_format.as_deref().unwrap_or("json")
+        );
+        let mut name = if let Some(g) = &self.global_data {
+            format!("record_{}_{}", g.run_instance_id, tail)
         } else {
-            format!("record_{}.log", self.cid)
+            format!("record_.{}", tail)
         };
         if let Some(p) = &self.file_prefix {
             name = p.to_owned() + &name;
         }
+        format!("logs/{}", name)
+    }
+    fn save(&mut self) {
+        let _ = std::fs::create_dir("logs");
 
-        let r = serde_json::to_writer_pretty(std::fs::File::create(name).unwrap(), &self);
+        match &self.serialize_format {
+            Some(s) => match s.as_str() {
+                "json" => self.save_json(),
+                // "pickle" => self.save_pickle(),
+                _ => self.save_json(),
+            },
+            None => self.save_json(),
+        }
+    }
+
+    // #[cfg(feature = "serde-pickle")]
+    // fn save_pickle(&self) {
+    //     let name = self.save_name();
+
+    //     let r = serde_pickle::to_writer(
+    //         &mut std::fs::File::create(name).unwrap(),
+    //         &self,
+    //         Default::default(),
+    //     );
+    //     if let Err(e) = r {
+    //         tracing::warn!("save to file got error: {e}");
+    //     }
+    // }
+    fn save_json(&mut self) {
+        let name = self.save_name();
+
+        let r = if self.full_record.unwrap_or_default() {
+            serde_json::to_writer_pretty(std::fs::File::create(name).unwrap(), &self)
+        } else {
+            serde_json::to_writer_pretty(
+                std::fs::File::create(name).unwrap(),
+                &SimplifiedRecordData::from(self),
+            )
+        };
         if let Err(e) = r {
             tracing::warn!("save to file got error: {e}");
         }
@@ -134,6 +223,9 @@ impl Recorder {
     }
 
     fn record_d(&mut self, data: &[u8]) {
+        if data.is_empty() {
+            return;
+        }
         let d = self.since();
         let d = DataPiece {
             nanos_since_start: d,
@@ -142,6 +234,9 @@ impl Recorder {
         self.data.download_data.push(d)
     }
     fn r_d_ad(&mut self, data: &[u8], ad: &Addr) {
+        if data.is_empty() {
+            return;
+        }
         let d = self.since();
         self.data.download_data.push(DataPiece {
             nanos_since_start: d,
@@ -149,6 +244,9 @@ impl Recorder {
         });
     }
     fn record_u(&mut self, data: &[u8]) {
+        if data.is_empty() {
+            return;
+        }
         let d = self.since();
         self.data.upload_data.push(DataPiece {
             nanos_since_start: d,
@@ -157,6 +255,9 @@ impl Recorder {
     }
 
     fn r_u_ad(&mut self, data: &[u8], ad: &Addr) {
+        if data.is_empty() {
+            return;
+        }
         let d = self.since();
         self.data.upload_data.push(DataPiece {
             nanos_since_start: d,
@@ -192,7 +293,7 @@ impl AsyncRead for RecorderConn {
                         "recorder read got err, Saving to file; err: {e}",
                     );
 
-                    self.record.data.save_json();
+                    self.record.data.save();
                 }
             }
         }
@@ -230,7 +331,7 @@ impl AsyncWrite for RecorderConn {
             "recorder got shutdown, Saving to file...",
         );
 
-        self.record.data.save_json();
+        self.record.data.save();
         self.base.as_mut().poll_shutdown(cx)
     }
 }
@@ -301,18 +402,33 @@ impl AsyncWriteAddr for RecordAddrConnW {
             cid = %self.record.data.cid,
             "recorder ac got shutdown, Saving to file..."
         );
-        self.record.data.save_json();
+        self.record.data.save();
 
         self.base.as_mut().poll_close_addr(cx)
     }
 }
 
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct Config {
+    pub custom_str: Option<String>,
+    pub serialize_format: Option<String>,
+    pub full_record: Option<bool>,
+}
+
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct RecorderMap {
-    pub custom_str: String,
+    config: Config,
 }
 
+impl RecorderMap {
+    pub fn new(config: Config) -> RecorderMap {
+        RecorderMap {
+            config,
+            ..Default::default()
+        }
+    }
+}
 impl Name for RecorderMap {
     fn name(&self) -> &'static str {
         "recorder"
@@ -325,16 +441,17 @@ impl Map for RecorderMap {
         let now = time::Instant::now();
         let sgd = params.g.as_ref().map(SerializableGlobalData::from);
 
-        let rb = Recorder {
+        let r = Recorder {
             start: now,
             data: RecordData {
                 cid: cid.to_string(),
                 behavior,
-                global_data: params.g.clone(),
+                // global_data: params.g.clone(),
+                global_data: sgd.clone(),
+                full_record: self.config.full_record,
 
-                serializable_global_data: sgd.clone(),
-
-                custom_str: self.custom_str.clone(),
+                serialize_format: self.config.serialize_format.clone(),
+                custom_str: self.config.custom_str.clone(),
 
                 ..Default::default()
             },
@@ -344,7 +461,7 @@ impl Map for RecorderMap {
             Stream::Conn(c) => {
                 let cc = RecorderConn {
                     base: Box::pin(c),
-                    record: rb,
+                    record: r,
                 };
 
                 MapResult::builder()
@@ -356,19 +473,19 @@ impl Map for RecorderMap {
             Stream::AddrConn(ac) => {
                 // 由于 AddrConn的实现是拆成 r,w 两部分的， 为避免多线程冲突，这里简单地拆成两个文件
 
-                let mut r_rb = rb;
-                let mut w_rb = r_rb.clone();
-                r_rb.data.file_prefix = Some(String::from("ac_r"));
-                w_rb.data.file_prefix = Some(String::from("ac_w"));
+                let mut r_r = r;
+                let mut w_r = r_r.clone();
+                r_r.data.file_prefix = Some(String::from("ac_r"));
+                w_r.data.file_prefix = Some(String::from("ac_w"));
 
                 let ac = AddrConn {
                     r: Box::new(RecordAddrConnR {
                         base: Box::pin(ac.r),
-                        record: r_rb,
+                        record: r_r,
                     }),
                     w: Box::new(RecordAddrConnW {
                         base: Box::pin(ac.w),
-                        record: w_rb,
+                        record: w_r,
                     }),
                     default_write_to: ac.default_write_to,
                     cached_name: "record_ac".to_string(),

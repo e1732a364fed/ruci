@@ -694,24 +694,13 @@ local config_17_tcp_ip_stack = {
 --]]
 
 
-local config_18_recorder_at_listen = {
-    inbounds = { {
-        chain = { listen, "Recorder", {
-            Socks5Http = {}
-        } },
-        tag = "listen1"
-    },
-    },
-    outbounds = { {
-        tag = "dial1",
-        chain = { direct }
-    } }
-
-}
-
-local config_19_recorder_at_dial = {
+local config_18_recorder = {
     inbounds = { {
         chain = { listen, {
+            Recorder = {
+                custom_str = "socks5"
+            }
+        }, {
             Socks5Http = {}
         } },
         tag = "listen1"
@@ -719,12 +708,17 @@ local config_19_recorder_at_dial = {
     },
     outbounds = { {
         tag = "dial1",
-        chain = { direct, "Recorder" }
+        chain = { direct, {
+            Recorder = {
+                custom_str = "direct"
+            }
+        } }
     } }
 
 }
 
-Config = config_18_recorder_at_listen
+
+Config = config_18_recorder
 
 --[[
 

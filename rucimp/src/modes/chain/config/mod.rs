@@ -304,7 +304,7 @@ pub enum InMapConfig {
 
     Adder(i8),
     Counter,
-    Recorder,
+    Recorder(recorder::Config),
     TLS(TlsIn),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
@@ -339,7 +339,7 @@ pub enum OutMapConfig {
     BindDialer(Box<BindDialerConfig>), //单流发生器
     Adder(i8),
     Counter,
-    Recorder,
+    Recorder(recorder::Config),
     TLS(TlsOut),
 
     #[cfg(feature = "sockopt")]
@@ -464,7 +464,7 @@ impl ToMapBox for InMapConfig {
             }
             InMapConfig::Adder(i) => i.to_map_box(),
             InMapConfig::Counter => Box::<Counter>::default(),
-            InMapConfig::Recorder => Box::<RecorderMap>::default(),
+            InMapConfig::Recorder(c) => Box::new(RecorderMap::new(c.clone())),
 
             InMapConfig::TLS(c) => tls::server::ServerOptions {
                 addr: "todo!()".to_string(),
@@ -611,7 +611,7 @@ impl ToMapBox for OutMapConfig {
             OutMapConfig::BindDialer(dc) => dc.to_map_box(),
             OutMapConfig::Adder(i) => i.to_map_box(),
             OutMapConfig::Counter => Box::<counter::Counter>::default(),
-            OutMapConfig::Recorder => Box::<RecorderMap>::default(),
+            OutMapConfig::Recorder(c) => Box::new(RecorderMap::new(c.clone())),
 
             OutMapConfig::TLS(c) => {
                 let a = tls::client::Client::new(tls::client::ClientOptions {
