@@ -217,7 +217,7 @@ impl AsyncRead for MockTcpStream {
         _: &mut Context,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        debug!("MockTcp: read called");
+        //debug!("MockTcp: read called");
         let size: usize = min(self.read_data.len(), buf.initialized().len());
         buf.put(&self.read_data[..size]);
 
@@ -279,7 +279,7 @@ impl<'a> AsyncRead for MockTcpStream2<'a> {
         _: &mut Context,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        debug!("MockTcp: read called");
+        //debug!("MockTcp: read called");
         let size: usize = min(self.read_data.len(), buf.initialized().len());
         buf.put(&self.read_data[..size]);
 
