@@ -3,6 +3,7 @@ target/
 ruci_config/
 .DS_Store
 .vscode/
+crates/ruci-cmd/static/
 testfile.txt
 *.log
 *.mmdb

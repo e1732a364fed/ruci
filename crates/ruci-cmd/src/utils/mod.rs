@@ -33,11 +33,6 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_download_mmdb() -> anyhow::Result<()> {
-    download_mmdb().await
-}
-
 //https://github.com/seanmonstar/reqwest/issues/482#issuecomment-1951347935
 fn response_to_async_read(resp: reqwest::Response) -> impl tokio::io::AsyncRead {
     use futures::stream::TryStreamExt;
@@ -50,7 +45,7 @@ fn response_to_async_read(resp: reqwest::Response) -> impl tokio::io::AsyncRead 
 ///
 /// timeout is 10s
 ///
-/// will print download progress during downloading.
+/// will print download progress inline during downloading.
 ///
 pub async fn dl_url(url: &str, file_name: &str) -> anyhow::Result<()> {
     info!("try downloading {} from {} ", file_name, url);

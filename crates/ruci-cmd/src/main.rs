@@ -7,17 +7,27 @@ mod utils;
 use std::env::{self, set_var};
 
 use anyhow::Ok;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use log::{info, log_enabled, Level};
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Mode {
+    /// Chain mode, which uses lua file
+    #[default]
+    C,
+
+    /// Suit mode, which uses toml file
+    S,
+}
 
 /// ruci command line
 #[derive(Parser)]
 #[command(author = "e")]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// rucimp mode, c(chain) or s(suit)
-    #[arg(short, long, default_value_t = 'c')]
-    mode: char,
+    /// choose the rucimp core mode
+    #[arg(short, long, value_enum, default_value_t = Mode::C )]
+    mode: Mode,
 
     /// basic config file
     #[arg(short, long, value_name = "FILE", default_value = "local.lua")]
@@ -62,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     print_env_version();
     let args = Args::parse();
 
-    println!("Mode {}!", args.mode);
+    println!("Mode {:?}!", args.mode);
     println!("Path {}!", args.config);
     println!("LogLevel {}!", args.log_level);
 
@@ -103,7 +113,7 @@ pub fn print_env_version() {
     }
 
     set_var(RL, l);
-    env_logger::init();
+    let _ = env_logger::try_init();
 
     println!(
         "Log Level(env): {:?}",

@@ -6,7 +6,7 @@
 
 项目命名采用了谐音。同时Ru指代rust, ruci 与 如此谐音.
 rucimp = ruci + imp,
-ruci可读作"如C"或 lucy。
+ruci pronounced lucy。
 
 ## 介绍
 
@@ -30,7 +30,8 @@ verysimple可以说是一个初级项目，而ruci最终将成为一个中级项
 
 ruci 是基础框架, 其中定义一些trait 和基本结构与方法，实现链式架构，实现了一些基本流映射函数, 提供转发方法
 
-rucimp 中提供若干流映射函数, 定义多种配置文件格式, 并提供一些 example 程序
+rucimp 中提供若干流映射函数, 定义多种配置文件格式, 并提供一些 example 程序.
+rucimp is the core.
 
 ruci-cmd 是最终的全功能的可执行文件，包含一些系统路由的配置功能 和 api-server
 
