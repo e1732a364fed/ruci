@@ -116,23 +116,29 @@ pub fn read_uvarint(r: &mut BytesMut) -> (u64, Option<UVariantErr>) {
     (x, Some(UVariantErr::OverFlow))
 }
 
-pub fn encode(payload: &[u8]) -> BytesMut {
+pub fn encode_head(lp: usize, only_head_cap: bool) -> BytesMut {
     let mut protobuf_header = [0u8; MAX_VARINT_LEN64 + 1];
     protobuf_header[0] = 0x0a;
 
-    let lp = payload.len();
     let varuint_size = put_uvarint(&mut protobuf_header[1..], lp);
 
     let ph_len = varuint_size + 1;
 
     let grpc_payload_len: u32 = (ph_len + lp) as u32;
 
-    let mut buf = BytesMut::with_capacity(5 + ph_len + payload.len());
+    let mut buf = BytesMut::with_capacity(5 + ph_len + if only_head_cap { 0 } else { lp });
     buf.put_u8(0);
     buf.put_u32(grpc_payload_len);
 
     buf.extend_from_slice(&protobuf_header[..ph_len]);
-    buf.extend_from_slice(payload);
+    buf
+}
+
+pub fn encode(payload: &[u8], only_head: bool) -> BytesMut {
+    let mut buf = encode_head(payload.len(), only_head);
+    if !only_head {
+        buf.extend_from_slice(payload);
+    }
     buf
 }
 
@@ -251,7 +257,7 @@ impl AsyncWrite for Stream {
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         let old_len = buf.len();
-        let real_buf = encode(buf);
+        let real_buf = encode(buf, false);
 
         self.send.reserve_capacity(real_buf.len());
         Poll::Ready(match ready!(self.send.poll_capacity(cx)) {
