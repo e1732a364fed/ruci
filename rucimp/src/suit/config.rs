@@ -46,11 +46,11 @@ pub struct LDConfig {
     pub port: Option<u16>, //若Network不为 unix , 则port项必填
     pub xver: Option<u8>,  //可选，只能为0/1/2. 若不为0, 则表示使用 pub PROXY protocol 协议头
     pub tls: Option<bool>,
-    pub cert: Option<String>,   //tls
-    pub key: Option<String>,    //tls
+    pub cert: Option<String>,   //tls server
+    pub key: Option<String>,    //tls server
     pub insecure: Option<bool>, //tls 是否安全
     pub alpn: Option<Vec<String>>,
-    pub protocol: String,
+    pub protocol: String,             //代理层协议名
     pub uuid: Option<String>,         // protocol 的用户识别
     pub version: Option<u16>,         // protocol 的 version
     pub encrypt_algo: Option<String>, //protocol 内部的加密算法选择
