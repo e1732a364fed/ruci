@@ -16,3 +16,10 @@ parking_lot = "0.12.1"
 
 toml = "0.8.1"
 serde = { version = "1", features = ["derive"] }    #1.0.196
+
+
+mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lot","luau"] , optional = true }
+
+[features]
+default = ["lua"]
+lua = ["mlua"]

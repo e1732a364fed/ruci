@@ -1,9 +1,28 @@
+/*!
+ *
+ */
+
+#[cfg(feature = "lua")]
+pub mod lua;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
-    pub listen: Vec<Vec<InMapper>>,
-    pub dial: Option<Vec<Vec<OutMapper>>>,
+    pub listen: Vec<InMapperStruct>,
+    pub dial: Option<Vec<OutMapperStruct>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct InMapperStruct {
+    tag: Option<String>,
+    chain: Vec<InMapper>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct OutMapperStruct {
+    tag: Option<String>,
+    chain: Vec<OutMapper>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -75,14 +94,17 @@ mod test {
     #[test]
     fn serialize() {
         let sc = StaticConfig {
-            listen: vec![vec![
-                InMapper::Listener(Listener::TcpListener("0.0.0.0:1080".to_string())),
-                InMapper::Counter,
-                InMapper::Socks5(Socks5In {
-                    userpass: None,
-                    more: None,
-                }),
-            ]],
+            listen: vec![InMapperStruct {
+                tag: None,
+                chain: vec![
+                    InMapper::Listener(Listener::TcpListener("0.0.0.0:1080".to_string())),
+                    InMapper::Counter,
+                    InMapper::Socks5(Socks5In {
+                        userpass: None,
+                        more: None,
+                    }),
+                ],
+            }],
             dial: None,
         };
         let toml = toml::to_string(&sc).unwrap();
