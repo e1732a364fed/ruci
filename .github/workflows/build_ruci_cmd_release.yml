@@ -13,55 +13,6 @@ env:
 
 jobs:
 
-  build-cross:
-    runs-on: ubuntu-latest
-    env:
-      RUST_BACKTRACE: full
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - aarch64-linux-android
-          - aarch64-unknown-linux-gnu
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        run: |
-          rustup set profile minimal
-          rustup toolchain install stable
-          rustup default stable
-          rustup override set stable
-          rustup target add --toolchain stable ${{ matrix.target }}
-
-      - name: Install cross
-        run: cargo install cross
-      
-      - name: Install Openssl
-        run: |
-          cd crates/ruci-cmd
-          sudo docker build -f Dockerfile_aarch64 -t openssl:aarch64 .
-          sudo docker build -f Dockerfile_android -t openssl:android .
-
-      - name: Build ${{ matrix.target }}
-        run: |
-
-          compile_target=${{ matrix.target }}
-          #compile_features=" -f api_server -f api_client -f utils -f native-tls-vendored"
-
-          cd crates/ruci-cmd
-          ./build_cross.sh -v ${{ inputs.tag || github.ref_name }} -t ${{ matrix.target }} -f api_server -f api_client -f utils -f native-tls-vendored
-
-      - name: Upload Github Assets
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: crates/ruci-cmd/dist/*.tar.xz
-          tag_name: ${{ inputs.tag || github.ref_name }}    
-
-
   build-ubuntu:
     permissions: write-all
     runs-on: ubuntu-latest
