@@ -105,7 +105,7 @@ async fn test_counter1() -> std::io::Result<()> {
     };
     use crate::map::counter;
 
-    let a = counter::Counter;
+    let a = counter::Counter::default();
     let r = a
         .maps(
             CID::default(),

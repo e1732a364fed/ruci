@@ -20,7 +20,7 @@ pub fn load_in_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mappe
             Some(Box::new(a))
         }
         "counter" => {
-            let a = ruci::map::counter::Counter;
+            let a = ruci::map::counter::Counter::default();
             Some(Box::new(a))
         }
         "tls" => {
@@ -75,7 +75,7 @@ pub fn load_out_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mapp
             Some(Box::new(a))
         }
         "counter" => {
-            let a = ruci::map::counter::Counter;
+            let a = ruci::map::counter::Counter::default();
             Some(Box::new(a))
         }
 

@@ -297,7 +297,6 @@ fn get_config_str() -> String {
     "#;
 
     let ps = net::gen_random_higher_port().to_string();
-    
 
     toml_str.replace("12345", &ps)
 }
@@ -536,7 +535,7 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
     let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    let a = ruci::map::counter::Counter;
+    let a = ruci::map::counter::Counter::default();
     lsuit.push_mapper(Box::new(a));
 
     let a = get_socks5_mapper(&lsuit).await;

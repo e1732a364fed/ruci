@@ -1,4 +1,4 @@
-workspace = { members = [ "rucimp" ,"./"]  }
+workspace = { members = [ "rucimp" ,"./", "crates/macro_mapper"]  }
 [package]
 name = "ruci"
 version = "0.0.1"
@@ -37,6 +37,8 @@ webpki-roots = "0.22.6"
 lazy_static = "1"
 
 sha2 = "0.10.8"
+
+macro_mapper ={ path = "crates/macro_mapper" }
 
 [dev-dependencies]
 env_logger = "0.11.1"

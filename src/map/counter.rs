@@ -101,9 +101,11 @@ impl AsyncWrite for CounterConn {
     }
 }
 
+use macro_mapper::common_mapper_field;
 /// 通过 maps 给 base 添加 上传和下载的流量计数
-#[derive(Debug, Clone)]
-pub struct Counter;
+#[common_mapper_field]
+#[derive(Debug, Clone, Default)]
+pub struct Counter {}
 
 impl Name for Counter {
     fn name(&self) -> &'static str {

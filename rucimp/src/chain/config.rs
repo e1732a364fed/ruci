@@ -150,7 +150,7 @@ impl ToMapper for InMapperConfig {
                 Listener::UnixListener(_) => todo!(),
             },
             InMapperConfig::Adder(i) => i.to_mapper(),
-            InMapperConfig::Counter => Box::new(ruci::map::counter::Counter),
+            InMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),
             InMapperConfig::TLS(c) => tls::server::ServerOptions {
                 addr: "todo!()".to_string(),
                 cert: PathBuf::from(c.cert.clone()),
@@ -220,7 +220,7 @@ impl ToMapper for OutMapperConfig {
                 Dialer::UnixDialer(_) => todo!(),
             },
             OutMapperConfig::Adder(i) => i.to_mapper(),
-            OutMapperConfig::Counter => Box::new(ruci::map::counter::Counter),
+            OutMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),
             OutMapperConfig::TLS(c) => {
                 let a = tls::client::Client::new(c.host.as_str(), c.insecure.unwrap_or_default());
                 Box::new(a)
