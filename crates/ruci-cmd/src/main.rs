@@ -82,12 +82,13 @@ enum SubCommands {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    print_env_version();
     let args = Args::parse();
 
     println!("Mode: {:?}", args.mode);
-    println!("Path: {}", args.config);
+    println!("Config: {}", args.config);
     println!("LogLevel: {:?}", args.log_level);
+
+    print_env_version(args.log_level);
 
     match args.sub_cmds {
         None => {
@@ -124,16 +125,32 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn print_env_version() {
+pub fn print_env_version(ll: Option<Level>) {
     println!("ruci-cmd\n");
     let cdir = std::env::current_dir().expect("has current directory");
     println!("working dir: {:?} \n", cdir);
 
     const RL: &str = "RUST_LOG";
-    let l = env::var(RL).unwrap_or("info".to_string());
 
-    if l == "warn" {
-        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";ruci-cmd \n shell like so: RUST_LOG=info ./ruci-cmd")
+    let mut not_given_flag = false;
+    let mut not_given_env = false;
+
+    let given_level = if let Some(l) = ll {
+        l.as_str()
+    } else {
+        not_given_flag = true;
+        "info"
+    };
+
+    let l = env::var(RL).unwrap_or_else(|_| {
+        not_given_env = true;
+        given_level.to_string()
+    });
+
+    if not_given_flag && not_given_env {
+        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";ruci-cmd \n shell like so: RUST_LOG=info ./ruci-cmd\n");
+
+        println!("You can also set -l or --log-level flag, but RUST_LOG has the highest priority\n")
     }
 
     set_var(RL, l);
