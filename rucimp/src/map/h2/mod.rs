@@ -1,4 +1,5 @@
 pub mod client;
+pub mod grpc;
 pub mod server;
 
 use std::cmp::min;
@@ -40,23 +41,23 @@ impl AsyncRead for H2Stream {
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<Result<()>> {
         if !self.buffer.is_empty() {
-            let to_read = min(buf.remaining(), self.buffer.len());
-            let data = self.buffer.split_to(to_read);
-            buf.put_slice(&data[..to_read]);
+            let r_len = min(buf.remaining(), self.buffer.len());
+            let data = self.buffer.split_to(r_len);
+            buf.put_slice(&data[..r_len]);
             return Poll::Ready(Ok(()));
         };
         Poll::Ready(match ready!(self.recv.poll_data(cx)) {
             Some(Ok(data)) => {
-                let to_read = min(buf.remaining(), data.len());
-                buf.put_slice(&data[..to_read]);
+                let r_len = min(buf.remaining(), data.len());
+                buf.put_slice(&data[..r_len]);
                 // copy the left payload into buffer
-                if data.len() > to_read {
-                    self.buffer.extend_from_slice(&data[to_read..]);
+                if data.len() > r_len {
+                    self.buffer.extend_from_slice(&data[r_len..]);
                 };
                 // increase recv window
                 self.recv
                     .flow_control()
-                    .release_capacity(to_read)
+                    .release_capacity(r_len)
                     .map_or_else(
                         |e| Err(Error::new(ErrorKind::ConnectionReset, e)),
                         |_| Ok(()),
