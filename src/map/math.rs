@@ -72,6 +72,8 @@ impl AsyncWrite for AdderConn {
             let abuf = &mut self.wbuf;
             abuf.clear();
             abuf.extend_from_slice(buf);
+
+            //考虑使用 simd 或 rayon
             for a in abuf.iter_mut() {
                 *a = (x + *a as i16) as u8;
             }
