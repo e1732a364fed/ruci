@@ -16,8 +16,10 @@ outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不�
 ### 报错示例: socks5 client only support tcplike stream, got NoStream
 
 
-注意几乎所有的 outbound 都要先有一个 Dialer, 如果直接是 socks5/trojan 的话，
-没有远程地址, 是无法建立任何连接的
+注意几乎所有的 outbound 都要先有一个 "流发生器", 如 Dialer, 如果直接是 socks5/trojan 的话，
+没有流发生器, 是无法建立任何连接的
+
+也就是说, 要有一个拨号环节
 
 
 # lib note
@@ -91,7 +93,7 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 在(24.2.28)测试中发现, 最新的 mmdb ,
 从 https://github.com/Loyalsoldier/geoip/releases 下载的,
 
-如 202402220055, 202310260055 , 202301050111 中, 它对大公司的 ip 的 iso 的返回值是 特殊的值, 如 GOOGLE, TWITTER
+如 202402220055, 202310260055 , 202301050111 中, 它对一些知名互联网公司的 ip 的 iso 的返回值是 特殊的值, 如 GOOGLE, TWITTER
 
 重新从其下载旧的 mmdb, 发现旧的  202203250801,  202209150159
  版是正常的 ( 返回值为 US)

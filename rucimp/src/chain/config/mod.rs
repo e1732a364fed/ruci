@@ -275,7 +275,7 @@ impl ToMapper for InMapperConfig {
                 s
             }
             InMapperConfig::Fileio(f) => {
-                let s = ruci::map::file::FileIO {
+                let s = ruci::map::fileio::FileIO {
                     iname: f.i.clone(),
                     oname: f.o.clone(),
                     sleep_interval: f.sleep_interval.map(|si| Duration::from_millis(si)),
@@ -366,7 +366,7 @@ impl ToMapper for OutMapperConfig {
                 s
             }
             OutMapperConfig::Fileio(f) => {
-                let s = ruci::map::file::FileIO {
+                let s = ruci::map::fileio::FileIO {
                     iname: f.i.clone(),
                     oname: f.o.clone(),
                     sleep_interval: f.sleep_interval.map(|si| Duration::from_millis(si)),

@@ -165,7 +165,7 @@ impl SuitEngine {
         self.servers.clone().into_iter().for_each(|s| {
             let (tx, rx) = oneshot::channel();
 
-            let task = listen_ser2(
+            let task = listen_ser(
                 s,
                 self.default_c.clone().expect("has default_c"),
                 Some(self.ti.clone()),
@@ -203,7 +203,7 @@ impl SuitEngine {
     }
 }
 
-pub async fn listen_ser2(
+pub async fn listen_ser(
     ins: Arc<Box<dyn Suit>>,
     outc: Arc<Box<dyn Suit>>,
     oti: Option<Arc<net::TransmissionInfo>>,
@@ -218,7 +218,7 @@ pub async fn listen_ser2(
                     outc.network()
                 )
             }
-            listen_tcp2(ins, outc, oti, shutdown_rx).await
+            listen_tcp(ins, outc, oti, shutdown_rx).await
         }
         _ => Err(io::Error::other(format!(
             "such network not supported: {}",
@@ -228,7 +228,7 @@ pub async fn listen_ser2(
 }
 
 /// blocking loop listen ins tcp。calls handle_conn_clonable inside the loop.
-async fn listen_tcp2(
+async fn listen_tcp(
     ins: Arc<Box<dyn Suit>>,
     outc: Arc<Box<dyn Suit>>,
     oti: Option<Arc<net::TransmissionInfo>>,

@@ -130,7 +130,11 @@ impl FileIO {
         bytes_per_turn: Option<usize>,
     ) -> anyhow::Result<FileIOConn> {
         let i = File::open(&self.iname).await?;
-        let o = File::options().append(true).open(&self.oname).await?;
+        let o = File::options()
+            .append(true)
+            .create(true)
+            .open(&self.oname)
+            .await?;
         Ok(FileIOConn {
             i: Box::pin(i),
             o: Box::pin(o),

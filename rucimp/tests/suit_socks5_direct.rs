@@ -25,7 +25,7 @@ use rucimp::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
 use rucimp::suit::config::{Config, LDConfig};
-use rucimp::suit::engine::{listen_ser2, SuitEngine};
+use rucimp::suit::engine::{listen_ser, SuitEngine};
 use rucimp::suit::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -353,7 +353,7 @@ async fn lisen_ser() -> anyhow::Result<(
     let listen_future = async {
         info!("try start listen");
 
-        let r = listen_ser2(alsuitc, Arc::new(Box::new(csuit)), Some(arc_ti), rx).await;
+        let r = listen_ser(alsuitc, Arc::new(Box::new(csuit)), Some(arc_ti), rx).await;
 
         info!("r {:?}", r);
     };
@@ -519,7 +519,7 @@ async fn socks5_direct_and_request_counter() -> anyhow::Result<()> {
     let listen_future = async {
         info!("try start listen, {}", wn);
 
-        let r = listen_ser2(
+        let r = listen_ser(
             Arc::new(Box::new(lsuit)),
             Arc::new(Box::new(csuit)),
             None,

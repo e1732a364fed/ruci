@@ -1,4 +1,4 @@
-# Ruci
+# Ruci (wip)
 
 - [X] Ruci : 如此：
 - [X] Rucimp: 如此实现~
@@ -35,7 +35,7 @@ rucimp 中提供若干第三方代理协议, 并定义多种配置文件格式, 
 rucimple 是最终的全功能的可执行文件，在另外的github 仓库中保管
 
 ruci根项目只提供 一些 经典、简单的 流映射函数(socks5,http, trojan,tls), 
-以及一些流发生器 (Listener, Dialer,Direct, Stdio 等), 
+以及一些流发生器 (Listener, Dialer,Direct, Stdio,Fileio 等), 
 以及一些辅助的 流映射函数（如 Counter, MathAdder,Echo,Blackhole 等）, 
 其它第三方协议要在 rucimp 或第三方包中实现
 
@@ -159,7 +159,7 @@ o2node-.->collector
 ### ruci
 - [x] 链式架构 
 - [x] 流量记录 (两种实现，分别用于记录原始流量(TransmissionInfo)与实际流量(Counter))
-- [x] Direct,Blackhole, TcpListener, TcpDialer, Stdio
+- [x] Direct, Blackhole, Listener, Dialer, Stdio, Fileio
 - [x] Tls, Socks5(including UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
 - [x] Adder (按字节加法器), Counter (层流量计), Echo
 - [x] Unix Domain Socket
