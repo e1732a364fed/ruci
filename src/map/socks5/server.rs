@@ -434,6 +434,7 @@ impl Server {
                 c: map::Stream::TCP(base),
                 d: the_user.map_or(None, |up| Some(map::AnyData::B(Box::new(up)))), //将 该登录的用户信息 作为 额外信息 传回
                 e: None,
+                id: None,
             });
         }
         if cmd == CMD_UDPASSOCIATE && self.support_udp {
@@ -448,6 +449,7 @@ impl Server {
                     data: None,
                 }))), //标记我们 采用了新的udp连接
                 e: None,
+                id: None,
             });
         }
 
@@ -457,6 +459,7 @@ impl Server {
             c: map::Stream::TCP(base),
             d: None,
             e: Some(Error::other(format!("socks5: not supported cmd, {}", cmd))),
+            id: None,
         });
     }
 }

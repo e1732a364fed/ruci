@@ -115,6 +115,7 @@ impl Client {
             c: map::Stream::TCP(Box::new(new_c)),
             d: Some(map::AnyData::B(Box::new(ClientTLSConnDescriber {}))),
             e: None,
+            id: None,
         })
     }
 }

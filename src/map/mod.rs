@@ -1,9 +1,9 @@
 /*!
 module proxy define some important traits for proxy
 
-几个关键部分：State, Stream, Mapper
+几个关键部分: State, Stream, Mapper
 
-ruci 包中实现 Mapper 的模块有：math, counter, tls, socks5, trojan
+ruci 包中实现 Mapper 的模块有: math, counter, tls, socks5, trojan
 
 ruci 将任意代理行为分割成若干个不可再分的
 流映射函数, function map(stream1, args...)-> (stream2, useful_data...)
@@ -13,7 +13,7 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 按代理的方向，逻辑上分 InAdder 和 OutAdder 两种，以 maps 方法的 behavior 参数加以区分.
 
-按顺序执行若干映射函数 的迭代行为 被ruci称为“累加”，执行者被称为 “累加器”
+按顺序执行若干映射函数 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
 
 一个完整的代理配置 是 【若干 映射函数 的集合】其在 rucimp 子项目中有定义。
 
@@ -225,6 +225,8 @@ pub struct MapResult {
     /// d为 AnyData::A, 可其可以作为 下一层的 InputData
     pub d: OptData,
     pub e: Option<io::Error>,
+
+    pub id: Option<CID>, //有值代表产生了与之前不同的 cid
 }
 
 //some helper initializers
@@ -236,6 +238,7 @@ impl MapResult {
             c: Stream::TCP(c),
             d: None,
             e: None,
+            id: None,
         }
     }
 
@@ -247,6 +250,7 @@ impl MapResult {
             c: Stream::TCP(c),
             d: None,
             e: None,
+            id: None,
         }
     }
 
@@ -257,6 +261,7 @@ impl MapResult {
             c: Stream::UDP(c),
             d: None,
             e: None,
+            id: None,
         }
     }
 
@@ -267,6 +272,7 @@ impl MapResult {
             c: Stream::TCP(c),
             d: None,
             e: None,
+            id: None,
         }
     }
 
@@ -277,6 +283,19 @@ impl MapResult {
             c: s,
             d: None,
             e: None,
+            id: None,
+        }
+    }
+
+    //Generator
+    pub fn gs(gs: tokio::sync::mpsc::Receiver<Stream>, cid: CID) -> Self {
+        MapResult {
+            a: None,
+            b: None,
+            c: Stream::Generator(gs),
+            d: None,
+            e: None,
+            id: Some(cid),
         }
     }
 
@@ -287,6 +306,7 @@ impl MapResult {
             c: Stream::None,
             d: None,
             e: Some(e),
+            id: None,
         }
     }
 
@@ -307,6 +327,7 @@ impl MapResult {
             c: Stream::None,
             d: None,
             e: Some(e),
+            id: None,
         }
     }
     pub fn buf_err_str(buf: BytesMut, estr: &str) -> Self {

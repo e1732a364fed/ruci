@@ -147,6 +147,7 @@ impl Mapper for Counter {
                     c: Stream::TCP(Box::new(cc)),
                     d: Some(AnyData::B(Box::new(cd))),
                     e: None,
+                    id: None,
                 }
             }
             Stream::UDP(_) => {

@@ -1,4 +1,8 @@
-use tokio::net::{TcpListener, TcpStream};
+use log::info;
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::mpsc::{self, Receiver},
+};
 
 use crate::Name;
 
@@ -101,11 +105,13 @@ impl Name for TcpStreamGenerator {
     }
 }
 impl TcpStreamGenerator {
-    pub async fn listen_addr(a: &net::Addr) {
+    pub async fn listen_addr(a: &net::Addr) -> io::Result<Receiver<TcpStream>> {
         let r = TcpListener::bind(a.clone().get_socket_addr().unwrap()).await;
 
         match r {
             Ok(listener) => {
+                let (tx, rx) = mpsc::channel(100); //todo: change this
+
                 tokio::spawn(async move {
                     loop {
                         let r = listener.accept().await;
@@ -114,13 +120,39 @@ impl TcpStreamGenerator {
                             break;
                         }
                         let (tcpstream, raddr) = r.unwrap();
+                        info!("new accepted tcp, raddr: {}", raddr);
+
+                        let r = tx.send(tcpstream).await;
+                        if r.is_err() {
+                            info!("loop tcp ended: {}", r.unwrap_err());
+
+                            break;
+                        }
                     }
                 });
-                // return MapResult(Box::new(c));
+                return Ok(rx);
             }
-            Err(e) => {
-                //    return MapResult::from_err(e)
+            Err(e) => Err(e),
+        }
+    }
+}
+
+#[async_trait]
+impl Mapper for TcpStreamGenerator {
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        match params.a {
+            Some(_) => todo!(),
+            None => {
+                let r = TcpStreamGenerator::listen_addr(self.addr.as_ref().unwrap()).await;
+                // match r {
+                //     Ok(rx) => todo!(),
+                //     Err(e) => MapResult::from_err(e),
+                // }
+
+                unimplemented!()
             }
         }
+
+        unimplemented!()
     }
 }
