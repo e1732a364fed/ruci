@@ -351,11 +351,11 @@ pub type Conn = Box<dyn ConnTrait>;
 pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
     c1: C1,
     c2: C2,
-    id: u32,
+    cid: u32,
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     if log_enabled!(log::Level::Debug) {
-        debug!("cp start, id: {} ", id);
+        debug!("cp start, cid: {} ", cid);
     }
 
     let (mut c1_read, mut c1_write) = tokio::io::split(c1);
@@ -377,7 +377,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     let tt = info.ub.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
-                        debug!("cp, c1_to_c2r1, {}, {}",n,tt);
+                        debug!("cp, cid: {}, c1_to_c2r1, {}, {}",cid,n,tt);
                     }
                 }
 
@@ -395,7 +395,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         let tt = info.db.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
-                            debug!("cp, c1_to_c2r2, {}, {}",n,tt);
+                            debug!("cp, cid: {}, c1_to_c2r2, {}, {}",cid, n,tt);
                         }
                     }
                 }
@@ -405,7 +405,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
             }
 
             if log_enabled!(log::Level::Debug) {
-                debug!("cp end c1_to_c2, cid: {} ",id);
+                debug!("cp end c1_to_c2, cid: {} ",cid);
             }
 
             r1
@@ -416,7 +416,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     let tt = info.db.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
-                        debug!("cp, c2_to_c1r2, {}, {}",n,tt);
+                        debug!("cp, cid: {}, c2_to_c1r2, {}, {}",cid, n,tt);
                     }
                 }
                 // c1_write.shutdown();
@@ -428,7 +428,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         let tt = info.ub.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
-                            debug!("cp, c2_to_c1r1, {}, {}",n,tt);
+                            debug!("cp, cid: {}, c2_to_c1r1, {}, {}",cid,n,tt);
                         }
                     }
                 }
@@ -438,7 +438,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
             }
 
             if log_enabled!(log::Level::Debug) {
-                debug!("cp end c2_to_c1, { } ",id);
+                debug!("cp end c2_to_c1, { } ",cid);
             }
 
             r2
