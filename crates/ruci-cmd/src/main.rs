@@ -22,6 +22,8 @@ use parking_lot::RwLock;
 use rucimp::{modes::CoreArgs, DEFAULT_LUA_CONFIG_FILE_NAME};
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
+#[cfg(feature = "api_server")]
+use utoipa;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
@@ -177,6 +179,10 @@ async fn main() -> anyhow::Result<()> {
                         args.api_addr.clone(),
                         epots.clone(),
                         Some(api_extensions),
+                        #[cfg(feature = "utils")]
+                        Some(<utils::ApiDoc as utoipa::OpenApi>::openapi()),
+                        #[cfg(not(feature = "utils"))]
+                        None,
                     )
                     .await;
                     api_server_started = true;

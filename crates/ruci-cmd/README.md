@@ -74,9 +74,7 @@ quic feature 使用的是 s2n-quic, 其不能在windows编译, 且与其它代�
 
 # utils
 
-大部分 utils 均有其对应的 api 供远程调用，api 格式见
-https://github.com/e1732a364fed/ruci/blob/tokio/crates/ruci-cmd/src/utils/mod.rs
-中的 register_command_apis 函数
+大部分 utils 均有其对应的 api 供远程调用, 格式见 http://127.0.0.1:40681/swagger-ui-ext/
 
 ## 下载外部依赖文件
 

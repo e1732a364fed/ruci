@@ -20,6 +20,7 @@ parking_lot = { workspace = true }
 tar = { workspace = true, optional = true }
 
 axum = { workspace = true, optional = true }
+utoipa = { workspace = true, optional = true }
 
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tracing-appender = "0.2"
@@ -62,7 +63,7 @@ tun = ["rucimp/tun"]
 quinn = ["rucimp/quinn"]
 
 file_server = ["rucimp/file_server"]
-api_server = ["chrono", "rucimp/api_server", "axum"]
+api_server = ["chrono", "rucimp/api_server", "axum", "utoipa"]
 api_client = ["reqwest"]
 
 utils = ["reqwest", "rcgen", "qrcode", "flate2", "tar"]

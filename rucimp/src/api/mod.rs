@@ -12,6 +12,7 @@ use ruci::net::{GlobalTrafficRecorder, CID};
 use ruci::relay::NewConnInfo;
 use tokio::sync::{mpsc, Mutex};
 use tracing::{debug, info};
+use utoipa_swagger_ui::SwaggerUi;
 
 pub const DEFAULT_API_ADDR: &str = "127.0.0.1:40681";
 
@@ -60,6 +61,7 @@ impl Server {
         listen_addr: Option<String>,
         start_core_opts: Opts,
         api_extensions: Option<ApiExtensionMap>,
+        extension_api_doc: Option<utoipa::openapi::OpenApi>,
     ) -> (Self, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>) {
         let (tx, rx) = mpsc::channel(10);
 
@@ -79,7 +81,13 @@ impl Server {
 
             api_extensions: api_extensions.unwrap_or_else(|| Arc::new(RwLock::new(HashMap::new()))),
         };
-        serve(&server, global_traffic.clone(), start_core_opts).await;
+        serve(
+            &server,
+            global_traffic.clone(),
+            start_core_opts,
+            extension_api_doc,
+        )
+        .await;
         (server, rx, global_traffic)
     }
 }
@@ -412,6 +420,7 @@ pub async fn serve(
     s: &Server,
     global_traffic: Arc<ruci::net::GlobalTrafficRecorder>,
     start_core_opts: Opts,
+    extension_api_doc: Option<utoipa::openapi::OpenApi>,
 ) {
     let addr = s
         .listen_addr
@@ -506,9 +515,15 @@ pub async fn serve(
         );
     }
 
-    // Add OpenAPI documentation and Swagger UI
-    use utoipa_swagger_ui::SwaggerUi;
+    // Add OpenAPI documentation and Swagger UI for core APIs
     app = app.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
+
+    // Add OpenAPI documentation and Swagger UI for extension APIs if provided
+    if let Some(extension_doc) = extension_api_doc {
+        app = app.merge(
+            SwaggerUi::new("/swagger-ui-ext").url("/api-docs-ext/openapi.json", extension_doc),
+        );
+    }
 
     // RUST_LOG=tower_http=trace
 

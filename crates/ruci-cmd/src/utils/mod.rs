@@ -8,6 +8,9 @@ use serde_value::Value;
 use tokio::sync::mpsc;
 use tracing::info;
 
+#[cfg(feature = "api_server")]
+use utoipa::OpenApi;
+
 pub const WINTUN_DOWNLOAD_LINK: &str = "https://www.wintun.net/builds/wintun-0.14.1.zip";
 
 pub const MMDB_DOWNLOAD_LINK: &str =
@@ -508,116 +511,254 @@ pub fn register_command_apis(
 
     extensions.insert(
         "/api/utils/generate_ca_certificate/{name}".to_string(),
-        get(
-            |axum::extract::Path(name): axum::extract::Path<String>| async {
-                let r = generate_ca_certificate(vec![name], None, None);
-                format!("{r:?}")
-            },
-        ),
+        get(api_generate_ca_certificate),
     );
 
     extensions.insert(
         "/api/utils/generate_certificate/{name}".to_string(),
-        get(
-            |axum::extract::Path(name): axum::extract::Path<String>| async {
-                let r = generate_certificate(vec![name]);
-                format!("{r:?}")
-            },
-        ),
+        get(api_generate_certificate),
     );
 
     extensions.insert(
         "/api/utils/download/webui".to_string(),
-        get(|| async {
-            let r = download_webui().await;
-            format!("{r:?}")
-        }),
+        get(api_download_webui),
     );
 
     extensions.insert(
         "/api/utils/download/mmdb".to_string(),
-        get(|| async {
-            let r = download_wintun().await;
-            format!("{r:?}")
-        }),
+        get(api_download_mmdb),
     );
 
     extensions.insert(
         "/api/utils/download/wintun".to_string(),
-        get(|| async {
-            let r = download_mmdb().await;
-            format!("{r:?}")
-        }),
+        get(api_download_wintun),
     );
 
     extensions.insert(
         "/api/utils/trojan_hash/{password}".to_string(),
-        get(
-            |axum::extract::Path(password): axum::extract::Path<String>| async move {
-                calcu_trojan_hash_fn(&password)
-            },
-        ),
+        get(api_calcu_trojan_hash),
     );
 
-    extensions.insert(
-        "/api/utils/qr/{text}".to_string(),
-        get(
-            |axum::extract::Path(text): axum::extract::Path<String>| async move {
-                qrcode_of(&text).to_string()
-            },
-        ),
-    );
-
-    #[derive(Deserialize)]
-    pub struct ConvertFormatRequest {
-        pub input_file_name: String,
-        pub output_format: String,
-    }
+    extensions.insert("/api/utils/qr/{text}".to_string(), get(api_print_qrcode));
 
     extensions.insert(
         "/api/utils/convert_format/name".to_string(),
-        post(
-            |axum::Json(params): axum::Json<ConvertFormatRequest>| async move {
-                let input_file = params.input_file_name;
-                let output_format = params.output_format;
-
-                if input_file.is_empty() || output_format.is_empty() {
-                    return "错误: 缺少必要参数 input_file 或 output_format".to_string();
-                }
-
-                let r = convert_format(input_file, output_format).await;
-                format!("{r:?}")
-            },
-        ),
+        post(api_convert_format_by_name),
     );
-
-    #[derive(Deserialize)]
-    pub struct ConvertFormatRequestByContent {
-        pub input_file_name: String,
-        pub input_file_content: String,
-        pub output_format: String,
-    }
 
     extensions.insert(
         "/api/utils/convert_format/content".to_string(),
-        post(
-            |axum::Json(params): axum::Json<ConvertFormatRequestByContent>| async move {
-                let input_file = params.input_file_name;
-                let input_file_c = params.input_file_content;
-                let output_format = params.output_format;
-
-                if input_file.is_empty() || output_format.is_empty()|| input_file_c.is_empty(){
-                    return "错误: 缺少必要参数 input_file_name 或 input_file_content 或 output_format".to_string();
-                }
-
-                let r = convert_format_with_content(input_file,input_file_c, rucimp::utils::default_file_source(), output_format).await;
-                format!("{r:?}")
-            },
-        )
-        ,
+        post(api_convert_format_by_content),
     );
 
     debug!("utils: Registered {} command APIs", extensions.len());
 
     Ok(())
+}
+
+#[cfg(feature = "api_server")]
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct ConvertFormatRequest {
+    pub input_file_name: String,
+    pub output_format: String,
+}
+
+#[cfg(feature = "api_server")]
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct ConvertFormatRequestByContent {
+    pub input_file_name: String,
+    pub input_file_content: String,
+    pub output_format: String,
+}
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        api_generate_ca_certificate,
+        api_generate_certificate,
+        api_download_webui,
+        api_download_mmdb,
+        api_download_wintun,
+        api_calcu_trojan_hash,
+        api_print_qrcode,
+        api_convert_format_by_name,
+        api_convert_format_by_content
+    ),
+    components(
+        schemas(ConvertFormatRequest, ConvertFormatRequestByContent)
+    ),
+    tags(
+        (name = "utils", description = "Ruci Utility APIs")
+    )
+)]
+pub struct ApiDoc;
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    get,
+    path = "/api/utils/generate_ca_certificate/{name}",
+    tag = "utils",
+    params(
+        ("name" = String, Path, description = "Certificate name")
+    ),
+    responses(
+        (status = 200, description = "Generate CA certificate", body = String)
+    )
+)]
+pub async fn api_generate_ca_certificate(
+    axum::extract::Path(name): axum::extract::Path<String>,
+) -> String {
+    let r = generate_ca_certificate(vec![name], None, None);
+    format!("{r:?}")
+}
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    get,
+    path = "/api/utils/generate_certificate/{name}",
+    tag = "utils",
+    params(
+        ("name" = String, Path, description = "Certificate name")
+    ),
+    responses(
+        (status = 200, description = "Generate certificate", body = String)
+    )
+)]
+pub async fn api_generate_certificate(
+    axum::extract::Path(name): axum::extract::Path<String>,
+) -> String {
+    let r = generate_certificate(vec![name]);
+    format!("{r:?}")
+}
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    get,
+    path = "/api/utils/download/webui",
+    tag = "utils",
+    responses(
+        (status = 200, description = "Download WebUI", body = String)
+    )
+)]
+pub async fn api_download_webui() -> String {
+    let r = download_webui().await;
+    format!("{r:?}")
+}
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    get,
+    path = "/api/utils/download/mmdb",
+    tag = "utils",
+    responses(
+        (status = 200, description = "Download MMDB", body = String)
+    )
+)]
+pub async fn api_download_mmdb() -> String {
+    let r = download_mmdb().await;
+    format!("{r:?}")
+}
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    get,
+    path = "/api/utils/download/wintun",
+    tag = "utils",
+    responses(
+        (status = 200, description = "Download Wintun", body = String)
+    )
+)]
+pub async fn api_download_wintun() -> String {
+    let r = download_wintun().await;
+    format!("{r:?}")
+}
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    get,
+    path = "/api/utils/trojan_hash/{password}",
+    tag = "utils",
+    params(
+        ("password" = String, Path, description = "Password to hash")
+    ),
+    responses(
+        (status = 200, description = "Calculate Trojan hash", body = String)
+    )
+)]
+pub async fn api_calcu_trojan_hash(
+    axum::extract::Path(password): axum::extract::Path<String>,
+) -> String {
+    calcu_trojan_hash_fn(&password)
+}
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    get,
+    path = "/api/utils/qr/{text}",
+    tag = "utils",
+    params(
+        ("text" = String, Path, description = "Text to convert to QR code")
+    ),
+    responses(
+        (status = 200, description = "Generate QR code", body = String)
+    )
+)]
+pub async fn api_print_qrcode(axum::extract::Path(text): axum::extract::Path<String>) -> String {
+    qrcode_of(&text).to_string()
+}
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    post,
+    path = "/api/utils/convert_format/name",
+    tag = "utils",
+    request_body = ConvertFormatRequest,
+    responses(
+        (status = 200, description = "Convert format by file name", body = String)
+    )
+)]
+pub async fn api_convert_format_by_name(
+    axum::Json(params): axum::Json<ConvertFormatRequest>,
+) -> String {
+    let input_file = params.input_file_name;
+    let output_format = params.output_format;
+
+    if input_file.is_empty() || output_format.is_empty() {
+        return "错误: 缺少必要参数 input_file 或 output_format".to_string();
+    }
+
+    let r = convert_format(input_file, output_format).await;
+    format!("{r:?}")
+}
+
+#[cfg(feature = "api_server")]
+#[utoipa::path(
+    post,
+    path = "/api/utils/convert_format/content",
+    tag = "utils",
+    request_body = ConvertFormatRequestByContent,
+    responses(
+        (status = 200, description = "Convert format by content", body = String)
+    )
+)]
+pub async fn api_convert_format_by_content(
+    axum::Json(params): axum::Json<ConvertFormatRequestByContent>,
+) -> String {
+    let input_file = params.input_file_name;
+    let input_file_c = params.input_file_content;
+    let output_format = params.output_format;
+
+    if input_file.is_empty() || output_format.is_empty() || input_file_c.is_empty() {
+        return "错误: 缺少必要参数 input_file_name 或 input_file_content 或 output_format"
+            .to_string();
+    }
+
+    let r = convert_format_with_content(
+        input_file,
+        input_file_c,
+        rucimp::utils::default_file_source(),
+        output_format,
+    )
+    .await;
+    format!("{r:?}")
 }
