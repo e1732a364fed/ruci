@@ -27,7 +27,6 @@ ruci 将任意代理行为分割成若干个不可再分的
 */
 
 pub mod acc;
-pub mod acc2;
 
 pub mod counter;
 pub mod fileio;
@@ -62,7 +61,10 @@ use std::{
 
 use self::addr_conn::AddrConn;
 
-/// 一种用于表示 Mapper 的生成的数据的类型
+/// a data type represents what a Mapper might generate.
+///
+/// The data must be clonable
+///
 #[derive(Debug, Clone)]
 pub enum AnyData {
     Bool(bool),
@@ -235,7 +237,7 @@ pub enum ProxyBehavior {
 
 /// Mapper: Stream Mapping Function,
 ///
-/// Generally maps just do a handshake in the old Stream, then forms a new Stream
+/// Generally maps just do a handshake in the old Stream, then perhaps forms a/some new Stream
 ///
 /// After encode/decode data in the new Stream,it will be passed to next Mapper
 ///

@@ -1,9 +1,9 @@
 /*!
-* provide facilities for accumulating static chain
+* provide facilities for accumulating dynamic chain
 
-trait: MIter
+trait: MIter, DMIter
 
-struct AccumulateResult, AccumulateParams
+struct DynMIterWrapper, AccumulateResult, AccumulateParams
 
 * function accumulate , accumulate_from_start
 */
@@ -17,6 +17,37 @@ impl<T: Iterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug> MIter 
 dyn_clone::clone_trait_object!(MIter);
 
 pub type MIterBox = Box<dyn MIter>;
+
+/// dynamic Iterator, can get different next item if the
+/// input data is different
+pub trait DynIterator {
+    type Item;
+
+    fn next(&mut self, data: Option<Vec<OptVecData>>) -> Option<Self::Item>;
+    fn requires_no_data(&self) -> bool {
+        false
+    }
+}
+
+pub trait DMIter: DynIterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug {}
+impl<T: DynIterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug> DMIter for T {}
+dyn_clone::clone_trait_object!(DMIter);
+
+pub type DMIterBox = Box<dyn DMIter>;
+
+pub struct DynMIterWrapper(MIterBox);
+
+impl DynIterator for DynMIterWrapper {
+    type Item = Arc<MapperBox>;
+
+    fn next(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Self::Item> {
+        self.0.next()
+    }
+
+    fn requires_no_data(&self) -> bool {
+        true
+    }
+}
 
 pub struct AccumulateResult {
     pub a: Option<net::Addr>,
