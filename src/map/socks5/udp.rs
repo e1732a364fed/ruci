@@ -153,7 +153,6 @@ impl AsyncReadAddr for Conn {
 #[cfg(test)]
 mod test {
 
-    use anyhow::Ok;
     use bytes::BytesMut;
     use tokio::{net::UdpSocket, sync::mpsc};
 
@@ -207,7 +206,7 @@ mod test {
 
             println!("try w2 ok, {:?}", r);
 
-            Ok(())
+            anyhow::Ok(())
         });
 
         let nu = UdpSocket::bind("127.0.0.1:12345").await?;

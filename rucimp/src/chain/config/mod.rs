@@ -175,6 +175,7 @@ pub struct OutMapperConfigChain {
 pub enum InMapperConfig {
     Echo,             //单流消耗器
     Stdio(Ext),       //单流发生器
+    FileIO(File),     //单流发生器
     Dialer(String),   //单流发生器
     Listener(String), //多流发生器
     Adder(i8),
@@ -191,6 +192,7 @@ pub enum OutMapperConfig {
     Blackhole,      //单流消耗器
     Direct,         //单流发生器
     Stdio(Ext),     //单流发生器
+    FileIO(File),   //单流发生器
     Dialer(String), //单流发生器
     Adder(i8),
     Counter,
@@ -216,6 +218,14 @@ impl Ext {
         }
         extf
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct File {
+    i: String,
+    o: String,
+
+    ext: Option<Ext>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -260,6 +270,14 @@ impl ToMapper for InMapperConfig {
                 let mut s = ruci::map::stdio::Stdio::new();
                 s.set_ext_fields(Some(extf));
                 s
+            }
+            InMapperConfig::FileIO(f) => {
+                let s = ruci::map::file::FileIO {
+                    iname: f.i.clone(),
+                    oname: f.o.clone(),
+                    ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
+                };
+                Box::new(s)
             }
             InMapperConfig::Dialer(td_str) => {
                 let a = net::Addr::from_network_addr_str(td_str).expect("network_ip_addr is valid");
@@ -341,6 +359,14 @@ impl ToMapper for OutMapperConfig {
                 let mut s = ruci::map::stdio::Stdio::new();
                 s.set_ext_fields(Some(extf));
                 s
+            }
+            OutMapperConfig::FileIO(f) => {
+                let s = ruci::map::file::FileIO {
+                    iname: f.i.clone(),
+                    oname: f.o.clone(),
+                    ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
+                };
+                Box::new(s)
             }
             OutMapperConfig::Blackhole => Box::new(ruci::map::network::BlackHole::default()),
 
