@@ -16,10 +16,141 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
     Ok(c)
 }
 
+/*
+////////////////////////////////////////////////////////////////
+
+         rust -> lua UserData 的包装
+
+////////////////////////////////////////////////////////////////
+*/
+
+use mlua::{UserData, UserDataMethods};
+
+#[repr(transparent)]
+pub struct AnyDataLuaWrapper(ruci::map::AnyData);
+
+//todo: 都用clone 太慢了, 加 add_method_mut
+
+impl UserData for AnyDataLuaWrapper {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("get_string", |_, this, ()| match &this.0 {
+            AnyData::String(s) => Ok(s.to_owned()),
+            _ => Err(LuaError::DeserializeError("can't get string".to_string())),
+        });
+
+        methods.add_method("get_u64", |_, this, ()| match &this.0 {
+            AnyData::U64(u) => Ok(*u),
+            AnyData::AU64(au) => Ok(au.load(std::sync::atomic::Ordering::Relaxed)),
+            _ => Err(LuaError::DeserializeError("can't get u64".to_string())),
+        });
+    }
+}
+
+pub struct VecOfAnyDataLuaWrapper(Vec<ruci::map::AnyData>);
+
+impl UserData for VecOfAnyDataLuaWrapper {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("len", |_, this, ()| Ok(this.0.len()));
+
+        methods.add_method("get", |_, this, index: usize| {
+            let x = this.0.get(index);
+            match x {
+                Some(d) => Ok(AnyDataLuaWrapper(d.clone())),
+                None => Err(LuaError::DeserializeError("can't get u64".to_string())),
+            }
+        });
+    }
+}
+
+pub struct OptVecDataLuaWrapper(OptVecData);
+
+impl UserData for OptVecDataLuaWrapper {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("has_value", |_, this, ()| Ok(this.0.is_some()));
+
+        methods.add_method("get_type", |_, this, ()| match &this.0 {
+            Some(vd) => match vd {
+                VecAnyData::Data(_) => Ok("data"),
+                VecAnyData::Vec(_) => Ok("vec"),
+            },
+            None => Ok("None"),
+        });
+
+        methods.add_method("get_data", |_, this, ()| match &this.0 {
+            Some(vd) => match vd {
+                VecAnyData::Data(d) => Ok(AnyDataLuaWrapper(d.clone())),
+                VecAnyData::Vec(_) => Err(LuaError::DeserializeError("can't get data".to_string())),
+            },
+            None => Err(LuaError::DeserializeError("can't get data".to_string())),
+        });
+
+        methods.add_method("get_vec", |_, this, ()| match &this.0 {
+            Some(vd) => match vd {
+                VecAnyData::Data(_) => Err(LuaError::DeserializeError("can't get vec".to_string())),
+                VecAnyData::Vec(v) => Ok(VecOfAnyDataLuaWrapper(v.clone())),
+            },
+            None => Err(LuaError::DeserializeError("can't get vec".to_string())),
+        });
+    }
+}
+
+/// 对 dynamic::NextSelector 的 next_index 方法 的 data 参数
+/// 的类型的包装
+pub struct OptVecOptVecDataLuaWrapper(Option<Vec<OptVecData>>);
+
+impl UserData for OptVecOptVecDataLuaWrapper {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("is_some", |_, this, ()| Ok(this.0.is_some()));
+
+        methods.add_method("len", |_, this, ()| Ok(this.0.as_ref().unwrap().len()));
+
+        methods.add_method("get", |_, this, index: usize| {
+            let x = this.0.as_ref().unwrap().get(index);
+            match x {
+                Some(d) => Ok(OptVecDataLuaWrapper(d.clone())),
+                None => Err(LuaError::DeserializeError("can't get u64".to_string())),
+            }
+        });
+    }
+}
+
+/*
+////////////////////////////////////////////////////////////////
+
+        end of rust -> lua UserData 的包装
+
+////////////////////////////////////////////////////////////////
+*/
+
 #[allow(unused)]
 #[cfg(test)]
 mod test {
+
+    #[allow(unused)]
+    #[test]
+    fn test_transmute() {
+        use std::mem;
+
+        // 定义结构体 A 和 B
+        #[derive(Debug)]
+        struct A {
+            i: i32,
+        };
+
+        #[repr(transparent)]
+        #[derive(Debug)]
+        struct B(A);
+
+        // 假设 vec_a 是 Vec<A> 类型的向量
+        let vec_a: Vec<A> = vec![A { i: 1 }, A { i: 1 }, A { i: 1 }];
+
+        // 使用 transmute 将 Vec<A> 转换为 Vec<B>
+        let vec_b: Vec<B> = unsafe { mem::transmute(vec_a) };
+        println!("{:?}", vec_b)
+    }
+
     use std::net::TcpListener;
+    use std::sync::atomic::AtomicU64;
 
     use super::*;
     use mlua::prelude::*;
@@ -328,6 +459,117 @@ mod test {
 
         //println!("{:#?}", c.get_default_and_outbounds_map());
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_pass_in_anydata() -> Result<()> {
+        use std::rc::Rc;
+
+        let sa = AnyData::String(String::from("mydata"));
+        let w = AnyDataLuaWrapper(sa);
+
+        let sa2 = AnyData::U64(321);
+        let w2 = AnyDataLuaWrapper(sa2);
+
+        let sa21 = AnyData::AU64(Arc::new(AtomicU64::new(321)));
+        let w21 = AnyDataLuaWrapper(sa21);
+
+        let sa22 = AnyData::AU64(Arc::new(AtomicU64::new(321)));
+
+        let va = Some(VecAnyData::Data(sa22));
+        let vva = Some(vec![va]);
+        let vvaw = OptVecOptVecDataLuaWrapper(vva);
+
+        let lua = Lua::new();
+        let lua = Rc::new(lua);
+
+        use mlua::chunk;
+        use mlua::Function;
+
+        let handler_fn = lua
+            .load(chunk! {
+                function(userdata1)
+                    print("datai is "..userdata1:get_string())
+
+                end
+            })
+            .eval::<Function>()
+            .expect("cannot create Lua handler");
+
+        let handler_fn2 = lua
+            .load(chunk! {
+                function(userdata1)
+                    print("datai is "..userdata1:get_u64())
+
+                end
+            })
+            .eval::<Function>()
+            .expect("cannot create Lua handler");
+
+        let handler_fn3 = lua
+            .load(chunk! {
+                function(userdata1)
+                    print(userdata1:is_some())
+                    print(userdata1:len())
+
+                    x = userdata1:get(0)
+                    print(x:has_value())
+                    print(x:get_type())
+                    y = x:get_data()
+                    print(y:get_u64())
+
+                end
+            })
+            .eval::<Function>()
+            .expect("cannot create Lua handler");
+
+        let handler_fn4 = lua
+            .load(chunk! {
+                function(this_index, userdata1)
+                    print(userdata1:is_some())
+                    print(userdata1:len())
+
+                    x = userdata1:get(0)
+                    print(x:has_value())
+                    print(x:get_type())
+                    y = x:get_data()
+                    print(y:get_u64())
+
+                    return this_index + 1
+                end
+            })
+            .eval::<Function>()
+            .expect("cannot create Lua handler");
+
+        let handler = lua
+            .create_registry_value(handler_fn)
+            .expect("cannot store Lua handler");
+
+        let handler: Function = lua
+            .registry_value(&handler)
+            .expect("cannot get Lua handler");
+
+        if let Err(err) = handler.call_async::<_, ()>(w).await {
+            eprintln!("{}", err);
+        }
+
+        if let Err(err) = handler_fn2.call_async::<_, ()>(w2).await {
+            eprintln!("{}", err);
+        }
+
+        if let Err(err) = handler_fn2.call_async::<_, ()>(w21).await {
+            eprintln!("{}", err);
+        }
+
+        // if let Err(err) = handler_fn3.call_async::<_, ()>(vvaw).await {
+        //     eprintln!("{}", err);
+        // }
+
+        match handler_fn4.call_async::<_, u64>((1, vvaw)).await {
+            Ok(rst) => println!("{}", rst),
+            Err(err) => eprintln!("{}", err),
+        }
         Ok(())
     }
 
