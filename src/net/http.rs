@@ -204,10 +204,8 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
 
     let mut last = bs.len();
 
-    if !is_proxy {
-        if last > MAX_PARSE_URL_LEN {
-            last = MAX_PARSE_URL_LEN
-        }
+    if !is_proxy && last > MAX_PARSE_URL_LEN {
+        last = MAX_PARSE_URL_LEN
     }
     //如果是代理, 则我们要判断整个请求, 不能漏掉任何部分
 
