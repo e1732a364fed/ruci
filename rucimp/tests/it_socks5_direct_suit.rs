@@ -729,7 +729,7 @@ async fn suit_engine_socks5_direct_and_request() -> std::io::Result<()> {
     let _ = env_logger::try_init();
 
     for i in 0..2 {
-        let r = suit_engine_socks5_direct_and_request_block_or_non_block(i & 2 == 0).await;
+        let r = suit_engine_socks5_direct_and_request_block_or_non_block(i % 2 == 0).await;
         if let Err(e) = r {
             return Err(e);
         }
@@ -741,7 +741,7 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     even: bool,
 ) -> std::io::Result<()> {
     info!(
-        "start suit_engine_socks5_direct_and_request_baidu test, {}",
+        "start suit_engine_socks5_direct_and_request_block_or_non_block test, {}",
         even
     );
 
@@ -755,8 +755,9 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     se.load_config(rucimp::suit::engine::Config { proxy_config: c });
 
     let listen_future = async {
-        info!("try start listen");
         if even {
+            info!("try start listen block");
+
             let r = se.block_run().await;
             //let r = block_on(se.block_run());
             //let r = join!(se.block_run()) ;
@@ -764,6 +765,8 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
 
             info!("r {:?}", r);
         } else {
+            info!("try start listen unblock");
+
             let r = se.run().await;
 
             info!("r {:?}", r);
@@ -779,17 +782,20 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
 
     pin_mut!(listen_future, dial_future);
 
-    select! {
+    loop {
+        select! {
 
-        () = dial_future => {
-            info!("dial finished first, will return , {:?}", se.ti);
-            tokio::time::sleep(Duration::from_millis(400)).await;
-            info!("dial finished first ,print again, {:?}",se.ti);
+            () = dial_future => {
+                info!("dial finished first, will return , {:?}", se.ti);
+                tokio::time::sleep(Duration::from_millis(400)).await;
+                info!("dial finished first ,print again, {:?}",se.ti);
 
-        },
-        () = listen_future => {
-            panic!("listen finished first");
-        },
+                break;
+            },
+            () = listen_future => {
+                info!("listen finished first");
+            },
+        }
     }
 
     //tokio::time::sleep(Duration::from_secs(2)).await;
@@ -819,8 +825,9 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
     se.load_config(rucimp::suit::engine::Config { proxy_config: c });
 
     let listen_future = async {
-        info!("try start listen");
         if even {
+            info!("try start listen block run");
+
             let r = se.block_run().await;
             //let r = block_on(se.block_run());
             //let r = join!(se.block_run()) ;
@@ -828,6 +835,8 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
 
             info!("r {:?}", r);
         } else {
+            info!("try start  listen unblock run");
+
             let r = se.run().await;
 
             info!("r {:?}", r);

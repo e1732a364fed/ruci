@@ -1,4 +1,4 @@
-use futures::join;
+use futures::{join, FutureExt};
 use log::info;
 use ruci::{
     map::{socks5, tls, MapParams, Mapper},
@@ -12,7 +12,7 @@ use rucimp::suit::{
     },
     engine::SuitEngine,
 };
-use std::{env::set_var, io};
+use std::{env::set_var, io, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -52,7 +52,9 @@ async fn f_dial_future_tls_out_adder(
     the_target_name: &str,
     the_target_port: u16,
 ) -> io::Result<()> {
+    tokio::time::sleep(Duration::from_millis(400)).await;
     info!("start run f_dial_future, {}", rid);
+
     let cs = TcpStream::connect((listen_host_str, listen_port))
         .await
         .unwrap();
@@ -119,25 +121,39 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
     );
     se.load_config(rucimp::suit::engine::Config { proxy_config: c });
 
+    let se = &se;
+    //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future
+    // 刚退出就会执行 drop(se), 进而将其内部储存的tx drop掉，进而关闭监听，导致失败
+
     let listen_future = async move {
         info!("try start listen");
 
         let r = se.run().await;
 
-        info!("r {:?}", r);
+        info!("listenr {:?}", r);
     };
 
-    let listen_handle = task::spawn(listen_future);
-    let dialh = task::spawn(f_dial_future_tls_out_adder(
-        0,
-        "127.0.0.1",
-        port,
-        TARGET_NAME,
-        TARGET_PORT,
-    ));
+    let listen_future = listen_future.fuse();
+    let dialh = f_dial_future_tls_out_adder(0, "127.0.0.1", port, TARGET_NAME, TARGET_PORT).fuse();
 
-    let x = join!(listen_handle, dialh);
+    futures::pin_mut!(listen_future, dialh);
 
-    info!("end, {:?}", x);
+    loop {
+        futures::select! {
+
+            r = dialh => {
+                info!("dial finished first, will return ,{:?}, {:?}",r, se.ti);
+                tokio::time::sleep(Duration::from_millis(400)).await;
+                info!("dial finished first ,print again, {:?}",se.ti);
+
+                break;
+            },
+            () = listen_future => {
+                info!("listen finished first");
+            },
+        }
+    }
+
+    info!("end,",);
     Ok(())
 }
