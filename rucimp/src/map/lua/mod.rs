@@ -118,6 +118,16 @@ impl UserData for WritePollResult {
             })
         });
 
+        methods.add_async_method_mut("get_err", |_, this, ()| async move {
+            Ok(match &this.0 {
+                Poll::Ready(r) => match r {
+                    Ok(_) => String::new(),
+                    Err(e) => e.to_string(),
+                },
+                Poll::Pending => String::new(),
+            })
+        });
+
         methods.add_async_method_mut("get_n", |_, this, ()| async move {
             Ok(match &this.0 {
                 Poll::Ready(r) => match r {
@@ -141,6 +151,16 @@ impl UserData for EmptyPollResult {
             Ok(match &this.0 {
                 Poll::Ready(r) => r.is_err(),
                 Poll::Pending => false,
+            })
+        });
+
+        methods.add_async_method_mut("get_err", |_, this, ()| async move {
+            Ok(match &this.0 {
+                Poll::Ready(r) => match r {
+                    Ok(_) => String::new(),
+                    Err(e) => e.to_string(),
+                },
+                Poll::Pending => String::new(),
             })
         });
     }
@@ -237,9 +257,7 @@ impl UserData for RustConn {
 
         methods.add_async_method_mut("read", |lua, mut this, size| async move {
             let mut buf = vec![0; size];
-            // debug!("reading...");
             let n = this.conn.read(&mut buf).await?;
-            // debug!("read returned");
 
             buf.truncate(n);
 
@@ -259,7 +277,6 @@ impl UserData for RustConn {
 
         methods.add_async_method_mut("flush", |_, mut this, ()| async move {
             this.conn.flush().await?;
-            // debug!("flush ok");
             Ok(())
         });
 
@@ -305,12 +322,9 @@ impl UserData for RustConn {
                 assert!(!buf_void.is_null());
 
                 let cx = unsafe { &mut *(cx_void as *mut Context<'_>) };
-
                 let rb = unsafe { &mut *(buf_void as *mut ReadBuf<'_>) };
 
-                // debug!("reading...");
                 let r = this.conn.as_mut().poll_read(cx, rb);
-                // debug!("read returned");
 
                 Ok(EmptyPollResult(r))
             },
@@ -382,14 +396,10 @@ impl AsyncWrite for LuaConn {
         let pr: Poll<Result<(), LuaError>> = Future::poll(std::pin::pin!(f), cx);
 
         match pr {
-            Poll::Ready(r) => {
-                // debug!("flush ready {r:?}");
-
-                match r {
-                    Ok(_) => Poll::Ready(Ok(())),
-                    Err(e) => Poll::Ready(Err(io::Error::other(e))),
-                }
-            }
+            Poll::Ready(r) => match r {
+                Ok(_) => Poll::Ready(Ok(())),
+                Err(e) => Poll::Ready(Err(io::Error::other(e))),
+            },
             Poll::Pending => Poll::Pending,
         }
     }
@@ -398,7 +408,6 @@ impl AsyncWrite for LuaConn {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<(), std::io::Error>> {
-        // debug!("shutdown called");
         let close_f = &self.close_f;
 
         let raw_ptr = cx as *mut Context<'_> as *mut c_void;
@@ -432,20 +441,15 @@ impl Name for LuaMap {
     }
 }
 
-#[async_trait]
-impl Map for LuaMap {
-    async fn maps(
-        &self,
-        cid: CID,
-        behavior: map::ProxyBehavior,
-        params: map::MapParams,
-    ) -> MapResult {
+impl LuaMap {
+    /// 向 lua 插入 若干函数，并提取出 handshake 函数
+    fn new_lua(&self, cid: &CID) -> (Lua, LuaFunction) {
         // 每一个 maps 调用都要使用全新的 Lua State，因为 Lua本身不支持真正的多线程，
         // 但 maps却是 多线程 调用的，同一时间可能有很多个 maps 调用
 
         let lua = Lua::new();
         let _: () = lua
-            .load(self.lua_text.clone())
+            .load(&self.lua_text)
             .eval()
             .context("eval lua failed")
             .unwrap();
@@ -468,12 +472,55 @@ impl Map for LuaMap {
             .unwrap();
         lua.globals().set("Wrap_read_buf", f).unwrap();
 
+        let cid_v2 = cid.to_string();
+        let cid_v3 = cid.to_string();
+        let cid_v4 = cid.to_string();
+
+        let f = lua
+            .create_function(move |_, s: BString| {
+                tracing::debug!("{s}, cid={cid_v2}");
+                Ok(())
+            })
+            .unwrap();
+        lua.globals().set("Debug_print", f).unwrap();
+
+        let f = lua
+            .create_function(move |_, s: BString| {
+                tracing::info!("{s}, cid={cid_v4}");
+                Ok(())
+            })
+            .unwrap();
+        lua.globals().set("Info_print", f).unwrap();
+
+        let f = lua
+            .create_function(move |_, s: BString| {
+                tracing::warn!("{s}, cid={cid_v3}");
+                Ok(())
+            })
+            .unwrap();
+        lua.globals().set("Warn_print", f).unwrap();
+
+        (lua, handshake_f)
+    }
+}
+
+#[async_trait]
+impl Map for LuaMap {
+    async fn maps(
+        &self,
+        cid: CID,
+        behavior: map::ProxyBehavior,
+        params: map::MapParams,
+    ) -> MapResult {
+        let (lua, handshake_f) = self.new_lua(&cid);
+
         match params.c {
             Stream::Conn(c) => {
                 let a = match params.a {
                     Some(a) => AddrWrapper(a, false),
                     None => AddrWrapper(Addr::default(), true),
                 };
+                let cid_v = cid.to_string();
 
                 let conn_v = RustConn { conn: Box::pin(c) };
 
@@ -481,8 +528,6 @@ impl Map for LuaMap {
                     Some(b) => BytesMutWrapper(b, false),
                     None => BytesMutWrapper(BytesMut::new(), true),
                 };
-
-                let cid_v = cid.to_string();
 
                 let bi: usize = behavior.into(); // 将 behavior enum 传成数字
 
@@ -512,8 +557,13 @@ impl Map for LuaMap {
                                 let b: RustConn = any_user_data.take().unwrap();
                                 Box::new(b.conn)
                             }
+                            LuaValue::Error(error) => return MapResult::from_e(error),
 
-                            _ => todo!(),
+                            _ => {
+                                return MapResult::err_str(
+                                    "got c from lua not of table/userdata type",
+                                )
+                            }
                         };
 
                         //a
@@ -531,8 +581,12 @@ impl Map for LuaMap {
                                 let a: AddrWrapper = any_user_data.take().unwrap();
                                 a.to_opt_addr()
                             }
-                            LuaValue::Error(_error) => todo!(),
-                            _ => todo!(),
+                            LuaValue::Error(error) => return MapResult::from_e(error),
+                            _ => {
+                                return MapResult::err_str(
+                                    "got a from lua not of nil/string/userdata type",
+                                )
+                            }
                         };
 
                         //b
@@ -542,13 +596,16 @@ impl Map for LuaMap {
                                 let bs: &[u8] = &ls.as_bytes();
                                 Some(BytesMut::from(bs))
                             }
-                            LuaValue::Table(_table) => todo!(),
                             LuaValue::UserData(any_user_data) => {
                                 let b: BytesMutWrapper = any_user_data.take().unwrap();
                                 b.to_opt_bytesmut()
                             }
-                            LuaValue::Error(_error) => todo!(),
-                            _ => todo!(),
+                            LuaValue::Error(error) => return MapResult::from_e(error),
+                            _ => {
+                                return MapResult::err_str(
+                                    "got b from lua not of nil/string/userdata type",
+                                )
+                            }
                         };
 
                         MapResult::new_c(c).a(a).b(b).build()

@@ -1,6 +1,6 @@
-local inspect = require("inspect")
+-- local inspect = require("inspect")
 
---模仿 math_add 包的操作。在 client 端 写时+add_num , 在 server 端 读时 -add_num
+--模仿 ruci::map::math::Adder 的行为：在 client 端 写时+add_num , 在 server 端 读时 -add_num
 
 local add_num = 1
 
@@ -11,6 +11,8 @@ local function read(cx, buf)
         if result:is_pending() then
             return -1
         elseif result:is_err() then
+            Debug_print("lua read got err: " .. result:get_err())
+
             return -2
         else
             return 0
@@ -24,6 +26,8 @@ local function read(cx, buf)
             return -1
         elseif result:is_err() then
             b:drop()
+            Debug_print("lua read got err: " .. result:get_err())
+
             return -2
         else
             local n = b:filled_len()
@@ -65,6 +69,8 @@ local function write(cx, s)
     if result:is_pending() then
         return -1
     elseif result:is_err() then
+        Debug_print("lua write got err: " .. result:get_err())
+
         return -2
     else
         local n = result:get_n()
@@ -78,6 +84,8 @@ local function close(cx)
     if result:is_pending() then
         return -1
     elseif result:is_err() then
+        Debug_print("lua close got err: " .. result:get_err())
+
         return -2
     else
         return 0
@@ -90,6 +98,7 @@ local function flush(cx)
     if result:is_pending() then
         return -1
     elseif result:is_err() then
+        Debug_print("lua flush got err: " .. result:get_err())
         return -2
     else
         return 0
