@@ -8,15 +8,16 @@ use std::env;
 use chrono::{DateTime, Utc};
 use log::warn;
 use ruci::relay::*;
-use rucimp::{cmd_common::*, modes::chain::engine::Engine};
+use rucimp::{modes::chain::engine::Engine, utils::*};
 use tokio::{
     fs::{File, OpenOptions},
     io::AsyncWriteExt,
 };
+mod shared;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    print_env_version("example: chain_trace_and_record_newconn");
+    shared::print_env_version("example: chain_trace_and_record_newconn");
 
     let default_fn = "local.lua".to_string();
 

@@ -160,7 +160,12 @@ pub fn print_env_version(ll: Option<Level>) {
     }
 
     set_var(RL, l);
-    let _ = env_logger::try_init();
+
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .init();
 
     println!(
         "Log Level(env): {:?}",

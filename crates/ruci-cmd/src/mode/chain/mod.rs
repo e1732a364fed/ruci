@@ -1,7 +1,7 @@
 use log::info;
 use rucimp::{
-    cmd_common::{wait_close_sig, wait_close_sig_with_closer},
     modes::chain::engine::Engine,
+    utils::{wait_close_sig, wait_close_sig_with_closer},
 };
 use tokio::sync::mpsc;
 
@@ -30,7 +30,7 @@ pub(crate) async fn run(
     {
         use anyhow::Context;
 
-        let contents = rucimp::cmd_common::try_get_filecontent("local.lua", Some(f))
+        let contents = rucimp::utils::try_get_filecontent("local.lua", Some(f))
             .with_context(|| format!("run chain engine try get file {} failed", f))?;
 
         if args.infinite {

@@ -10,7 +10,7 @@ pub mod modes;
 pub mod net;
 pub mod user;
 
-pub mod cmd_common;
+pub mod utils;
 
 #[cfg(feature = "route")]
 pub mod route;

@@ -6,15 +6,17 @@ use std::env;
 
 use log::warn;
 use rucimp::{
-    cmd_common::*,
     modes::suit::{config::adapter::*, engine::SuitEngine},
+    utils::*,
 };
+
+mod shared;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     //it's the second impl version of suit
 
-    print_env_version("suit2");
+    shared::print_env_version("suit2");
 
     let default_fn = "local.suit.toml".to_string();
 

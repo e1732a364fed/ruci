@@ -1796,7 +1796,6 @@ dependencies = [
  "bytesize",
  "chrono",
  "clap",
- "env_logger",
  "futures",
  "log",
  "parking_lot",

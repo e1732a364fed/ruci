@@ -5,11 +5,11 @@
 
 use std::env;
 
-use rucimp::{cmd_common::*, modes::chain::engine::Engine};
-
+use rucimp::{modes::chain::engine::Engine, utils::*};
+mod shared;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    print_env_version("example: chain");
+    shared::print_env_version("example: chain");
 
     let default_fn = "local.lua".to_string();
 
