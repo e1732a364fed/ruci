@@ -238,9 +238,9 @@ mod test {
     ///
     #[tokio::test]
     async fn test_addrconn_cp() -> io::Result<()> {
-        let u = UdpSocket::bind("127.0.0.1:12345").await?;
+        let u = UdpSocket::bind("127.0.0.1:12346").await?;
 
-        let ad2_str = "127.0.0.1:23456";
+        let ad2_str = "127.0.0.1:23457";
         let u2 = UdpSocket::bind(ad2_str).await?;
 
         let (_r, mut w) = duplicate(u);
