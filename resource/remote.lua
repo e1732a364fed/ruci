@@ -21,7 +21,7 @@ dial = { Dialer =  "tcp://0.0.0.0:10801" }
 dial_trojan = { dial, { Trojan = "mypassword"} }
 
 
-out_stdio_chain = { { Stdio="" } }
+out_stdio_chain = { { Stdio={} } }
 
 direct_out_chain = { "Direct" }
 

@@ -164,7 +164,17 @@ config = {
 -- fileio -> trojan_out
 
     inbounds = { 
-        {chain = { { Fileio={ i= "local.lua", o = "testfile.txt" } }  } , tag = "listen1"} ,
+        {
+            chain = { 
+                { 
+                    Fileio={ 
+                          i= "local.suit.toml", o = "testfile.txt", 
+                          sleep_interval = 500, bytes_per_turn = 10, 
+                            ext = { fixed_target_addr= "fake.com:80" } 
+                    } 
+                }  
+            } , tag = "listen1"
+        } ,
     },
 
     outbounds = { { tag="dial1", chain = dial_trojan_chain } }

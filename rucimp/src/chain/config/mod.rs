@@ -8,7 +8,7 @@ pub mod lua;
 #[cfg(feature = "lua")]
 pub mod dynamic;
 
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 
 use bytes::BytesMut;
 use log::warn;
@@ -175,7 +175,7 @@ pub struct OutMapperConfigChain {
 pub enum InMapperConfig {
     Echo,             //单流消耗器
     Stdio(Ext),       //单流发生器
-    FileIO(File),     //单流发生器
+    Fileio(File),     //单流发生器
     Dialer(String),   //单流发生器
     Listener(String), //多流发生器
     Adder(i8),
@@ -192,7 +192,7 @@ pub enum OutMapperConfig {
     Blackhole,      //单流消耗器
     Direct,         //单流发生器
     Stdio(Ext),     //单流发生器
-    FileIO(File),   //单流发生器
+    Fileio(File),   //单流发生器
     Dialer(String), //单流发生器
     Adder(i8),
     Counter,
@@ -224,6 +224,9 @@ impl Ext {
 pub struct File {
     i: String,
     o: String,
+
+    sleep_interval: Option<u64>,
+    bytes_per_turn: Option<usize>,
 
     ext: Option<Ext>,
 }
@@ -271,10 +274,12 @@ impl ToMapper for InMapperConfig {
                 s.set_ext_fields(Some(extf));
                 s
             }
-            InMapperConfig::FileIO(f) => {
+            InMapperConfig::Fileio(f) => {
                 let s = ruci::map::file::FileIO {
                     iname: f.i.clone(),
                     oname: f.o.clone(),
+                    sleep_interval: f.sleep_interval.map(|si| Duration::from_millis(si)),
+                    bytes_per_turn: f.bytes_per_turn,
                     ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
                 };
                 Box::new(s)
@@ -360,10 +365,12 @@ impl ToMapper for OutMapperConfig {
                 s.set_ext_fields(Some(extf));
                 s
             }
-            OutMapperConfig::FileIO(f) => {
+            OutMapperConfig::Fileio(f) => {
                 let s = ruci::map::file::FileIO {
                     iname: f.i.clone(),
                     oname: f.o.clone(),
+                    sleep_interval: f.sleep_interval.map(|si| Duration::from_millis(si)),
+                    bytes_per_turn: f.bytes_per_turn,
                     ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
                 };
                 Box::new(s)
