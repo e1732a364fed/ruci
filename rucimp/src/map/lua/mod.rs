@@ -6,6 +6,7 @@ In order to let lua take full use of rust code, we have to wrap everything for l
 
 use std::future::Future;
 use std::io;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::task::Poll;
 
@@ -29,7 +30,6 @@ use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
-use tracing::debug;
 
 /// 被用于 infinite.rs 中 给 lua 添加 Create_out_map 和 Create_in_map 函数.
 #[derive(Clone)]
@@ -95,8 +95,56 @@ impl UserData for BytesMutWrapper {
     }
 }
 
+pub struct WritePollResult(pub Poll<std::io::Result<usize>>);
+
+impl UserData for WritePollResult {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_async_method_mut("is_pending", |_, this, ()| async move {
+            Ok(this.0.is_pending())
+        });
+
+        methods.add_async_method_mut("is_err", |_, this, ()| async move {
+            Ok(match &this.0 {
+                Poll::Ready(r) => match r {
+                    Ok(_) => false,
+                    Err(_) => true,
+                },
+                Poll::Pending => false,
+            })
+        });
+
+        methods.add_async_method_mut("get_n", |_, this, ()| async move {
+            Ok(match &this.0 {
+                Poll::Ready(r) => match r {
+                    Ok(n) => *n,
+                    Err(_) => 0,
+                },
+                Poll::Pending => 0,
+            })
+        });
+    }
+}
+
+pub struct EmptyPollResult(pub Poll<io::Result<()>>);
+impl UserData for EmptyPollResult {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_async_method_mut("is_pending", |_, this, ()| async move {
+            Ok(this.0.is_pending())
+        });
+
+        methods.add_async_method_mut("is_err", |_, this, ()| async move {
+            Ok(match &this.0 {
+                Poll::Ready(r) => r.is_err(),
+                Poll::Pending => false,
+            })
+        });
+    }
+}
+
 /// 将 ruci::net::Conn 包装 并提供给 lua 使用
-pub struct RustConn(pub ruci::net::Conn);
+pub struct RustConn {
+    pub conn: Pin<ruci::net::Conn>,
+}
 
 impl UserData for RustConn {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
@@ -104,9 +152,9 @@ impl UserData for RustConn {
 
         methods.add_async_method_mut("read", |lua, mut this, size| async move {
             let mut buf = vec![0; size];
-            debug!("reading...");
-            let n = this.0.read(&mut buf).await?;
-            debug!("read returned");
+            // debug!("reading...");
+            let n = this.conn.read(&mut buf).await?;
+            // debug!("read returned");
 
             buf.truncate(n);
 
@@ -115,115 +163,136 @@ impl UserData for RustConn {
         });
 
         methods.add_async_method_mut("write", |_, mut this, data: mlua::BString| async move {
-            let n = this.0.write(&data).await?;
+            let n = this.conn.write(&data).await?;
             Ok(n)
         });
 
         methods.add_async_method_mut("close", |_, mut this, ()| async move {
-            this.0.shutdown().await?;
+            this.conn.shutdown().await?;
             Ok(())
         });
 
         methods.add_async_method_mut("flush", |_, mut this, ()| async move {
-            this.0.flush().await?;
+            this.conn.flush().await?;
             // debug!("flush ok");
             Ok(())
         });
+
+        methods.add_function("get_read_buf_filled_len", |_, rb_ll: LuaLightUserData| {
+            let buf_void = rb_ll.0;
+            assert!(!buf_void.is_null());
+
+            let rb = unsafe { &mut *(buf_void as *mut tokio::io::ReadBuf<'_>) };
+
+            Ok(rb.filled().len())
+        });
+
+        methods.add_method_mut("poll_flush", |_, this, cx_ll: LuaLightUserData| {
+            let void = cx_ll.0;
+            assert!(!void.is_null());
+
+            let cx = unsafe { &mut *(void as *mut std::task::Context<'_>) };
+
+            let x = this.conn.as_mut().poll_flush(cx);
+            Ok(EmptyPollResult(x))
+        });
+
+        methods.add_method_mut("poll_close", |_, this, cx_ll: LuaLightUserData| {
+            let void = cx_ll.0;
+            assert!(!void.is_null());
+
+            let cx = unsafe { &mut *(void as *mut std::task::Context<'_>) };
+
+            let x = this.conn.as_mut().poll_shutdown(cx);
+            Ok(EmptyPollResult(x))
+        });
+
+        methods.add_method_mut(
+            "poll_write",
+            |_, this, params: (LuaLightUserData, mlua::BString)| {
+                let cx_void = params.0 .0;
+                assert!(!cx_void.is_null());
+
+                let cx = unsafe { &mut *(cx_void as *mut std::task::Context<'_>) };
+
+                let x = this.conn.as_mut().poll_write(cx, &params.1);
+                Ok(WritePollResult(x))
+            },
+        );
+
+        methods.add_method_mut(
+            "poll_read",
+            |_, this, params: (LuaLightUserData, LuaLightUserData)| {
+                let cx_void = params.0 .0;
+                let buf_void = params.1 .0;
+                assert!(!cx_void.is_null());
+                assert!(!buf_void.is_null());
+
+                let cx = unsafe { &mut *(cx_void as *mut std::task::Context<'_>) };
+
+                let rb = unsafe { &mut *(buf_void as *mut tokio::io::ReadBuf<'_>) };
+
+                // debug!("reading...");
+                let r = this.conn.as_mut().poll_read(cx, rb);
+                // debug!("read returned");
+
+                Ok(EmptyPollResult(r))
+            },
+        );
     }
 }
 
 pub struct LuaConn {
-    lua: Lua,
-    read_key: String,
-    write_key: String,
-    close_key: String,
-    flush_key: String,
-
-    read_future: OptReadF,
-    write_future: OptWriteF,
+    #[allow(unused)]
+    lua: Lua, //就算不使用 lua, 也要带着，如果不带着，就会自动被释放掉, 导致LuaFunction不可用
+    read_f: LuaFunction,
+    write_f: LuaFunction,
+    close_f: LuaFunction,
+    flush_f: LuaFunction,
 }
-
-type OptReadF =
-    Option<std::pin::Pin<Box<dyn Future<Output = Result<LuaString, LuaError>> + Send + Sync>>>;
-
-type OptWriteF =
-    Option<std::pin::Pin<Box<dyn Future<Output = Result<usize, LuaError>> + Send + Sync>>>;
 
 impl AsyncRead for LuaConn {
     fn poll_read(
-        mut self: std::pin::Pin<&mut Self>,
+        self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<std::io::Result<()>> {
-        let mut future = match self.read_future.take() {
-            Some(f) => f,
-            None => {
-                let read_f: LuaFunction = self.lua.globals().get(self.read_key.as_str()).unwrap();
-                let max_len = buf.capacity() - buf.filled().len();
+        let read_f = &self.read_f;
 
-                let future = read_f.call_async(max_len);
+        let raw_ptr1 = cx as *mut std::task::Context<'_> as *mut std::os::raw::c_void;
 
-                Box::pin(future)
-            }
-        };
+        let raw_ptr2 = buf as *mut tokio::io::ReadBuf<'_> as *mut std::os::raw::c_void;
 
-        let pr: Poll<Result<LuaString, LuaError>> = future.as_mut().poll(cx);
+        let x = read_f
+            .call::<i64>((LuaLightUserData(raw_ptr2), LuaLightUserData(raw_ptr1)))
+            .unwrap();
 
-        match pr {
-            Poll::Ready(r) => match r {
-                Ok(s) => {
-                    let bs = s.as_bytes();
-
-                    buf.put_slice(&bs);
-
-                    Poll::Ready(Ok(()))
-                }
-                Err(e) => Poll::Ready(Err(io::Error::other(e))),
-            },
-            Poll::Pending => {
-                debug!("read got pending");
-
-                let _ = self.read_future.insert(future);
-
-                Poll::Pending
-            }
+        match x {
+            -1 => Poll::Pending,
+            -2 => Poll::Ready(Err(io::Error::other("some err"))),
+            _ => Poll::Ready(Ok(())),
         }
     }
 }
 
 impl AsyncWrite for LuaConn {
     fn poll_write(
-        mut self: std::pin::Pin<&mut Self>,
+        self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, std::io::Error>> {
-        let mut future = match self.write_future.take() {
-            Some(f) => f,
-            None => {
-                let wf: LuaFunction = self.lua.globals().get(self.write_key.as_str()).unwrap();
+        let wf = &self.write_f;
 
-                let future = wf.call_async(BString::from(buf));
+        let raw_ptr = cx as *mut std::task::Context<'_> as *mut std::os::raw::c_void;
 
-                Box::pin(future)
-            }
-        };
+        let x = wf
+            .call::<i64>((BString::from(buf), LuaLightUserData(raw_ptr)))
+            .unwrap();
 
-        let pr: Poll<Result<usize, LuaError>> = future.as_mut().poll(cx);
-
-        match pr {
-            Poll::Ready(r) => {
-                debug!("write ready {r:?}");
-                match r {
-                    Ok(n) => Poll::Ready(Ok(n)),
-                    Err(e) => Poll::Ready(Err(io::Error::other(e))),
-                }
-            }
-            Poll::Pending => {
-                debug!("write pending");
-                let _ = self.write_future.insert(Box::pin(future));
-
-                Poll::Pending
-            }
+        match x {
+            -1 => Poll::Pending,
+            -2 => Poll::Ready(Err(io::Error::other("some err"))),
+            n => Poll::Ready(Ok(n as usize)),
         }
     }
 
@@ -231,9 +300,11 @@ impl AsyncWrite for LuaConn {
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Result<(), std::io::Error>> {
-        let ff: LuaFunction = self.lua.globals().get(self.flush_key.as_str()).unwrap();
+        let ff = &self.flush_f;
 
-        let f = ff.call_async(());
+        let raw_ptr = cx as *mut std::task::Context<'_> as *mut std::os::raw::c_void;
+
+        let f = ff.call_async(LuaLightUserData(raw_ptr));
 
         let pr: Poll<Result<(), LuaError>> = Future::poll(std::pin::pin!(f), cx);
 
@@ -254,10 +325,12 @@ impl AsyncWrite for LuaConn {
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Result<(), std::io::Error>> {
-        debug!("shutdown called");
-        let close_f: LuaFunction = self.lua.globals().get(self.close_key.as_str()).unwrap();
+        // debug!("shutdown called");
+        let close_f = &self.close_f;
 
-        let f = close_f.call_async(());
+        let raw_ptr = cx as *mut std::task::Context<'_> as *mut std::os::raw::c_void;
+
+        let f = close_f.call_async(LuaLightUserData(raw_ptr));
 
         let pr: Poll<Result<(), LuaError>> = Future::poll(std::pin::pin!(f), cx);
 
@@ -312,7 +385,7 @@ impl Map for LuaMap {
                     None => AddrWrapper(Addr::default(), true),
                 };
 
-                let conn_v = RustConn(c);
+                let conn_v = RustConn { conn: Box::pin(c) };
 
                 let b = match params.b {
                     Some(b) => BytesMutWrapper(b, false),
@@ -323,33 +396,31 @@ impl Map for LuaMap {
 
                 let bi: usize = behavior.into(); // 将 behavior enum 传成数字
 
-                // 返回  {read, write, close, flush} ,其中为函数名，然后后面代码再将其包装为 一个 LuaConn
+                // 返回  {read, write, close, flush} ,然后后面代码再将其包装为 一个 LuaConn
                 // 如果 不为 Table 而为一个 UserData, 则 其为 传入的 RustConn
                 let r = handshake_f.call::<(Value, Value, Value)>((cid_v, bi, a, b, conn_v));
                 match r {
                     Ok(r) => {
                         let c: Box<dyn ruci::net::AsyncConn> = match r.0 {
                             LuaValue::Table(table) => {
-                                let read_key: String = table.get(1).unwrap();
-                                let write_key: String = table.get(2).unwrap();
-                                let close_key: String = table.get(3).unwrap();
-                                let flush_key: String = table.get(4).unwrap();
+                                let read_f: LuaFunction = table.get(1).unwrap();
+                                let write_f: LuaFunction = table.get(2).unwrap();
+                                let close_f: LuaFunction = table.get(3).unwrap();
+                                let flush_f: LuaFunction = table.get(4).unwrap();
 
                                 let nc = LuaConn {
                                     lua,
-                                    read_key,
-                                    write_key,
-                                    close_key,
-                                    flush_key,
-                                    read_future: None,
-                                    write_future: None,
+                                    read_f,
+                                    write_f,
+                                    close_f,
+                                    flush_f,
                                 };
                                 Box::new(nc)
                             }
 
                             LuaValue::UserData(any_user_data) => {
                                 let b: RustConn = any_user_data.take().unwrap();
-                                b.0
+                                Box::new(b.conn)
                             }
 
                             _ => todo!(),

@@ -35,8 +35,8 @@ local socks5http_chain = { tcp, {
 } }
 
 local tls = {
-    NativeTLS = { --NativeTLS 要用 test2.crt 而不是 test.crt
-        --TLS = {
+    -- NativeTLS = { --NativeTLS 要用 test2.crt 而不是 test.crt
+    TLS = {
         cert = "test2.crt",
         key = "test2.key",
         alpn = { "h2", "http" }
@@ -135,9 +135,7 @@ local out_stdio_show_bytes_chain = { {
 local spe1_in = { SPE1 = { qa = { { "q1", "a1" }, { "q2", "a2" } } } }
 -- local spe1_in = { SPE1 = {} }
 
-local lua_example2 = { tcp, {
-    Socks5Http = {}
-}, { Lua = { file_name = "custom_protocol_example1.lua", handshake_function = "Handshake2" } } }
+local lua_example1 = { tcp, tls, trojan_in, { Lua = { file_name = "lua_protocol_example1.lua", handshake_function = "Handshake2" } } }
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
@@ -162,7 +160,7 @@ Config = {
         }
         -- ]]
         -- { chain = { tcp, spe1_in, trojan_in }, tag = "listen1" }
-        { chain = lua_example2, tag = "listen1" },
+        { chain = lua_example1, tag = "listen1" },
     },
 
     ---[[

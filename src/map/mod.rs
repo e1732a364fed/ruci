@@ -228,9 +228,10 @@ pub enum ProxyBehavior {
     /// inbound's general behavior
     DECODE,
 }
-impl Into<usize> for ProxyBehavior {
-    fn into(self) -> usize {
-        match self {
+
+impl From<ProxyBehavior> for usize {
+    fn from(val: ProxyBehavior) -> Self {
+        match val {
             ProxyBehavior::UNSPECIFIED => 0,
             ProxyBehavior::ENCODE => 1,
             ProxyBehavior::DECODE => 2,

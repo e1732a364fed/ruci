@@ -827,7 +827,7 @@ local config_21_lua_example1 = {
     } },
     outbounds = { {
         tag = "dial1",
-        chain = { direct, { Lua = { file_name = "custom_protocol_example1.lua", handshake_function = "Handshake2" } } }
+        chain = { dial, tlsout, trojan_out, { Lua = { file_name = "lua_protocol_example1.lua", handshake_function = "Handshake2" } } }
     } }
 }
 
