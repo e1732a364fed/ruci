@@ -107,38 +107,39 @@ jobs:
 
 
 
-  build-windows:
-    permissions: write-all
-    runs-on: ${{ matrix.os }}
-    env:
-      RUST_BACKTRACE: full
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
-        target:
-          - x86_64-pc-windows-msvc
+  # build-windows:
+  #   permissions: write-all
+  #   runs-on: ${{ matrix.os }}
+  #   env:
+  #     RUST_BACKTRACE: full
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [windows-latest]
+  #       target:
+  #         - x86_64-pc-windows-msvc
 
-    steps:
-      - uses: actions/checkout@v4
+  #   steps:
+  #     - uses: ilammy/setup-nasm@v1
+  #     - uses: actions/checkout@v4
 
-      - name: Install Rust
-        run: |
-          rustup set profile minimal
-          rustup toolchain install stable
-          rustup default stable
-          rustup override set stable
-          rustup target add --toolchain stable ${{ matrix.target }}
+  #     - name: Install Rust
+  #       run: |
+  #         rustup set profile minimal
+  #         rustup toolchain install stable
+  #         rustup default stable
+  #         rustup override set stable
+  #         rustup target add --toolchain stable ${{ matrix.target }}
 
-      - name: Build ${{ matrix.target }}
-        run: |
-          cd crates/ruci-cmd
-          make exe BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+  #     - name: Build ${{ matrix.target }}
+  #       run: |
+  #         cd crates/ruci-cmd
+  #         make exe BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
   
-      - name: Upload Github Assets
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: crates/ruci-cmd/dist/*.tar.xz
-          tag_name: ${{ inputs.tag || github.ref_name }}
+  #     - name: Upload Github Assets
+  #       uses: softprops/action-gh-release@v1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         files: crates/ruci-cmd/dist/*.tar.xz
+  #         tag_name: ${{ inputs.tag || github.ref_name }}
