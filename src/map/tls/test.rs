@@ -34,7 +34,7 @@ async fn dial_tls_in_mem() {
     println!("will out, {}", ta);
 
     //should panic here , as the data 111,222,123 is not cool for a server tls response.
-    let mut r = a
+    let r = a
         .maps(
             0,
             ProxyBehavior::ENCODE,
@@ -50,7 +50,12 @@ async fn dial_tls_in_mem() {
         .unwrap();
 
     let mut buf = [0u8; 1024];
-    let n = r.read(&mut buf[..]).await.unwrap();
+    let n = r
+        .try_unwrap_tcp()
+        .unwrap()
+        .read(&mut buf[..])
+        .await
+        .unwrap();
 
     println!("{}, {:?}", n, &buf[..n]);
 }
@@ -65,7 +70,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.
 
     info!("client will out, {}", ta);
-    let mut r = a
+    let r = a
         .maps(
             0,
             ProxyBehavior::ENCODE,
@@ -84,6 +89,8 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result
 
     let mut buf = [3u8; 3];
 
+    let mut r = r.try_unwrap_tcp()?;
+    let r = r.as_mut();
     let n = r.write(&mut buf[..]).await?;
     r.flush().await?;
 
@@ -122,7 +129,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> std::io::Resu
     if let Some(e) = add_result.e {
         return Err(e);
     }
-    let mut conn = add_result.c.unwrap();
+    let conn = add_result.c.unwrap();
 
     debug!("tls listen");
 
@@ -130,7 +137,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> std::io::Resu
 
     let mut buf = [0u8; 1024];
 
-    let n = conn.read(&mut buf[..]).await?;
+    let n = conn.try_unwrap_tcp()?.read(&mut buf[..]).await?;
 
     info!("server read {}, {:?}", n, &buf[..n]);
     tokio::time::sleep(Duration::from_secs(1)).await;

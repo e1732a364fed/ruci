@@ -110,7 +110,7 @@ impl Client {
         Ok(MapResult {
             a,
             b: None,
-            c: Some(Box::new(new_c)),
+            c: Some(map::Stream::TCP(Box::new(new_c))),
             d: Some(map::AnyData::B(Box::new(ClientTLSConnDescriber {}))),
             e: None,
         })

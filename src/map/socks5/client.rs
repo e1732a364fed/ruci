@@ -87,7 +87,7 @@ impl Client {
         Ok(MapResult {
             a: None,
             b: None,
-            c: Some(base),
+            c: Some(map::Stream::TCP(base)),
             d: Some(map::AnyData::B(Box::new(adopted_method))),
             e: None,
         })

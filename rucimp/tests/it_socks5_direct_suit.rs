@@ -150,7 +150,7 @@ async fn f_dial_future_out_adder(
         up: Some(UserPass::from("u0 p0".to_string())),
         use_earlydata: false,
     };
-    let mut newconn = a
+    let newconn = a
         .maps(
             0,
             ruci::map::ProxyBehavior::ENCODE,
@@ -171,6 +171,8 @@ async fn f_dial_future_out_adder(
         .unwrap();
 
     info!("client{} writing hello...", rid,);
+
+    let mut newconn = newconn.try_unwrap_tcp()?;
 
     newconn.write(&b"hello\n"[..]).await.unwrap();
 

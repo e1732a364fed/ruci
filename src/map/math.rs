@@ -122,7 +122,7 @@ impl crate::map::Mapper for Adder {
                 MapResult {
                     a: params.a,
                     b: params.b,
-                    c: Some(Box::new(cc)),
+                    c: Some(Stream::TCP(Box::new(cc))),
                     d: None,
                     e: None,
                 }

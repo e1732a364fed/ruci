@@ -24,6 +24,7 @@ use crate::user::UserPass;
 use futures::executor::block_on;
 use futures::join;
 
+use std::io;
 use std::net::IpAddr;
 use std::sync::Arc;
 
@@ -292,10 +293,15 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];
-        let n = r.c.unwrap().read(&mut readbuf[..]).await.unwrap();
+        let n =
+            r.c.unwrap()
+                .try_unwrap_tcp()?
+                .read(&mut readbuf[..])
+                .await
+                .unwrap();
         assert_eq!(&readbuf[..n], &[b'h', b'e', b'l', b'l', b'o']);
 
-        1
+        Ok::<(), io::Error>(())
     };
 
     let dial_future = async {
@@ -361,7 +367,7 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
         1
     };
 
-    join!(listen_future, dial_future);
+    let _ = join!(listen_future, dial_future);
 
     Ok(())
 }
@@ -398,10 +404,15 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];
-        let n = r.c.unwrap().read(&mut readbuf[..]).await.unwrap();
+        let n =
+            r.c.unwrap()
+                .try_unwrap_tcp()?
+                .read(&mut readbuf[..])
+                .await
+                .unwrap();
         assert_eq!(&readbuf[..n], &b"hello"[..]);
 
-        1
+        Ok::<(), io::Error>(())
     };
 
     let dial_future = async {
@@ -464,7 +475,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
         1
     };
 
-    join!(listen_future, dial_future);
+    let _ = join!(listen_future, dial_future);
 
     Ok(())
 }
@@ -499,10 +510,15 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];
-        let n = r.c.unwrap().read(&mut readbuf[..]).await.unwrap();
+        let n =
+            r.c.unwrap()
+                .try_unwrap_tcp()?
+                .read(&mut readbuf[..])
+                .await
+                .unwrap();
         assert_eq!(&readbuf[..n], &b"hello"[..]);
 
-        1
+        Ok::<_, io::Error>(())
     };
 
     let dial_future = async {
@@ -565,7 +581,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
         1
     };
 
-    join!(listen_future, dial_future);
+    let _ = join!(listen_future, dial_future);
 
     Ok(())
 }

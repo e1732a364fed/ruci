@@ -51,7 +51,7 @@ impl Server {
         Ok(MapResult {
             a,
             b: None,
-            c: Some(Box::new(c)),
+            c: Some(map::Stream::TCP(Box::new(c))),
             d: Some(map::AnyData::B(Box::new(SeverTLSConnDescriber {}))),
             e: None,
         })

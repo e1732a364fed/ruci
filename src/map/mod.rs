@@ -121,6 +121,21 @@ pub enum Stream {
     UDP(AddrConn),
     None,
 }
+impl Stream {
+    pub fn try_unwrap_tcp(self) -> io::Result<net::Conn> {
+        if let Stream::TCP(t) = self {
+            return Ok(t);
+        }
+        Err(io::Error::other("not tcp"))
+    }
+
+    pub fn try_unwrap_udp(self) -> io::Result<AddrConn> {
+        if let Stream::UDP(t) = self {
+            return Ok(t);
+        }
+        Err(io::Error::other("not tcp"))
+    }
+}
 
 /// map方法的参数
 pub struct MapParams {
@@ -161,7 +176,7 @@ impl MapParams {
 pub struct MapResult {
     pub a: Option<net::Addr>, //target_addr
     pub b: Option<BytesMut>,  //pre read buf
-    pub c: Option<net::Conn>,
+    pub c: Option<Stream>,
 
     ///extra data, 如果d为 AnyData::B, 则只能被外部调用;, 如果
     /// d为 AnyData::A, 可其可以作为 下一层的 InputData
@@ -175,7 +190,7 @@ impl MapResult {
         MapResult {
             a: Some(a),
             b: None,
-            c: Some(c),
+            c: Some(Stream::TCP(c)),
             d: None,
             e: None,
         }
@@ -186,7 +201,7 @@ impl MapResult {
         MapResult {
             a: Some(a),
             b: if b.len() > 0 { Some(b) } else { None },
-            c: Some(c),
+            c: Some(Stream::TCP(c)),
             d: None,
             e: None,
         }
@@ -196,7 +211,7 @@ impl MapResult {
         MapResult {
             a: None,
             b: None,
-            c: Some(c),
+            c: Some(Stream::TCP(c)),
             d: None,
             e: None,
         }
@@ -340,7 +355,7 @@ pub struct TcpInAccumulator<'a> {
 pub struct AccumulateResult {
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
-    pub c: Option<net::Conn>,
+    pub c: Option<Stream>,
     pub d: Vec<OptData>,
     pub e: Option<io::Error>,
 }
@@ -362,7 +377,7 @@ impl<'a> TcpInAccumulator<'a> {
         let mut last_r: MapResult = MapResult {
             a: None,
             b: None,
-            c: Some(initial_conn),
+            c: Some(Stream::TCP(initial_conn)),
             d: None,
             e: None,
         };
@@ -404,7 +419,7 @@ impl<'a> TcpInAccumulator<'a> {
                             cid,
                             ProxyBehavior::DECODE,
                             MapParams {
-                                c: Stream::TCP(last_r.c.unwrap()),
+                                c: last_r.c.unwrap(),
                                 a: last_r.a,
                                 b: last_r.b,
                                 d: input_data,
@@ -451,7 +466,7 @@ impl<'a> TcpOutAccumulator<'a> {
         mut outmappers: IterOutMapperBoxRef,
         target_addr: Option<net::Addr>,
         early_data: Option<BytesMut>,
-    ) -> io::Result<(net::Conn, Option<net::Addr>, Vec<OptData>)>
+    ) -> io::Result<(Stream, Option<net::Addr>, Vec<OptData>)>
     where
         IterOutMapperBoxRef: Iterator<Item = &'a MapperBox>,
     {
@@ -460,7 +475,7 @@ impl<'a> TcpOutAccumulator<'a> {
         let mut last_r = MapResult {
             a: target_addr,
             b: early_data,
-            c: Some(base),
+            c: Some(Stream::TCP(base)),
             d: None,
             e: None,
         };
@@ -475,7 +490,7 @@ impl<'a> TcpOutAccumulator<'a> {
                         cid,
                         ProxyBehavior::ENCODE,
                         MapParams {
-                            c: Stream::TCP(last_r.c.unwrap()),
+                            c: last_r.c.unwrap(),
                             a: last_r.a,
                             b: last_r.b,
                             d: None,
@@ -494,7 +509,7 @@ impl<'a> TcpOutAccumulator<'a> {
                                     cid,
                                     ProxyBehavior::ENCODE,
                                     MapParams {
-                                        c: Stream::TCP(last_r.c.unwrap()),
+                                        c: last_r.c.unwrap(),
                                         a: last_r.a,
                                         b: None,
                                         d: None,
@@ -512,7 +527,13 @@ impl<'a> TcpOutAccumulator<'a> {
             None => {
                 if let Some(ed) = last_r.b {
                     use tokio::io::AsyncWriteExt;
-                    last_r.c.as_mut().unwrap().write(&ed).await?;
+                    match last_r.c.as_mut().unwrap() {
+                        Stream::TCP(c) => {
+                            c.write(&ed).await?;
+                        }
+                        Stream::UDP(_) => unimplemented!(),
+                        Stream::None => unimplemented!(),
+                    }
                 }
                 return Ok((last_r.c.unwrap(), last_r.a, extra_data_vec));
             }

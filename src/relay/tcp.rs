@@ -65,8 +65,8 @@ pub async fn handle_tcp<'a>(
                 "{}, handshake in server succeed but got no target_addr",
                 state
             );
-            if let Some(mut c) = listen_result.c {
-                let _ = c.shutdown().await;
+            if let Some(c) = listen_result.c {
+                let _ = c.try_unwrap_tcp()?.shutdown().await;
             }
             return Err(io::Error::other(
                 "handshake in server succeed but got no target_addr",
@@ -101,8 +101,8 @@ pub async fn handle_tcp<'a>(
                 "{}, parse target addr failed, {} , {}",
                 state, real_target_addr, e
             );
-            if let Some(mut c) = listen_result.c {
-                let _ = c.shutdown().await;
+            if let Some(c) = listen_result.c {
+                let _ = c.try_unwrap_tcp()?.shutdown().await;
             }
             return Err(e);
         }
@@ -112,8 +112,8 @@ pub async fn handle_tcp<'a>(
         Ok(tcp) => tcp,
         Err(e) => {
             warn!("{}, handshake in server failed: {}", state, e);
-            if let Some(mut c) = listen_result.c {
-                let _ = c.shutdown().await;
+            if let Some(c) = listen_result.c {
+                let _ = c.try_unwrap_tcp()?.shutdown().await;
             }
             return Err(e);
         }
@@ -123,7 +123,7 @@ pub async fn handle_tcp<'a>(
     if is_direct {
         cp_tcp::cp_tcp(
             cid,
-            listen_result.c.take().unwrap(),
+            listen_result.c.take().unwrap().try_unwrap_tcp()?,
             out_conn,
             listen_result.b.take(),
             ti,
@@ -164,7 +164,14 @@ pub async fn handle_tcp<'a>(
                 state, rta
             );
         }
-        cp_tcp::cp_tcp(cid, listen_result.c.take().unwrap(), out_conn, None, ti).await;
+        cp_tcp::cp_tcp(
+            cid,
+            listen_result.c.take().unwrap().try_unwrap_tcp()?,
+            out_conn.try_unwrap_tcp()?,
+            None,
+            ti,
+        )
+        .await;
     }
 
     Ok(())
