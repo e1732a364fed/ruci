@@ -253,14 +253,23 @@ config = {
         {chain = {l3,tlsin}, tag = "l3"} 
     } ,
     outbounds = { 
-        { tag="d1", chain = { "Direct" } } ,  { tag="d2", chain = { dial, tlsout } } 
+        { tag="d1", chain = { "Direct" } } ,  { tag="d2", chain = { dial, tlsout } } ,
+        {
+            tag = "fallback_d", chain = {
+                Dialer = "tcp://0.0.0.0:80"
+            }
+        }
     },
 
-    tag_route = {  { "l1","d1" },{ "l2","d2"},{"l3","d2"} }
+    tag_route = {  { "l1","d1" },{ "l2","d2"},{"l3","d2"} },
+
+    fallback_route = { {  "l1", "fallback_d" } }
 
 --[[
 这个 config 块是演示 多in多out的情况, 只要outbounds有多个，您就应该考虑使用路由配置
 该 tag_route 示例明确指出，l1将被路由到d1, l2 -> d2, l3 -> d2
+
+l1 的回落为 fallback_d
 --]]
 
 }

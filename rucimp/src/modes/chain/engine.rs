@@ -40,6 +40,7 @@ pub struct Engine {
     outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
     default_outbound: Option<DMIterBox>,        // init 后一定有值
     tag_routes: Option<HashMap<String, String>>,
+    fallback_routes: Option<HashMap<String, String>>,
 
     #[cfg(feature = "route")]
     rule_sets: Option<Vec<RuleSet>>,
@@ -317,8 +318,10 @@ impl Engine {
     fn get_tag_route_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
         let s = TagOutSelector {
             outbounds_tag_route_map: self.tag_routes.clone().expect("has tag_routes"),
+            fallback_tag_route_map: self.fallback_routes.clone(),
             outbounds_map: self.outbounds.clone(),
-            default: self.default_outbound.clone().expect("has default_outbound"),
+            ok_default: Some(self.default_outbound.clone().expect("has default_outbound")),
+            ..Default::default()
         };
 
         Arc::new(Box::new(s))

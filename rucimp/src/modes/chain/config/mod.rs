@@ -36,6 +36,7 @@ pub struct StaticConfig {
     pub outbounds: Vec<OutMapperConfigChain>,
 
     pub tag_route: Option<Vec<(String, String)>>,
+    pub fallback_route: Option<Vec<(String, String)>>,
 
     #[cfg(feature = "route")]
     pub rule_route: Option<Vec<RuleSetConfig>>,
@@ -455,8 +456,7 @@ mod test {
                 tag: String::from("todo!()"),
                 chain: vec![OutMapperConfig::Direct],
             }],
-            tag_route: None,
-            rule_route: None,
+            ..Default::default()
         };
         let toml = toml::to_string(&sc).expect("valid toml");
         println!("{:#}", toml);

@@ -44,25 +44,27 @@ pub struct RuleSetOutSelector {
 impl route::OutSelector for RuleSetOutSelector {
     async fn select(
         &self,
+        is_fallback: bool,
         addr: &net::Addr,
         in_chain_tag: &str,
         params: &[Option<Box<dyn Data>>],
-    ) -> DMIterBox {
+    ) -> Option<DMIterBox> {
         let users = get_user_from_opt_data(params).await;
-        let r = InboundInfo {
+        let ii = InboundInfo {
             in_tag: in_chain_tag.to_string(),
             target_addr: addr.clone(),
             users,
+            is_fallback,
         };
         let mut out_tag: Option<String> = None;
         for rs in self.outbounds_rules_vec.iter() {
-            if rs.matches(&r) {
+            if rs.matches(&ii) {
                 out_tag = Some(rs.out_tag.clone());
                 break;
             }
         }
 
-        match out_tag {
+        let r = match out_tag {
             Some(out_k) => {
                 let y = self.outbounds_map.get(&out_k);
                 match y {
@@ -71,7 +73,9 @@ impl route::OutSelector for RuleSetOutSelector {
                 }
             }
             None => self.default.clone(),
-        }
+        };
+
+        Some(r)
     }
 }
 
@@ -427,11 +431,11 @@ mod test {
         };
         let a = Addr::default();
         let opts = Vec::new();
-        let x = selector.select(&a, "listen1", &opts).await;
+        let x = selector.select(false, &a, "listen1", &opts).await;
 
         println!("{:?}", x);
 
-        let x = selector.select(&a, "listen2", &opts).await;
+        let x = selector.select(false, &a, "listen2", &opts).await;
 
         println!("{:?}", x);
 

@@ -51,10 +51,11 @@ use super::Data;
 pub trait OutSelector: Send + Sync {
     async fn select(
         &self,
+        is_fallback: bool,
         addr: &net::Addr,
         in_chain_tag: &str,
         params: &[Option<Box<dyn Data>>],
-    ) -> DMIterBox;
+    ) -> Option<DMIterBox>;
 }
 
 pub async fn get_user_from_opt_data(adv: &[Option<Box<dyn Data>>]) -> Option<UserVec> {
@@ -81,40 +82,69 @@ pub struct FixedOutSelector {
 impl OutSelector for FixedOutSelector {
     async fn select(
         &self,
+        is_fallback: bool,
         _addr: &net::Addr,
         _in_chain_tag: &str,
         _params: &[Option<Box<dyn Data>>],
-    ) -> DMIterBox {
-        self.default.clone()
+    ) -> Option<DMIterBox> {
+        if is_fallback {
+            None
+        } else {
+            Some(self.default.clone())
+        }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub struct TagOutSelector {
     pub outbounds_tag_route_map: HashMap<String, String>, // in_tag -> out_tag
+    pub fallback_tag_route_map: Option<HashMap<String, String>>, // in_tag -> out_tag
     pub outbounds_map: Arc<HashMap<String, DMIterBox>>,   //out_tag -> outbound
-    pub default: DMIterBox,
+    pub ok_default: Option<DMIterBox>,
+    pub fb_default: Option<DMIterBox>,
 }
 
 #[async_trait]
 impl OutSelector for TagOutSelector {
     async fn select(
         &self,
+        is_fallback: bool,
         _addr: &net::Addr,
         in_chain_tag: &str,
         _params: &[Option<Box<dyn Data>>],
-    ) -> DMIterBox {
-        let ov = self.outbounds_tag_route_map.get(in_chain_tag);
-        match ov {
+    ) -> Option<DMIterBox> {
+        let ov = if is_fallback {
+            if let Some(fm) = &self.fallback_tag_route_map {
+                fm.get(in_chain_tag)
+            } else {
+                None
+            }
+        } else {
+            self.outbounds_tag_route_map.get(in_chain_tag)
+        };
+        let r = match ov {
             Some(out_k) => {
                 let y = self.outbounds_map.get(out_k);
                 match y {
                     Some(out) => out.clone(),
-                    None => self.default.clone(),
+                    None => {
+                        if is_fallback {
+                            return self.fb_default.clone();
+                        } else {
+                            return self.ok_default.clone();
+                        }
+                    }
                 }
             }
-            None => self.default.clone(),
-        }
+            None => {
+                if is_fallback {
+                    return self.fb_default.clone();
+                } else {
+                    return self.ok_default.clone();
+                }
+            }
+        };
+        Some(r)
     }
 }
 
@@ -123,13 +153,15 @@ impl OutSelector for TagOutSelector {
 /// 1. 是谁进来的:      users
 /// 2. 从哪里进来的:    in_tag
 /// 3. 要到哪里去:      target_addr
+/// 4. 是否为 fallback
 ///
-#[derive(Hash, Debug, PartialEq, Eq)]
+#[derive(Hash, Debug, PartialEq, Eq, Default)]
 pub struct InboundInfo {
     ///因为链中可能有多个用户验证，所以会有多个 UserBox
     pub users: Option<UserVec>,
     pub in_tag: String,
     pub target_addr: net::Addr,
+    pub is_fallback: bool,
 }
 
 /// (k,v), v 为 out_tag, k 为 所有能对应 v的 rule 值的集合
@@ -151,21 +183,24 @@ impl InboundInfoOutTagPair {
 pub struct InboundInfoOutSelector {
     pub outbounds_ruleset_vec: Vec<InboundInfoOutTagPair>, // rule -> out_tag
     pub outbounds_map: Arc<HashMap<String, DMIterBox>>,    //out_tag -> outbound
-    pub default: DMIterBox,
+    pub ok_default: DMIterBox,
+    pub fb_default: Option<DMIterBox>,
 }
 #[async_trait]
 impl OutSelector for InboundInfoOutSelector {
     async fn select(
         &self,
+        is_fallback: bool,
         addr: &net::Addr,
         in_chain_tag: &str,
         params: &[Option<Box<dyn Data>>],
-    ) -> DMIterBox {
+    ) -> Option<DMIterBox> {
         let users = get_user_from_opt_data(params).await;
         let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),
             target_addr: addr.clone(),
             users,
+            is_fallback,
         };
         let mut out_tag: Option<String> = None;
         for rs in self.outbounds_ruleset_vec.iter() {
@@ -174,16 +209,29 @@ impl OutSelector for InboundInfoOutSelector {
                 break;
             }
         }
-        match out_tag {
+        let r = match out_tag {
             Some(out_k) => {
                 let y = self.outbounds_map.get(&out_k);
                 match y {
                     Some(out) => out.clone(),
-                    None => self.default.clone(),
+                    None => {
+                        if is_fallback {
+                            return self.fb_default.clone();
+                        } else {
+                            self.ok_default.clone()
+                        }
+                    }
                 }
             }
-            None => self.default.clone(),
-        }
+            None => {
+                if is_fallback {
+                    return self.fb_default.clone();
+                } else {
+                    self.ok_default.clone()
+                }
+            }
+        };
+        Some(r)
     }
 }
 
@@ -242,12 +290,19 @@ mod test {
         let t = TagOutSelector {
             outbounds_tag_route_map: outbounds_route_map,
             outbounds_map,
-            default: m2,
+            ok_default: Some(m2),
+            ..Default::default()
         };
-        let x = t.select(&Addr::default(), "l1", &Vec::new()).await;
+        let x = t
+            .select(false, &Addr::default(), "l1", &Vec::new())
+            .await
+            .unwrap();
         println!("{:?}", x);
         assert_eq!(x.get_miter().unwrap().count(), 2); //can't count DMIter directly
-        let x = t.select(&Addr::default(), "l11", &Vec::new()).await;
+        let x = t
+            .select(false, &Addr::default(), "l11", &Vec::new())
+            .await
+            .unwrap();
         println!("{:?}", x);
         assert_eq!(x.get_miter().unwrap().count(), 1);
     }
@@ -263,13 +318,11 @@ mod test {
 
         let r1 = InboundInfo {
             in_tag: String::from("l1"),
-            target_addr: Addr::default(),
-            users: None,
+            ..Default::default()
         };
         let r2 = InboundInfo {
             in_tag: String::from("l2"),
-            target_addr: Addr::default(),
-            users: None,
+            ..Default::default()
         };
         let mut hs = HashSet::new();
         hs.insert(r1);
@@ -282,7 +335,8 @@ mod test {
         let ios = InboundInfoOutSelector {
             outbounds_ruleset_vec: rsv,
             outbounds_map,
-            default: m2,
+            ok_default: m2,
+            fb_default: None,
         };
 
         let u = PlainText::new("user".to_string(), "pass".to_string());
@@ -290,13 +344,19 @@ mod test {
         let mut params: Vec<Option<Box<dyn Data>>> = Vec::new();
         params.push(Some(Box::new(u)));
 
-        let x = ios.select(&Addr::default(), "l1", &params).await;
+        let x = ios
+            .select(false, &Addr::default(), "l1", &params)
+            .await
+            .unwrap();
 
         assert_eq!(x.get_miter().unwrap().count(), 1);
 
         println!("{:?}", x);
         params.clear();
-        let x = ios.select(&Addr::default(), "l1", &params).await;
+        let x = ios
+            .select(false, &Addr::default(), "l1", &params)
+            .await
+            .unwrap();
 
         assert_eq!(x.get_miter().unwrap().count(), 2);
         println!("{:?}", x);

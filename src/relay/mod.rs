@@ -96,20 +96,27 @@ pub async fn handle_in_fold_result(
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) -> anyhow::Result<()> {
     let cid = listen_result.id;
+
+    let mut is_fallback = false;
+
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {
             let return_e: anyhow::Error;
             match listen_result.e {
                 Some(err) => {
-                    return_e = anyhow!("fold inbound failed with Error: {:#}", err);
+                    // return_e = anyhow!("fold inbound failed with Error, will fallback: {:#}", err);
 
-                    warn!(cid = %cid, "{}", return_e);
-                    let r = listen_result.c.try_shutdown().await;
-                    if let Err(e) = r {
-                        warn!(cid = %cid, e=%e, "shutdown stream got error");
-                    }
-                    return Err(return_e);
+                    warn!(cid = %cid, e=%err, "fold inbound failed with Error, will try to fallback");
+
+                    is_fallback = true;
+
+                    // let r = listen_result.c.try_shutdown().await;
+                    // if let Err(e) = r {
+                    //     warn!(cid = %cid, e=%e, "shutdown stream got error");
+                    // }
+                    // return Err(return_e);
+                    Addr::default()
                 }
                 None => match &listen_result.c {
                     Stream::None => {
@@ -127,7 +134,7 @@ pub async fn handle_in_fold_result(
             }
         }
     };
-    if tracing::enabled!(tracing::Level::INFO) {
+    if !is_fallback && tracing::enabled!(tracing::Level::INFO) {
         match listen_result.b.as_ref() {
             Some(ed) => {
                 info!(
@@ -148,8 +155,27 @@ pub async fn handle_in_fold_result(
     }
 
     let outbound = out_selector
-        .select(&target_addr, &listen_result.chain_tag, &listen_result.d)
+        .select(
+            is_fallback,
+            &target_addr,
+            &listen_result.chain_tag,
+            &listen_result.d,
+        )
         .await;
+
+    let outbound = match outbound {
+        Some(o) => o,
+        None => {
+            info!(cid = %cid, "out selector got None, shutting down the connection");
+
+            let r = listen_result.c.try_shutdown().await;
+            if let Err(e) = r {
+                warn!(cid = %cid, e=%e, "shutdown stream got error");
+            }
+
+            return Ok(());
+        }
+    };
 
     let cid_c = cid.clone();
     let ta_clone = target_addr.clone();
