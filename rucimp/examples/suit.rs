@@ -17,13 +17,14 @@ use rucimp::{
     suit::engine::SuitEngine,
 };
 
+/// 使用 config.suit.toml, resource/config.suit.toml, 或 用户提供的参数作为配置文件
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("rucimp~ suit\n");
     println!("working dir: {:?} \n", std::env::current_dir().unwrap());
 
     const RL: &str = "RUST_LOG";
-    let l = env::var(RL).unwrap_or("warn".to_string());
+    let l = env::var(RL).unwrap_or("info".to_string());
 
     if l == "warn" {
         println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";rucimp \n shell like so: RUST_LOG=info ./rucimp")
@@ -41,7 +42,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("versions: ruci_{}_mp_{}", ruci::VERSION, rucimp::VERSION,)
     }
 
-    let mut r_contents = fs::read_to_string("config.suit.toml");
+    let args: Vec<String> = env::args().collect();
+
+    let default_file = "config.suit.toml".to_string();
+
+    let filename = if args.len() > 1 {
+        &args[1]
+    } else {
+        &default_file
+    };
+
+    let mut r_contents = fs::read_to_string(filename);
     if r_contents.is_err() {
         r_contents = fs::read_to_string("resource/config.suit.toml");
     }
