@@ -92,10 +92,12 @@ impl Mapper for Client {
     ) -> MapResult {
         match params.c {
             map::Stream::Conn(c) => {
-                let r = self
-                    .handshake(cid, c, params.a.expect("params has target addr"), params.b)
-                    .await;
-                MapResult::from_result(r)
+                if let Some(a) = params.a {
+                    let r = self.handshake(cid, c, a, params.b).await;
+                    MapResult::from_result(r)
+                } else {
+                    MapResult::err_str("trojan client requires a target_addr, got None")
+                }
             }
             _ => MapResult::err_str("trojan only support tcplike stream"),
         }

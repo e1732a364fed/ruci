@@ -258,7 +258,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
 ///
 pub async fn fold_from_start(
     in_cid: CID,
-    tx: tokio::sync::mpsc::Sender<FoldResult>,
+    result_dealer: tokio::sync::mpsc::Sender<FoldResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
     mut inmappers: DMIterBox,
@@ -285,11 +285,11 @@ pub async fn fold_from_start(
         return Err(e);
     }
 
-    if let Stream::Generator(rx) = first_r.c {
+    if let Stream::Generator(stream_generator) = first_r.c {
         in_iter_fold_forever(InIterFoldForeverParams {
             cid: in_cid,
-            rx,
-            tx,
+            stream_generator,
+            result_dealer,
             dmiter: inmappers,
             o_gtr,
 
@@ -324,7 +324,7 @@ pub async fn fold_from_start(
                 trace: vec![first.name().to_string()],
             })
             .await;
-            let _ = tx.send(r).await;
+            let _ = result_dealer.send(r).await;
         });
     };
     Ok(())
@@ -332,8 +332,8 @@ pub async fn fold_from_start(
 
 pub struct InIterFoldForeverParams {
     pub cid: CID,
-    pub rx: tokio::sync::mpsc::Receiver<MapResult>,
-    pub tx: tokio::sync::mpsc::Sender<FoldResult>,
+    pub stream_generator: tokio::sync::mpsc::Receiver<MapResult>,
+    pub result_dealer: tokio::sync::mpsc::Sender<FoldResult>,
     pub dmiter: DMIterBox,
     pub o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 
@@ -341,7 +341,7 @@ pub struct InIterFoldForeverParams {
     pub trace: Vec<String>,
 }
 
-/// blocking until rx got closed.
+/// blocking until stream_generator got closed.
 ///
 /// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
@@ -354,9 +354,9 @@ pub struct InIterFoldForeverParams {
 /// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
 ///
 pub async fn in_iter_fold_forever(params: InIterFoldForeverParams) {
-    let mut rx = params.rx;
+    let mut rx = params.stream_generator;
     let cid = params.cid;
-    let tx = params.tx;
+    let tx = params.result_dealer;
     let dmiter = params.dmiter;
     let o_gtr = params.o_gtr;
 
@@ -365,7 +365,10 @@ pub async fn in_iter_fold_forever(params: InIterFoldForeverParams) {
 
         let new_stream_info = match opt_stream_info {
             Some(s) => s,
-            None => break,
+            None => {
+                //debug!(cid = %cid, "got None, will break");
+                break;
+            }
         };
         let new_cid = cid.clone_push(o_gtr.clone());
 
@@ -438,8 +441,8 @@ fn spawn_fold_forever(params: SpawnFoldForeverParams) {
             in_iter_fold_forever(InIterFoldForeverParams {
                 cid,
 
-                rx,
-                tx,
+                stream_generator: rx,
+                result_dealer: tx,
                 dmiter: r.left_mappers_iter.clone(),
                 o_gtr,
 

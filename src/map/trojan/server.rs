@@ -54,7 +54,7 @@ impl Server {
 
     pub async fn handshake(
         &self,
-        _cid: CID,
+        cid: CID,
         mut base: net::Conn,
         ob: Option<BytesMut>,
     ) -> anyhow::Result<MapResult> {
@@ -76,10 +76,16 @@ impl Server {
 
         if previous_read_len < 17 {
             loop {
+                //tracing::debug!(cid = %cid, "trojan loop read");
                 let n = base
                     .read(&mut buf[previous_read_len..])
                     .await
                     .with_context(|| "trojan server read failed")?;
+
+                if n == 0 {
+                    tracing::debug!(cid = %cid, "trojan server loop read header got n=0, will break");
+                    break;
+                }
 
                 let mut index_crlf = -1;
                 let new_len = previous_read_len + n;
