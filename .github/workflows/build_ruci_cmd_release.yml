@@ -40,9 +40,9 @@ jobs:
       
       - name: Install Openssl
         run: |
-          sudo apt-get update
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update && sudo apt-get install --assume-yes libssl-dev:arm64
+          cd crates/ruci-cmd
+          sudo docker build -f Dockerfile_aarch64 -t openssl:aarch64 .
+          sudo docker build -f Dockerfile_android -t openssl:android .
 
       - name: Build ${{ matrix.target }}
         run: |
