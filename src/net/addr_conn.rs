@@ -1,10 +1,12 @@
 use super::*;
 
+use core::time;
 use std::{
     ops::DerefMut,
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
+    time::Duration,
 };
 use tokio::io::ReadBuf;
 
@@ -177,41 +179,69 @@ impl<T: AsyncWriteAddr + Unpin + ?Sized> futures::Future for WriteFuture<'_, T> 
 ////////////////////////////////////////////////////////////////////
 */
 
-/// 循环读写直到read错误发生. 不会认为 read错误为错误
+const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(10);
+
+/// 循环读写直到read错误发生. 不会认为 read错误为错误. 每一次read都会以
+/// READ_UDP_TIMEOUT 为 最长等待时间，一旦读不到，就会退出函数
+///
+/// 读到后，如果写超过了同样的时间，也退出函数
 pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut r1: R1,
     mut w1: W1,
 ) -> Result<u64, Error> {
-    const CAP: usize = 1500;
-    let mut buf0 = Box::new([0u8; CAP]);
-    let mut buf = ReadBuf::new(buf0.deref_mut());
+    const CAP: usize = 1500; //todo: change this
+
     let mut whole_write = 0;
 
     loop {
-        buf.clear();
+        let r1ref = &mut r1;
 
-        let r = r1.read(buf.initialized_mut()).await;
+        let sleepf = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
+        let readf = async move {
+            let mut buf0 = Box::new([0u8; CAP]);
+            let mut buf = ReadBuf::new(buf0.deref_mut());
+            let r = r1ref.read(buf.initialized_mut()).await;
 
-        match r {
-            Err(_) => break,
-            Ok((m, ad)) => {
-                if m > 0 {
-                    loop {
-                        let r = w1.write(buf.filled(), &ad).await;
-                        if r.is_err() {
-                            break;
+            (r, buf0)
+        }
+        .fuse();
+        pin_mut!(sleepf, readf);
+
+        select! {
+            _ = sleepf =>{
+                break;
+            }
+            r = readf =>{
+                let (r,  buf0) = r;
+                match r {
+                    Err(_) => break,
+                    Ok((m, ad)) => {
+                        if m > 0 {
+                            //写udp 是不会卡住的, 但addr_conn底层可能不是 udp
+
+                            let sleepf2 = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
+                            let wf = w1.write(&buf0[..], &ad).fuse();
+
+                            pin_mut!(sleepf2, wf);
+                            select!{
+                                _ = sleepf2 =>{
+                                     debug!("write addrconn timeout");
+                                }
+                                r = wf =>{
+                                    if r.is_err() {
+                                        debug!("write addrconn got err, {}",r.unwrap());
+                                        break;
+                                    }
+                                }
+                            }
+
                         }
-                        let n = r.unwrap();
-                        buf.advance(n);
-                        if buf.filled().len() == 0 {
-                            break;
-                        }
+                        whole_write += m;
                     }
                 }
-                whole_write += m;
             }
-        }
-    }
+        } //select
+    } //loop
 
     Ok(whole_write as u64)
 }
