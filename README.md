@@ -224,6 +224,10 @@ o2node-.->collector
 - [x] utils
 - [ ] tui: using ratatui
 
+### 其它生态
+
+[节点编辑器 webui ](https://github.com/e1732a364fed/ruci-webui)
+
 #### Goal of The Project
 
 1. 了解协议的细节 以进行数据处理、转换到统一格式和“标注”.
