@@ -12,7 +12,7 @@ use ruci::{net::*, Name};
 
 use macro_mapper::{mapper_ext_fields, MapperExt};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::utils::run_command_list;
 
@@ -27,12 +27,12 @@ pub struct Options {
 /// 解析出实际 target_addr
 #[mapper_ext_fields]
 #[derive(Debug, Clone, Default, MapperExt)]
-pub struct TproxyResolver {
+pub struct TcpResolver {
     //opts: Options,
     port: Option<u32>,
 }
 
-impl Name for TproxyResolver {
+impl Name for TcpResolver {
     fn name(&self) -> &'static str {
         "tproxy_resolver"
     }
@@ -141,7 +141,7 @@ iptables -t mangle -X rucimp_self"#
     Ok(())
 }
 
-impl TproxyResolver {
+impl TcpResolver {
     pub fn new(opts: Options) -> anyhow::Result<Self> {
         if opts.auto_route_tcp.unwrap_or_default() {
             info!("tproxy run auto_route_tcp");
@@ -149,21 +149,25 @@ impl TproxyResolver {
             run_tcp_route(opts.port.unwrap_or(12345))
                 .context("run auto_route_tcp commands failed")?;
         }
+
+        let is_auto_route =
+            opts.auto_route.unwrap_or_default() || opts.auto_route_tcp.unwrap_or_default();
         Ok(Self {
-            //opts: opts.clone(),
-            port: opts.port,
+            port: if is_auto_route { opts.port } else { None },
             ext_fields: Some(MapperExtFields::default()),
         })
     }
 }
 
-impl Drop for TproxyResolver {
+impl Drop for TcpResolver {
     fn drop(&mut self) {
-        info!("tproxy run down_auto_route");
+        if let Some(port) = self.port {
+            info!("tproxy run down_auto_route");
 
-        let r = down_auto_route(self.port.unwrap_or(12345));
-        if let Err(e) = r {
-            warn!("tproxy run down_auto_route got error {e}")
+            let r = down_auto_route(port);
+            if let Err(e) = r {
+                warn!("tproxy run down_auto_route got error {e}")
+            }
         }
     }
 }
@@ -179,26 +183,31 @@ fn get_laddr_from_vd(vd: Vec<Option<Box<dyn Data>>>) -> Option<ruci::net::Addr> 
 }
 
 #[async_trait]
-impl Mapper for TproxyResolver {
-    ///tproxy only has decode behavior
+impl Mapper for TcpResolver {
+    /// TcpResolver only has decode behavior
     ///
-    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+    async fn maps(&self, _cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        if let ProxyBehavior::ENCODE = behavior {
+            return MapResult::err_str("tproxy TcpResolver doesn't support ENCODE behavior");
+        }
         match params.c {
             Stream::Conn(c) => {
                 let oa = get_laddr_from_vd(params.d);
 
                 if oa.is_none() {
                     return MapResult::err_str(
-                        "Tproxy needs data for local_addr, did't get it from the data.",
+                        "tproxy TcpResolver needs data for local_addr, did't get it from the data.",
                     );
                 }
-                debug!(cid = %cid, a=?oa, "tproxy got target_addr: ");
+                //debug!(cid = %cid, a=?oa, "tproxy TcpResolver got target_addr: ");
 
                 // laddr in tproxy is in fact target_addr
                 MapResult::new_c(c).a(oa).b(params.b).build()
             }
-            Stream::AddrConn(_) => todo!(),
-            _ => MapResult::err_str(&format!("Tproxy needs a stream, got {}", params.c)),
+            _ => MapResult::err_str(&format!(
+                "tproxy TcpResolver needs a tcp stream, got {}",
+                params.c
+            )),
         }
     }
 }

@@ -74,30 +74,30 @@ pub fn set_tproxy_socket_opts<T: AsRawFd>(v4: bool, is_udp: bool, socket: &T) ->
     Ok(())
 }
 
-pub fn tproxy_get_ori_dst_addr<T>(s: &T) -> Result<SocketAddr>
-where
-    T: AsRawFd,
-{
-    let fd = s.as_raw_fd();
+// pub fn tproxy_get_ori_dst_addr<T>(s: &T) -> Result<SocketAddr>
+// where
+//     T: AsRawFd,
+// {
+//     let fd = s.as_raw_fd();
 
-    unsafe {
-        let mut target_addr: libc::sockaddr_storage = std::mem::zeroed();
-        let mut target_addr_len = std::mem::size_of_val(&target_addr) as libc::socklen_t;
+//     unsafe {
+//         let mut target_addr: libc::sockaddr_storage = std::mem::zeroed();
+//         let mut target_addr_len = std::mem::size_of_val(&target_addr) as libc::socklen_t;
 
-        let ret = libc::getsockname(
-            fd,
-            &mut target_addr as *mut _ as *mut _,
-            &mut target_addr_len,
-        );
+//         let ret = libc::getsockname(
+//             fd,
+//             &mut target_addr as *mut _ as *mut _,
+//             &mut target_addr_len,
+//         );
 
-        if ret != 0 {
-            Err(Error::last_os_error())
-        } else {
-            // Convert sockaddr_storage to SocketAddr
-            sockaddr_to_std(&target_addr)
-        }
-    }
-}
+//         if ret != 0 {
+//             Err(Error::last_os_error())
+//         } else {
+//             // Convert sockaddr_storage to SocketAddr
+//             sockaddr_to_std(&target_addr)
+//         }
+//     }
+// }
 
 fn tproxy_get_destination_addr(msg: &libc::msghdr) -> Option<libc::sockaddr_storage> {
     unsafe {
@@ -156,7 +156,7 @@ pub fn tproxy_recv_from_with_destination<T: AsRawFd>(
         msg.msg_iovlen = 1;
 
         msg.msg_control = control_buf.as_mut_ptr() as *mut _;
-        // This is f*** s***, some platform define msg_controllen as size_t, some define as u32
+        // Note: some platform define msg_controllen as size_t, some define as u32
         msg.msg_controllen = TryFrom::try_from(control_buf.len())
             .expect("failed to convert usize to msg_controllen");
 

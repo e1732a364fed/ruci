@@ -13,6 +13,8 @@ use std::{
 };
 use tokio::{io::ReadBuf, net::UdpSocket};
 
+/// Implements AddrConn trait
+///
 /// 固定用同一个 udp socket 发送, 到不同的远程地址也是如此
 #[derive(Clone)]
 pub struct Conn {
@@ -26,6 +28,8 @@ impl crate::Name for Conn {
 }
 
 impl Conn {
+    /// init a Conn from a UdpSocket
+    ///
     /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
     /// 以及用 send 而不是 send_to
     ///
@@ -37,6 +41,11 @@ impl Conn {
     }
 }
 
+/// init a AddrConn from a UdpSocket
+///
+/// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
+/// 以及用 send 而不是 send_to
+///
 pub fn new(u: UdpSocket, peer_addr: Option<Addr>) -> AddrConn {
     let a = Arc::new(u);
     let b = a.clone();

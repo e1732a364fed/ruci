@@ -37,7 +37,7 @@ use tracing::warn;
 
 use crate::map::{
     quic_common,
-    tproxy::{self, TproxyResolver},
+    tproxy::{self, TcpResolver},
     ws,
 };
 
@@ -208,13 +208,13 @@ pub enum InMapperConfig {
     Listener(String), //多流发生器
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
-    OptListener {
+    TcpOptListener {
         sockopt: crate::net::so2::SockOpt,
         ext: Ext,
     },
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
-    TproxyResolver(tproxy::Options),
+    TproxyTcpResolver(tproxy::Options),
 
     Adder(i8),
     Counter,
@@ -251,6 +251,7 @@ pub enum OutMapperConfig {
     TLS(TlsOut),
 
     OptDirect(crate::net::so2::SockOpt),
+    OptDialer(crate::net::so2::SockOpt),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
     NativeTLS(TlsOut),
@@ -460,7 +461,7 @@ impl ToMapperBox for InMapperConfig {
             InMapperConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapperConfig::OptListener { sockopt, ext } => {
+            InMapperConfig::TcpOptListener { sockopt, ext } => {
                 Box::new(crate::map::opt_net::TcpOptListener {
                     sopt: sockopt.clone(),
                     ext_fields: Some(ext.to_ext_fields()),
@@ -468,8 +469,8 @@ impl ToMapperBox for InMapperConfig {
             }
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapperConfig::TproxyResolver(opts) => {
-                Box::new(TproxyResolver::new(opts.clone()).expect("ok"))
+            InMapperConfig::TproxyTcpResolver(opts) => {
+                Box::new(TcpResolver::new(opts.clone()).expect("ok"))
             }
         }
     }
@@ -579,6 +580,10 @@ impl ToMapperBox for OutMapperConfig {
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
             OutMapperConfig::OptDirect(sopt) => Box::new(crate::map::opt_net::OptDirect {
+                sopt: sopt.clone(),
+                ext_fields: Some(MapperExtFields::default()),
+            }),
+            OutMapperConfig::OptDialer(sopt) => Box::new(crate::map::opt_net::OptDialer {
                 sopt: sopt.clone(),
                 ext_fields: Some(MapperExtFields::default()),
             }),

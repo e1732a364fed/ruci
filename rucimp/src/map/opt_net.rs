@@ -2,6 +2,7 @@
 similar to ruci::map::network, but with SockOpt
  */
 use async_trait::async_trait;
+use bytes::BytesMut;
 use macro_mapper::*;
 use ruci::map::network::accept;
 use ruci::map::{self, *};
@@ -118,7 +119,9 @@ impl Mapper for OptDirect {
 
         let dial_r: anyhow::Result<Stream> = match behavior {
             ProxyBehavior::ENCODE => match a.network {
-                Network::UDP => todo!(),
+                Network::UDP => so2::dial_udp(&a, &self.sopt)
+                    .await
+                    .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None))),
                 Network::TCP => so2::dial_tcp(&a, &self.sopt)
                     .await
                     .map(|s| Stream::Conn(Box::new(s))),
@@ -145,6 +148,60 @@ impl Mapper for OptDirect {
                 return MapResult::builder().c(stream).b(params.b).build();
             }
             Err(e) => return MapResult::from_e(e.context(format!("opt_direct dial {} failed", a))),
+        }
+    }
+}
+
+#[mapper_ext_fields]
+#[derive(Clone, Debug, Default, MapperExt)]
+pub struct OptDialer {
+    pub sopt: SockOpt,
+}
+
+impl Name for OptDialer {
+    fn name(&self) -> &'static str {
+        "opt_dialer"
+    }
+}
+
+impl OptDialer {
+    pub async fn dial_addr(
+        &self,
+        dial_a: &net::Addr,
+        pass_a: Option<net::Addr>,
+        pass_b: Option<BytesMut>,
+    ) -> MapResult {
+        let r = match dial_a.network {
+            Network::UDP => so2::dial_udp(&dial_a, &self.sopt)
+                .await
+                .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None))),
+            Network::TCP => so2::dial_tcp(&dial_a, &self.sopt)
+                .await
+                .map(|s| Stream::Conn(Box::new(s))),
+            _ => todo!(),
+        };
+
+        match r {
+            Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
+            Err(e) => MapResult::from_e(e.context(format!("Dialer dial {} failed", dial_a))),
+        }
+    }
+}
+
+#[async_trait]
+impl Mapper for OptDialer {
+    /// use configured addr.
+    /// 注意, dial addr 和target addr (params.a) 不一样
+    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        match params.c {
+            Stream::None => {
+                if let Some(configured_dial_a) = &self.configured_target_addr() {
+                    return self.dial_addr(configured_dial_a, params.a, params.b).await;
+                }
+                return MapResult::err_str("Dialer can't dial without an address");
+            }
+
+            _ => return MapResult::err_str("Dialer can't dial when a stream already exists"),
         }
     }
 }

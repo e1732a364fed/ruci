@@ -2,7 +2,7 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::{TcpListener, TcpStream, UdpSocket};
 
 use ruci::net::{self, Network, Stream};
 use socket2::{Domain, Protocol, Socket, Type};
@@ -87,6 +87,12 @@ pub async fn listen_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpListe
 pub async fn dial_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpStream> {
     let socket = new_socket2(na, so, false).await?;
     let s: TcpStream = TcpStream::from_std(std::net::TcpStream::from(socket))?;
+    Ok(s)
+}
+
+pub async fn dial_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
+    let socket = new_socket2(na, so, false).await?;
+    let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
     Ok(s)
 }
 

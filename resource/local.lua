@@ -13,8 +13,8 @@ l3 = {
     Listener = "0.0.0.0:30800"
 }
 
-tproxy_listen = {
-    OptListener = {
+tproxy_tcp_listen = {
+    TcpOptListener = {
         sockopt = {
             tproxy = true,
         },
@@ -34,9 +34,9 @@ listen_socks5http = {listen, {
     Socks5Http = {}
 }}
 
-tproxy_listen_chain = {
-    tproxy_listen, {
-        TproxyResolver = {
+tproxy_listen_tcp_chain = {
+    tproxy_tcp_listen, {
+        TproxyTcpResolver = {
             port = 12345,
             auto_route_tcp = true,
         }
@@ -181,7 +181,7 @@ config = {
 
 config = {
     inbounds = {{
-        chain = tproxy_listen_chain,
+        chain = tproxy_listen_tcp_chain,
         tag = "listen1"
     }},
     outbounds = {{
