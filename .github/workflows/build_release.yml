@@ -101,10 +101,10 @@ jobs:
           cd rucimp
           make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
   
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload Github Assets
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/*.tar.xz
-          tag: ${{ inputs.tag || github.ref_name }}
-          
+          files: dist/*.tar.xz
+          tag_name: ${{ inputs.tag || github.ref_name }}
