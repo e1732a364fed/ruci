@@ -111,8 +111,8 @@ pub enum AnyData {
 pub type OptData = Option<AnyData>;
 
 pub struct InputData {
-    calculated_data: OptData, //由上层计算得到的数据
-    hyperparameter: OptData,  // 超参数, 即不上层计算决定的数据
+    pub calculated_data: OptData, //由上层计算得到的数据
+    pub hyperparameter: OptData,  // 超参数, 即不上层计算决定的数据
 }
 
 pub enum Stream {
