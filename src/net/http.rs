@@ -44,6 +44,7 @@ pub struct ParsedHttpRequest {
     pub headers: Vec<Header>,
     pub parse_result: Result<(), ParseError>,
     pub last_checked_index: usize,
+    pub body_start_index: usize,
 }
 impl Default for ParsedHttpRequest {
     fn default() -> Self {
@@ -54,6 +55,7 @@ impl Default for ParsedHttpRequest {
             headers: Default::default(),
             parse_result: Ok(()),
             last_checked_index: Default::default(),
+            body_start_index: 0,
         }
     }
 }
@@ -201,12 +203,13 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     //所以找到第二个空格的位置即可，
 
     let mut last = bs.len();
+
     if !is_proxy {
-        //如果是代理，则我们要判断整个请求，不能漏掉任何部分
         if last > MAX_PARSE_URL_LEN {
             last = MAX_PARSE_URL_LEN
         }
     }
+    //如果是代理，则我们要判断整个请求，不能漏掉任何部分
 
     for i in should_slash_index..last {
         let b = bs[i];
@@ -260,6 +263,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                         value: ss[1].to_string(),
                     });
                 }
+                request.body_start_index = index_of_ending + HEADER_ENDING_BYTES_LEN;
             } else {
                 request.parse_result = Err(ParseError::NoEndMark2);
             }

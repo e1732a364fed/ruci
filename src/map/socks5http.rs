@@ -18,7 +18,7 @@ use crate::{
     Name,
 };
 
-use super::{http_proxy, socks5, MapperBox, ToMapperBox};
+use super::{http_proxy, socks5, MapperBox, MapperExtFields, ToMapperBox};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -74,6 +74,7 @@ impl Server {
             http_s: http_proxy::Server {
                 um: oum.clone(),
                 only_connect: false,
+                ext_fields: Some(MapperExtFields::default()),
             },
             socks5_s: socks5::server::Server {
                 um: oum,

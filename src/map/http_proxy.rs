@@ -4,10 +4,11 @@ implements Mapper for http proxy
 
 use std::cmp::min;
 
+use anyhow::bail;
 use base64::prelude::*;
 use bytes::BytesMut;
 use futures::executor::block_on;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
@@ -22,13 +23,14 @@ use crate::{
     Name,
 };
 
-use super::{MapperBox, Stream, ToMapperBox};
+use super::{MapperBox, MapperExtFields, Stream, ToMapperBox};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
 pub const PROXY_AUTH_HEADER_STR: &str = "Proxy-Authorization ";
 
-#[derive(Debug, Clone, NoMapperExt)]
+#[mapper_ext_fields]
+#[derive(Debug, Clone, MapperExt)]
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,
     pub only_connect: bool,
@@ -76,6 +78,7 @@ impl Server {
         Server {
             only_connect: option.only_support_connect,
             um: if um.len().await > 0 { Some(um) } else { None },
+            ext_fields: Some(MapperExtFields::default()),
         }
     }
 
@@ -191,13 +194,14 @@ impl Server {
                 }
             };
 
-            addr_str = match url.host() {
-                Some(h) => h.to_string(),
-                None => {
-                    let e1 = anyhow::anyhow!("http proxy: no host in url: , {}", &r.path);
-                    return Ok(MapResult::ebc(e1, buf, base));
-                }
-            };
+            addr_str = url.authority().to_string();
+            // addr_str = match url.host() {
+            //     Some(h) => h.to_string(),
+            //     None => {
+            //         let e1 = anyhow::anyhow!("http proxy: no host in url: , {}", &r.path);
+            //         return Ok(MapResult::ebc(e1, buf, base));
+            //     }
+            // };
 
             if !addr_str.contains(':') {
                 addr_str += ":80";
@@ -227,7 +231,18 @@ impl Server {
 
         Ok(MapResult {
             a: Some(ta),
-            b: buf_to_ob(buf),
+            b: if is_connect {
+                None
+            } else {
+                if r.body_start_index > buf.len() {
+                    bail!(
+                        "http proxy server got r.body_start_index > buf.len(),{},{}",
+                        r.body_start_index,
+                        buf.len()
+                    )
+                }
+                buf_to_ob(buf.split_to(r.body_start_index))
+            }, // Connect 方式 是没有 early data 的
             c: Stream::c(base),
             d: data, //将 该登录的用户信息 作为 额外信息 传回
             ..Default::default()

@@ -158,10 +158,11 @@ fn get_io_bounds_by_config_and_selector_map(
     let v: Vec<DMIterBox> = ibs
         .into_iter()
         .map(|v| {
+            // 这里要求所有的 Mapper 的 get_chain_tag 均不为空
             let tag = v.last().unwrap().get_chain_tag().to_string();
             let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
 
-            //debug!("try remove from selector map: {}", tag);
+            //tracing::debug!("try remove from selector map: {} {:?}", tag, selector_map);
 
             let selector = Box::new(selector_map.remove(&tag).unwrap());
 

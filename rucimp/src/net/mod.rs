@@ -47,6 +47,20 @@ pub enum HttpMatchError<'a> {
     InvalidContentType { expected: &'a str, found: &'a str },
 }
 
+#[test]
+fn test_url() {
+    let u = http::Uri::builder()
+        .scheme("https")
+        .authority("c.authority.as_str():1234")
+        .path_and_query("/&c.path")
+        .build()
+        .expect("uri ok");
+    println!("{}", u);
+    println!("{:?}", u.authority());
+    println!("{:?}", u.host());
+    assert_ne!(u.authority().unwrap(), u.host().unwrap());
+}
+
 pub fn match_request_http_header<'a, T: 'a>(
     c: &'a CommonConfig,
     r: &'a Request<T>,
