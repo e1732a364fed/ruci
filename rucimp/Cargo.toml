@@ -107,6 +107,8 @@ reqwest = { version = "0.11", features = ["json"] }
 
 har = "0.8.1"
 
+pin-project = "1.1"
+
 
 [target.'cfg(not(all(target_os = "windows", target_env = "msvc")))'.dependencies]
 netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d", optional = true }

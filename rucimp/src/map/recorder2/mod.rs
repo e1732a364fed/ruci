@@ -1,10 +1,11 @@
 mod tcp;
 
 use std::fmt::Display;
-use std::{fs::File, io::BufWriter, time};
+use std::{fs::File, io::BufWriter, pin::Pin, time};
 
 use async_trait::async_trait;
 use chrono::DateTime;
+use futures::Future;
 use macro_map::{map_ext_fields, MapExt};
 use ruci::map::{self, Map, MapBox, MapParams, MapResult};
 use ruci::net::{Stream, CID};
@@ -13,6 +14,8 @@ use ruci::{
     net::Addr,
 };
 use serde::{Deserialize, Serialize};
+use tokio::io::{AsyncWriteExt, BufWriter as AsyncBufWriter};
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum OutputFileExtension {
     #[default]
@@ -69,17 +72,17 @@ pub enum Recorder {
 impl Recorder {
     pub fn cid(&self) -> &str {
         match self {
-            Recorder::Full(r) => &r.data.cid,
-            Recorder::Simplified(r) => &r.data.cid,
-            Recorder::Info(r) => &r.data.cid,
+            Recorder::Full(r) => r.cid(),
+            Recorder::Simplified(r) => r.cid(),
+            Recorder::Info(r) => r.cid(),
         }
     }
 
     pub fn since(&self) -> u128 {
         match self {
-            Recorder::Full(r) => r.since(),
-            Recorder::Simplified(r) => r.since(),
-            Recorder::Info(r) => r.since(),
+            Recorder::Full(r) => r.since(r.start),
+            Recorder::Simplified(r) => r.since(r.start),
+            Recorder::Info(r) => r.since(r.start),
         }
     }
 
@@ -109,9 +112,29 @@ impl Recorder {
 
     pub fn save(&self) {
         match self {
-            Recorder::Full(r) => r.save(),
-            Recorder::Simplified(r) => r.save(),
-            Recorder::Info(r) => r.save(),
+            Recorder::Full(r) => r.save_to_file(&r.config).unwrap(),
+            Recorder::Simplified(r) => r.save_to_file(&r.config).unwrap(),
+            Recorder::Info(r) => r.save_to_file(&r.config).unwrap(),
+        }
+    }
+
+    pub fn async_save(&self) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>> {
+        match self {
+            Recorder::Full(r) => {
+                let config = r.config.clone();
+                let r = r.clone();
+                Box::pin(async move { r.async_save_to_file(&config).await.unwrap() })
+            }
+            Recorder::Simplified(r) => {
+                let config = r.config.clone();
+                let r = r.clone();
+                Box::pin(async move { r.async_save_to_file(&config).await.unwrap() })
+            }
+            Recorder::Info(r) => {
+                let config = r.config.clone();
+                let r = r.clone();
+                Box::pin(async move { r.async_save_to_file(&config).await.unwrap() })
+            }
         }
     }
 }
@@ -325,7 +348,7 @@ impl From<SimplifiedRecordData> for har::Har {
         let entries = val
             .data
             .into_iter()
-            .map(|(d, data)| PayloadInfo::Tcp(0, d, data.len()))
+            .map(|(direction, data)| PayloadInfo::Tcp(0, direction, data.len()))
             .collect::<Vec<_>>();
 
         let entries = entries.into_iter().map(|p| p.into()).collect::<Vec<_>>();
@@ -340,69 +363,18 @@ impl From<SimplifiedRecordData> for har::Har {
 }
 
 impl InfoRecorder {
-    pub fn cid(&self) -> &str {
-        &self.data.cid
-    }
-
-    pub fn since(&self) -> u128 {
-        self.start.elapsed().as_nanos()
-    }
-
     pub fn record_u(&mut self, data: &[u8]) {
-        let d = self.since();
+        let d = self.since(self.start);
         self.data.payload.push(PayloadInfo::Tcp(d, 1, data.len()));
     }
 
     pub fn record_d(&mut self, data: &[u8]) {
-        let d = self.since();
+        let d = self.since(self.start);
         self.data.payload.push(PayloadInfo::Tcp(d, -1, data.len()));
-    }
-
-    pub fn save(&self) {
-        match self.config.output_format {
-            OutputFormat::Ruci => match self.config.output_file_extension {
-                OutputFileExtension::Json => {
-                    let file_name = format!("{}.json", self.cid());
-                    let file = File::create(file_name).unwrap();
-                    let mut writer = BufWriter::new(file);
-                    serde_json::to_writer(&mut writer, &self.data).unwrap();
-                }
-                OutputFileExtension::Cbor => {
-                    let file_name = format!("{}.cbor", self.cid());
-                    let file = File::create(file_name).unwrap();
-                    let mut writer = BufWriter::new(file);
-
-                    serde_cbor::to_writer(&mut writer, &self.data).unwrap();
-                }
-            },
-            OutputFormat::Har => {
-                let har: har::Har = self.data.clone().into();
-                let file_name = format!("{}.har", self.cid());
-                let file = File::create(file_name).unwrap();
-                let mut writer = BufWriter::new(file);
-
-                match self.config.output_file_extension {
-                    OutputFileExtension::Json => {
-                        serde_json::to_writer(&mut writer, &har).unwrap();
-                    }
-                    OutputFileExtension::Cbor => {
-                        serde_cbor::to_writer(&mut writer, &har).unwrap();
-                    }
-                }
-            }
-        }
     }
 }
 
 impl SimplifiedRecorder {
-    pub fn cid(&self) -> &str {
-        &self.data.cid
-    }
-
-    pub fn since(&self) -> u128 {
-        self.start.elapsed().as_nanos()
-    }
-
     pub fn record_u(&mut self, data: &[u8]) {
         self.data.data.push((1, data.to_vec()));
     }
@@ -410,83 +382,213 @@ impl SimplifiedRecorder {
     pub fn record_d(&mut self, data: &[u8]) {
         self.data.data.push((-1, data.to_vec()));
     }
-
-    pub fn save(&self) {
-        match self.config.output_format {
-            OutputFormat::Ruci => match self.config.output_file_extension {
-                OutputFileExtension::Json => {
-                    let file_name = format!("{}.json", self.cid());
-                    let file = File::create(file_name).unwrap();
-                    let mut writer = BufWriter::new(file);
-                    serde_json::to_writer(&mut writer, &self.data).unwrap();
-                }
-                OutputFileExtension::Cbor => {
-                    let file_name = format!("{}.cbor", self.cid());
-                    let file = File::create(file_name).unwrap();
-                    let mut writer = BufWriter::new(file);
-
-                    serde_cbor::to_writer(&mut writer, &self.data).unwrap();
-                }
-            },
-            OutputFormat::Har => {
-                let har: har::Har = self.data.clone().into();
-                let file_name = format!("{}.har", self.cid());
-                let file = File::create(file_name).unwrap();
-                let mut writer = BufWriter::new(file);
-
-                match self.config.output_file_extension {
-                    OutputFileExtension::Json => {
-                        serde_json::to_writer(&mut writer, &har).unwrap();
-                    }
-                    OutputFileExtension::Cbor => {
-                        serde_cbor::to_writer(&mut writer, &har).unwrap();
-                    }
-                }
-            }
-        }
-    }
 }
 
 impl FullRecorder {
-    pub fn cid(&self) -> &str {
-        &self.data.cid
-    }
-
-    pub fn since(&self) -> u128 {
-        self.start.elapsed().as_nanos()
-    }
-
     pub fn record_u(&mut self, data: &[u8]) {
-        let d = self.since();
+        let d = self.since(self.start);
         self.data
             .upload_data
             .push(FullPayloadData::Tcp(d, data.to_vec()));
     }
 
     pub fn record_d(&mut self, data: &[u8]) {
-        let d = self.since();
+        let d = self.since(self.start);
         self.data
             .download_data
             .push(FullPayloadData::Tcp(d, data.to_vec()));
     }
+}
 
-    pub fn save(&self) {
-        match self.config.output_format {
-            OutputFormat::Ruci => match self.config.output_file_extension {
-                OutputFileExtension::Json => {
-                    let file_name = format!("{}.json", self.cid());
-                    let file = File::create(file_name).unwrap();
-                    let mut writer = BufWriter::new(file);
-                    serde_json::to_writer(&mut writer, &self.data).unwrap();
-                }
-                OutputFileExtension::Cbor => {
-                    let file_name = format!("{}.cbor", self.cid());
-                    let file = File::create(file_name).unwrap();
-                    let mut writer = BufWriter::new(file);
+// Common trait for all recorders
+pub trait RecorderTrait {
+    fn cid(&self) -> &str;
+    fn since(&self, start: time::Instant) -> u128 {
+        start.elapsed().as_nanos()
+    }
+    fn save_to_file(&self, config: &Config) -> std::io::Result<()>;
+    fn async_save_to_file(
+        self,
+        config: &Config,
+    ) -> impl Future<Output = std::io::Result<()>> + Send;
+}
 
-                    serde_cbor::to_writer(&mut writer, &self.data).unwrap();
-                }
-            },
+// Common error type for serialization
+#[derive(Debug)]
+enum SerializeError {
+    Json(serde_json::Error),
+    Cbor(serde_cbor::Error),
+}
+
+impl std::fmt::Display for SerializeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SerializeError::Json(e) => write!(f, "JSON error: {}", e),
+            SerializeError::Cbor(e) => write!(f, "CBOR error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for SerializeError {}
+
+// Common save implementation
+fn save_to_file<T: serde::Serialize>(data: &T, cid: &str, config: &Config) -> std::io::Result<()> {
+    let file_name = match config.output_file_extension {
+        OutputFileExtension::Json => format!("{}.json", cid),
+        OutputFileExtension::Cbor => format!("{}.cbor", cid),
+    };
+
+    let file = File::create(file_name)?;
+    let mut writer = BufWriter::new(file);
+
+    let result: Result<(), SerializeError> = match config.output_file_extension {
+        OutputFileExtension::Json => {
+            serde_json::to_writer(&mut writer, data).map_err(SerializeError::Json)
+        }
+        OutputFileExtension::Cbor => {
+            serde_cbor::to_writer(&mut writer, data).map_err(SerializeError::Cbor)
+        }
+    };
+
+    result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+}
+
+// Common save implementation for async
+async fn async_save_to_file<T: serde::Serialize + Send + 'static + Clone>(
+    data: T,
+    cid: &str,
+    config: &Config,
+) -> std::io::Result<()> {
+    let file_name = match config.output_file_extension {
+        OutputFileExtension::Json => format!("{}.json", cid),
+        OutputFileExtension::Cbor => format!("{}.cbor", cid),
+    };
+
+    // Clone the data for the blocking task
+    let ext = config.output_file_extension;
+
+    // Spawn blocking task for serialization since serde operations are CPU-bound
+    let buf = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, SerializeError> {
+        match ext {
+            OutputFileExtension::Json => serde_json::to_vec(&data).map_err(SerializeError::Json),
+            OutputFileExtension::Cbor => serde_cbor::to_vec(&data).map_err(SerializeError::Cbor),
+        }
+    })
+    .await
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+
+    // Use tokio's async file operations
+    let file = tokio::fs::File::create(file_name).await?;
+    let mut writer = AsyncBufWriter::new(file);
+
+    // Write the serialized data
+    writer.write_all(&buf).await?;
+    writer.flush().await?;
+
+    Ok(())
+}
+
+impl RecorderTrait for InfoRecorder {
+    fn cid(&self) -> &str {
+        &self.data.cid
+    }
+
+    fn save_to_file(&self, config: &Config) -> std::io::Result<()> {
+        match config.output_format {
+            OutputFormat::Ruci => save_to_file(&self.data, self.cid(), config),
+            OutputFormat::Har => {
+                let har: har::Har = self.data.clone().into();
+                save_to_file(
+                    &har,
+                    self.cid(),
+                    &Config {
+                        output_file_extension: config.output_file_extension,
+                        ..Default::default()
+                    },
+                )
+            }
+        }
+    }
+
+    async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
+        let cid = self.cid().to_string();
+        match config.output_format {
+            OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
+            OutputFormat::Har => {
+                let har: har::Har = self.data.into();
+                async_save_to_file(
+                    har,
+                    &cid,
+                    &Config {
+                        output_file_extension: config.output_file_extension,
+                        ..Default::default()
+                    },
+                )
+                .await
+            }
+        }
+    }
+}
+
+impl RecorderTrait for SimplifiedRecorder {
+    fn cid(&self) -> &str {
+        &self.data.cid
+    }
+
+    fn save_to_file(&self, config: &Config) -> std::io::Result<()> {
+        match config.output_format {
+            OutputFormat::Ruci => save_to_file(&self.data, self.cid(), config),
+            OutputFormat::Har => {
+                let har: har::Har = self.data.clone().into();
+                save_to_file(
+                    &har,
+                    self.cid(),
+                    &Config {
+                        output_file_extension: config.output_file_extension,
+                        ..Default::default()
+                    },
+                )
+            }
+        }
+    }
+
+    async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
+        let cid = self.cid().to_string();
+        match config.output_format {
+            OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
+            OutputFormat::Har => {
+                let har: har::Har = self.data.into();
+                async_save_to_file(
+                    har,
+                    &cid,
+                    &Config {
+                        output_file_extension: config.output_file_extension,
+                        ..Default::default()
+                    },
+                )
+                .await
+            }
+        }
+    }
+}
+
+impl RecorderTrait for FullRecorder {
+    fn cid(&self) -> &str {
+        &self.data.cid
+    }
+
+    fn save_to_file(&self, config: &Config) -> std::io::Result<()> {
+        match config.output_format {
+            OutputFormat::Ruci => save_to_file(&self.data, self.cid(), config),
+            OutputFormat::Har => panic!("har is not supported for full data"),
+        }
+    }
+
+    async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
+        let cid = self.cid().to_string();
+        match config.output_format {
+            OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
             OutputFormat::Har => panic!("har is not supported for full data"),
         }
     }
@@ -570,6 +672,7 @@ impl Map for RecorderMap {
                 let rc = tcp::RecorderConn {
                     base: Box::pin(c),
                     record: r,
+                    save_future: None,
                 };
                 MapResult::builder()
                     .a(params.a)
