@@ -1,5 +1,5 @@
 /*
-代码修改自 tproxy 包中的对应 udp 代码
+代码修改自 tproxy 模块 中的对应 udp 代码
 */
 
 use std::fmt::{Display, Formatter};
@@ -26,7 +26,7 @@ use ruci::net::{
 
 use dashmap::DashMap;
 
-/// (buf_index, left_bound, right_bound), dst, src
+/// data, dst, src
 pub type DataDstSrc = (Vec<u8>, SocketAddr, SocketAddr);
 
 const UDP_CHANNEL_SIZE: usize = 4096;
@@ -34,21 +34,17 @@ const UDP_CONN_CHANNEL_SIZE: usize = 100;
 const UDP_TIMEOUT_MULTIPLIER: u32 = 2;
 
 #[async_trait::async_trait]
-pub trait Getter: Send {
-    async fn get(&mut self) -> io::Result<DataDstSrc>;
+pub trait UdpRead: Send {
+    async fn read(&mut self) -> io::Result<DataDstSrc>;
 }
 
 #[async_trait::async_trait]
-pub trait Putter: Send {
-    async fn put(&mut self, data: DataDstSrc) -> io::Result<()>;
-}
-
-pub trait Splitter: Send {
-    fn split(&mut self) -> (Box<dyn Getter>, Box<dyn Putter>);
+pub trait UdpWrite: Send {
+    async fn write(&mut self, data: DataDstSrc) -> io::Result<()>;
 }
 
 pub async fn loop_accept_udp(
-    r: &mut dyn Getter,
+    r: &mut dyn UdpRead,
     tx: mpsc::Sender<DataDstSrc>,
     shutdown_atomic: Arc<AtomicBool>,
 ) {
@@ -58,7 +54,7 @@ pub async fn loop_accept_udp(
             break;
         }
 
-        let r = r.get().await;
+        let r = r.read().await;
 
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
             debug!("stack udp thread shutdown_atomic = true");

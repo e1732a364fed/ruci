@@ -16,38 +16,25 @@ use ruci::{
     net::CID,
 };
 
+use super::tcp_ip_stack_common::udp::{UdpRead, UdpWrite};
 use super::tcp_ip_stack_common::Generator;
 
 mod udp {
-    use std::pin::Pin;
 
     use crate::map::tcp_ip_stack_common::udp::*;
 
     use super::*;
 
-    pub(crate) struct U {
-        pub udp: Option<Pin<Box<netstack_lwip::udp::UdpSocket>>>,
-    }
-
-    impl Splitter for U {
-        fn split(&mut self) -> (Box<dyn Getter>, Box<dyn Putter>) {
-            let (w, r) = self.udp.take().unwrap().split();
-            (Box::new(r), Box::new(w))
-        }
-    }
-
     #[async_trait::async_trait]
-
-    impl Putter for netstack_lwip::udp::SendHalf {
-        async fn put(&mut self, data: DataDstSrc) -> std::io::Result<()> {
+    impl UdpWrite for netstack_lwip::udp::SendHalf {
+        async fn write(&mut self, data: DataDstSrc) -> std::io::Result<()> {
             self.send_to(&data.0, &data.1, &data.2)
         }
     }
 
     #[async_trait::async_trait]
-
-    impl Getter for netstack_lwip::udp::RecvHalf {
-        async fn get(&mut self) -> std::io::Result<(Vec<u8>, SocketAddr, SocketAddr)> {
+    impl UdpRead for netstack_lwip::udp::RecvHalf {
+        async fn read(&mut self) -> std::io::Result<(Vec<u8>, SocketAddr, SocketAddr)> {
             self.recv_from().await
         }
     }
@@ -65,32 +52,26 @@ impl Display for Stack {
 
 impl Generator for Stack {
     type AsyncConn = Pin<Box<netstack_lwip::TcpStream>>;
-    type TcpGetter = Pin<Box<netstack_lwip::TcpListener>>;
-
-    type Stack = Pin<Box<netstack_lwip::NetStack>>;
+    type TcpConnStream = Pin<Box<netstack_lwip::TcpListener>>;
+    type StackStream = Pin<Box<netstack_lwip::NetStack>>;
 
     fn gen(
         &self,
     ) -> (
-        Self::Stack,
-        Self::TcpGetter,
-        Box<dyn crate::map::tcp_ip_stack_common::udp::Splitter>,
+        Self::StackStream,
+        Self::TcpConnStream,
+        (Box<dyn UdpRead>, Box<dyn UdpWrite>),
     ) {
         let (stack, tcp_listener, udp_socket) = netstack_lwip::NetStack::new().unwrap();
 
-        (
-            stack,
-            tcp_listener,
-            Box::new(udp::U {
-                udp: Some(udp_socket),
-            }),
-        )
+        let (w, r) = udp_socket.split();
+        (stack, tcp_listener, (Box::new(r), Box::new(w)))
     }
 }
 
 #[async_trait]
 impl Map for Stack {
-    async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        crate::map::tcp_ip_stack_common::maps(cid, behavior, params, self).await
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        crate::map::tcp_ip_stack_common::maps(cid, params, self).await
     }
 }

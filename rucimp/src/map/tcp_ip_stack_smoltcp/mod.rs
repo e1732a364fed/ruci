@@ -2,9 +2,6 @@
 ! Implement tcp/ip stack by netstack_smoltcp;
 
 <https://github.com/automesh-network/netstack-smoltcp>
-
-The mod is a mirror of mod tcp_ip_stack_lwip.
-
  */
 
 use std::fmt::Display;
@@ -17,40 +14,28 @@ use ruci::{
     net::CID,
 };
 
+use super::tcp_ip_stack_common::udp::{UdpRead, UdpWrite};
 use super::tcp_ip_stack_common::Generator;
 
 mod udp {
     use std::net::SocketAddr;
 
-    use crate::map::tcp_ip_stack_common::udp::{DataDstSrc, Getter, Putter, Splitter};
+    use crate::map::tcp_ip_stack_common::udp::{DataDstSrc, UdpRead, UdpWrite};
 
     #[async_trait::async_trait]
-
-    impl Putter for netstack_smoltcp::udp::WriteHalf {
-        async fn put(&mut self, data: DataDstSrc) -> std::io::Result<()> {
+    impl UdpWrite for netstack_smoltcp::udp::WriteHalf {
+        async fn write(&mut self, data: DataDstSrc) -> std::io::Result<()> {
             use futures::SinkExt;
             self.send(data).await
         }
     }
 
     #[async_trait::async_trait]
-
-    impl Getter for netstack_smoltcp::udp::ReadHalf {
-        async fn get(&mut self) -> std::io::Result<(Vec<u8>, SocketAddr, SocketAddr)> {
+    impl UdpRead for netstack_smoltcp::udp::ReadHalf {
+        async fn read(&mut self) -> std::io::Result<(Vec<u8>, SocketAddr, SocketAddr)> {
             use futures::StreamExt;
             let r = self.next().await;
             r.ok_or(std::io::Error::other("smoltcp udp ReadHalf got None"))
-        }
-    }
-
-    pub(crate) struct U {
-        pub udp: Option<netstack_smoltcp::udp::UdpSocket>,
-    }
-
-    impl Splitter for U {
-        fn split(&mut self) -> (Box<dyn Getter>, Box<dyn Putter>) {
-            let (r, w) = self.udp.take().unwrap().split();
-            (Box::new(r), Box::new(w))
         }
     }
 }
@@ -67,16 +52,15 @@ impl Display for Stack {
 
 impl Generator for Stack {
     type AsyncConn = netstack_smoltcp::TcpStream;
-    type TcpGetter = netstack_smoltcp::TcpListener;
-
-    type Stack = netstack_smoltcp::Stack;
+    type TcpConnStream = netstack_smoltcp::TcpListener;
+    type StackStream = netstack_smoltcp::Stack;
 
     fn gen(
         &self,
     ) -> (
-        Self::Stack,
-        Self::TcpGetter,
-        Box<dyn crate::map::tcp_ip_stack_common::udp::Splitter>,
+        Self::StackStream,
+        Self::TcpConnStream,
+        (Box<dyn UdpRead>, Box<dyn UdpWrite>),
     ) {
         let (stack, runner, udp_socket, tcp_listener) = netstack_smoltcp::StackBuilder::default()
             .stack_buffer_size(512)
@@ -92,19 +76,15 @@ impl Generator for Stack {
             tokio::spawn(runner);
         }
 
-        (
-            stack,
-            tcp_listener,
-            Box::new(udp::U {
-                udp: Some(udp_socket),
-            }),
-        )
+        let (r, w) = udp_socket.split();
+
+        (stack, tcp_listener, (Box::new(r), Box::new(w)))
     }
 }
 
 #[async_trait]
 impl Map for Stack {
-    async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        crate::map::tcp_ip_stack_common::maps(cid, behavior, params, self).await
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        crate::map::tcp_ip_stack_common::maps(cid, params, self).await
     }
 }

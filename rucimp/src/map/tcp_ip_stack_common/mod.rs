@@ -9,11 +9,11 @@ use std::{
 };
 
 use bytes::BytesMut;
-use futures::{SinkExt, StreamExt};
+use futures::{Sink, SinkExt, Stream, StreamExt};
 
 use ruci::net::Network;
 use ruci::{
-    map::{MapParams, MapResult, ProxyBehavior},
+    map::{MapParams, MapResult},
     net::{Addr, CID},
 };
 use tokio::{
@@ -22,38 +22,40 @@ use tokio::{
 };
 use tracing::debug;
 use tracing::warn;
-
-// #[async_trait::async_trait]
-// pub trait Getter: Send {
-//     type Item;
-
-//     //item, local, remote
-//     async fn get(&mut self) -> std::io::Result<(Self::Item, SocketAddr, SocketAddr)>;
-// }
+use udp::{UdpRead, UdpWrite};
 
 pub trait Generator: Send + Sync {
     type AsyncConn: ruci::net::AsyncConn + 'static;
-    type Stack: futures::Stream<Item = std::io::Result<Vec<u8>>>
-        + futures::Sink<Vec<u8>, Error = std::io::Error>
+    type StackStream: Stream<Item = std::io::Result<Vec<u8>>>
+        + Sink<Vec<u8>, Error = std::io::Error>
         + Unpin
         + Send;
 
-    type TcpGetter: futures::Stream<Item = (Self::AsyncConn, SocketAddr, SocketAddr)> + Unpin + Send;
+    type TcpConnStream: Stream<Item = (Self::AsyncConn, SocketAddr, SocketAddr)> + Unpin + Send;
 
-    fn gen(&self) -> (Self::Stack, Self::TcpGetter, Box<dyn udp::Splitter>);
+    fn gen(
+        &self,
+    ) -> (
+        Self::StackStream,
+        Self::TcpConnStream,
+        (Box<dyn UdpRead>, Box<dyn UdpWrite>),
+    );
 }
 
-pub async fn maps<AsyncConn, Getter, S>(
+pub async fn maps<AsyncConn, TcpConnStream, StackStream>(
     cid: CID,
-    _behavior: ProxyBehavior,
     params: MapParams,
-    gen: &dyn Generator<AsyncConn = AsyncConn, TcpGetter = Getter, Stack = S>,
+    gen: &dyn Generator<
+        AsyncConn = AsyncConn,
+        TcpConnStream = TcpConnStream,
+        StackStream = StackStream,
+    >,
 ) -> MapResult
 where
-    AsyncConn: ruci::net::AsyncConn + 'static, // tokio::io::AsyncRead + tokio::io::AsyncWrite + std::marker::Unpin,
-    Getter: futures::Stream<Item = (AsyncConn, SocketAddr, SocketAddr)> + Unpin + Send + 'static,
-    S: futures::Stream<Item = std::io::Result<Vec<u8>>>
-        + futures::Sink<Vec<u8>, Error = std::io::Error>
+    AsyncConn: ruci::net::AsyncConn + 'static,
+    TcpConnStream: Stream<Item = (AsyncConn, SocketAddr, SocketAddr)> + Unpin + Send + 'static,
+    StackStream: Stream<Item = std::io::Result<Vec<u8>>>
+        + Sink<Vec<u8>, Error = std::io::Error>
         + Unpin
         + Send
         + 'static,
@@ -68,7 +70,7 @@ where
     // if let ruci::net::Stream::RW(rw) = params.c {
     // if let ruci::net::Stream::Frame(f) = params.c {
     if let ruci::net::Stream::Conn(conn) = params.c {
-        let (stack, mut tcp_listener, mut udp_socket) = gen.gen();
+        let (stack, mut tcp_listener, udp_socket) = gen.gen();
         let (mut stack_sink, mut stack_stream) = stack.split();
 
         let (mut r, mut w) = split(conn);
@@ -100,14 +102,14 @@ where
 
         let stream_tx_c = stream_tx.clone();
 
-        let (udp_new_msg_tx_to_stack, mut udp_new_msg_rx_stack_end) = mpsc::channel(100);
+        let (udp_new_msg_tx_self_end, mut udp_new_msg_rx_stack_end) = mpsc::channel(100);
 
         let (udp_new_msg_tx_stack_end, udp_new_msg_rx_self_end) = mpsc::channel(100);
 
         let cc = cid.clone();
         let ccc = cid.clone();
 
-        let (mut r, mut w) = udp_socket.split();
+        let (mut r, mut w) = udp_socket;
 
         tokio::spawn(async move {
             loop {
@@ -120,7 +122,7 @@ where
                     }
 
                     Some(d) => {
-                        let r = w.put((d.0, d.1, d.2)).await; //.send_to(d.0.as_slice(), &d.1, &d.2);
+                        let r = w.write((d.0, d.1, d.2)).await;
                         match r {
                             Ok(_) => {
                                 // debug!("write ok");
@@ -146,7 +148,7 @@ where
         });
 
         let mut l = crate::map::tcp_ip_stack_common::udp::Listener::new(
-            udp_new_msg_tx_to_stack,
+            udp_new_msg_tx_self_end,
             udp_new_msg_rx_self_end,
         )
         .await
@@ -170,7 +172,7 @@ where
                         }
                     }
                     Err(e) => {
-                        tracing::warn!("l.accept() got err {e}");
+                        tracing::warn!(cid = %ccc,"l.accept() got err {e}");
                         break;
                     }
                 }
@@ -181,7 +183,7 @@ where
             let s_count: AtomicU32 = AtomicU32::new(1);
 
             while let Some((stream, local_addr, remote_addr)) = tcp_listener.next().await {
-                debug!("stack new tcp: {},{}", local_addr, remote_addr);
+                debug!(cid = %cc, "stack new tcp: {},{}", local_addr, remote_addr);
 
                 let c: ruci::net::Conn = Box::new(stream);
 
