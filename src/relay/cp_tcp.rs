@@ -5,9 +5,6 @@
 */
 
 use crate::net::{self, TransmissionInfo};
-use async_std::io::WriteExt;
-use async_std::net::TcpStream;
-use async_std::task;
 use log::Level::Debug;
 use log::{debug, info, log_enabled, warn};
 use std::sync::atomic::Ordering;

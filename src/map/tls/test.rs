@@ -1,18 +1,11 @@
 use std::{env::set_var, sync::Arc, thread, time::Duration};
 
-use async_std::{
-    io::ReadExt,
-    net::{TcpListener, TcpStream},
-    sync::Mutex,
-    task,
-};
-use async_std_test::async_test;
 use futures::{join, FutureExt};
 use log::info;
 
 use crate::{
+    map::{tls, MapParams, Mapper},
     net::{self, gen_random_higher_port, helpers::MockTcpStream},
-    map::{tls, Mapper,  MapParams},
 };
 
 use super::*;
@@ -31,7 +24,7 @@ async fn tls_in_mem() -> std::io::Result<()> {
         write_target: Some(writev),
     };
 
-    let a = tls::Client::new("www.baidu.com",true);
+    let a = tls::Client::new("www.baidu.com", true);
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?;
     println!("will out, {}", ta);
 
@@ -41,14 +34,15 @@ async fn tls_in_mem() -> std::io::Result<()> {
             0,
             ProxyBehavior::ENCODE,
             MapParams {
-                c: map::Stream::TCP(Box::new(client_tcps)) ,
+                c: map::Stream::TCP(Box::new(client_tcps)),
                 a: Some(ta),
                 b: None,
                 d: None,
             },
         )
         .await
-        .c.unwrap();
+        .c
+        .unwrap();
 
     let mut buf = [0u8; 1024];
     let n = r.read(&mut buf[..]).await?;
@@ -64,7 +58,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result
         .await
         .unwrap();
 
-    let a = tls::Client::new("test.domain", true) ;
+    let a = tls::Client::new("test.domain", true);
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.
 
     info!("client will out, {}", ta);
@@ -73,14 +67,15 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result
             0,
             ProxyBehavior::ENCODE,
             MapParams {
-                c: map::Stream::TCP(Box::new(cs)) ,
+                c: map::Stream::TCP(Box::new(cs)),
                 a: Some(ta),
                 b: None,
                 d: None,
             },
         )
         .await
-        .c.unwrap();
+        .c
+        .unwrap();
 
     info!("client ok");
 
@@ -118,7 +113,9 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> std::io::Resu
 
     info!("server will start");
 
-    let add_result = a.maps(0,ProxyBehavior::DECODE, MapParams::new(Box::new(nc))).await;
+    let add_result = a
+        .maps(0, ProxyBehavior::DECODE, MapParams::new(Box::new(nc)))
+        .await;
     if let Some(e) = add_result.e {
         return Err(e);
     }

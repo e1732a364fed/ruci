@@ -1,6 +1,5 @@
 use super::*;
 
-use async_std::io::{self};
 use bytes::{Buf, BytesMut};
 use futures::io::Error;
 use std::{
@@ -208,16 +207,14 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     Ok(whole_write as u64)
 }
 
-pub async fn cp_addrconn<
-    F: Fn() -> (),
->(
+pub async fn cp_addrconn<F: Fn() -> ()>(
     cid: u32,
     c1: AddrConn,
     c2: AddrConn,
     shutdown_f: F,
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
-    cp_addr_between(cid,c1.0,c1.1,c2.0,c2.1,shutdown_f,opt).await
+    cp_addr_between(cid, c1.0, c1.1, c2.0, c2.1, shutdown_f, opt).await
 }
 
 pub async fn cp_addr_between<

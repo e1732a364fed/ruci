@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use async_std::sync::Mutex;
 use async_trait::async_trait;
 
 /// 用于用户鉴权
@@ -85,7 +84,6 @@ pub struct UsersMap<T: User> {
     m: Mutex<InnerUsersmapStruct<T>>,
 }
 
-
 #[derive(Debug)]
 struct InnerUsersmapStruct<T: User> {
     idmap: HashMap<String, T>, // id map
@@ -135,8 +133,6 @@ mod test {
 
     use super::UserPass;
     use crate::user::{AsyncUserAuthenticator, UsersMap};
-    use async_std::task::block_on;
-    use async_std_test::async_test;
 
     #[test]
     fn test_hashmap() {

@@ -1,7 +1,6 @@
-use crate::net::helpers::MockTcpStream;
 use crate::map::{MapParams, Mapper};
-use async_std::sync::Mutex;
-use async_std_test::async_test;
+use crate::net::helpers::MockTcpStream;
+
 use futures::AsyncWriteExt;
 use std::sync::Arc;
 
@@ -19,7 +18,13 @@ async fn test_adder1() -> std::io::Result<()> {
     };
 
     let a = crate::map::math::Adder { addnum: 2 };
-    let r = a.maps(0,ProxyBehavior::UNSPECIFIED, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            0,
+            ProxyBehavior::UNSPECIFIED,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
 
     if let Some(e) = r.e {
         return Err(e);
@@ -59,7 +64,13 @@ async fn test_counter1() -> std::io::Result<()> {
     use crate::map::counter;
 
     let a = counter::Counter;
-    let r = a.maps(0,ProxyBehavior::UNSPECIFIED, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            0,
+            ProxyBehavior::UNSPECIFIED,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
 
     if let Some(e) = r.e {
         return Err(e);
@@ -72,12 +83,12 @@ async fn test_counter1() -> std::io::Result<()> {
             if let Some(cd) = d.downcast_mut::<counter::CounterData>() {
                 let mut inital_data = [1u8, 2, 3];
                 r.c.unwrap().write(&mut inital_data).await?;
-        
+
                 let v = writevc.lock().await;
-        
+
                 println!("it     be {:?}", v);
                 assert_eq!(v.len(), inital_data.len());
-        
+
                 println!(
                     "Successfully downcasted to CounterConn, {}, {}",
                     cd.ub.fetch_add(0, std::sync::atomic::Ordering::Relaxed),
@@ -87,10 +98,7 @@ async fn test_counter1() -> std::io::Result<()> {
             } else {
                 panic!("failed downcasted to CounterConn, ")
             }
-        },
+        }
         _ => panic!("need AsyncAnyData::B"),
-
     }
-
-    
 }

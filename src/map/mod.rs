@@ -1,7 +1,7 @@
 /*!
 module proxy define some important traits for proxy
 
-几个关键部分：State, Mapper, Accumulator 
+几个关键部分：State, Mapper, Accumulator
 
 ruci 包中实现 Mapper 的模块有：math, counter, tls, socks5, trojan
 
@@ -22,22 +22,18 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 pub mod counter;
 
+pub mod basic;
 /// math 中有一些基本数学运算的 adder
 pub mod math;
 pub mod socks5;
 pub mod tls;
 pub mod trojan;
-pub mod basic;
 
 #[cfg(test)]
 mod test;
 
 use crate::net::{self, addr_conn::AddrConn};
-use async_std::{
-    io::{self},
-    net::TcpStream,
-    sync::Mutex,
-};
+
 use async_trait::async_trait;
 use bytes::BytesMut;
 
@@ -107,7 +103,7 @@ pub type AnyArc = Arc<Mutex<AnyS>>;
 pub enum AnyData {
     A(AnyArc),
     B(AnyBox),
-    Addr(net::Addr)
+    Addr(net::Addr),
 }
 
 pub type OptData = Option<AnyData>;
@@ -117,7 +113,7 @@ pub struct InputData {
     hyperparameter: OptData,  // 超参数, 即不上层计算决定的数据
 }
 
-pub enum Stream{
+pub enum Stream {
     TCP(net::Conn), // 传播 tcp / unix domain socket 数据
     UDP(AddrConn),
     None,
@@ -172,8 +168,7 @@ pub struct MapResult {
 
 //some helper initializers
 impl MapResult {
-
-    pub fn ac(a: net::Addr,  c: net::Conn) -> Self {
+    pub fn ac(a: net::Addr, c: net::Conn) -> Self {
         MapResult {
             a: Some(a),
             b: None,
@@ -182,7 +177,6 @@ impl MapResult {
             e: None,
         }
     }
-
 
     /// will set b to None if b.len() == 0
     pub fn abc(a: net::Addr, b: BytesMut, c: net::Conn) -> Self {
@@ -195,7 +189,7 @@ impl MapResult {
         }
     }
 
-    pub fn c( c: net::Conn) -> Self {
+    pub fn c(c: net::Conn) -> Self {
         MapResult {
             a: None,
             b: None,
@@ -267,7 +261,7 @@ pub enum ProxyBehavior {
 #[async_trait]
 pub trait Mapper {
     /// InAdder 与 OutAdder 由 behavior 区分。
-    /// 
+    ///
     /// # InAdder
     ///
     /// 可选地返回 解析出的“目标地址”。一般只在InAdder最后一级产生。
@@ -412,7 +406,7 @@ impl<'a> TcpInAccumulator<'a> {
                             cid,
                             ProxyBehavior::DECODE,
                             MapParams {
-                                c: Stream::TCP(last_r.c.unwrap()) ,
+                                c: Stream::TCP(last_r.c.unwrap()),
                                 a: last_r.a,
                                 b: last_r.b,
                                 d: input_data,
@@ -484,7 +478,7 @@ impl<'a> TcpOutAccumulator<'a> {
                         cid,
                         ProxyBehavior::ENCODE,
                         MapParams {
-                            c: Stream::TCP(last_r.c.unwrap()) ,
+                            c: Stream::TCP(last_r.c.unwrap()),
                             a: last_r.a,
                             b: last_r.b,
                             d: None,
@@ -503,7 +497,7 @@ impl<'a> TcpOutAccumulator<'a> {
                                     cid,
                                     ProxyBehavior::ENCODE,
                                     MapParams {
-                                        c: Stream::TCP(last_r.c.unwrap()) ,
+                                        c: Stream::TCP(last_r.c.unwrap()),
                                         a: last_r.a,
                                         b: None,
                                         d: None,

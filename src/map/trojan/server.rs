@@ -1,10 +1,9 @@
 use super::*;
 use crate::{
-    net::{self, helpers, Network},
     map::{self, MapResult, Mapper},
+    net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
 };
-use async_std::io::ReadExt;
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use std::io::{self};

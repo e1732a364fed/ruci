@@ -1,11 +1,7 @@
 use std::sync::Arc;
 
-use async_std::sync::Mutex;
-use async_std_test::async_test;
-use bytes::{BufMut, BytesMut};
-
-use crate::net::{self,   Addr};
 use crate::map::{MapParams, Mapper, ProxyBehavior};
+use crate::net::{self, Addr};
 use crate::user::AsyncUserAuthenticator;
 
 use super::server::*;
@@ -85,17 +81,23 @@ async fn auth_tcp_in_mem_earlydata() -> std::io::Result<()> {
     buf.put_u16(CRLF);
     buf.put(&b"hello!"[..]);
 
-    println!("len is {}",buf.len());
+    println!("len is {}", buf.len());
 
     let writev = Arc::new(Mutex::new(Vec::new()));
 
-    let   client_tcps = net::helpers::MockTcpStream {
+    let client_tcps = net::helpers::MockTcpStream {
         read_data: buf.to_vec(),
         write_data: Vec::new(),
         write_target: Some(writev),
     };
 
-    let r = a.maps(1, ProxyBehavior::DECODE, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            1,
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
     match r.e {
         None => {
             let ad = r.a.unwrap();
@@ -103,7 +105,7 @@ async fn auth_tcp_in_mem_earlydata() -> std::io::Result<()> {
             assert_eq!(ad.get_port(), port);
             assert_ne!(r.b, None);
 
-            assert_eq!(&b"hello!"[..],r.b.unwrap());
+            assert_eq!(&b"hello!"[..], r.b.unwrap());
         }
         Some(e) => {
             println!("{:?}", e);

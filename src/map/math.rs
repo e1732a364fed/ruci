@@ -1,5 +1,4 @@
 use crate::net;
-use async_std::io::{self};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use futures::{AsyncRead, AsyncWrite};
@@ -101,7 +100,7 @@ impl crate::map::Mapper for Adder {
                     add: self.addnum,
                     base: Box::pin(c),
                 };
-        
+
                 MapResult {
                     a: params.a,
                     b: params.b,
@@ -109,16 +108,11 @@ impl crate::map::Mapper for Adder {
                     d: None,
                     e: None,
                 }
-            },
+            }
             Stream::UDP(_) => {
                 unimplemented!()
-            },
-            Stream::None => {
-                MapResult::err_str("adder: can't add without a stream")
-
-            },
+            }
+            Stream::None => MapResult::err_str("adder: can't add without a stream"),
         }
-
-        
     }
 }

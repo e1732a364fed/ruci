@@ -8,10 +8,6 @@
 pub mod addr_conn;
 pub mod udp;
 
-use async_std::{
-    io::{self},
-    net::TcpStream,
-};
 use futures::select;
 use futures::AsyncReadExt;
 use futures::{io::Error, FutureExt};
@@ -119,7 +115,7 @@ pub enum IPName {
 /// port = 0 表示不用端口
 ///
 /// Addr实现 Eq和 Hash，以支持作为Key存入 HashMap 等集合中。
-/// 
+///
 /// default is  tcp://0.0.0.0:0
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
 pub struct Addr {

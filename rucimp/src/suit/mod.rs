@@ -9,9 +9,6 @@ pub mod config;
 mod test;
 
 use crate::tls;
-use async_std::io;
-use async_std::net::TcpListener;
-use async_std::net::TcpStream;
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::Level::Debug;
@@ -19,8 +16,8 @@ use log::{debug, info, log_enabled};
 use ruci::relay;
 use std::sync::Arc;
 
-use ruci::net::{self, Addr};
 use ruci::map::*;
+use ruci::net::{self, Addr};
 
 /// SuitConfigHolder ：一套完整的代理配置，如从tcp到tls一直到socks5
 ///
@@ -170,8 +167,10 @@ impl Suit for SuitStruct {
         match self.get_behavior() {
             ProxyBehavior::ENCODE => {
                 if self.has_tls() {
-                    let a =
-                        tls::Client::new(c.host.unwrap_or_default().as_str(), c.insecure.unwrap_or(false));
+                    let a = tls::Client::new(
+                        c.host.unwrap_or_default().as_str(),
+                        c.insecure.unwrap_or(false),
+                    );
                     self.push_mapper(Box::new(a));
                 }
             }
@@ -223,7 +222,7 @@ async fn listen_tcp(
     ins: Arc<dyn Suit>,
     outc: Arc<dyn Suit>,
     oti: Option<Arc<net::TransmissionInfo>>,
-) ->io::Result<()>{
+) -> io::Result<()> {
     let laddr = ins.addr_str();
     info!("start listen tcp {}", laddr);
 

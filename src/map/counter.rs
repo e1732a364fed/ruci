@@ -3,6 +3,7 @@
  * 而Counter是针对自己持有的 Conn的流量的统计
  */
 
+use super::*;
 use std::{
     pin::Pin,
     sync::{
@@ -11,10 +12,8 @@ use std::{
     },
     task::Poll,
 };
-use super::*;
 
 use crate::net;
-use async_std::io::{self, WriteExt};
 use async_trait::async_trait;
 use futures::{AsyncRead, AsyncWrite};
 use log::{debug, log_enabled};

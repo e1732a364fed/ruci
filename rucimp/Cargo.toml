@@ -8,9 +8,8 @@ ruci = { path = ".." }
 bytes = "1.5.0"
 env_logger = "0.11.1"
 log = "0.4.20"
-async-trait = "0.1.77"
-async-std-test = "0.0.4"
-async-std = { version = "1.12.0" , features = ["attributes", "unstable"]}
+tokio = { version = "1", features = ["full"] }
+
 futures = "0.3"
 futures-lite = "2.2.0"
 

@@ -9,13 +9,11 @@ pub const VERSION: &str = "0.0.0";
 
 use std::{io, sync::Arc};
 
-use async_std::sync::Mutex;
 use futures::{executor::block_on, future::select_all, Future};
 use log::debug;
-use ruci::{net::TransmissionInfo, map::*};
+use ruci::{map::*, net::TransmissionInfo};
 use suit::config::LDConfig;
 use suit::*;
-
 
 /// 将所有在本包中实现的 in_adder 从 名称映射到 InAdderBox.
 ///
@@ -23,9 +21,11 @@ use suit::*;
 pub fn load_in_adder_by_str(s: &str, c: LDConfig) -> Option<MapperBox> {
     match s {
         "socks5" => {
-            let a = block_on(socks5::server::Server::new(suit::config::adapter::get_socks5_server_option_from_ldconfig(c)));
+            let a = block_on(socks5::server::Server::new(
+                suit::config::adapter::get_socks5_server_option_from_ldconfig(c),
+            ));
             return Some(Box::new(a));
-        }        
+        }
         "counter" => {
             let a = ruci::map::counter::Counter;
             return Some(Box::new(a));
@@ -151,7 +151,7 @@ where
     pub async fn run(&self) -> io::Result<()> {
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
-                async_std::task::spawn(task);
+                task::spawn(task);
             }
         })
     }

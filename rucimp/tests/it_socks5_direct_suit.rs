@@ -12,11 +12,6 @@
 
 use std::{env::set_var, io, sync::Arc, thread, time::Duration};
 
-use async_std::{
-    io::{ReadExt, WriteExt},
-    net::TcpStream,
-};
-use async_std_test::async_test;
 use bytes::{BufMut, BytesMut};
 use futures::{pin_mut, select, FutureExt};
 use log::info;

@@ -6,9 +6,6 @@ mod load;
 #[cfg(test)]
 mod test;
 
-use async_std::io::{self};
-
-use async_tls::{TlsAcceptor, TlsConnector};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use futures::AsyncWriteExt;
@@ -17,8 +14,8 @@ use rustls::{client::ServerCertVerifier, ClientConfig, OwnedTrustAnchor};
 use std::{fmt, sync::Arc};
 
 use crate::{
-    net::{self, helpers::EarlyDataWrapper},
     map,
+    net::{self, helpers::EarlyDataWrapper},
 };
 use std::path::PathBuf;
 

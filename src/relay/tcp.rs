@@ -1,12 +1,10 @@
 use super::*;
-use async_std::io;
-use async_std::net::TcpStream;
 use log::{info, log_enabled, warn};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::net;
 use crate::map::*;
+use crate::net;
 
 /// 初级监听为tcp的 链式转发.
 ///
@@ -41,13 +39,8 @@ pub async fn handle_tcp<'a>(
     let listen_result = io::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
         type DummyType = std::vec::IntoIter<OptData>;
         Ok(
-            TcpInAccumulator::accumulate::<_, DummyType>(
-                cid,
-                Box::new(intcpc),
-                ins_iterator,
-                None,
-            )
-            .await,
+            TcpInAccumulator::accumulate::<_, DummyType>(cid, Box::new(intcpc), ins_iterator, None)
+                .await,
         )
     })
     .await;
@@ -143,7 +136,7 @@ pub async fn handle_tcp<'a>(
         .await;
 
         if let Err(e) = dial_result {
-            warn!("{}, dial out client failed, {}",state, e);
+            warn!("{}, dial out client failed, {}", state, e);
             let _ = in_tcp.shutdown(std::net::Shutdown::Both);
             let _ = out_tcp.shutdown(std::net::Shutdown::Both);
             return;

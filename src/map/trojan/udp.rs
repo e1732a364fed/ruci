@@ -8,9 +8,9 @@ use bytes::{Buf, BufMut, BytesMut};
 use futures_util::io::{ReadHalf, WriteHalf};
 
 use crate::net::{
-    self, helpers,
+    self,
     addr_conn::{AsyncReadAddr, AsyncWriteAddr},
-    Addr,
+    helpers, Addr,
 };
 
 use super::*;
@@ -108,7 +108,6 @@ impl AsyncWriteAddr for Writer {
     }
 }
 
-
 pub fn split_conn_to_trojan_udp_rw(c: net::Conn) -> net::addr_conn::AddrConn {
     use futures::AsyncReadExt;
     let (r, w) = c.split();
@@ -122,8 +121,6 @@ pub fn split_conn_to_trojan_udp_rw(c: net::Conn) -> net::addr_conn::AddrConn {
 #[allow(unused)]
 #[cfg(test)]
 mod test {
-    use async_std::net::TcpStream;
-    use async_std_test::async_test;
     use futures_util::AsyncReadExt;
 
     use self::net::addr_conn::AsyncWriteAddrExt;

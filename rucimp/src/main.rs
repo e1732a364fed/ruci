@@ -4,12 +4,15 @@
  * 查找 config.toml 文件，读取它并以suit模式运行。
  */
 
-use std::{env::{self, set_var}, fs};
+use std::{
+    env::{self, set_var},
+    fs,
+};
 
 use log::{info, log_enabled, Level};
-use rucimp::{load_in_adder_by_str, load_out_adder_by_str, SuitEngine};
+//use rucimp::{load_in_adder_by_str, load_out_adder_by_str, SuitEngine};
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("rucimp~ \n");
 
@@ -29,22 +32,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     );
 
     if log_enabled!(Level::Info) {
-        info!(
-            "versions: ruci_{}_mp_{}",
-            ruci::VERSION,
-            rucimp::VERSION,
-        )
+        info!("versions: ruci_{}_mp_{}", ruci::VERSION, rucimp::VERSION,)
     }
 
     let contents = fs::read_to_string("config.toml").expect("no config.toml");
 
-    let mut se = SuitEngine::new(load_in_adder_by_str, load_out_adder_by_str);
+    // let mut se = SuitEngine::new(load_in_adder_by_str, load_out_adder_by_str);
 
-    se.load_config_from_str(&contents);
-    let r =  se.block_run().await;
+    // se.load_config_from_str(&contents);
+    // let r = se.block_run().await;
 
     info!("r {:?}", r);
 
-    
     Ok(())
 }

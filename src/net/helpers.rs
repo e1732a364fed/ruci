@@ -1,7 +1,6 @@
 use std::{net::Ipv4Addr, pin::Pin, task::Poll};
 
 use super::*;
-use async_std::io::{self};
 use bytes::{Buf, BufMut, BytesMut};
 use futures::{AsyncRead, AsyncWrite};
 
@@ -10,10 +9,6 @@ use super::ConnTrait;
 use futures::executor::block_on;
 use futures::task::Context;
 
-use async_std::{
-    io::{Read, Write},
-    sync::Mutex,
-};
 use std::cmp::min;
 
 //todo: add unit test
@@ -254,7 +249,6 @@ impl Write for MockTcpStream {
 mod test {
     use super::*;
 
-    use async_std_test::async_test;
     use bytes::BufMut;
 
     #[async_test]

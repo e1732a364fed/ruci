@@ -8,7 +8,6 @@ use std::{
     task::{Context, Poll},
 };
 
-use async_std::net::UdpSocket;
 use bytes::{Buf, BytesMut};
 use futures_util::Future;
 
@@ -209,7 +208,6 @@ pub async fn cp_addrconn_to_reader_writer<F: Fn() -> ()>(
     let (c1_to_c2, c2_to_c1) = (
         cp_r_to_writer(c1.0, w2).fuse(),
         cp_reader_to_w(r2, c1.1).fuse(),
-
     );
     pin_mut!(c1_to_c2, c2_to_c1);
 
@@ -236,7 +234,7 @@ pub async fn cp_addrconn_udpsocket<F: Fn() -> ()>(
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     let (r, w) = get_rw(c2);
-    cp_addrconn_to_reader_writer(cid,c1,r,w,shutdown_f,opt).await
+    cp_addrconn_to_reader_writer(cid, c1, r, w, shutdown_f, opt).await
 }
 
 #[allow(unused)]

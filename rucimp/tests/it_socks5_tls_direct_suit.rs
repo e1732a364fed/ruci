@@ -1,14 +1,8 @@
-use async_std::{
-    io::{ReadExt, WriteExt},
-    net::TcpStream,
-    task,
-};
-use async_std_test::async_test;
 use futures::join;
 use log::info;
 use ruci::{
+    map::{socks5, tls, MapParams, Mapper},
     net,
-    map::{socks5, tls, Mapper, MapParams},
     user::UserPass,
 };
 use rucimp::{load_in_adder_by_str, load_out_adder_by_str, suit::config::Config, SuitEngine};
@@ -54,16 +48,28 @@ async fn f_dial_future_tls_out_adder(
 
     let mut readbuf = [0u8; 1024];
 
-    let a = tls::Client::new("do.main", true); 
+    let a = tls::Client::new("do.main", true);
 
     let ta = net::Addr::from_strs("tcp", the_target_name, "", the_target_port)?;
-    let nc = a.maps(0, ruci::map::ProxyBehavior::ENCODE, MapParams::ca(Box::new(cs), ta.clone())).await.c.unwrap();
+    let nc = a
+        .maps(
+            0,
+            ruci::map::ProxyBehavior::ENCODE,
+            MapParams::ca(Box::new(cs), ta.clone()),
+        )
+        .await
+        .c
+        .unwrap();
 
     let a = socks5::client::Client {
         up: Some(UserPass::from("u0 p0".to_string())),
         use_earlydata: false,
     };
-    let mut newconn = a.maps(0, ruci::map::ProxyBehavior::ENCODE, MapParams::ca(nc, ta)).await.c.unwrap();
+    let mut newconn = a
+        .maps(0, ruci::map::ProxyBehavior::ENCODE, MapParams::ca(nc, ta))
+        .await
+        .c
+        .unwrap();
 
     info!("client{} writing hello...", rid,);
 

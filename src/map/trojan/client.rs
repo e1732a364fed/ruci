@@ -1,12 +1,11 @@
 use std::io;
 
-use async_std::io::WriteExt;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 
 use crate::{
-    net::{self, helpers, Network},
     map::{self, MapResult, Mapper},
+    net::{self, helpers, Network},
 };
 
 use super::*;
