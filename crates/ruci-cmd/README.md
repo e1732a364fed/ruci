@@ -22,7 +22,7 @@ cargo run -F api_server -F api_client -F utils --release -- -a run
 
 debug:
 ```
-cargo run -- -l trace --log-file ""
+cargo run -F api_server -F lua  -- -l trace --log-file ""
 
 RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run --trace
 

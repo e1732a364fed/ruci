@@ -23,6 +23,8 @@ done
 
 TARGET_FEATURES="${features[@]}"
 
+echo "* Building ${target} package ${version} with features \"${TARGET_FEATURES}\" ..."
+
 cross build --target ${target} --features "${TARGET_FEATURES}" --release 
 
 mkdir -p dist

@@ -113,11 +113,16 @@ async fn main() -> anyhow::Result<()> {
             #[cfg(feature = "api_server")]
             {
                 let api_server_args = args.api_server.clone();
+                let mut started = false;
                 for arg in api_server_args {
                     let x = api::server::deal_args(arg, &args).await;
                     if let Some(opts) = x {
+                        started = true;
                         start_engine(args.clone(), args.config.clone(), Some(opts)).await?;
                     }
+                }
+                if !started {
+                    start_engine(args.clone(), args.config, None).await?;
                 }
             }
             #[cfg(not(feature = "api_server"))]

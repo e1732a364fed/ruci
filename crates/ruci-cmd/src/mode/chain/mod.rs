@@ -26,7 +26,7 @@ pub(crate) async fn run(
 
     let mut se = rucimp::modes::chain::engine::Engine::default();
 
-    #[cfg(feature = "lua")]
+    #[cfg(any(feature = "lua", feature = "lua54"))]
     {
         use anyhow::Context;
 
