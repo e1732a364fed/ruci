@@ -50,7 +50,7 @@ pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
     lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InStreamCID {
     pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
 }
@@ -73,7 +73,7 @@ impl Display for InStreamCID {
 }
 
 /// state id
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum CID {
     Unit(u32),
     Chain(InStreamCID),
@@ -102,7 +102,7 @@ impl Display for CID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CID::Unit(u) => write!(f, "[ cid: {u} ]"),
-            CID::Chain(c) => c.fmt(f),
+            CID::Chain(c) => Display::fmt(c, f),
         }
     }
 }
@@ -454,6 +454,12 @@ pub enum Stream {
 
     #[default]
     None,
+}
+
+impl Debug for Stream {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self, f)
+    }
 }
 
 impl Display for Stream {

@@ -69,6 +69,7 @@ pub type AnyS = dyn Any + Send; // 加 Send 以支持多线程
 pub type AnyBox = Box<AnyS>;
 pub type AnyArc = Arc<Mutex<AnyS>>;
 
+#[derive(Debug)]
 pub enum AnyData {
     A(AnyArc),
     B(AnyBox),
@@ -341,6 +342,23 @@ where
 
     /// 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
     pub left_mappers_iter: IterMapperBoxRef,
+}
+
+impl<'a, IterMapperBoxRef> Debug for AccumulateResult<'a, IterMapperBoxRef>
+where
+    IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AccumulateResult")
+            .field("a", &self.a)
+            .field("b", &self.b)
+            .field("c", &self.c)
+            .field("d", &self.d)
+            .field("e", &self.e)
+            .field("id", &self.id)
+            //.field("left_mappers_iter count", &self.left_mappers_iter.)
+            .finish()
+    }
 }
 
 ///  accumulate 是一个作用很强的函数,是 mappers 的累加器

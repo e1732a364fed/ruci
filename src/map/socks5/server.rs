@@ -12,6 +12,7 @@ use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
 use log::{debug, log_enabled, warn};
 use std::{
+    cmp::min,
     io::{self, Error},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     sync::Arc,
@@ -120,12 +121,24 @@ impl Server {
 
             return Err(e1);
         }
+        //buf.truncate(n); //不能 truncate
 
         let v = buf[0];
         if v != VERSION5 {
-            let e2 = Error::other(format!("{}, socks5: unsupported version: {}", cid, v));
+            if log_enabled!(log::Level::Debug) {
+                let e2 = Error::other(format!(
+                    "{}, socks5: unsupported version: {}, buf as str: {}",
+                    cid,
+                    v,
+                    String::from_utf8_lossy(&buf[..min(n, 256)])
+                ));
 
-            return Err(e2);
+                return Err(e2);
+            } else {
+                let e2 = Error::other(format!("{}, socks5: unsupported version: {}", cid, v));
+
+                return Err(e2);
+            }
         }
 
         let nm = buf[1];
@@ -476,9 +489,9 @@ impl map::Mapper for Server {
     ) -> map::MapResult {
         match params.c {
             map::Stream::TCP(c) => {
-                let x = self.handshake(cid, c, params.a, params.b).await;
+                let r = self.handshake(cid, c, params.a, params.b).await;
 
-                MapResult::from_result(x)
+                MapResult::from_result(r)
             }
             _ => MapResult::err_str("socks5 only support tcplike stream"),
         }

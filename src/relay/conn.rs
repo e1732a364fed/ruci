@@ -66,18 +66,17 @@ where
     T: Iterator<Item = &'a MapperBox>,
     T2: Iterator<Item = &'a MapperBox>,
 {
-    let cid = &listen_result.id.unwrap();
+    let cid = listen_result.id.as_ref().unwrap();
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {
-            warn!(
-                "{}, handshake in server succeed but got no target_addr",
-                cid
-            );
-            let _ = listen_result.c.try_shutdown().await;
-            return Err(io::Error::other(
-                "handshake in server succeed but got no target_addr",
+            let e = io::Error::other(format!(
+                "{cid}, handshake in server succeed but got no target_addr, e: {:?}",
+                listen_result.e
             ));
+            warn!("{}", e);
+            let _ = listen_result.c.try_shutdown().await;
+            return Err(e);
         }
     };
     if log_enabled!(log::Level::Info) {
