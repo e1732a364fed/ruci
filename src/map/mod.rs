@@ -304,34 +304,30 @@ pub trait MapperExt: Mapper {
     fn get_ext_fields(&self) -> Option<&MapperExtFields>;
     fn set_ext_fields(&mut self, fs: Option<MapperExtFields>);
 
-    fn set_chain_tag(&mut self, tag: &str) {
-        let mut efc = if let Some(ef) = self.get_ext_fields() {
+    fn get_ext_fields_clone_or_default(&self) -> MapperExtFields {
+        if let Some(ef) = self.get_ext_fields() {
             ef.clone()
         } else {
             MapperExtFields::default()
-        };
+        }
+    }
+
+    fn set_chain_tag(&mut self, tag: &str) {
+        let mut efc = self.get_ext_fields_clone_or_default();
 
         efc.chain_tag = tag.to_string();
         self.set_ext_fields(Some(efc));
     }
 
     fn set_is_tail_of_chain(&mut self, is: bool) {
-        let mut efc = if let Some(ef) = self.get_ext_fields() {
-            ef.clone()
-        } else {
-            MapperExtFields::default()
-        };
+        let mut efc = self.get_ext_fields_clone_or_default();
 
         efc.is_tail_of_chain = is;
         self.set_ext_fields(Some(efc));
     }
 
     fn set_configured_target_addr(&mut self, a: Option<net::Addr>) {
-        let mut efc = if let Some(ef) = self.get_ext_fields() {
-            ef.clone()
-        } else {
-            MapperExtFields::default()
-        };
+        let mut efc = self.get_ext_fields_clone_or_default();
 
         efc.fixed_target_addr = a;
         self.set_ext_fields(Some(efc));
