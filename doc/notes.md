@@ -153,7 +153,7 @@ www.1.com 的答 是回复给 client1  还是 client2 呢？
 
 举个形象的例子
 
-一个课代表收作业，收了很多作业，作业有记名，老师批完了，发回课代表，但发回课代表的不是批过的作业，而是一个个 成绩，请问课代表如何 发回 作业作者？
+一个课代表收作业，收了很多作业，作业有记名，老师批完了，发回课代表，但发回课代表的不是批过的作业，而是一个个 未记名的成绩和批语，请问课代表如何 发回 作业作者？
 
 不完美方案：
 
@@ -168,7 +168,7 @@ www.1.com 的答 是回复给 client1  还是 client2 呢？
 Listener 在 监听 udp, 且 有 udp 的 fixed_target_addr 时, 会对每一个 inbound
 连接新建一个 udp 连接 , 建立了一对一的转发, 而不是 一对多的转发, 就没问题了
 
-有用户报告 用 BindDialer 的 fixed_target_addr 作 udp 转发会导致宕机, 所以一定要用 Listener
+有用户报告 用 BindDialer 的 fixed_target_addr 作 udp 转发会导致宕机(或卡住？我认为该用户的表述可能不正确), 所以一定要用 Listener
 
 
 ### 报错示例: socks5 client only support tcplike stream, got NoStream
@@ -194,7 +194,7 @@ ruci chain 模式中,
 1. trojan 的 password 写在自己配置中的 password 项里
 2. grpc和 h2一样的, 没有 service name 一说, path直接写为 /service1/Tun 即可
 3. tls 的 sni 写的 tls 的配置中, ws/grpc 的 authority 写在 它们自己的配置中
-4. vs 中的 ws server 要加 early = true 才能使持 earlydata, 而 ruci 中的 ws server 是默认支持的, 只需要在 ws client 端打开use_early_data
+4. vs 中的 ws server 要加 early = true 才能支持 earlydata, 而 ruci 中的 ws server 是默认支持的, 只需要在 ws client 端打开use_early_data
 
 在ruci 中, 你可以:  dial 一个由 host1 解析得的ip, 然后 tls 里的 sni 写 host2, 然后 ws/grpc 的请求 url 中 写 host3
 

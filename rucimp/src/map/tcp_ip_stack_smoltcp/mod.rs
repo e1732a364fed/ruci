@@ -14,11 +14,11 @@ use tracing::debug;
 
 use self::device::SmoltcpDevice;
 
+/// split the incomming ip stream into multiple tcp/udp stream
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Stack {}
 
-/// minor the incomming stream into multiple
 impl Name for Stack {
     fn name(&self) -> &'static str {
         "smoltcp"

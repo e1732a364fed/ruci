@@ -104,7 +104,7 @@ pub fn addr_to_socks5_bytes(ta: &Addr, buf: &mut BytesMut) {
     }
 }
 
-/// wrap [`mpsc::Receiver<BytesMut>`] as an AsyncConn
+/// wrap [`mpsc::Receiver<BytesMut>`] as a readonly AsyncConn
 pub struct MpscRWrapper {
     pub r: mpsc::Receiver<BytesMut>,
 }
@@ -155,7 +155,7 @@ impl AsyncWrite for MpscRWrapper {
     }
 }
 
-/// Wrap R: AsyncRead + Unpin,W: AsyncWrite + Unpin to an AsyncConn
+/// Wrap R: AsyncRead + Unpin,W: AsyncWrite + Unpin as an AsyncConn
 pub struct RWWrapper<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> {
     pub r: R,
     pub w: W,

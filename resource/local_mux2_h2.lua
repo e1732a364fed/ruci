@@ -32,6 +32,8 @@ local h2_out_config = {
     H2Mux = h2_common_part
 }
 
+-- h2 single out 的特性是, 连接内容结束后就会马上断开连接(即没有mux特性). 这里用于
+-- pool 已达上限但又多创建了 tcp-tls 连接的情况
 local h2_single_out_config = {
     H2Single = h2_common_part
 }

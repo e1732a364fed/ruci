@@ -25,6 +25,9 @@ use crate::net::so2::SockOpt;
 
 /// TproxyResolver 从 系统发来的 tproxy 相关的 连接
 /// 解析出实际 target_addr
+///
+/// 同时它有 "auto_route" 功能, 在new 和 drop 时 自动 添加 或 删除
+/// 路由表以 将全局流量导向 监听的 端口
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct TcpResolver {
@@ -119,6 +122,7 @@ impl Map for TcpResolver {
     }
 }
 
+/// listen and resolve udp for tproxy
 #[map_ext_fields]
 #[derive(Clone, Debug, Default, MapExt)]
 pub struct UDPListener {

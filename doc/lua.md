@@ -121,11 +121,16 @@ end
 
 完全动态链的基本演示完全动态链不使用 固定的列表 来预定义任何Maps, 它只给出一个函数
 
-generator, generator 根据参数内容来动态生成 [Map], 如果不想
+generator, generator 根据参数内容来动态生成 [Map]; 或者也可以利用 Create_in_map
+和 Create_out_map 这两个方法来直接在 lua 中创建map.
 
-重复生成以前生成过的Map, 则可以返回一个已创建过的Map 
+Create_* 方法的使用 主要是用于 创建一个map 并缓存起来, 留作之后使用
 
-演示的功能是 inbound 为 tcp - socks5, outbound 为 direct
+如果不想重复生成以前生成过的Map, 则可以返回一个已创建过的Map 
+
+下面演示的是 inbound 为 tcp - socks5, outbound 为 direct 的情况
+
+使用 Create_* 方法的示例见 local.lua 和其它 示例 lua 文件
 
 #### 基本演示
 

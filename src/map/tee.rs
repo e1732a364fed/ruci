@@ -21,10 +21,9 @@ tokio 中类似的功能的工具是 tokio_utils::io::InspectReader 和 inspectW
 ## 举例
 
 内部直接用 tokio 的办法.
+每 从 tls read 到数据, 就调用 tee的 f1, 每 向 tls write 数据, 就调用 tee 的 f2
 
 设一个 chain 为 tcp->tls , 加tee后, 变 tcp->tls->tee
-
-每 从 tls read 到数据, 就调用 tee的 f1, 每 向 tls write 数据, 就调用 tee 的 f2
 
 之后 tee 返回一个 StreamGenerator, 有 3 个 stream, 如 stream1, stream2 和 stream3
 
@@ -53,11 +52,12 @@ use futures::executor::block_on;
 use macro_map::*;
 use tokio::sync::mpsc;
 
+/// split the incomming stream into 3 sub streams: one main rw stream,
+/// two readonly stream.
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Tee {}
 
-/// minor the incomming stream into multiple
 impl Name for Tee {
     fn name(&self) -> &'static str {
         "tee"
