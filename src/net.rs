@@ -346,7 +346,10 @@ impl Addr {
         Addr::from(network, host, ip, port)
     }
 
-    // tcp://127.0.0.1:80 or tcp://www.b.com:80. if :// is not present, use tcp as network
+    /// tcp://127.0.0.1:80 or tcp://www.b.com:80.
+    ///
+    /// if :// is not present, use tcp as network, like 1.1.1.1:1 will act like
+    /// tcp://1.1.1.1:1
     pub fn from_network_addr_str(s: &str) -> Result<Self> {
         let ns: Vec<_> = s.splitn(2, "://").collect();
         match ns.len() {

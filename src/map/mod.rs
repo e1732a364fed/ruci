@@ -73,8 +73,8 @@ pub struct NewConnectionOptData {
 pub enum AnyData {
     A(AnyArc),
     B(AnyBox),
-    Addr(net::Addr),
-    User(Box<dyn user::User>),
+    Addr(net::Addr),           //store raddr
+    User(Box<dyn user::User>), //store authed user
 }
 
 pub type OptData = Option<AnyData>;

@@ -1,5 +1,6 @@
 use crate::map::acc::MIterBox;
 use crate::map::math::{AddDirection, Adder};
+use crate::map::network::Direct;
 use crate::map::{MapParams, Mapper, CID};
 use crate::net::helpers::MockTcpStream;
 
@@ -146,33 +147,38 @@ async fn test_counter1() -> anyhow::Result<()> {
     }
 }
 
-// #[test]
-// fn test_clone_box_and_iter() {
-//     let a = Direct::default();
-//     let a: MapperBox = Box::new(a);
-
-//     let mut ac = a.clone();
-//     ac.set_chain_tag("tag2");
-
-//     println!("{:?} {:?}", a, ac);
-
-//     assert_ne!(ac.get_chain_tag(), a.get_chain_tag());
-
-//     let v = vec![Arc::new(a), Arc::new(ac)];
-//     let mut m: MIterBox = Box::new(v.into_iter());
-//     println!("{:?}", &m);
-
-//     m.next();
-
-//     let mc2 = m.clone();
-//     println!("{:?}", mc2);
-
-//     assert_eq!(mc2.count(), 1);
-
-//     // cloning an iter is cheap
-// }
 #[test]
-fn test_miter_and_drop() {
+fn test_clone_box_and_iter() {
+    let a = Direct::default();
+    let abase_c = a.clone();
+
+    let a: MapperBox = Box::new(a);
+    let a = Arc::new(a);
+
+    let mut ac: MapperBox = Box::new(abase_c);
+    ac.set_chain_tag("tag2");
+
+    let ac = Arc::new(ac);
+
+    println!("{:?} {:?}", a, ac);
+
+    assert_ne!(ac.get_chain_tag(), a.get_chain_tag());
+
+    let v = vec![a, ac];
+    let mut m: MIterBox = Box::new(v.into_iter());
+    println!("{:?}", &m);
+
+    m.next();
+
+    let mc2 = m.clone();
+    println!("{:?}", mc2);
+
+    assert_eq!(mc2.count(), 1);
+
+    // cloning an iter is cheap
+}
+#[test]
+fn test_miter() {
     let a = Adder::default();
 
     let a: MapperBox = Box::new(a);
