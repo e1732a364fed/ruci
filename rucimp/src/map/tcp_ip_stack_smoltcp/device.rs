@@ -99,16 +99,17 @@ impl<'a> RxToken for MyRxToken<'a> {
 pub struct MyTxToken {
     tx: Sender<BytesMut>,
     //traffic: &'a mut Traffic,
-    buf: [u8; BUF_SIZE],
+    //buf: [u8; BUF_SIZE],
 }
 impl TxToken for MyTxToken {
-    fn consume<R, F>(mut self, len: usize, f: F) -> R
+    fn consume<R, F>(self, len: usize, f: F) -> R
     where
         F: FnOnce(&mut [u8]) -> R,
     {
+        let mut buf = BytesMut::zeroed(len);
         //self.traffic.tx_bytes += len;
-        let r = f(&mut self.buf[..len]);
-        let _ = self.tx.try_send(BytesMut::from(&self.buf[..len]));
+        let r = f(&mut buf);
+        let _ = self.tx.try_send(buf);
 
         r
     }
@@ -130,8 +131,6 @@ pub struct SmoltcpDevice {
 
     device_write_tx: Sender<BytesMut>,
 
-    // 用于流量记录
-    //traffic: Traffic,
     /// 生成新 Stream 后由此发出.
     new_stream_tx: tokio::sync::mpsc::Sender<MapResult>,
 
@@ -158,6 +157,8 @@ pub struct SmoltcpDevice {
 
     /// only here to be cloned for new UdpStream
     udp_write_data_tx: Sender<(SocketHandle, IpEndpoint, BytesMut)>,
+    // 用于流量记录
+    //traffic: Traffic,
 }
 
 impl Device for SmoltcpDevice {
@@ -165,7 +166,7 @@ impl Device for SmoltcpDevice {
     where
         Self: 'a;
 
-    type TxToken<'a> = MyTxToken 
+    type TxToken<'a> = MyTxToken
     where
         Self: 'a;
 
@@ -187,7 +188,7 @@ impl Device for SmoltcpDevice {
                 let tx = MyTxToken {
                     tx: self.device_write_tx.clone(),
                     //traffic: &mut self.traffic,
-                    buf: [0u8; BUF_SIZE],
+                    //buf: [0u8; BUF_SIZE],
                 };
                 self.r_state = Poll::Pending;
                 Some((rx, tx))
@@ -199,7 +200,7 @@ impl Device for SmoltcpDevice {
         Some(MyTxToken {
             tx: self.device_write_tx.clone(),
             //traffic: &mut self.traffic,
-            buf: [0u8; BUF_SIZE],
+            //buf: [0u8; BUF_SIZE],
         })
     }
 
@@ -378,7 +379,6 @@ impl SmoltcpDevice {
                             .try_send(MapResult::new_c(Box::new(tcp_stream)).a(Some(ta)).build());
                     }
                 }
-
             }
             IpProtocol::Udp => {
                 //debug!("is udp, {n} {}",ip_packet.payload().len());
