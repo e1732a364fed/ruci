@@ -10,7 +10,8 @@ use dyn_clone::DynClone;
 use parking_lot::Mutex;
 use std::hash::Hash;
 
-use crate::{AnyBox, AnyS};
+//use crate::{AnyBox, AnyS};
+
 /// 用于用户鉴权
 pub trait UserTrait: Debug + Send + Sync {
     /// 每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name. 用于在非敏感环境显示该用户
@@ -32,6 +33,7 @@ pub trait User: UserTrait + DynClone {}
 impl<T: UserTrait + DynClone> User for T {}
 dyn_clone::clone_trait_object!(User);
 
+/*
 /// from &AnyS get `Box<dyn User>`
 ///
 /// # Example
@@ -50,7 +52,7 @@ dyn_clone::clone_trait_object!(User);
 /// assert!(y.is_some());
 /// ```
 ///
-pub fn get_user_from_anydata(anys: &AnyS) -> Option<Box<dyn User>> {
+pub(crate) fn get_user_from_anydata(anys: &AnyS) -> Option<Box<dyn User>> {
     let a = anys.downcast_ref::<Box<dyn User>>();
     a.map(|u| u.clone())
 }
@@ -70,10 +72,11 @@ pub fn get_user_from_anydata(anys: &AnyS) -> Option<Box<dyn User>> {
 /// assert!(y.is_some());
 /// ```
 ///
-pub fn bget_user_from_anydata(anys: &AnyBox) -> Option<Box<dyn User>> {
+pub(crate) fn bget_user_from_anydata(anys: &AnyBox) -> Option<Box<dyn User>> {
     let a = anys.downcast_ref::<Box<dyn User>>();
     a.map(|u| u.clone())
 }
+*/
 
 /// implements Hash
 #[derive(Clone)]

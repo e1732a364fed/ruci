@@ -30,7 +30,7 @@ use async_trait::async_trait;
 use crate::{
     map::{acc::MIterBox, AnyData},
     net,
-    user::{self, bget_user_from_anydata, get_user_from_anydata, UserVec},
+    user::{self, UserVec},
 };
 
 /// Send + Sync to use in async
@@ -63,19 +63,6 @@ pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<Use
         .map(|d| d.as_ref().expect("d is some"))
     {
         match anyd {
-            AnyData::A(arc) => {
-                let anyv = arc.lock();
-                let oub = get_user_from_anydata(&*anyv);
-                if let Some(ub) = oub {
-                    v.0.push(user::UserBox(ub));
-                }
-            }
-            AnyData::B(b) => {
-                let oub = bget_user_from_anydata(b);
-                if let Some(ub) = oub {
-                    v.0.push(user::UserBox(ub));
-                }
-            }
             AnyData::User(u) => {
                 v.0.push(user::UserBox(u.clone()));
             }
