@@ -23,10 +23,14 @@ pub mod http;
 pub mod listen;
 pub mod udp;
 
+#[cfg(feature = "tun")]
+pub mod tun;
+
 #[cfg(test)]
 mod test;
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use futures::pin_mut;
 use futures::{io::Error, FutureExt};
@@ -292,6 +296,24 @@ pub enum IPName {
     Name(String),
 }
 
+fn prefix_length_to_netmask(prefix_length: u8) -> (u8, u8, u8, u8) {
+    // Ensure the prefix length is valid
+    if prefix_length > 32 {
+        panic!("Invalid prefix length: {}", prefix_length);
+    }
+
+    // Calculate the netmask
+    let netmask: u32 = !(0xFFFFFFFF >> prefix_length);
+
+    // Extract the octets from the netmask
+    let o1 = (netmask >> 24) & 0xFF;
+    let o2 = (netmask >> 16) & 0xFF;
+    let o3 = (netmask >> 8) & 0xFF;
+    let o4 = netmask & 0xFF;
+
+    (o1 as u8, o2 as u8, o3 as u8, o4 as u8)
+}
+
 /// Addr 结构是一个可表示多种网络地址的结构,
 /// 可以是 ip, ipv4, ipv6, unix domain socket, domain name
 ///
@@ -370,6 +392,25 @@ impl Addr {
         };
 
         Addr::from(network, host, ip, port)
+    }
+
+    /// like 10.0.0.1:24. this 24 stores in "port",but means netmask, not port.
+    ///
+    /// will return (10.0.0.1, 255.255.255.0)
+    ///
+    /// if it has a name, it will be returned too. might be used as a tun device name
+    pub fn to_name_ip_netmask(&self) -> Result<(Option<String>, IpAddr, (u8, u8, u8, u8))> {
+        match &self.addr {
+            NetAddr::Socket(so) => {
+                let nm = prefix_length_to_netmask(so.port() as u8);
+                Ok((None, so.ip(), nm))
+            }
+            NetAddr::NameAndSocket(name, so, port) => {
+                let nm = prefix_length_to_netmask(*port as u8);
+                Ok((Some(name.clone()), so.ip(), nm))
+            }
+            _ => bail!("Addr::to_netmask requires addr has ip, you have {:?}", self),
+        }
     }
 
     /// tcp://127.0.0.1:80 or tcp://www.b.com:80.
@@ -493,12 +534,24 @@ impl Addr {
 
     /// dial tcp/udp/unix_domain_socket
     ///
+    /// can dial ip if feature "tun" is enabled
+    ///
     /// ## udp:
     ///
     /// Addr 的 try_dial 中的 udp 其实是 listen, 它会bind到Addr
     ///
     pub async fn try_dial(&self) -> Result<Stream> {
         match self.network {
+            #[cfg(feature = "tun")]
+            Network::IP => {
+                let (tun_name, dial_addr, netmask) = self
+                    .to_name_ip_netmask()
+                    .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
+                let c = tun::dial(tun_name, dial_addr, netmask)
+                    .await
+                    .context("Addr::try_dial tun, dial failed")?;
+                Ok(Stream::IP(Box::new(c)))
+            }
             Network::TCP => {
                 let so = self.get_socket_addr_or_resolve()?;
 
@@ -517,6 +570,7 @@ impl Addr {
                 let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
                 Ok(Stream::TCP(Box::new(u)))
             }
+            #[cfg(not(feature = "tun"))]
             _ => bail!("try_dial failed, not supported network: {}", self.network),
         }
     }
@@ -594,6 +648,7 @@ pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 
 #[derive(Default)]
 pub enum Stream {
+    IP(Conn),
     ///  tcp / unix domain socket 等 目标 Addr 唯一的 情况
     TCP(Conn),
     UDP(AddrConn),
@@ -615,7 +670,7 @@ impl Debug for Stream {
 impl Display for Stream {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            Stream::TCP(c) => write!(f, "{}", c.name()),
+            Stream::TCP(c) | Stream::IP(c) => write!(f, "{}", c.name()),
             Stream::UDP(ac) => write!(f, "{}", ac.name()),
             Stream::Generator(_) => write!(f, "SomeStreamGenerator"),
             Stream::None => write!(f, "NoStream"),
