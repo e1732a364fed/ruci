@@ -456,7 +456,7 @@ impl Server {
         fn ou_to_oad(ou: Option<PlainText>) -> Option<AnyData> {
             ou.map(|up| {
                 let b: Box<dyn User> = Box::new(up);
-                map::AnyData::B(Box::new(b))
+                map::AnyData::User(b)
             })
         }
         let d = ou_to_oad(the_user);

@@ -76,6 +76,9 @@ pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<Use
                     v.0.push(user::UserBox(ub));
                 }
             }
+            AnyData::User(u) => {
+                v.0.push(user::UserBox(u.clone()));
+            }
             _ => {}
         }
     }
@@ -236,7 +239,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn tag_select() {
+    async fn test_tag_select() {
         let pair_list = vec![
             ("l1".to_string(), "d1".to_string()),
             ("l2".to_string(), "d2".to_string()),
@@ -264,7 +267,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn inbound_info_select() {
+    async fn test_inbound_info_select() {
         let m: MIterBox = get_miter_ab();
         let m2: MIterBox = get_miter_a();
 
@@ -300,7 +303,8 @@ mod test {
         let ub: Box<dyn User> = Box::new(u);
 
         let mut params: Vec<Option<AnyData>> = Vec::new();
-        params.push(Some(AnyData::B(Box::new(ub))));
+        // params.push(Some(AnyData::B(Box::new(ub))));
+        params.push(Some(AnyData::User(ub)));
 
         let x = rsos.select(&Addr::default(), "l1", &params).await;
 

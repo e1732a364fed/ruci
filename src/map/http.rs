@@ -232,7 +232,7 @@ impl Server {
             c: Stream::c(base),
             d: authed_user.map(|up| {
                 let b: Box<dyn User> = Box::new(up);
-                map::AnyData::B(Box::new(b))
+                map::AnyData::User(b)
             }), //将 该登录的用户信息 作为 额外信息 传回
             ..Default::default()
         })

@@ -156,7 +156,7 @@ impl Server {
         fn ou_to_od(opt_user: Option<User>) -> Option<AnyData> {
             opt_user.map(|up| {
                 let b: Box<dyn user::User> = Box::new(up);
-                map::AnyData::B(Box::new(b))
+                map::AnyData::User(b)
             })
         }
 
