@@ -11,7 +11,7 @@ use crate::map::{self, MapResult};
 use crate::net::CID;
 use crate::user::{self};
 use crate::{
-    net::{self, Conn},
+    net::Conn,
     user::{PlainText, UsersMap},
     Name,
 };

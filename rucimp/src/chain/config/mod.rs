@@ -208,10 +208,9 @@ impl ToMapper for InMapperConfig {
                 Listener::TcpListener(tcp_l_str) => {
                     let a =
                         net::Addr::from_ip_addr_str("tcp", tcp_l_str).expect("ip_addr is valid");
-                    Box::new(ruci::map::network::TcpStreamGenerator {
-                        fixed_target_addr: Some(a),
-                        ..Default::default()
-                    })
+                    let mut g = ruci::map::network::TcpStreamGenerator::default();
+                    g.set_configured_target_addr(Some(a));
+                    Box::new(g)
                 }
                 Listener::UnixListener(_) => todo!(),
             },
@@ -284,10 +283,9 @@ impl ToMapper for OutMapperConfig {
             OutMapperConfig::Direct => Box::new(ruci::map::network::Direct::default()),
             OutMapperConfig::Dialer(td_str) => {
                 let a = net::Addr::from_network_addr_str(td_str).expect("network_ip_addr is valid");
-                Box::new(ruci::map::network::Dialer {
-                    fixed_target_addr: Some(a),
-                    ..ruci::map::network::Dialer::default()
-                })
+                let mut d = ruci::map::network::Dialer::default();
+                d.set_configured_target_addr(Some(a));
+                Box::new(d)
             }
             OutMapperConfig::Adder(i) => i.to_mapper(),
             OutMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),

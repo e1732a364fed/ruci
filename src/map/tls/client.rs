@@ -7,7 +7,10 @@ use rustls::{
 };
 use tokio::io::AsyncWriteExt;
 
-use self::{map::CID, net::Stream};
+use self::{
+    map::{MapperExt, MapperExtFields, CID},
+    net::Stream,
+};
 
 use super::*;
 
@@ -45,10 +48,7 @@ impl Client {
             domain: domain.to_string(),
             is_insecure,
             client_config: Arc::new(config),
-            is_tail_of_chain: false,
-            fixed_target_addr: None,
-            chain_tag: String::new(),
-            pre_defined_early_data: None,
+            ext_fields: Some(MapperExtFields::default()),
         }
     }
 }
@@ -124,7 +124,7 @@ impl Client {
 
         let mut bc = Box::new(new_c);
 
-        if self.is_tail_of_chain {
+        if self.is_tail_of_chain() {
             if let Some(ed) = b {
                 debug!("tls client writing ed, because is_tail_of_chain");
                 bc.write_all(&ed).await?;

@@ -76,8 +76,10 @@ impl Stdio {
             Ok(Box::<Stdio>::default())
         } else {
             let a = net::Addr::from_network_addr_str(network_addr_str)?;
+            let mut ext_f = MapperExtFields::default();
+            ext_f.fixed_target_addr = Some(a);
             Ok(Box::new(Stdio {
-                fixed_target_addr: Some(a),
+                ext_fields: Some(ext_f),
                 ..Default::default()
             }))
         }
@@ -102,7 +104,7 @@ impl Mapper for Stdio {
         let a = if params.a.is_some() {
             params.a
         } else {
-            self.configured_target_addr()
+            self.configured_target_addr().map(|dr| dr.clone())
         };
         MapResult::newc(Box::new(c)).b(params.b).a(a).build()
     }

@@ -271,7 +271,23 @@ pub trait ToMapper {
     fn to_mapper(&self) -> MapperBox;
 }
 
-/// Some helper method. See crates/macro_mapper.
+//令 Mapper 实现 Send + Sync, 否则异步/多线程报错
+pub trait MapperSync: MapperExt + Send + Sync {}
+impl<T: MapperExt + Send + Sync> MapperSync for T {}
+
+pub type MapperBox = Box<dyn MapperSync>;
+
+/// Some helper fields.
+#[derive(Default, Clone, Debug)]
+
+pub struct MapperExtFields {
+    pub is_tail_of_chain: bool,
+    pub chain_tag: String,
+    pub fixed_target_addr: Option<net::Addr>,
+    pub pre_defined_early_data: Option<bytes::BytesMut>,
+}
+
+/// Some helper method.
 ///
 /// ```plaintext
 /// use macro_mapper::*;
@@ -282,21 +298,61 @@ pub trait ToMapper {
 /// ```
 /// to auto impl MapperExt
 ///
+/// See crates/macro_mapper.
+///
 pub trait MapperExt: Mapper {
-    fn set_configured_target_addr(&mut self, _a: Option<net::Addr>);
-    fn set_is_tail_of_chain(&mut self, _is: bool);
-    fn set_pre_defined_early_data(&mut self, data: Option<bytes::BytesMut>);
+    fn get_ext_fields(&self) -> Option<&MapperExtFields>;
+    fn set_ext_fields(&mut self, fs: Option<MapperExtFields>);
 
-    fn configured_target_addr(&self) -> Option<net::Addr>;
-    fn is_tail_of_chain(&self) -> bool;
+    fn set_chain_tag(&mut self, tag: &str) {
+        let mut efc = if let Some(ef) = self.get_ext_fields() {
+            ef.clone()
+        } else {
+            MapperExtFields::default()
+        };
 
-    fn set_chain_tag(&mut self, tag: &str);
+        efc.chain_tag = tag.to_string();
+        self.set_ext_fields(Some(efc));
+    }
 
-    fn get_chain_tag(&self) -> &str;
+    fn set_is_tail_of_chain(&mut self, is: bool) {
+        let mut efc = if let Some(ef) = self.get_ext_fields() {
+            ef.clone()
+        } else {
+            MapperExtFields::default()
+        };
+
+        efc.is_tail_of_chain = is;
+        self.set_ext_fields(Some(efc));
+    }
+
+    fn set_configured_target_addr(&mut self, a: Option<net::Addr>) {
+        let mut efc = if let Some(ef) = self.get_ext_fields() {
+            ef.clone()
+        } else {
+            MapperExtFields::default()
+        };
+
+        efc.fixed_target_addr = a;
+        self.set_ext_fields(Some(efc));
+    }
+
+    fn get_chain_tag(&self) -> &str {
+        if let Some(ef) = self.get_ext_fields() {
+            return &ef.chain_tag;
+        }
+        ""
+    }
+    fn is_tail_of_chain(&self) -> bool {
+        if let Some(ef) = self.get_ext_fields() {
+            return ef.is_tail_of_chain;
+        }
+        false
+    }
+    fn configured_target_addr(&self) -> Option<&net::Addr> {
+        if let Some(ef) = self.get_ext_fields() {
+            return ef.fixed_target_addr.as_ref();
+        }
+        None
+    }
 }
-
-//令 Mapper 实现 Send + Sync, 否则异步/多线程报错
-pub trait MapperSync: MapperExt + Send + Sync {}
-impl<T: MapperExt + Send + Sync> MapperSync for T {}
-
-pub type MapperBox = Box<dyn MapperSync>;

@@ -6,7 +6,7 @@ use macro_mapper::{common_mapper_field, CommonMapperExt};
 use tokio::io::AsyncWriteExt;
 
 use crate::{
-    map::{self, MapResult, Mapper, CID},
+    map::{self, MapResult, Mapper, MapperExt, CID},
     net::{self, helpers, Network},
     Name,
 };
@@ -55,7 +55,7 @@ impl Client {
         helpers::addr_to_socks5_bytes(&ta, &mut buf);
         buf.put_u16(CRLF);
 
-        if self.is_tail_of_chain && !is_udp {
+        if self.is_tail_of_chain() && !is_udp {
             if let Some(b) = &first_payload {
                 if !b.is_empty() {
                     buf.extend_from_slice(b);

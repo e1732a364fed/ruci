@@ -159,7 +159,7 @@ impl Mapper for Dialer {
                     ));
                 }
                 None => {
-                    if let Some(configured_dial_a) = &self.fixed_target_addr {
+                    if let Some(configured_dial_a) = &self.configured_target_addr() {
                         return Dialer::dial_addr(configured_dial_a, params.a, params.b).await;
                     }
                     return MapResult::err_str(&format!(
@@ -309,7 +309,7 @@ impl Mapper for TcpStreamGenerator {
         let a = match params.a.as_ref() {
             Some(a) => a,
             None => self
-                .fixed_target_addr
+                .configured_target_addr()
                 .as_ref()
                 .expect("TcpStreamGenerator always has a fixed_target_addr"),
         };

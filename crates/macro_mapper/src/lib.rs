@@ -11,26 +11,7 @@ pub fn common_mapper_field(_args: TokenStream, input: TokenStream) -> TokenStrea
                 syn::Fields::Named(fields) => {
                     fields.named.push(
                         syn::Field::parse_named
-                            .parse2(quote! { pub is_tail_of_chain: bool })
-                            .unwrap(),
-                    );
-
-                    fields.named.push(
-                        // 存一个可选的addr, 可作为指定的连接目标。 这样该mapper的decode行为就像一个 socks5一样
-                        syn::Field::parse_named
-                            .parse2(quote! { pub fixed_target_addr: Option<net::Addr> })
-                            .unwrap(),
-                    );
-
-                    fields.named.push(
-                        syn::Field::parse_named
-                            .parse2(quote! { pub chain_tag: String })
-                            .unwrap(),
-                    );
-
-                    fields.named.push(
-                        syn::Field::parse_named
-                            .parse2(quote! { pub pre_defined_early_data: Option<bytes::BytesMut> })
+                            .parse2(quote! { pub ext_fields: Option<map::MapperExtFields> })
                             .unwrap(),
                     );
                 }
@@ -61,28 +42,12 @@ fn impl_common_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let gen = quote! {
         impl map::MapperExt for #name {
-            fn configured_target_addr(&self) -> Option<net::Addr> {
-                self.fixed_target_addr.clone()
-            }
-            fn is_tail_of_chain(&self) -> bool {
-                self.is_tail_of_chain
-            }
-
-            fn set_configured_target_addr(&mut self, a: Option<net::Addr>) {
-                self.fixed_target_addr = a
-            }
-            fn set_is_tail_of_chain(&mut self, is: bool) {
-                self.is_tail_of_chain = is
-            }
-            fn set_pre_defined_early_data(&mut self, data: Option<bytes::BytesMut>){
-                self.pre_defined_early_data = data
-            }
 
 
-            fn set_chain_tag(&mut self, tag: &str){self.chain_tag = tag.to_string()}
-
-            fn get_chain_tag(&self) -> &str{ &self.chain_tag}
-
+            fn get_ext_fields(&self) -> Option<&map::MapperExtFields>{self.ext_fields.as_ref()}
+            fn set_ext_fields(&mut self, fs: Option<map::MapperExtFields>){
+                self.ext_fields = fs
+            }
         }
     };
     gen.into()
@@ -101,20 +66,10 @@ fn impl_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let gen = quote! {
         impl map::MapperExt for #name {
-            fn set_configured_target_addr(&mut self, _a: Option<net::Addr>) {}
-            fn set_is_tail_of_chain(&mut self, _is: bool) {}
-            fn set_pre_defined_early_data(&mut self, data: Option<bytes::BytesMut>){
-            }
-            fn configured_target_addr(&self) -> Option<net::Addr> {
-                None
-            }
-            fn is_tail_of_chain(&self) -> bool {
-                false
-            }
 
-            fn set_chain_tag(&mut self, tag: &str){}
-
-            fn get_chain_tag(&self) -> &str{""}
+            fn get_ext_fields(&self) -> Option<&map::MapperExtFields>{ None}
+            fn set_ext_fields(&mut self, fs: Option<map::MapperExtFields>){
+            }
         }
     };
     gen.into()
