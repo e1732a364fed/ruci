@@ -698,7 +698,9 @@ local config_18_recorder = {
     inbounds = { {
         chain = { listen, {
             Recorder = {
-                custom_str = "socks5"
+                custom_str = "socks5",
+                serialize_format = "cbor", --"json"
+                --full_record = true
             }
         }, {
             Socks5Http = {}
@@ -710,7 +712,8 @@ local config_18_recorder = {
         tag = "dial1",
         chain = { direct, {
             Recorder = {
-                custom_str = "direct"
+                custom_str = "direct",
+                serialize_format = "cbor"
             }
         } }
     } }

@@ -73,14 +73,17 @@ pub struct SimplifiedRecordData {
 
 impl From<&mut RecordData> for SimplifiedRecordData {
     /// 本转换会 拿走 RecordData 中 download_data 和 upload_data
+    ///
+    /// 且将截断1500字节以上的部分(但不做padding 以最小化文件大小)
     fn from(d: &mut RecordData) -> Self {
         fn convert(d: Vec<DataPiece>, i: i8) -> Vec<(i8, u128, Vec<u8>)> {
             d.into_iter()
                 .map(|dp| {
-                    let data = match dp.data {
+                    let mut data = match dp.data {
                         PayloadData::Pure(d) => d,
                         PayloadData::Addr(add) => add.1,
                     };
+                    data.truncate(1500);
                     (i, dp.nanos_since_start, data)
                 })
                 .collect()
@@ -172,42 +175,39 @@ impl RecordData {
     fn save(&mut self) {
         let _ = std::fs::create_dir("logs");
 
-        match &self.serialize_format {
+        let name = self.save_name();
+        let f = std::fs::File::create(name).unwrap();
+
+        let r = match &self.serialize_format {
             Some(s) => match s.as_str() {
-                "json" => self.save_json(),
-                // "pickle" => self.save_pickle(),
-                _ => self.save_json(),
+                "json" => self.save_json(f),
+                "cbor" => self.save_cbor(f),
+                _ => self.save_json(f),
             },
-            None => self.save_json(),
+            None => self.save_json(f),
+        };
+
+        if let Err(e) = r {
+            tracing::warn!("save to file got error: {e}");
         }
     }
 
-    // #[cfg(feature = "serde-pickle")]
-    // fn save_pickle(&self) {
-    //     let name = self.save_name();
-
-    //     let r = serde_pickle::to_writer(
-    //         &mut std::fs::File::create(name).unwrap(),
-    //         &self,
-    //         Default::default(),
-    //     );
-    //     if let Err(e) = r {
-    //         tracing::warn!("save to file got error: {e}");
-    //     }
-    // }
-    fn save_json(&mut self) {
-        let name = self.save_name();
-
-        let r = if self.full_record.unwrap_or_default() {
-            serde_json::to_writer_pretty(std::fs::File::create(name).unwrap(), &self)
+    fn save_cbor(&mut self, f: std::fs::File) -> anyhow::Result<()> {
+        if self.full_record.unwrap_or_default() {
+            Ok(serde_cbor::to_writer(f, &self)?)
         } else {
-            serde_json::to_writer_pretty(
-                std::fs::File::create(name).unwrap(),
+            Ok(serde_cbor::to_writer(f, &SimplifiedRecordData::from(self))?)
+        }
+    }
+
+    fn save_json(&mut self, f: std::fs::File) -> anyhow::Result<()> {
+        if self.full_record.unwrap_or_default() {
+            Ok(serde_json::to_writer_pretty(f, &self)?)
+        } else {
+            Ok(serde_json::to_writer_pretty(
+                f,
                 &SimplifiedRecordData::from(self),
-            )
-        };
-        if let Err(e) = r {
-            tracing::warn!("save to file got error: {e}");
+            )?)
         }
     }
 }
