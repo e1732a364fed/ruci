@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct AutoRouteParams {
+pub struct InAutoRouteParams {
     pub tun_dev_name: Option<String>,
     pub tun_gateway: Option<String>,
     pub router_ip: Option<String>,
@@ -20,7 +20,7 @@ pub struct AutoRouteParams {
 const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
 const DEFAULT_ORIGINAL_DEV_NAME: &str = "enp0s1";
 
-pub fn auto_route(params: &AutoRouteParams) -> anyhow::Result<Option<Vec<String>>> {
+pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<String>>> {
     #[cfg(target_os = "linux")]
     {
         info!("tun up auto route for linux...");
@@ -56,7 +56,7 @@ ip route add default via {router_ip} dev {original_dev_name} metric 10"#,
         if let Err(e) = r {
             warn!("auto_route run command got e, will down_route: {}", e);
 
-            let _ = down_route(params);
+            let _ = in_down_route(params);
             return Err(e);
         }
 
@@ -71,7 +71,7 @@ ip route add default via {router_ip} dev {original_dev_name} metric 10"#,
     Ok(None)
 }
 
-pub fn down_route(params: &AutoRouteParams) -> anyhow::Result<()> {
+pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
     {
         info!("tun down auto route for linux...");

@@ -121,7 +121,7 @@ pub struct BindDialer {
     pub bind_addr: Option<net::Addr>,
 
     #[cfg(feature = "tun")]
-    pub auto_route: Option<tun::route::AutoRouteParams>,
+    pub in_auto_route: Option<tun::route::InAutoRouteParams>,
 
     auto_route_state: Arc<Mutex<AutoRouteState>>,
 }
@@ -147,13 +147,13 @@ impl BindDialer {
     #[cfg(feature = "tun")]
 
     pub fn down_route(&mut self) {
-        debug!("BindDialer down route");
+        debug!("BindDialer down auto route");
         let mut mg = self.auto_route_state.lock();
         match &*mg {
             AutoRouteState::Up(opt_dns_list) => {
-                let mut params = self.auto_route.take().unwrap();
+                let mut params = self.in_auto_route.take().unwrap();
                 params.dns_list = opt_dns_list.to_owned();
-                let r = tun::route::down_route(&params);
+                let r = tun::route::in_down_route(&params);
                 debug!("BindDialer down route {r:?}");
                 if r.is_ok() {
                     *mg = AutoRouteState::Down;
@@ -178,14 +178,14 @@ impl BindDialer {
                 if let Some(a) = &bind_a {
                     #[cfg(feature = "tun")]
                     if let Network::IP = a.network {
-                        if let Some(c) = &self.auto_route {
+                        if let Some(c) = &self.in_auto_route {
                             let mut mg = self.auto_route_state.lock();
                             match &*mg {
                                 AutoRouteState::Up(_) => {
                                     info!("BindDialer called after AutoRouteState::Up")
                                 }
                                 _ => {
-                                    let r = tun::route::auto_route(c);
+                                    let r = tun::route::in_auto_route(c);
                                     match r {
                                         Ok(opt_dns_list) => {
                                             *mg = AutoRouteState::Up(opt_dns_list);

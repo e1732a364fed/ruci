@@ -204,7 +204,7 @@ pub struct DialerConfig {
     dial_addr: Option<String>,
 
     #[cfg(feature = "tun")]
-    auto_route: Option<tun::route::AutoRouteParams>,
+    in_auto_route: Option<tun::route::InAutoRouteParams>,
 
     ext: Option<Ext>,
 }
@@ -225,7 +225,7 @@ impl ToMapBox for DialerConfig {
         d.bind_addr = opt_bind_a;
         #[cfg(feature = "tun")]
         {
-            d.auto_route = self.auto_route.clone();
+            d.in_auto_route = self.in_auto_route.clone();
         }
         d.ext_fields = self.ext.as_ref().map(|e| e.to_ext_fields());
 
