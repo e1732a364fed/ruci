@@ -109,7 +109,7 @@ impl Map for Direct {
 enum AutoRouteState {
     #[default]
     None,
-    InUp(Option<Vec<String>>),
+    InUp(Option<Vec<String>>), //old_dns_list
     OutUp,
     Down,
 }

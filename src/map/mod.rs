@@ -34,6 +34,7 @@ pub mod network;
 pub mod socks5;
 pub mod socks5http;
 pub mod stdio;
+pub mod tee;
 pub mod tls;
 pub mod trojan;
 

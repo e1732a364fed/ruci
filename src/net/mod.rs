@@ -219,6 +219,12 @@ impl CID {
         cid
     }
 
+    pub fn clone_push_num(&self, new_id_num: u32) -> Self {
+        let mut cid = self.clone();
+        cid.push_num(new_id_num);
+        cid
+    }
+
     /// won't change self
     ///
     /// return the popped value

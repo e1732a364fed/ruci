@@ -5,7 +5,7 @@ use crate::Name;
 use super::*;
 use bytes::{Buf, BufMut, BytesMut};
 use parking_lot::Mutex;
-use tokio::io::ReadBuf;
+use tokio::{io::ReadBuf, sync::mpsc};
 
 use futures::task::Context;
 
@@ -101,6 +101,57 @@ pub fn addr_to_socks5_bytes(ta: &Addr, buf: &mut BytesMut) {
                 buf.put_u16(*p);
             }
         }
+    }
+}
+
+/// wrap [`mpsc::Receiver<BytesMut>`] as an AsyncConn
+pub struct MpscRWrapper {
+    pub r: mpsc::Receiver<BytesMut>,
+}
+
+impl AsyncRead for MpscRWrapper {
+    #[inline]
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        let r = Pin::new(&mut self.r).poll_recv(cx);
+        match r {
+            Poll::Ready(r) => match r {
+                Some(mut b) => {
+                    b.truncate(buf.capacity());
+                    buf.put(b);
+                    Poll::Ready(Ok(()))
+                }
+                None => Poll::Ready(Err(io::Error::new(
+                    io::ErrorKind::ConnectionAborted,
+                    "MpscRWrapper r got none",
+                ))),
+            },
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl AsyncWrite for MpscRWrapper {
+    #[inline]
+    fn poll_write(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        Poll::Ready(Ok(buf.len()))
+    }
+
+    #[inline]
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+
+    #[inline]
+    fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
     }
 }
 
