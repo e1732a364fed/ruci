@@ -7,8 +7,8 @@ use tokio::{
 };
 
 use super::*;
+use crate::map;
 use crate::Name;
-
 /// only use CommonMapperExt's is_tail_of_chain. won't use configured_target_addr;
 /// if you want to set configured_target_addr, maybe you should use TcpDialer
 #[common_mapper_field]

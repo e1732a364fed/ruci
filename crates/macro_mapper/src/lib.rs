@@ -48,7 +48,7 @@ pub fn commonext_macro_derive(input: TokenStream) -> TokenStream {
 fn impl_common_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let gen = quote! {
-        impl MapperExt for #name {
+        impl map::MapperExt for #name {
             fn configured_target_addr(&self) -> Option<net::Addr> {
                 self.fixed_target_addr.clone()
             }

@@ -68,7 +68,7 @@ pub fn sha224_hexstring_lower_case(pass: &str) -> String {
     format!("{}", bs.hex_display())
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct User {
     pub plain_text_pass: String, //store the original password
     pub hex: String,             //len = 56

@@ -2,7 +2,7 @@ use std::io;
 
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
-use macro_mapper::DefaultMapperExt;
+use macro_mapper::{common_mapper_field, CommonMapperExt};
 use tokio::io::AsyncWriteExt;
 
 use crate::{
@@ -13,7 +13,8 @@ use crate::{
 
 use super::*;
 
-#[derive(Debug, Clone, DefaultMapperExt)]
+#[common_mapper_field]
+#[derive(Debug, Clone, CommonMapperExt, Default)]
 pub struct Client {
     pub u: User,
 }
@@ -21,7 +22,10 @@ pub struct Client {
 impl Client {
     pub fn new(plain_text_password: &str) -> Self {
         let u = User::new(plain_text_password);
-        Client { u }
+        Client {
+            u,
+            ..Default::default()
+        }
     }
 
     pub async fn handshake(
@@ -42,13 +46,20 @@ impl Client {
         }
         helpers::addr_to_socks5_bytes(&ta, &mut buf);
         buf.put_u16(CRLF);
-        if let Some(b) = first_payload {
-            buf.extend_from_slice(&b);
-        }
-        base.write_all(&buf).await?;
-        base.flush().await?;
+        if self.is_tail_of_chain {
+            if let Some(b) = first_payload {
+                buf.extend_from_slice(&b);
+            }
+            base.write_all(&buf).await?;
+            base.flush().await?;
 
-        Ok(MapResult::c(base))
+            Ok(MapResult::c(base))
+        } else {
+            base.write_all(&buf).await?;
+            base.flush().await?;
+
+            Ok(MapResult::obc(first_payload, base))
+        }
     }
 }
 impl Name for Client {
