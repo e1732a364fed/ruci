@@ -9,11 +9,11 @@ use crate::map::*;
 use crate::net;
 use crate::net::Stream;
 
-/// 初级监听为tcp的 链式转发.
+/// 初级监听为 net::Conn 的 链式转发.
 ///
 /// ins指 in_server, outc 指 out client;
 /// ins_name 只用于 log 和 debug.
-/// ins 的行为只与 ins_iterator 有关. outc 同理。
+/// ins 的行为只与 ins_iterator 有关, 与name无关. outc 同理。
 ///
 /// 若 outc_addr 为None 或 outc_iterator.next() 必返回 None，则说明 该 outc 为 direct直连
 ///
