@@ -39,10 +39,10 @@ jobs:
       run: cargo hack check --feature-powerset --no-dev-deps
 
     - name: Test Rucimp Every feature tag
-      run: cd rucimp && cargo hack check --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua
+      run: cd rucimp && cargo hack check --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features use-native-tls,native-tls-vendored
 
     - name: Test Ruci-Cmd Every feature tag
-      run: cd crates/ruci-cmd && cargo hack check --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua
+      run: cd crates/ruci-cmd && cargo hack check --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features use-native-tls,native-tls-vendored
 
     - name: Run Ruci tests
       run: cargo test --verbose
