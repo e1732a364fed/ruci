@@ -55,19 +55,21 @@ For lua configuration, see [local.lua](resource/local.lua), [remote.lua](resourc
 
 ### ruci-cmd
 
+full featured command-line executable.
+
 See [ruci-cmd](crates/ruci-cmd/README.md)
 
 
 ### rucimp/examples
 
-rucimp provides some example binaries, like suit, chain etc.
+rucimp provides some example binaries for debugging and testing.
 
 See [exmaples](rucimp/examples/readme.md)
 
 
 # Dev
 
-TDD. See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md) for developper Contributing guidelines in 中文.
+See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md) for developper Contributing guidelines in 中文.
 
 ## What is "Proxy"
 
@@ -76,11 +78,11 @@ A proxy must have both an inbound and an outbound.
 If the app only has an inbound, then it's just a regular web server.
 If the app only has an outbound, then it's just a regular web browser.
 
-On client side, having both an inbound and an outbound is called regular proxy;
-It's outbound is connected to the server's inbound.
+On client side, having both an inbound and an outbound is called a regular proxy;
+Its outbound is connected to the server's inbound.
 
-On server side, having both an inbound and an outbound is called "reverse proxy".
-It's outbound is connected to another server's inbound.
+On server side, having both an inbound and an outbound is called a "reverse proxy".
+Its outbound is connected to another server's inbound.
 
 ## Chain Structure Explained
 
@@ -97,12 +99,13 @@ Multi-stream generator【多流发生器】(one to many): `function( Option<stre
 
 流由流发生器产生. 
 
-流发生器是一种不接受流参数, 只接受其它参数的函数, 是整个链的起点, 是流的源
+流发生器是一种不接受流参数, 只接受其它参数的(编程意义下的)函数, 是整个链的起点, 是流的源。
 
-单流发生器可能是 BindDialer, 文件, 或者 Stdio.
+单流发生器是数学意义下的函数，可能是 BindDialer, 文件, 或者 Stdio.
 
 多流发生器可能是 Listener (不接受流参数的无中生有 (一般实际上原理上是对接硬件上的流,
-如网卡提供的流) ) 或 inner mux (接受一个流, 对其进行分支处理)
+如网卡提供的流) ) 或 inner mux (接受一个流, 对其进行分支处理)。
+其在数学意义下可以理解为泛函。
 
 流映射可以改变流(如Tls), 也可以不改变而只是在内容上做修改(如MathAdder),
 
@@ -116,7 +119,7 @@ Multi-stream generator【多流发生器】(one to many): `function( Option<stre
 
 也可以替换掉流的源(如socks5中的 udp associate, 是持有tcp流的所有权后, 产生并返回一个新的udp流). 
 
-如此, 整个架构抽象把代理分成了一个一个小模块, 任由你拼接. 
+如此, 整个架构抽象把代理分成了一个一个小模块（映射）, 像一个个箭头一样，任由你拼接. 
 
 
 虽然看起来没有什么区别, 但是, 你可以很方便地构建一些独特的结构, 比如 TLS+TLS (用于分析 tls in tls, 
@@ -129,10 +132,9 @@ Multi-stream generator【多流发生器】(one to many): `function( Option<stre
 发挥你的想象力吧. 
 
 而作为suit配置格式实际上也是运行在链式结构中的
+能够定义动态的链式结构 (如跳转, 以及通过跳转实现的 循环)的链式配置文件要采用脚本语言格式.  这里使用 Lua。
 
-能够定义动态的链式结构 (如跳转, 以及通过跳转实现的 循环)的链式配置文件要采用脚本语言格式.  这里使用 Lua
-
-只会返回 有限个Map可能 的动态链 是一种 有限状态机. 静态链是一种特化的有限状态机, 其状态转换函数是 `fn(i)->++i`
+只会返回 有限个Map可能 的动态链 是一种 有限状态机. 静态链是一种特化的有限状态机, 其状态转换函数是 `fn(i)->++i`。
 
 
 经典链

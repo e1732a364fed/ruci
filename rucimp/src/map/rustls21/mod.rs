@@ -110,7 +110,7 @@ pub fn load_key(path: &Path) -> anyhow::Result<PrivateKey> {
     }
 }
 
-/// 一个文件有多个 cert 的情况一般是 fullchain
+/// 注：一个文件有多个 cert 的情况一般是 fullchain
 pub fn load_certs(cert_path: &str) -> anyhow::Result<Vec<rustls::Certificate>> {
     let mut cert_chain_reader = BufReader::new(File::open(cert_path)?);
     let certs = rustls_pemfile::certs(&mut cert_chain_reader)?

@@ -2,7 +2,7 @@
 这里说的 0rtt 是指在 h2 握手后, 客户端发送 "建立子连接请求" 后, 无须等待服务端
 的回复确认包 而直接发送 子连接初始数据的 做法.
 
-也可以叫 early data
+也可以叫 early data。*ray 等程序使用的就是这种做法。
  */
 
 use futures_lite::FutureExt;
