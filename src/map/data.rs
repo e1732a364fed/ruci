@@ -65,7 +65,7 @@ impl Data for u8 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RLAddr(net::Addr, net::Addr);
+pub struct RLAddr(pub net::Addr, pub net::Addr);
 
 #[typetag::serde]
 impl Data for RLAddr {

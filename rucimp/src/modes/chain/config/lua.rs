@@ -148,6 +148,7 @@ fn get_iobounds_by_config_and_selector_map(
     (v, first_o.expect("has an outbound"), Arc::new(omap))
 }
 
+/// implements dynamic::NextSelector
 #[derive(Debug, Clone)]
 pub struct LuaNextSelector(Arc<Mutex<LuaOwnedFunction>>);
 
@@ -190,13 +191,6 @@ impl NextSelector for LuaNextSelector {
     }
 }
 
-/*
-//////////////////////////////////////////////////////////////////////////////
-
-         rust -> lua UserData 的包装
-
-//////////////////////////////////////////////////////////////////////////////
-*/
 use mlua::{UserData, UserDataMethods};
 use parking_lot::Mutex;
 
@@ -242,14 +236,6 @@ impl UserData for OptVecDataLuaWrapper {
         });
     }
 }
-
-/*
-//////////////////////////////////////////////////////////////////////////////
-
-        end of rust -> lua UserData 的包装
-
-//////////////////////////////////////////////////////////////////////////////
-*/
 
 #[allow(unused)]
 #[cfg(test)]
