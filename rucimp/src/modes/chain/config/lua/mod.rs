@@ -13,6 +13,28 @@ use parking_lot::Mutex;
 use ruci::map::fold::OVOD;
 use ruci::net::CID;
 
+pub fn set_lua_create_in_mapper_func(lua: &Lua) -> anyhow::Result<()> {
+    let f = lua.create_function(|lua, v: LuaValue| {
+        let c = lua.from_value::<InMapperConfig>(v)?;
+        let m = c.to_mapper_box();
+        let m = LuaMapperWrapper(Arc::new(m));
+        Ok(m)
+    })?;
+    lua.globals().set("create_in_mapper_func", f)?;
+    Ok(())
+}
+
+pub fn set_lua_create_out_mapper_func(lua: &Lua) -> anyhow::Result<()> {
+    let f = lua.create_function(|lua, v: LuaValue| {
+        let c = lua.from_value::<OutMapperConfig>(v)?;
+        let m = c.to_mapper_box();
+        let m = LuaMapperWrapper(Arc::new(m));
+        Ok(m)
+    })?;
+    lua.globals().set("create_out_mapper_func", f)?;
+    Ok(())
+}
+
 /// load chain::config::StaticConfig from a lua file which has a
 /// "config" global variable
 pub fn load_static(lua_text: &str) -> mlua::Result<StaticConfig> {
@@ -203,6 +225,8 @@ fn get_infinite_g_map_from(text: &str, behavior: ProxyBehavior) -> anyhow::Resul
             let g: LuaFunction = chain.get("generator")?;
 
             let key = lua.create_registry_value(g).expect("ok");
+            set_lua_create_in_mapper_func(&lua)?;
+            set_lua_create_out_mapper_func(&lua)?;
 
             (key, tag)
         };
@@ -377,6 +401,10 @@ impl InnerLuaNextGenerator {
 
                 self.get_result_by_value(i, Value::String(s.to_ref()))
             }
+            LuaMapperRepresentation::OU(ud) => {
+                let m = ud.take::<LuaMapperWrapper>().expect("ok");
+                Some((i, Some(m.0)))
+            }
         }
     }
 }
@@ -384,6 +412,7 @@ impl InnerLuaNextGenerator {
 enum LuaMapperRepresentation {
     OT(LuaOwnedTable),
     OS(LuaOwnedString),
+    OU(LuaOwnedAnyUserData),
 }
 
 impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
@@ -504,3 +533,18 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
         mg.get_result(cid, r)
     }
 }
+
+pub struct LuaMapperWrapper(Arc<MapperBox>);
+
+use mlua::UserData;
+
+impl<'lua> FromLua<'lua> for LuaMapperWrapper {
+    fn from_lua(value: Value<'lua>, _: &'lua Lua) -> LuaResult<Self> {
+        match value {
+            Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl UserData for LuaMapperWrapper {}
