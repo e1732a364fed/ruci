@@ -381,15 +381,13 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     let tt = info.ub.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
-                        debug!("cp, cid: {}, c1_to_c2r1, {}, {}",cid,n,tt);
+                        debug!("cp, cid: {}, u, ub, {}, {}",cid,n,tt);
                     }
                 }
-
 
                 // can't borrow mut more than once. We just hope tokio will shutdown tcp
                 // when it's dropped.
                 // during the tests we can prove it's dropped.
-
 
                 let r2 = c2_to_c1.await;
                 if let Some(info) = opt {
@@ -397,7 +395,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         let tt = info.db.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
-                            debug!("cp, cid: {}, c1_to_c2r2, {}, {}",cid, n,tt);
+                            debug!("cp, cid: {}, u, db, {}, {}",cid, n,tt);
                         }
                     }
                 }
@@ -405,7 +403,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
 
 
             if log_enabled!(log::Level::Debug) {
-                debug!("cp end c1_to_c2, cid: {} ",cid);
+                debug!("cp end u, cid: {} ",cid);
             }
 
             r1
@@ -416,10 +414,9 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     let tt = info.db.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
-                        debug!("cp, cid: {}, c2_to_c1r2, {}, {}",cid, n,tt);
+                        debug!("cp, cid: {}, d, db, {}, {}",cid, n,tt);
                     }
                 }
-
 
                 let r1 = c1_to_c2.await;
                 if let Some(ref info) = opt {
@@ -427,15 +424,14 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         let tt = info.ub.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
-                            debug!("cp, cid: {}, c2_to_c1r1, {}, {}",cid,n,tt);
+                            debug!("cp, cid: {}, d, ub, {}, {}",cid,n,tt);
                         }
                     }
                 }
             }
 
-
             if log_enabled!(log::Level::Debug) {
-                debug!("cp end c2_to_c1, { } ",cid);
+                debug!("cp end d, { } ",cid);
             }
 
             r2

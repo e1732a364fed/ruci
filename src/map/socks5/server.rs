@@ -47,6 +47,11 @@ async fn server_udp_associate(
     ];
     base.write(&reply).await?;
 
+    /*
+        socks5 udp relay doesn't use ruci::net::addr_conn relay procedure
+        because it consumes the tcp connection
+    */
+
     task::spawn(loop_listen_udp_for_certain_client(
         cid,
         base,
@@ -70,10 +75,8 @@ pub async fn loop_listen_udp_for_certain_client(
     let mut user_raddr: IpAddr = client_future_addr.get_ip().unwrap();
     let mut user_port: u16 = client_future_addr.get_port();
 
-    use tokio::sync::mpsc::channel;
-    // use futures::sink::SinkExt;
-    // use futures::stream::StreamExt;
     use futures::FutureExt;
+    use tokio::sync::mpsc::channel;
     let (tx, mut rx) = channel::<(Option<SocketAddr>, BytesMut, SocketAddr)>(20);
 
     let udpso_created_to_listen_for_thisuser = Arc::new(udpso_created_to_listen_for_thisuser);
