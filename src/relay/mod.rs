@@ -102,10 +102,13 @@ pub async fn handle_in_fold_result(
             let return_e: anyhow::Error;
             match listen_result.e {
                 Some(err) => {
-                    return_e = anyhow!("fold inbound failed with Error: {:#?}", err);
+                    return_e = anyhow!("fold inbound failed with Error: {:#}", err);
 
                     warn!(cid = %cid, "{}", return_e);
-                    let _ = listen_result.c.try_shutdown().await;
+                    let r = listen_result.c.try_shutdown().await;
+                    if let Err(e) = r {
+                        warn!(cid = %cid, e=%e, "shutdown stream got error");
+                    }
                     return Err(return_e);
                 }
                 None => match &listen_result.c {

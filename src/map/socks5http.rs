@@ -93,7 +93,7 @@ impl Server {
             .await?;
 
         if let Some(e) = &r.e {
-            debug!(cid = %cid, "debug socks5http e, {}", e);
+            debug!(cid = %cid, "socks5http error: {:#}", e);
 
             if r.b.is_some() {
                 let c = match r.c {

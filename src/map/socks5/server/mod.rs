@@ -137,7 +137,7 @@ impl Server {
         if v != VERSION5 {
             if tracing::enabled!(tracing::Level::DEBUG) {
                 let e2 = anyhow!(
-                    "socks5: unsupported version: {}, buf as str: {}",
+                    "socks5: unsupported version: {}, buf as str:\n {}\n",
                     v,
                     String::from_utf8_lossy(&buf[..min(n, 256)])
                 );

@@ -320,13 +320,17 @@ impl Stream {
     pub fn is_none_or_generator(&self) -> bool {
         matches!(self, Stream::None) || matches!(self, Stream::Generator(_))
     }
+
+    /// try shutdown the underlying stream. If there's no
+    /// stream, no behavior.
     pub async fn try_shutdown(self) -> Result<()> {
-        if let Stream::Conn(mut t) = self {
-            t.shutdown().await?
-        } else if let Stream::AddrConn(mut c) = self {
-            c.w.shutdown().await?
-        }
-        Ok(())
+        let r = match self {
+            Stream::Conn(mut t) => t.shutdown().await?,
+            Stream::AddrConn(mut c) => c.w.shutdown().await?,
+            Stream::Generator(mut rx) => rx.close(),
+            Stream::None => {}
+        };
+        Ok(r)
     }
 
     pub fn try_unwrap_tcp(self) -> Result<Conn> {

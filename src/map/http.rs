@@ -102,7 +102,7 @@ impl Server {
         if r.fail_reason != FailReason::None {
             if tracing::enabled!(tracing::Level::DEBUG) {
                 let e1 = anyhow::anyhow!(
-                    "http proxy: get method/path failed: {:?}, buf as str: {}",
+                    "http proxy: get method/path failed: {:?}, buf as str:\n{}\n",
                     r.fail_reason,
                     String::from_utf8_lossy(&buf[..min(n, 256)])
                 );

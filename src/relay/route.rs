@@ -35,7 +35,6 @@ use crate::{
 
 use super::Data;
 
-/// Send + Sync to use in async
 ///
 /// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 DMIterBox
 ///
@@ -45,6 +44,8 @@ use super::Data;
 ///
 /// 不过对于路由来说最有用的值应该是 验证后的 user, 所以本模块中含一个 get_user_from_opt_data
 /// 函数用于这一点.
+///
+/// Send + Sync to use in async
 ///
 #[async_trait]
 pub trait OutSelector: Send + Sync {

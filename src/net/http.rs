@@ -45,7 +45,7 @@ pub enum FailReason {
     MethodLenWrong,
     UnexpectedProxy,
     SpaceIndexWrong,
-    Is11ProxyButNot11,
+    ExpectCONNECTButNot,
     NoSlash,
     EarlyLinefeed,
     FirstLineLessThan10,
@@ -163,7 +163,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
         } else {
             //http
             if bs[should_slash_index..should_slash_index + 7] != b"http://"[..] {
-                request.fail_reason = FailReason::Is11ProxyButNot11;
+                request.fail_reason = FailReason::ExpectCONNECTButNot;
                 return request;
             }
         }
