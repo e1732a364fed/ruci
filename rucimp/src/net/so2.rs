@@ -103,7 +103,9 @@ pub fn dial_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpStream> {
 /// just bind to empty addr
 pub fn dial_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
     let socket = new_socket2(na, so, false)?;
+    socket.set_nonblocking(true)?; // NECESSARY!
     let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
+
     Ok(s)
 }
 
