@@ -85,7 +85,7 @@ quic_out_chain = {{
     Quic = {
         is_insecure = true,
 
-        -- cert_path = "test.crt", -- 若 is_insecure 为 false 则可给出 服务端的 证书 
+        -- cert_path = "test2.crt", -- 若 is_insecure 为 false 则可给出 服务端的 证书 (须为非自签的真证书)
         server_addr = "127.0.0.1:10801",
 
         -- 须给出 server_name, 

@@ -45,25 +45,12 @@ impl Name for Client {
 
 impl Client {
     pub fn new(c: quic_common::ClientConfig) -> anyhow::Result<Self> {
-        let tls = if c.is_insecure.unwrap_or_default() {
+        let tls = {
             let cc = rustls21::cc(rustls21::ClientOptions {
-                is_insecure: true,
+                is_insecure: c.is_insecure.unwrap_or_default(),
                 alpn: c.alpn,
-            });
-
-            quinn::ClientConfig::new(Arc::new(cc))
-        } else {
-            // let mut tls = s2n_quic_rustls::Client::builder()
-            //     .with_certificate(Path::new(c.cert_path.unwrap_or_default().as_str()))?;
-
-            // if let Some(a) = c.alpn {
-            //     tls = tls.with_application_protocols(a.into_iter())?;
-            // }
-            // tls.build()?
-            let cc = rustls21::cc(rustls21::ClientOptions {
-                is_insecure: true,
-                alpn: c.alpn,
-            });
+                cert_path: c.cert_path.clone(),
+            })?;
 
             quinn::ClientConfig::new(Arc::new(cc))
         };

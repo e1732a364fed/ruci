@@ -20,10 +20,20 @@ use tracing::debug;
 pub struct ClientOptions {
     pub is_insecure: bool,
     pub alpn: Option<Vec<String>>,
+    pub cert_path: Option<String>,
 }
 
-pub(crate) fn cc(opt: ClientOptions) -> ClientConfig {
-    let root_store = rustls::RootCertStore::empty();
+pub(crate) fn cc(opt: ClientOptions) -> anyhow::Result<ClientConfig> {
+    let mut root_store = rustls::RootCertStore::empty();
+
+    if let Some(c) = opt.cert_path {
+        let c = load_certs(&c)?;
+        root_store.add(
+            c.first()
+                .ok_or(anyhow::anyhow!("load_certs got empty vec"))?,
+        )?;
+    }
+
     let mut cc = ClientConfig::builder()
         .with_safe_defaults()
         .with_root_certificates(root_store)
@@ -36,7 +46,7 @@ pub(crate) fn cc(opt: ClientOptions) -> ClientConfig {
     if let Some(a) = opt.alpn {
         cc.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
     }
-    cc
+    Ok(cc)
 }
 
 #[derive(Debug, Default)]
@@ -93,15 +103,20 @@ pub fn load_key(path: &Path) -> anyhow::Result<PrivateKey> {
     }
 }
 
-pub fn read_certs_from_file(
-    cert_path: &str,
-    key_path: &str,
-) -> anyhow::Result<(Vec<rustls::Certificate>, rustls::PrivateKey)> {
+pub fn load_certs(cert_path: &str) -> anyhow::Result<Vec<rustls::Certificate>> {
     let mut cert_chain_reader = BufReader::new(File::open(cert_path)?);
     let certs = rustls_pemfile::certs(&mut cert_chain_reader)?
         .into_iter()
         .map(rustls::Certificate)
         .collect();
+    Ok(certs)
+}
+
+pub fn read_certs_from_file(
+    cert_path: &str,
+    key_path: &str,
+) -> anyhow::Result<(Vec<rustls::Certificate>, rustls::PrivateKey)> {
+    let certs = load_certs(cert_path)?;
 
     let key = load_key(Path::new(key_path))?;
 

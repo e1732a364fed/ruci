@@ -219,11 +219,11 @@ trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来, 这
 
 ## quic 
 
-使用了 s2n-quic 包
+使用了 s2n-quic 包 或 quinn 包
 
 使用 quic 会给 ruci-cmd release 加 3-4MB 大小左右
 
-### tls
+### s2n-quic 的 s2n-tls
 
 它默认用的是 s2n-tls, 没问题. 但试图用 rustls 如:
 
@@ -239,6 +239,29 @@ unexpected error: could not load any valid private keys
 The connection was closed on the transport level with error unexpected error by the local endpoint
 
 似乎还是 tls 错误. 也许是自签名证书的原因, 开启 is_insecure 后就不报错了
+
+
+### quic 的两种不同实现的 多代理程序  互通性：
+ 
+截至 23.3.21
+
+s2n-quic:
+
+ruci 自己连自己，没问题
+ruci 作 客户端， verysimple 作 服务端，能通，能过trojan 得 target_addr, 但之后 relay 阶段卡住
+ruci 作 服务端， vs 作客户端，连不上，就像没运行ruci 一样.
+
+
+这个行为 在 s2n-quic 中使用 rustls 与 使用 s2n-tls 的效果是一样的
+
+quinn: 全没问题
+
+故 ruci 默认使用 quinn 作为 quic实现。
+
+（两个依赖包的接口代码几乎是相同的，只能说明s2n-quic 互通性还不完善)
+
+而且 s2n-quic 在 windows 无法编译通过
+
 
 ## 其它
 
