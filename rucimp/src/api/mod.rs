@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
+use std::env::current_dir;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
@@ -398,7 +399,6 @@ pub struct StatusResponse {
     pub status: String,
 }
 
-// Add OpenAPI documentation for each endpoint
 #[utoipa::path(
     get,
     path = "/api/status",
@@ -413,6 +413,19 @@ pub async fn get_status() -> impl IntoResponse {
     };
 
     axum::Json(status)
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/app_working_dir",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "get app working dir", body = String)
+    )
+)]
+pub async fn app_working_dir() -> String {
+    let r = current_dir();
+    format!("{r:?}")
 }
 
 /// non-blocking, it calls tokio::spawn
@@ -444,6 +457,7 @@ pub async fn serve(
             "/api/engine/start",
             post(start_engine).with_state(start_core_opts),
         )
+        .route("/api/app_working_dir", get(app_working_dir))
         .route(
             "/api/traffic/connections/alive/count",
             get(get_alive_conn_count).with_state(global_traffic.clone()),
