@@ -11,10 +11,7 @@ use std::{
 use bytes::{Buf, BytesMut};
 use dashmap::DashMap;
 use futures::channel::oneshot;
-use ruci::{
-    net::{self, addr_conn::CP_UDP_TIMEOUT, MTU},
-    Name,
-};
+use ruci::net::{self, addr_conn::CP_UDP_TIMEOUT, MTU};
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tracing::{debug, warn};
 
@@ -381,11 +378,11 @@ pub struct Reader {
     last_buf: Option<DataIndex>,
     state: ReadState,
 }
-impl ruci::Name for Reader {
-    fn name(&self) -> &str {
-        "tproxy_udp_w"
-    }
-}
+// impl ruci::Name for Reader {
+//     fn name(&self) -> &str {
+//         "tproxy_udp_w"
+//     }
+// }
 
 enum ReadState {
     Buf,

@@ -8,7 +8,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use rainbow::NetworkSteganographyProcessor;
 use reqwest;
 
-use ruci::Name;
+// use ruci::Name;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -114,11 +114,11 @@ impl AIGeneratedProcessor {
     }
 }
 
-impl Name for AIGeneratedProcessor {
-    fn name(&self) -> &str {
-        "AIGeneratedProcessor"
-    }
-}
+// impl Name for AIGeneratedProcessor {
+//     fn name(&self) -> &str {
+//         "AIGeneratedProcessor"
+//     }
+// }
 
 #[async_trait]
 impl NetworkSteganographyProcessor for AIGeneratedProcessor {

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use ruci::map::*;
 use ruci::net::CID;
-use ruci::Name;
+// use ruci::Name;
 use ruci::{map, net::Stream};
 
 use macro_map::*;
@@ -25,11 +25,11 @@ pub struct Client {
     server_name: String,
 }
 
-impl Name for Client {
-    fn name(&self) -> &'static str {
-        "quic_client"
-    }
-}
+// impl Name for Client {
+//     fn name(&self) -> &'static str {
+//         "quic_client"
+//     }
+// }
 
 impl Client {
     pub fn new(c: crate::map::quic_common::ClientConfig) -> anyhow::Result<Self> {

@@ -6,7 +6,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use ruci::map::*;
 use ruci::net::CID;
-use ruci::Name;
+// use ruci::Name;
 use ruci::{map, net::Stream};
 
 use macro_map::*;
@@ -26,11 +26,11 @@ pub struct Server {
     a_next_cid: Arc<AtomicU32>,
 }
 
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "quic_server"
-    }
-}
+// impl Name for Server {
+//     fn name(&self) -> &'static str {
+//         "quic_server"
+//     }
+// }
 
 impl Server {
     pub fn new(c: ServerConfig) -> Self {

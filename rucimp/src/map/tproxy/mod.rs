@@ -9,10 +9,7 @@ pub use route::*;
 use async_trait::async_trait;
 use itertools::Itertools;
 use ruci::map::{self, *};
-use ruci::{
-    net::{self, *},
-    Name,
-};
+use ruci::net::{self, *};
 
 use macro_map::{map_ext_fields, MapExt};
 use serde::{Deserialize, Serialize};
@@ -32,11 +29,11 @@ pub struct TcpResolver {
     opts: Options,
 }
 
-impl Name for TcpResolver {
-    fn name(&self) -> &'static str {
-        "tproxy_tcp_resolver"
-    }
-}
+// impl Name for TcpResolver {
+//     fn name(&self) -> &'static str {
+//         "tproxy_tcp_resolver"
+//     }
+// }
 
 impl TcpResolver {
     pub fn new(opts: Options) -> anyhow::Result<Self> {
@@ -128,11 +125,11 @@ pub struct UDPListener {
     pub sopt: SockOpt,
 }
 
-impl Name for UDPListener {
-    fn name(&self) -> &'static str {
-        "tproxy_udp_listener"
-    }
-}
+// impl Name for UDPListener {
+//     fn name(&self) -> &'static str {
+//         "tproxy_udp_listener"
+//     }
+// }
 
 impl UDPListener {
     pub async fn start_listen(
