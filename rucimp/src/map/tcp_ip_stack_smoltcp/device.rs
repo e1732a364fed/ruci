@@ -82,7 +82,7 @@ impl Traffic {
 }
  */
 
-/// to record message，created by Device's receive method.
+/// to record a received message，created by Device's receive method.
 pub struct MyRxToken<'a> {
     data: &'a mut [u8],
 }
@@ -264,7 +264,7 @@ pub fn create(
 }
 
 impl SmoltcpDevice {
-    /// read the base_conn's ReadHalf part(`r`), data will be written in `buf`。
+    /// read the base_conn, data will be written in `buf`。
     ///
     /// On a successful read, self.state will be set to Poll::Ready(n), with n the
     /// data length.
@@ -440,7 +440,7 @@ impl SmoltcpDevice {
         }
     }
 
-    /// 名称跟随 smoltcp 的规范.  从smoltcp的 base_conn(tun) 对每个 socket 用 recv_slice 读取数据, 并解析、发送到到实际 TcpStream中
+    /// 名称跟随 smoltcp 的规范.  从smoltcp的 base_conn(tun) 对每个 socket 用 recv_slice 读取数据, 并解析、发送到到实际 TcpStream/UDP的AddrConn 中
     pub fn process_ingress(&mut self) {
         let mut handles_to_remove = Vec::new();
         let mut tcp_src_to_remove = Vec::new();
@@ -450,28 +450,27 @@ impl SmoltcpDevice {
 
         self.sockets.iter_mut().for_each(|(h, so)| {
             match so {
-                smoltcp::socket::Socket::Icmp(_) => {}
-                smoltcp::socket::Socket::Udp(socket) => {
+                smoltcp::socket::Socket::Udp(so) => {
                     /*
                     smoltcp 中, udp 在 client端 的逻辑是反的，它在建立udp socket 时(bind)，只存储目标的ip+port,
                     对 该 socket 进行 recv_slice 时, 得到的地址是 源的ip+port (本地地址)
                      */
 
-                    if !socket.can_recv() {
+                    if !so.can_recv() {
                         return;
                     }
-                    let dst = socket.endpoint();
+                    let dst = so.endpoint();
                     let dst_ipe: IpEndpoint = IpEndpoint {
                         addr: dst.addr.unwrap(),
                         port: dst.port,
                     };
 
-                    while socket.can_recv() {
+                    while so.can_recv() {
                         let mut buffer = BytesMut::with_capacity(MTU);
                         unsafe {
                             buffer.set_len(MTU);
                         }
-                        let r1 = socket.recv_slice(buffer.as_mut());
+                        let r1 = so.recv_slice(buffer.as_mut());
                         match r1 {
                             Ok((n, src)) => {
                                 unsafe {
@@ -502,7 +501,7 @@ impl SmoltcpDevice {
                             }
                         }
                     }
-                    if !socket.is_open() {
+                    if !so.is_open() {
                         debug!("udp not open");
                         udp_dst_to_remove.push(dst_ipe);
                     }
@@ -519,9 +518,9 @@ impl SmoltcpDevice {
                         }
                     };
                     let m = self.tcp_read_data_tx_map.lock();
-                    let tcp_read_data_sender = m.get(&src).unwrap();
+                    let tcp_stream_read_data_sender = m.get(&src).unwrap();
 
-                    while so.can_recv() && tcp_read_data_sender.capacity() > 0 {
+                    while so.can_recv() && tcp_stream_read_data_sender.capacity() > 0 {
                         let mut buffer = BytesMut::with_capacity(so.recv_queue());
                         unsafe {
                             buffer.set_len(so.recv_queue());
@@ -536,7 +535,7 @@ impl SmoltcpDevice {
                                     buffer.set_len(n);
                                 }
                             }
-                            let r = tcp_read_data_sender.try_send(buffer);
+                            let r = tcp_stream_read_data_sender.try_send(buffer);
                             if let Err(e) = r {
                                 tracing::warn!("tcp_read_data_tx send failed, {e}");
                                 so.close();
@@ -550,13 +549,15 @@ impl SmoltcpDevice {
                     }
                     if so.state() == smoltcp::socket::tcp::State::CloseWait && so.send_queue() == 0
                     {
-                        let _ = tcp_read_data_sender.try_send(BytesMut::with_capacity(0));
+                        let _ = tcp_stream_read_data_sender.try_send(BytesMut::with_capacity(0));
                         so.close();
                     }
                     if !so.is_active() {
                         tcp_src_to_remove.push(src);
                     }
                 }
+
+                _ => {}
             } //match
         }); //iter
 
@@ -609,7 +610,8 @@ impl SmoltcpDevice {
         }
     }
 
-    /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 base_conn(tun)
+    /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 socket 的 buffer,
+    /// 之后可调用 iface.poll 来发出.
     pub fn process_udp_egress(&mut self, sh: SocketHandle, src: IpEndpoint, data: BytesMut) {
         //debug!("process_egress udp for {sh}, {src}, {}",data.len());
 
@@ -641,6 +643,7 @@ impl SmoltcpDevice {
             self.sockets.remove(*h);
             tcp_src_handle_map_lock.remove(&src);
         }
+        self.tcp_read_data_tx_map.lock().remove(&src);
     }
 
     fn remove_udp(&mut self, src: IpEndpoint) {

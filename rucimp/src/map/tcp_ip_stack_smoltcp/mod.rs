@@ -84,6 +84,8 @@ impl Map for Stack {
                                     Ok(_) => {
                                         let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
 
+                                        //poll->socket_ingress->device.receive->rx_token.consume->process_ip->process_ipv4->process_tcp
+
                                         iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
                                             &mut *sockets
                                         });
