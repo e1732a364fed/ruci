@@ -14,6 +14,7 @@ use tokio::sync::{
 
 use super::config::StaticConfig;
 
+/// 静态引擎中 使用 StaticConfig 作为配置
 #[derive(Default)]
 pub struct StaticEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁

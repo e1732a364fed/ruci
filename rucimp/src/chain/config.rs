@@ -13,6 +13,7 @@ use ruci::{
 };
 use serde::{Deserialize, Serialize};
 
+/// 静态配置中有初始化后即确定的listen/dial数量和行为
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
     pub listen: Vec<InMapperConfigChain>,
