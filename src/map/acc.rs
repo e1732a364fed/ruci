@@ -29,10 +29,10 @@ pub type MIterBox = Box<dyn MIter>;
 /// if you want to count it, you might use get_miter to try to get MIterBox first
 ///
 pub trait DynIterator {
-    fn next_with_data(&mut self, data: OVOD) -> Option<Arc<MapperBox>>;
+    fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapperBox>>;
 
     fn next(&mut self) -> Option<Arc<MapperBox>> {
-        self.next_with_data(None)
+        self.next_with_data(CID::default(), None)
     }
 
     fn get_miter(&self) -> Option<MIterBox> {
@@ -57,7 +57,7 @@ pub type OVOD = Option<Vec<Option<Box<dyn Data>>>>;
 pub struct DynMIterWrapper(pub MIterBox);
 
 impl DynIterator for DynMIterWrapper {
-    fn next_with_data(&mut self, _data: OVOD) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _cid: CID, _data: OVOD) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
@@ -81,7 +81,7 @@ impl DynIterator for DynMIterWrapper {
 pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapperBox>>);
 
 impl DynIterator for DynVecIterWrapper {
-    fn next_with_data(&mut self, _data: OVOD) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _cid: CID, _data: OVOD) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
@@ -179,7 +179,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
         let adder = if mappers.requires_no_data() {
             mappers.next()
         } else {
-            mappers.next_with_data(Some(calculated_output_vec.clone()))
+            mappers.next_with_data(cid.clone(), Some(calculated_output_vec.clone()))
         };
 
         let adder = match adder {
@@ -249,10 +249,11 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
 }
 
 /// blocking.
-/// 先调用第一个 mapper 生成 流, 然后调用 in_iter_accumulate_forever
+/// 先调用第一个 mapper 生成 流发生器, 然后调用 in_iter_accumulate_forever
 ///
-/// 但如果 第一个 mapper 生成的不是流, 则会调用 普通的 accumulate, 累加结束后就会返回,
-/// 不会永远阻塞.
+/// 但如果 第一个 mapper 生成的不是流发生器而是普通的流, 则会调用 普通的
+/// accumulate, 累加结束后就会返回
+///
 ///
 pub async fn accumulate_from_start(
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
@@ -261,10 +262,12 @@ pub async fn accumulate_from_start(
     mut inmappers: DMIterBox,
     oti: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
-    let first = inmappers.next_with_data(None).expect("first inmapper");
+    let first = inmappers
+        .next_with_data(CID::Unit(0), None)
+        .expect("first inmapper");
     let first_r = first
         .maps(
-            CID::default(),
+            CID::Unit(0),
             ProxyBehavior::DECODE,
             MapParams::builder().shutdown_rx(shutdown_rx).build(),
         )
@@ -282,7 +285,7 @@ pub async fn accumulate_from_start(
 
     if let Stream::Generator(rx) = first_r.c {
         in_iter_accumulate_forever(InIterAccumulateForeverParams {
-            cid: CID::default(),
+            cid: CID::Unit(0),
             rx,
             tx,
             miter: inmappers,

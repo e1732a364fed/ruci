@@ -42,7 +42,7 @@ pub async fn handle_in_stream(
 ) -> anyhow::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
-        None => CID::new(),
+        None => CID::new_random(),
     };
 
     let cidc = cid.clone();

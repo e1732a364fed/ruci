@@ -6,6 +6,7 @@ use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Value};
 use parking_lot::Mutex;
 use ruci::map::acc::OVOD;
+use ruci::net::CID;
 
 /// load chain::config::StaticConfig from a lua file which has a
 /// "config" global variable
@@ -211,6 +212,7 @@ unsafe impl Sync for LuaNextGenerator {}
 impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
     fn next_mapper(
         &self,
+        cid: CID,
         this_index: i64,
         cache_len: usize,
         data: OVOD,
@@ -222,7 +224,9 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
             .registry_value(&mg.1)
             .expect("must get generator from lua");
 
-        let r = f.call::<_, (i64, LuaTable)>((this_index, cache_len, lua.to_value(&data)));
+        let cid_lua: LuaValue<'_> = lua.to_value(&cid).ok()?;
+
+        let r = f.call::<_, (i64, LuaTable)>((cid_lua, this_index, cache_len, lua.to_value(&data)));
 
         match r {
             Ok(rst) => {

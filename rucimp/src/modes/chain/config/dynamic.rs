@@ -24,9 +24,12 @@
 use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use dyn_clone::DynClone;
-use ruci::map::{
-    acc::{DynIterator, OVOD},
-    MapperBox,
+use ruci::{
+    map::{
+        acc::{DynIterator, OVOD},
+        MapperBox,
+    },
+    net::CID,
 };
 
 use uuid::Uuid;
@@ -70,15 +73,23 @@ pub type IndexMapperBox = (i64, Option<Arc<MapperBox>>); //MapperBox 和它的 �
 /// 若 index 小于0, 则指示迭代结束
 ///
 pub trait IndexNextMapperGenerator: DynClone + Send + Sync {
-    fn next_mapper(&self, this_index: i64, cache_len: usize, data: OVOD) -> Option<IndexMapperBox>;
+    fn next_mapper(
+        &self,
+        cid: CID,
+        this_index: i64,
+        cache_len: usize,
+        data: OVOD,
+    ) -> Option<IndexMapperBox>;
 }
 
 dyn_clone::clone_trait_object!(IndexNextMapperGenerator);
 
 impl DynIterator for IndexInfinite {
-    fn next_with_data(&mut self, data: OVOD) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapperBox>> {
         let cl = self.cache.len();
-        let oi = self.generator.next_mapper(self.current_index, cl, data);
+        let oi = self
+            .generator
+            .next_mapper(cid, self.current_index, cl, data);
         match oi {
             Some(ib) => {
                 let i = ib.0;
@@ -161,7 +172,7 @@ pub trait NextSelector: Debug + DynClone + Send + Sync {
 dyn_clone::clone_trait_object!(NextSelector);
 
 impl DynIterator for Finite {
-    fn next_with_data(&mut self, data: OVOD) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _cid: CID, data: OVOD) -> Option<Arc<MapperBox>> {
         let oi = self.selector.next_index(self.current_index, data);
         match oi {
             Some(i) => {

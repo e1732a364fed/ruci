@@ -43,7 +43,7 @@ use log::{debug, log_enabled};
 use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::vec;
 use std::{fmt::Debug, net::Ipv4Addr};
 use std::{
@@ -72,10 +72,12 @@ pub fn new_rand_cid() -> u32 {
     rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
 }
 
-pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
-    lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
+pub fn new_ordered_cid(lastid: &AtomicU32) -> u32 {
+    lastid.fetch_add(1, Ordering::Relaxed) + 1
 }
 
+/// # Example
+///
 /// ```
 /// use ruci::net::CIDChain;
 ///
@@ -85,7 +87,7 @@ pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
 ///  println!("{}", cc)
 /// ```
 ///
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CIDChain {
     pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
 }
@@ -113,7 +115,9 @@ impl Display for CIDChain {
 }
 
 /// stream id ('c' for conn as convention)
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+///
+/// default is CID::Unit(0) which means no connection yet
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum CID {
     Unit(u32),
     Chain(CIDChain),
@@ -132,8 +136,7 @@ impl std::str::FromStr for CID {
 }
 
 impl CID {
-    ///random
-    pub fn new() -> CID {
+    pub fn new_random() -> CID {
         CID::Unit(new_rand_cid())
     }
 
@@ -146,7 +149,7 @@ impl CID {
     pub fn new_by_opti(oti: Option<Arc<GlobalTrafficRecorder>>) -> CID {
         match oti {
             Some(ti) => CID::new_ordered(&ti.last_connection_id),
-            None => CID::new(),
+            None => CID::new_random(),
         }
     }
 
@@ -334,8 +337,6 @@ impl Stream {
         }
     }
 }
-
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::map::MapResult;
 use crate::Name;
