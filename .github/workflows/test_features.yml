@@ -46,4 +46,4 @@ jobs:
         run: cd ${{ matrix.crate }} && cargo hack check --clean-per-run --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
 
       - name: Test  ${{ matrix.crate }} Every feature tag
-        run: cd ${{ matrix.crate }} && cargo hack test --clean-per-run --each-feature --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
+        run: cd ${{ matrix.crate }} && cargo hack test --clean-per-run  --feature-powerset --depth 1 --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
