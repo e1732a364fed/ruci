@@ -5,6 +5,7 @@
 */
 pub mod chain;
 pub mod suit;
+pub mod user;
 
 pub mod example_common;
 

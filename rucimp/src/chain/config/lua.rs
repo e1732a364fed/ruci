@@ -302,6 +302,10 @@ mod test {
                     out_tag = "dial1", 
                     mode = "WhiteList",
                     in_tags = { "listen1" } ,
+                    userset = {
+                        { "plaintext:u0 p0", "trojan:mypassword" },
+                        { "plaintext:u1 p1", "trojan:password1" },
+                    },
                     ta_ip_countries = { "CN", "US" },
                     ta_networks = { "tcp", "udp" },
                     ta_ipv4 = { "192.168.1.0/24" },

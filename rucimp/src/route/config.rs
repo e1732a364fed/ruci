@@ -4,8 +4,13 @@ use ipnet::{Ipv4Net, Ipv6Net};
 use iprange::IpRange;
 use itertools::Itertools;
 use regex::RegexSet;
-use ruci::net::Network;
+use ruci::{
+    net::Network,
+    user::{UserBox, UserVec},
+};
 use serde::{Deserialize, Serialize};
+
+use crate::user::str_to_userbox;
 
 use super::{DomainMatcher, Mode, RuleSet};
 
@@ -17,8 +22,6 @@ pub struct RuleSetConfig {
     pub mode: ModeConfig,
     pub in_tags: Option<HashSet<String>>,
 
-    //todo: we need a way to parse different type
-    // of user, like plaintext, trojan
     pub userset: Option<HashSet<Vec<String>>>,
 
     pub ta_ip_countries: Option<HashSet<String>>,
@@ -65,6 +68,18 @@ impl DomainMatcherConfig {
 
 impl RuleSetConfig {
     pub fn to_ruleset(self) -> RuleSet {
+        let userset = self.userset.map(|uss| {
+            let y: HashSet<UserVec> = uss
+                .iter()
+                .map(|us_v| {
+                    let z: Vec<UserBox> =
+                        us_v.iter().map(|us| str_to_userbox(us).unwrap()).collect();
+                    UserVec(z)
+                })
+                .collect();
+            y
+        });
+
         let netset = self.ta_networks.map(|hm| {
             let hs: HashSet<Network> = hm
                 .iter()
@@ -92,6 +107,7 @@ impl RuleSetConfig {
         RuleSet {
             out_tag: self.out_tag,
             mode: self.mode.to_mode(),
+            userset,
             in_tags: self.in_tags,
             ta_ip_countries: self.ta_ip_countries,
             ta_networks: netset,

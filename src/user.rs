@@ -33,60 +33,13 @@ pub trait User: UserTrait + DynClone {}
 impl<T: UserTrait + DynClone> User for T {}
 dyn_clone::clone_trait_object!(User);
 
-/*
-/// from &AnyS get `Box<dyn User>`
-///
-/// # Example
-///
-/// ```
-/// use ruci::*;
-/// use ruci::user::*;
-/// use parking_lot::Mutex;
-/// use std::sync::Arc;
-///
-/// let u = PlainText::new("u".to_string(), "".to_string());
-/// let ub0: Box<dyn User> = Box::new(u);
-/// let ub2: AnyArc = Arc::new(Mutex::new(ub0));
-/// let anyv = ub2.lock();
-/// let y = get_user_from_anydata(&*anyv);
-/// assert!(y.is_some());
-/// ```
-///
-pub(crate) fn get_user_from_anydata(anys: &AnyS) -> Option<Box<dyn User>> {
-    let a = anys.downcast_ref::<Box<dyn User>>();
-    a.map(|u| u.clone())
-}
-
-/// from &AnyBox get `Box<dyn User>`
-///
-/// # Example
-///
-/// ```
-/// use ruci::*;
-/// use ruci::user::*;
-/// ///
-/// let u = PlainText::new("u".to_string(), "".to_string());
-/// let ub0: Box<dyn User> = Box::new(u);
-/// let ub2:AnyBox = Box::new(ub0);
-/// let y = bget_user_from_anydata(&ub2);
-/// assert!(y.is_some());
-/// ```
-///
-pub(crate) fn bget_user_from_anydata(anys: &AnyBox) -> Option<Box<dyn User>> {
-    let a = anys.downcast_ref::<Box<dyn User>>();
-    a.map(|u| u.clone())
-}
-*/
-
 /// implements Hash
 #[derive(Clone)]
 pub struct UserBox(pub Box<dyn User>);
 
 impl Debug for UserBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("UserBox")
-            .field(&self.0.identity_str())
-            .finish()
+        f.debug_tuple("UserBox").field(&self.0.auth_str()).finish()
     }
 }
 
