@@ -2888,6 +2888,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruci-tls"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bytes",
+ "criterion",
+ "env_logger",
+ "futures",
+ "http 1.1.0",
+ "macro_map",
+ "parking_lot",
+ "rand",
+ "rcgen",
+ "ruci",
+ "rustls 0.22.4",
+ "rustls-pemfile 1.0.4",
+ "serde",
+ "thiserror 1.0.63",
+ "time",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "webpki-roots",
+]
+
+[[package]]
 name = "rucimp"
 version = "0.0.7"
 dependencies = [
@@ -2923,7 +2950,7 @@ dependencies = [
  "reqwest 0.11.27",
  "rlimit",
  "ruci",
- "rucimp-tls",
+ "ruci-tls",
  "rustls 0.21.12",
  "rustls-pemfile 1.0.4",
  "rustyline",
@@ -2948,33 +2975,6 @@ dependencies = [
  "windows-sys 0.52.0",
  "wiremock",
  "zip",
-]
-
-[[package]]
-name = "rucimp-tls"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "async-trait",
- "bytes",
- "criterion",
- "env_logger",
- "futures",
- "http 1.1.0",
- "macro_map",
- "parking_lot",
- "rand",
- "rcgen",
- "ruci",
- "rustls 0.22.4",
- "rustls-pemfile 1.0.4",
- "serde",
- "thiserror 1.0.63",
- "time",
- "tokio",
- "tokio-rustls",
- "tracing",
- "webpki-roots",
 ]
 
 [[package]]

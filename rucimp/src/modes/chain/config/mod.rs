@@ -358,10 +358,10 @@ pub enum InMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(rucimp_tls::server::TlsServerOptions),
+    TLS(ruci_tls::server::TlsServerOptions),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(rucimp_tls::server::TlsServerOptions),
+    NativeTLS(ruci_tls::server::TlsServerOptions),
     H2 {
         is_grpc: Option<bool>,
         http_config: Option<CommonConfig>,
@@ -398,7 +398,7 @@ pub enum InMapConfig {
         handshake_function: String, // 用于 handshake 的 函数名
     },
 
-    MITM(rucimp_tls::server::TlsServerOptions),
+    MITM(ruci_tls::server::TlsServerOptions),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
@@ -411,7 +411,7 @@ pub enum OutMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(rucimp_tls::client::TlsClientOptions),
+    TLS(ruci_tls::client::TlsClientOptions),
 
     #[cfg(feature = "sockopt")]
     OptDirect {
@@ -424,7 +424,7 @@ pub enum OutMapConfig {
     OptDialer(crate::map::opt_net::OptDialerOption),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(rucimp_tls::client::TlsClientOptions),
+    NativeTLS(ruci_tls::client::TlsClientOptions),
 
     Http,
     Socks5(Socks5Out),
@@ -720,7 +720,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::MITM(c) => {
                 let sc = init_tls_server_pem_option(&c, &file_source)?;
 
-                Ok(Box::new(rucimp_tls::mitm::MITM {
+                Ok(Box::new(ruci_tls::mitm::MITM {
                     sc,
                     ext_fields: None,
                 }))
