@@ -138,17 +138,18 @@ impl Client {
     ) -> anyhow::Result<MapResult> {
         let connector = TlsConnector::from(self.client_config.clone());
 
+        let domain = self.server_domain.clone().map_or_else(
+            || {
+                a.as_ref()
+                    .and_then(|a| a.get_name_or_ip_string())
+                    .unwrap_or_default()
+            },
+            |d| d,
+        );
+
         let new_c = connector
             .connect(
-                ServerName::try_from(
-                    self.server_domain.clone().unwrap_or(
-                        a.clone()
-                            .unwrap_or_default()
-                            .get_name_or_ip_string()
-                            .unwrap_or_default(),
-                    ),
-                )
-                .expect("domain string to serverName ok"),
+                ServerName::try_from(domain).expect("domain string to serverName ok"),
                 conn,
             )
             .await?;

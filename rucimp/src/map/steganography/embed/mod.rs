@@ -17,12 +17,6 @@ use tracing::{debug, info};
 
 use crate::map::recorder::{PayloadInfo, READ_DIRECTION, WRITE_DIRECTION};
 
-// fn direction_match_write(endpoint_type: ProxyBehavior, direction: i8) -> bool {
-//     assert!(direction.abs() == 1);
-//     matches!(endpoint_type, ProxyBehavior::DECODE) && direction == WRITE_DIRECTION
-//         || matches!(endpoint_type, ProxyBehavior::ENCODE) && direction == READ_DIRECTION
-// }
-
 pub const WRTIE_IS_STEGO: u8 = 0;
 pub const WRTIE_IS_REAL: u8 = 1;
 
@@ -170,7 +164,9 @@ pub struct EmbedConn {
 enum WriteState {
     #[default]
     Ready,
-    WriteTxPending(usize, WriteTxFuture), //written_len
+
+    //written_len
+    WriteTxPending(usize, WriteTxFuture),
 }
 
 #[derive(Default)]

@@ -160,19 +160,18 @@ impl map::Map for Client {
             if self.config.host.is_none() {
                 debug!("host: {:?}", params.a);
             }
-            let r = connector
-                .connect(
-                    self.config.host.as_ref().unwrap_or(
-                        &params
-                            .a
-                            .clone()
-                            .unwrap_or_default()
-                            .get_name_or_ip_string()
-                            .unwrap_or_default(),
-                    ),
-                    conn,
-                )
-                .await;
+            let host = self.config.host.clone().map_or_else(
+                || {
+                    params
+                        .a
+                        .as_ref()
+                        .and_then(|a| a.get_name_or_ip_string())
+                        .unwrap_or_default()
+                },
+                |h| h,
+            );
+
+            let r = connector.connect(&host, conn).await;
             match r {
                 anyhow::Result::Ok(c) => {
                     return MapResult::new_c(Box::new(c))
