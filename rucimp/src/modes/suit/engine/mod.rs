@@ -18,6 +18,7 @@ use tokio::{
 
 use super::config;
 
+#[derive(Default)]
 pub struct SuitEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<GlobalTrafficRecorder>,
@@ -28,16 +29,6 @@ pub struct SuitEngine {
 }
 
 impl SuitEngine {
-    pub fn new() -> Self {
-        SuitEngine {
-            ti: Arc::new(GlobalTrafficRecorder::default()),
-            servers: Vec::new(),
-            clients: Vec::new(),
-            default_c: None,
-            running: Arc::new(Mutex::new(None)),
-        }
-    }
-
     pub fn server_count(&self) -> usize {
         self.servers.len()
     }

@@ -36,14 +36,14 @@ pub fn is_finite_dynamic_available(lua_text: &str) -> mlua::Result<()> {
     Ok(())
 }
 
-pub fn load_finite_dynamic(
-    lua_text: &str,
-) -> mlua::Result<(
+pub type LoadFiniteDynamicResult = (
     StaticConfig,
     Vec<DMIterBox>,
     DMIterBox,
     Arc<HashMap<String, DMIterBox>>,
-)> {
+);
+
+pub fn load_finite_dynamic(lua_text: &str) -> mlua::Result<LoadFiniteDynamicResult> {
     let (sc, sm) = load_finite_config_and_selector_map(lua_text)?;
 
     let (ibs, fb, obm) = get_iobounds_by_config_and_selector_map(sc.clone(), sm);
@@ -76,7 +76,7 @@ fn load_finite_config_and_selector_map(
 
             (
                 tag.to_string(),
-                LuaNextSelector::from(&lua_text, &tag).expect("get handler from lua must be ok"),
+                LuaNextSelector::from(lua_text, tag).expect("get handler from lua must be ok"),
             )
         })
         .collect();
@@ -86,7 +86,7 @@ fn load_finite_config_and_selector_map(
 
         selector_map.insert(
             tag.to_string(),
-            LuaNextSelector::from(&lua_text, tag).expect("get handler from lua must be ok"),
+            LuaNextSelector::from(lua_text, tag).expect("get handler from lua must be ok"),
         );
     });
 
@@ -103,7 +103,7 @@ fn get_iobounds_by_config_and_selector_map(
         .into_iter()
         .map(|v| {
             let tag = v.last().unwrap().get_chain_tag().to_string();
-            let inbound: Vec<_> = v.into_iter().map(|o| Arc::new(o)).collect();
+            let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
 
             let selector = Box::new(selector_map.remove(&tag).unwrap());
 
@@ -125,13 +125,12 @@ fn get_iobounds_by_config_and_selector_map(
         .into_iter()
         .map(|outbound| {
             let tag = outbound
-                .iter()
-                .next()
+                .first()
                 .expect("outbound should has at least one mapper ")
                 .get_chain_tag();
 
             let ts = tag.to_string();
-            let outbound: Vec<_> = outbound.into_iter().map(|o| Arc::new(o)).collect();
+            let outbound: Vec<_> = outbound.into_iter().map(Arc::new).collect();
 
             let selector = Box::new(selector_map.remove(&ts).unwrap());
 
@@ -142,7 +141,7 @@ fn get_iobounds_by_config_and_selector_map(
                 selector,
             });
 
-            if let None = first_o {
+            if first_o.is_none() {
                 first_o = Some(outbound_iter.clone());
             }
 

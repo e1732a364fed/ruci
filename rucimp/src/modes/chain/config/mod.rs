@@ -17,6 +17,8 @@ use log::warn;
 use ruci::{
     map::{
         acc::{DMIterBox, DynVecIterWrapper},
+        counter::Counter,
+        network::{echo::Echo, BlackHole, Direct},
         *,
     },
     net,
@@ -102,17 +104,16 @@ impl StaticConfig {
             .into_iter()
             .map(|outbound| {
                 let tag = outbound
-                    .iter()
-                    .next()
+                    .first()
                     .expect("outbound should has at least one mapper ")
                     .get_chain_tag();
 
                 let ts = tag.to_string();
-                let outbound: Vec<_> = outbound.into_iter().map(|o| Arc::new(o)).collect();
+                let outbound: Vec<_> = outbound.into_iter().map(Arc::new).collect();
 
                 let outbound_iter: DMIterBox = Box::new(DynVecIterWrapper(outbound.into_iter()));
 
-                if let None = first_o {
+                if first_o.is_none() {
                     first_o = Some(outbound_iter.clone());
                 }
 
@@ -126,9 +127,7 @@ impl StaticConfig {
     pub fn get_tag_route(&self) -> Option<HashMap<String, String>> {
         self.tag_route.as_ref().map(|tr| {
             let route_tag_pairs = tr.clone();
-            let route_tag_map = route_tag_pairs.into_iter().collect::<HashMap<_, _>>();
-
-            route_tag_map
+            route_tag_pairs.into_iter().collect::<HashMap<_, _>>()
         })
     }
 
@@ -268,7 +267,7 @@ pub struct TrojanPassSet {
 impl ToMapperBox for InMapperConfig {
     fn to_mapper_box(&self) -> ruci::map::MapperBox {
         match self {
-            InMapperConfig::Echo => Box::new(ruci::map::network::echo::Echo::default()),
+            InMapperConfig::Echo => Box::<Echo>::default(),
             InMapperConfig::Stdio(ext) => {
                 let extf = ext.to_ext_fields();
 
@@ -280,7 +279,7 @@ impl ToMapperBox for InMapperConfig {
                 let s = ruci::map::fileio::FileIO {
                     iname: f.i.clone(),
                     oname: f.o.clone(),
-                    sleep_interval: f.sleep_interval.map(|si| Duration::from_millis(si)),
+                    sleep_interval: f.sleep_interval.map(Duration::from_millis),
                     bytes_per_turn: f.bytes_per_turn,
                     ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
                 };
@@ -300,7 +299,7 @@ impl ToMapperBox for InMapperConfig {
                 Box::new(g)
             }
             InMapperConfig::Adder(i) => i.to_mapper_box(),
-            InMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),
+            InMapperConfig::Counter => Box::<Counter>::default(),
             InMapperConfig::TLS(c) => tls::server::ServerOptions {
                 addr: "todo!()".to_string(),
                 cert: PathBuf::from(c.cert.clone()),
@@ -329,7 +328,6 @@ impl ToMapperBox for InMapperConfig {
                             .map(|up| ruci::user::PlainText::from(up.to_string()))
                             .collect::<Vec<_>>()
                     }),
-                    ..Default::default()
                 };
 
                 so.to_mapper_box()
@@ -372,15 +370,15 @@ impl ToMapperBox for OutMapperConfig {
                 let s = ruci::map::fileio::FileIO {
                     iname: f.i.clone(),
                     oname: f.o.clone(),
-                    sleep_interval: f.sleep_interval.map(|si| Duration::from_millis(si)),
+                    sleep_interval: f.sleep_interval.map(Duration::from_millis),
                     bytes_per_turn: f.bytes_per_turn,
                     ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
                 };
                 Box::new(s)
             }
-            OutMapperConfig::Blackhole => Box::new(ruci::map::network::BlackHole::default()),
+            OutMapperConfig::Blackhole => Box::<BlackHole>::default(),
 
-            OutMapperConfig::Direct => Box::new(ruci::map::network::Direct::default()),
+            OutMapperConfig::Direct => Box::<Direct>::default(),
             OutMapperConfig::Dialer(td_str) => {
                 let a = net::Addr::from_name_network_addr_str(td_str)
                     .expect("network_ip_addr is valid");
@@ -389,7 +387,7 @@ impl ToMapperBox for OutMapperConfig {
                 Box::new(d)
             }
             OutMapperConfig::Adder(i) => i.to_mapper_box(),
-            OutMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),
+            OutMapperConfig::Counter => Box::<counter::Counter>::default(),
             OutMapperConfig::TLS(c) => {
                 let a = tls::client::Client::new(c.host.as_str(), c.insecure.unwrap_or_default());
                 Box::new(a)

@@ -15,7 +15,7 @@ fn test() {
 ///
 pub fn str_to_userbox(str: &str) -> Option<UserBox> {
     let s = String::from(str);
-    let v: Vec<&str> = s.splitn(2, ":").collect();
+    let v: Vec<&str> = s.splitn(2, ':').collect();
     if v.len() != 2 {
         return None;
     }

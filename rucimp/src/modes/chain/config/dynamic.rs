@@ -21,7 +21,7 @@
  * 都要初始化一遍配置（如加载tls证书等），这将是非常低效的
  *
  */
-use std::{collections::HashMap, fmt::Debug, sync::Arc};
+use std::{cmp::Ordering, collections::HashMap, fmt::Debug, sync::Arc};
 
 use dyn_clone::DynClone;
 use ruci::{
@@ -96,19 +96,19 @@ impl DynIterator for IndexInfinite {
                 self.current_index = i;
                 let i = i as usize;
 
-                if i == cl {
-                    let mb = ib.1.expect("should have a mapperbox");
-                    self.cache.push(mb.clone());
-                    Some(mb)
-                } else if i > cl {
-                    match ib.1 {
-                        Some(mb) => Some(mb),
-                        None => None,
+                match i.cmp(&cl) {
+                    Ordering::Greater => ib.1,
+                    Ordering::Equal => {
+                        let mb = ib.1.expect("should have a mapperbox");
+                        self.cache.push(mb.clone());
+                        Some(mb)
                     }
-                } else {
-                    let mb = self.cache[i].clone();
 
-                    Some(mb)
+                    _ => {
+                        let mb = self.cache[i].clone();
+
+                        Some(mb)
+                    }
                 }
             }
             None => None,

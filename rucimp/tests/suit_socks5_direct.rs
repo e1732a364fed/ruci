@@ -663,7 +663,7 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     let c: Config = get_config();
     let cc = c.clone();
 
-    let mut se = SuitEngine::new();
+    let mut se = SuitEngine::default();
     se.load_config(
         c,
         load_in_mappers_by_str_and_ldconfig,
@@ -734,7 +734,7 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> anyhow::Resul
     let c: Config = get_nl_config(3);
     let cc = c.clone();
 
-    let mut se = SuitEngine::new();
+    let mut se = SuitEngine::default();
     se.load_config(
         c,
         load_in_mappers_by_str_and_ldconfig,
@@ -802,7 +802,7 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
     let c: Config = get_nl_config(3);
     let cc = c.clone();
 
-    let se = rucimp::modes::suit::engine::SuitEngine::new();
+    let se = rucimp::modes::suit::engine::SuitEngine::default();
     let se = Arc::new(Mutex::new(Box::new(se)));
     {
         let mut lo = se.lock();

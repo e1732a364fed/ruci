@@ -69,7 +69,7 @@ impl Engine {
         self.inbounds = inbounds
             .into_iter()
             .map(|v| {
-                let inbound: Vec<_> = v.into_iter().map(|o| Arc::new(o)).collect();
+                let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
 
                 let x: DMIterBox = Box::new(DynVecIterWrapper(inbound.into_iter()));
                 x
@@ -104,7 +104,8 @@ impl Engine {
         debug!("trying init_lua_static");
 
         let sc = lua::load_static(&config_string).context("init_lua_static failed")?;
-        Ok(self.init_static(sc))
+        self.init_static(sc);
+        Ok(())
     }
 
     /// load finite dynamic chain
@@ -147,7 +148,7 @@ impl Engine {
             .map(|(tag, g)| {
                 let g = IndexInfinite::new(tag.clone(), Box::new(g));
                 let x: DMIterBox = Box::new(g);
-                if let None = first_o {
+                if first_o.is_none() {
                     first_o = Some(x.clone());
                 }
                 (tag, x)

@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let contents = try_get_filecontent(&default_fn, arg_f)?;
 
     println!("{}", contents);
-    let mut se = SuitEngine::new();
+    let mut se = SuitEngine::default();
 
     se.load_config_from_str(
         &contents,

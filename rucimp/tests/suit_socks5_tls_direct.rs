@@ -121,7 +121,7 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
     let (ws, port) = get_lconfig_str();
     let c: Config = toml::from_str(&ws).unwrap();
 
-    let se = rucimp::modes::suit::engine::SuitEngine::new();
+    let se = rucimp::modes::suit::engine::SuitEngine::default();
     let se = Arc::new(Mutex::new(Box::new(se)));
     let sec = se.clone();
 
@@ -177,7 +177,7 @@ async fn suit_engine2_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
     let (ws, port) = get_lconfig_str();
     let c: Config = toml::from_str(&ws).unwrap();
 
-    let se = rucimp::modes::suit::engine::SuitEngine::new();
+    let se = rucimp::modes::suit::engine::SuitEngine::default();
     let se = Arc::new(Mutex::new(Box::new(se)));
     let sec = se.clone();
 

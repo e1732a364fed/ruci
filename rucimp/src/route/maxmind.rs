@@ -23,7 +23,7 @@ use maxminddb::geoip2;
 
 /// try read file  in possible_addrs
 pub fn get_ip_iso(ip: IpAddr, filename: &str, possible_addrs: &[&str]) -> String {
-    let reader = open_mmdb(filename, possible_addrs).expect(&format!("has {}", filename));
+    let reader = open_mmdb(filename, possible_addrs).unwrap_or_else(|_| panic!("has {}", filename));
 
     get_ip_iso_by_reader(ip, &reader)
 }

@@ -253,7 +253,7 @@ impl RuleSet {
             Some(dm) => match &addr.addr {
                 NetAddr::Name(domain, _) => {
                     if let Some(dmr) = &dm.domain_regex {
-                        if dmr.is_match(&domain) {
+                        if dmr.is_match(domain) {
                             return true;
                         }
                     }

@@ -83,7 +83,7 @@ impl RuleSetConfig {
         let netset = self.ta_networks.map(|hm| {
             let hs: HashSet<Network> = hm
                 .iter()
-                .map(|ns| Network::from_string(&ns).unwrap_or_default())
+                .map(|ns| Network::from_string(ns).unwrap_or_default())
                 .dedup()
                 .collect();
 
