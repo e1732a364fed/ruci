@@ -527,12 +527,6 @@ https://github.com/zephyrchien/midori
 
 https://github.com/cfal/shoes
 
-https://github.com/ylxdzsw/v2socks/tree/master
-
-https://github.com/erebe/turbine_lb
-
-https://github.com/tickbh/wmproxy
-
 https://github.com/Shadowrocket/lua-backend/tree/master
 
 ### 项目对比,参考与评估
@@ -541,9 +535,12 @@ https://github.com/Shadowrocket/lua-backend/tree/master
 
 lua自定义协议 先例是 小火箭的 lua-backend, （ruci并未参考其代码） 但是对比而言 ruci 中的lua协议写起来更复杂，因为使用了异步代码。
 
-ruci 中的基本结构 Map 的先例是 YtFlowCore中的 Plugin，（ruci并未参考其代码）。不过它使用的是json配置，没有 lua配置灵活。
+ruci 中的基本结构 Map 的先例是 YtFlowCore中的 Plugin，（ruci并未参考其对应代码）。不过它使用的是json配置，没有 lua配置灵活。
 
-http2代码实现 参考了 midori，so_opts 代码参考了 trojan-rs 和 shadowsocks-rust . smoltcp 代码参考了 trojan-rs.
+http2代码实现 参考了 midori，
+so_opts 代码参考了 trojan-rs 和 shadowsocks-rust . 
+smoltcp 代码参考了 trojan-rs.
+vmess 代码参考了 ytflow.
 所有参考项目均使用 MIT 协议。
 
 ruci 项目架构与运行逻辑 参考了 ruci 的前身项目 verysimple。（ruci 乃 rucimple 缩写）
