@@ -1,7 +1,7 @@
 /*!
 module proxy define some important traits for proxy
 
-几个关键部分：State, Mapper, Accumulator
+几个关键部分：State, Stream, Mapper
 
 ruci 包中实现 Mapper 的模块有：math, counter, tls, socks5, trojan
 
@@ -53,9 +53,6 @@ pub enum GenerateStateIDBehavior {
     Ordered,
 }
 
-pub trait StateID: Ord + Eq + Display {}
-impl<T: Ord + Eq + Display> StateID for T {}
-
 fn new_rand_state_id() -> u32 {
     use rand::Rng;
     const ID_RANGE_START: u32 = 100_000;
@@ -71,28 +68,23 @@ impl Display for SubStateID {
     }
 }
 
-impl PartialEq for SubStateID {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0 && self.1 == other.1
-    }
+pub struct InStreamStateID {
+    id_list: Vec<u32>, //首项为根id，末项为末端stream的id
 }
-
-impl Eq for SubStateID {}
-
-impl PartialOrd for SubStateID {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self.0.partial_cmp(&other.0) {
-            Some(core::cmp::Ordering::Equal) => self.1.partial_cmp(&other.1),
-            _ => self.1.partial_cmp(&other.1),
-        }
-    }
-}
-impl Ord for SubStateID {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match self.0.cmp(&other.0) {
-            std::cmp::Ordering::Less => std::cmp::Ordering::Less,
-            std::cmp::Ordering::Equal => self.1.cmp(&other.1),
-            std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
+impl Display for InStreamStateID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match (&self.id_list).len() {
+            0 => {
+                write!(f, "[ empty ]")
+            }
+            1 => {
+                write!(f, "[ cid: {} ]", self.id_list.first().unwrap())
+            }
+            _ => {
+                let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
+                let s = v.join(" ");
+                write!(f, "[ ids: {} ]", s)
+            }
         }
     }
 }
@@ -100,7 +92,7 @@ impl Ord for SubStateID {
 /// 描述一条代理连接
 pub trait State<T>
 where
-    T: StateID,
+    T: Display,
 {
     fn cid(&self) -> T;
     fn network(&self) -> &'static str;
@@ -132,9 +124,10 @@ impl RootState {
         s
     }
 
+    /// new with ordered id
     pub fn new_ordered(network: &'static str, lastid: &std::sync::atomic::AtomicU32) -> RootState {
-        let mut s = RootState::default();
         let li = lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let mut s = RootState::default();
         s.cid = li + 1;
         s.network = network;
         s
@@ -562,17 +555,19 @@ where
     };
 }
 
-/// 用于 已知一个初始点为 Stream::Generator, 向其所有子连接进行accumulate，
+/// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate，
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator，或e不为None
 ///
 /// 因为要spawn, 所以对 Iter 的类型提了比 accumulate更高的要求，加了
 /// Clone + Send + 'static
 ///
-pub async fn iter_accumulate<IterMapperBoxRef, IterOptData>(
+/// 将每一条子连接的accumulate 结果 用 tx 发送出去
+///
+pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
     cid: u32,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
-    mappers: IterMapperBoxRef,
+    inmappers: IterMapperBoxRef,
     hyperparameter_vec: Option<IterOptData>,
 ) where
     IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
@@ -583,7 +578,7 @@ pub async fn iter_accumulate<IterMapperBoxRef, IterOptData>(
         if opt_stream.is_none() {}
         let stream = opt_stream.unwrap();
 
-        let mc = mappers.clone();
+        let mc = inmappers.clone();
         let txc = tx.clone();
         let hvc = hyperparameter_vec.clone();
         tokio::spawn(async move {
