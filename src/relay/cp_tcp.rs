@@ -20,19 +20,36 @@ pub fn cp_conn(
     out_conn: net::Conn,
     pre_read_data: Option<bytes::BytesMut>,
     ti: Option<Arc<net::GlobalTrafficRecorder>>,
+
+    #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
     match (pre_read_data, ti) {
         (None, None) => tokio::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
-        (None, Some(t)) => tokio::spawn(ti_no_ed(cid, in_conn, out_conn, t)),
+        (None, Some(t)) => tokio::spawn(ti_no_ed(
+            cid,
+            in_conn,
+            out_conn,
+            t,
+            #[cfg(feature = "trace")]
+            updater,
+        )),
         (Some(ed), None) => tokio::spawn(no_ti_ed(cid, in_conn, out_conn, ed)),
-        (Some(ed), Some(t)) => tokio::spawn(ti_ed(cid, in_conn, out_conn, t, ed)),
+        (Some(ed), Some(t)) => tokio::spawn(ti_ed(
+            cid,
+            in_conn,
+            out_conn,
+            t,
+            ed,
+            #[cfg(feature = "trace")]
+            updater,
+        )),
     };
 }
 
 async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
     debug!("{cid}, relay start");
 
-    let _ = net::cp(in_conn, out_conn, &cid, None).await;
+    let _ = net::copy(in_conn, out_conn, &cid, None, None).await;
     debug!("{cid}, relay end",);
 }
 
@@ -41,6 +58,8 @@ async fn ti_no_ed(
     in_conn: net::Conn,
     out_conn: net::Conn,
     ti: Arc<GlobalTrafficRecorder>,
+
+    #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
     debug!("{cid}, relay start");
 
@@ -51,7 +70,15 @@ async fn ti_no_ed(
         debug!("{cid}, relay end", );
     }
 
-    let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;
+    let _ = net::copy(
+        in_conn,
+        out_conn,
+        &cid,
+        Some(ti.clone()),
+        #[cfg(feature = "trace")]
+        updater,
+    )
+    .await;
 }
 
 async fn no_ti_ed(
@@ -86,7 +113,7 @@ async fn no_ti_ed(
         }
     }
 
-    let _ = net::cp(in_conn, out_conn, &cid, None).await;
+    let _ = net::copy(in_conn, out_conn, &cid, None, None).await;
 
     debug!("{}, relay end", cid);
 }
@@ -97,6 +124,8 @@ async fn ti_ed(
     mut out_conn: net::Conn,
     ti: Arc<GlobalTrafficRecorder>,
     earlydata: bytes::BytesMut,
+
+    #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
     if log_enabled!(Debug) {
         debug!("{cid}, relay with earlydata, {}", earlydata.len());
@@ -126,5 +155,13 @@ async fn ti_ed(
         debug!("{cid}, relay end");
     }
 
-    let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;
+    let _ = net::copy(
+        in_conn,
+        out_conn,
+        &cid,
+        Some(ti.clone()),
+        #[cfg(feature = "trace")]
+        updater,
+    )
+    .await;
 }

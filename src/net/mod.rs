@@ -2,7 +2,7 @@
  * module net defines some important parts for proxy.
  *
  * important parts: CID, Network, Addr, ConnTrait, Conn, Stream, GlobalTrafficRecorder,
- *  and a cp function for copying data between Conn
+ *  and a cp mod for copying data between Conn
 
  enums:
 CID, Network ,Addr ,Stream
@@ -22,6 +22,10 @@ pub mod helpers;
 pub mod http;
 pub mod listen;
 pub mod udp;
+
+pub mod cp;
+
+pub use cp::*;
 
 #[cfg(feature = "tun")]
 pub mod tun;
@@ -901,91 +905,3 @@ impl crate::Name for UnixStream {
 
 /// an important type in ruci
 pub type Conn = Box<dyn ConnTrait>;
-
-/// may log debug or do other side-effect stuff with id.
-pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
-    c1: C1,
-    c2: C2,
-    cid: &CID,
-    gtr: Option<Arc<GlobalTrafficRecorder>>,
-) -> Result<u64, Error> {
-    if log_enabled!(log::Level::Debug) {
-        debug!("cp start, {} c1: {}, c2: {}", cid, c1.name(), c2.name());
-    }
-
-    let (mut c1_read, mut c1_write) = tokio::io::split(c1);
-    let (mut c2_read, mut c2_write) = tokio::io::split(c2);
-
-    let (c1_to_c2, c2_to_c1) = (
-        tokio::io::copy(&mut c1_read, &mut c2_write).fuse(),
-        tokio::io::copy(&mut c2_read, &mut c1_write).fuse(),
-    );
-
-    pin_mut!(c1_to_c2, c2_to_c1);
-
-    // 一个方向停止后, 关闭连接, 如果 opt 不为空, 则等待另一个方向关闭, 以获取另一方向的流量信息。
-
-    futures::select! {
-        r1 = c1_to_c2 => {
-            if let Some(ref tr) = gtr {
-                if let Ok(n) = r1 {
-                    let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
-
-                    if log_enabled!(log::Level::Debug) {
-                        debug!("cp, {}, u, ub, {}, {}",cid,n,tt+n);
-                    }
-                }
-
-                // can't borrow mut more than once. We just hope tokio will shutdown tcp
-                // when it's dropped.
-                // during the tests we can prove it's dropped.
-
-                let r2 = c2_to_c1.await;
-                if let Some(ref tr) = gtr {
-                    if let Ok(n) = r2 {
-                        let tt = tr.db.fetch_add(n, Ordering::Relaxed);
-
-                        if log_enabled!(log::Level::Debug) {
-                            debug!("cp, {}, u, db, {}, {}",cid, n,tt+n);
-                        }
-                    }
-                }
-            }
-
-
-            if log_enabled!(log::Level::Debug) {
-                debug!("cp end u, {} ",cid);
-            }
-
-            r1
-        },
-        r2 = c2_to_c1 => {
-            if let Some(ref tr) = gtr {
-                if let Ok(n) = r2 {
-                    let tt = tr.db.fetch_add(n, Ordering::Relaxed);
-
-                    if log_enabled!(log::Level::Debug) {
-                        debug!("cp, {}, d, db, {}, {}",cid, n,tt+n);
-                    }
-                }
-
-                let r1 = c1_to_c2.await;
-                if let Some(ref tr) = gtr {
-                    if let Ok(n) = r1 {
-                        let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
-
-                        if log_enabled!(log::Level::Debug) {
-                            debug!("cp, {}, d, ub, {}, {}",cid,n,tt+n);
-                        }
-                    }
-                }
-            }
-
-            if log_enabled!(log::Level::Debug) {
-                debug!("cp end d, { } ",cid);
-            }
-
-            r2
-        },
-    }
-}

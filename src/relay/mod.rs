@@ -37,6 +37,8 @@ pub async fn handle_in_stream(
     ti: Option<Arc<net::GlobalTrafficRecorder>>,
 
     newc_recorder: OptNewInfoSender,
+
+    #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) -> anyhow::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
@@ -68,7 +70,7 @@ pub async fn handle_in_stream(
         }
     };
 
-    handle_in_accumulate_result(listen_result, out_selector, ti, newc_recorder).await
+    handle_in_accumulate_result(listen_result, out_selector, ti, newc_recorder, updater).await
 }
 
 /// block until out handshake is over
@@ -80,6 +82,8 @@ pub async fn handle_in_accumulate_result(
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
 
     newc_recorder: OptNewInfoSender,
+
+    #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) -> anyhow::Result<()> {
     let cid = listen_result.id;
     let target_addr = match listen_result.a.take() {
@@ -205,6 +209,7 @@ pub async fn handle_in_accumulate_result(
         dial_result.b,
         dial_result.a,
         tr,
+        updater,
     );
 
     Ok(())
@@ -218,9 +223,19 @@ pub fn cp_stream(
     ed: Option<BytesMut>,            //earlydata
     first_target: Option<net::Addr>, // 用于 udp
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
+
+    #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
     match (s1, s2) {
-        (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(cid, i, o, ed, tr),
+        (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(
+            cid,
+            i,
+            o,
+            ed,
+            tr,
+            #[cfg(feature = "trace")]
+            updater,
+        ),
         (Stream::Conn(i), Stream::AddrConn(o)) => {
             tokio::spawn(cp_udp::cp_udp_tcp(cid, o, i, false, ed, first_target, tr));
         }

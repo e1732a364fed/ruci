@@ -159,6 +159,8 @@ impl Engine {
                     out_selector.clone(),
                     Some(ti.clone()),
                     conn_info_recorder.clone(),
+                    #[cfg(feature = "trace")]
+                    None,
                 ));
             } else {
                 break;
