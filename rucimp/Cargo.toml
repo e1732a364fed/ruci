@@ -139,6 +139,7 @@ use-native-tls = ["native-tls", "tokio-native-tls"]
 
 native-tls-vendored = ["native-tls/vendored", "tokio-native-tls/vendored"]
 
+[target.'cfg(not(all(target_os = "windows", target_env = "msvc")))'.features]
 lwip = ["netstack-lwip"]
 
 
