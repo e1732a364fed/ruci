@@ -33,7 +33,7 @@ pub(crate) async fn run(
         let contents = rucimp::cmd_common::try_get_filecontent("local.lua", Some(f))
             .context(format!("run chain engine try get file {} failed", f))?;
 
-        se.init_lua_static(contents);
+        se.init_lua(contents)?;
     }
 
     let mut se = Box::new(se);

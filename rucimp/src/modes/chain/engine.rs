@@ -71,17 +71,33 @@ impl Engine {
         self.tag_routes = sc.get_tag_route();
     }
 
+    /// try dynamic first, then try static
     #[cfg(feature = "lua")]
-    pub fn init_lua_static(&mut self, config_string: String) {
+    pub fn init_lua(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
-        let sc = lua::load_static(&config_string).expect("has valid lua codes in the file content");
-        self.init_static(sc)
+        let r = lua::try_load_finite_dynamic(&config_string);
+        match r {
+            Ok(_) => self.init_lua_finite_dynamic(config_string),
+            Err(_) => self.init_lua_static(config_string),
+        }
     }
 
     #[cfg(feature = "lua")]
-    pub fn init_lua_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
+    pub fn init_lua_static(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
-        let (sc, ibs, default_o, ods) = lua::load_finite_dynamic(config_string)?;
+        use anyhow::Context;
+
+        let sc = lua::load_static(&config_string).context("init_lua_static failed")?;
+        Ok(self.init_static(sc))
+    }
+
+    #[cfg(feature = "lua")]
+    pub fn init_lua_finite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
+        use anyhow::Context;
+
+        use crate::modes::chain::config::lua;
+        let (sc, ibs, default_o, ods) =
+            lua::load_finite_dynamic(config_string).context("lua::load_finite_dynamic failed")?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);
         self.outbounds = ods;

@@ -300,7 +300,7 @@ config = {
 
 ---[[
 
--- 演示 动态链的 选择器用法
+-- 演示 有限动态链的 选择器用法
 
 function get_dyn_selector_for(tag)
     if tag == "listen1" then
@@ -344,13 +344,15 @@ end
 
 -- ]]
 
---[[
+---[[
 
 -- 完全动态链的演示
 
 -- 完全动态链不使用 config 来预定义任何Mappers, 它只给出一个函数
 
 dyn_config = {
+
+-- 下面这个演示 与第一个普通示例 形式上等价
 
     inbounds = {{
         tag = "listen1",
