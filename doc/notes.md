@@ -5,6 +5,14 @@
 
 # dev note
 
+## feature tag
+
+rucimp 中有很多feature tag:
+
+"lua", "route","geoip"
+
+
+
 ## is_tail_of_chain
 
 链式模式的一个特点是，每一层都不知道上层和下层的确切信息，它只做自己层做的事

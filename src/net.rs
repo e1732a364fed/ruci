@@ -64,8 +64,8 @@ impl Display for CIDChain {
             }
             _ => {
                 let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
-                let s = v.join(" ");
-                write!(f, "[ ids: {} ]", s)
+                let s = v.join("-");
+                write!(f, "[ cid: {} ]", s)
             }
         }
     }

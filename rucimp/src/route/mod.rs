@@ -12,7 +12,9 @@ route 模块中的定义的是 比 ruci::route中的 InboundInfoOutSelector 更�
 */
 
 #[cfg(feature = "geoip")]
-mod geoip;
+pub mod geoip;
+
+pub mod config;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -98,6 +100,7 @@ pub struct RuleSet {
     pub ta_ipv6: Option<IpRange<Ipv6Net>>,
 
     pub ta_domain_matcher: Option<DomainMatcher>,
+    //todo: add peer_addr related filter
 }
 
 #[derive(Clone, Debug)]

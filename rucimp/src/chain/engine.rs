@@ -106,13 +106,10 @@ impl StaticEngine {
             return Err(io::Error::other("no client"));
         }
 
-        //todo: 因为没实现路由功能，所以现在只能用 FixedOutSelector,返回第一个outbound
-
         let mut tasks = Vec::new();
         let mut shutdown_tx_vec = Vec::new();
 
         let out_selector = self.get_out_selector();
-        //todo: 在 stop 后 处理leak
 
         self.inbounds.iter().for_each(|inmappers| {
             let (tx, rx) = oneshot::channel();
