@@ -40,6 +40,8 @@ pub trait AsyncWriteAddr {
 pub struct AddrConn {
     pub r: Box<dyn AddrReadTrait>,
     pub w: Box<dyn AddrWriteTrait>,
+
+    pub default_write_to: Option<Addr>,
 }
 impl Name for AddrConn {
     fn name(&self) -> &str {
@@ -48,7 +50,11 @@ impl Name for AddrConn {
 }
 impl AddrConn {
     pub fn new(r: Box<dyn AddrReadTrait>, w: Box<dyn AddrWriteTrait>) -> Self {
-        AddrConn { r, w }
+        AddrConn {
+            r,
+            w,
+            default_write_to: None,
+        }
     }
 }
 

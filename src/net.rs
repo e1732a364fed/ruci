@@ -447,7 +447,9 @@ impl Addr {
                 let so = self.get_socket_addr_or_resolve()?;
 
                 let u = UdpSocket::bind(so).await?;
-                Ok(Stream::UDP(udp::new(u)))
+                let mut u = udp::new(u);
+                u.default_write_to = Some(self.clone());
+                Ok(Stream::UDP(u))
             }
             #[cfg(unix)]
             Network::Unix => {
