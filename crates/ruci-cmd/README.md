@@ -16,13 +16,17 @@ utils feature 可用于下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.d
 run with api server:
 
 ```
-cargo run -F lua -F api_server -F api_client -F utils --release -- -a run
+cargo run -F lua -F api_server -F api_client -F utils -F use-native-tls --release -- -a run
 
 ```
 
 debug:
 ```
-cargo run -F api_server -F lua  -- -l trace --log-file ""
+cargo run -F lua -F use-native-tls  -- -l trace --log-file ""
+
+RUST_LOG=none,ruci=debug cargo run -F lua -F use-native-tls  -- --log-file "" -c remote.lua
+
+RUST_LOG=none,ruci=debug cargo run -F lua -F use-native-tls  -- --log-file "" -c local_mux_h2.lua --infinite
 
 RUST_LOG=debug cargo run -F lua -F api_server -F api_client -F utils -F trace -- -a run --trace
 

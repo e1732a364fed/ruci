@@ -1,13 +1,11 @@
 /*!
- *
+Defines some [`ruci::relay::route::OutSelector`]
 
 route 模块中的定义的是 比 ruci::route中的 InboundInfoOutSelector 更实用的 OutSelector
 
 加了很多范围匹配
 
 有 WhiteList 和 BlackList 两种模式
-
-
 
 */
 

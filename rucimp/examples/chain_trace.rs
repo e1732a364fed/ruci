@@ -1,5 +1,5 @@
 /*!
-* 在 working dir 或 working dir /resource 或 ../resource/ 文件夹查找 local.lua 或
+在 working dir 或 working dir /resource 或 ../resource/ 文件夹查找 local.lua 或
  用户提供的参数作为配置文件 读取它并以 chain 模式运行。新连接写入 new_conn.log 文件
 */
 

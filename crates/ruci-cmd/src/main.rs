@@ -1,3 +1,12 @@
+/*!
+具有综合功能的命令行程序
+
+可选功能 api_client, api_server, utils
+
+针对 rucimp 核心的 可选功能:
+trace, lua, lua54, use-native-tls, native-tls-vendored
+
+ */
 #[cfg(any(feature = "api_client", feature = "api_server"))]
 mod api;
 
