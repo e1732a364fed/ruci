@@ -93,15 +93,14 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
 
     info!("client ok");
 
-    let mut buf = [3u8; 3];
+    let buf = [3u8; 3];
 
     let mut r = r.try_unwrap_tcp()?;
     let r = r.as_mut();
-    let n = r.write(&mut buf[..]).await?;
+    r.write_all(&buf[..]).await?;
     r.flush().await?;
 
-    assert_eq!(n, buf.len());
-    info!("client has write byte num {},", n);
+    info!("client has write byte num {},", buf.len());
 
     Ok(())
 }

@@ -157,8 +157,7 @@ impl Listener {
         let (new_ac_tx, new_ac_rx) = mpsc::channel(4096);
 
         tokio::spawn(async move {
-            let conn_map: Arc<Mutex<HashMap<(Addr, Addr), Sender<BytesMut>>>> =
-                Arc::new(Mutex::new(HashMap::new()));
+            let conn_map: ConnMap = Arc::new(Mutex::new(HashMap::new()));
             loop {
                 tokio::select! {
                     _ = &mut shutdown_rx=>{
@@ -272,18 +271,14 @@ impl Drop for Listener {
     }
 }
 
+type ConnMap = Arc<Mutex<HashMap<(Addr, Addr), Sender<BytesMut>>>>;
+
 /// init a AddrConn from a UdpSocket
 ///
 /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
 /// 以及用 send 而不是 send_to
 ///
-fn new_addr_conn(
-    r: Receiver<BytesMut>,
-    src: Addr,
-    dst: Addr,
-
-    conn_map: Arc<Mutex<HashMap<(Addr, Addr), Sender<BytesMut>>>>,
-) -> AddrConn {
+fn new_addr_conn(r: Receiver<BytesMut>, src: Addr, dst: Addr, conn_map: ConnMap) -> AddrConn {
     let r = Reader {
         dst: dst.clone(),
         rx: r,
@@ -299,7 +294,7 @@ fn new_addr_conn(
 pub struct Writer {
     src: Addr,
     dst: Addr,
-    conn_map: Arc<Mutex<HashMap<(Addr, Addr), Sender<BytesMut>>>>,
+    conn_map: ConnMap,
 }
 impl Name for Writer {
     fn name(&self) -> &str {

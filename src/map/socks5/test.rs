@@ -289,7 +289,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
 
         let mut readbuf = [0u8; 1024];
 
-        cs.write(&[VERSION5, 1, AUTH_PASSWORD])
+        cs.write_all(&[VERSION5, 1, AUTH_PASSWORD])
             .await
             .expect("write1 ok");
 
@@ -303,7 +303,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
 
         assert_eq!(&readbuf[..n], &[5, 2]);
 
-        cs.write(&[
+        cs.write_all(&[
             1,
             "u0".len() as u8,
             b'u',
@@ -321,7 +321,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
         println!("client read, {:?}", &readbuf[..n]);
         assert_eq!(&readbuf[..n], &[1, 0]);
 
-        cs.write(&[
+        cs.write_all(&[
             VERSION5,
             CMD_CONNECT,
             0,
@@ -343,7 +343,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
         assert_eq!(&readbuf[..n], &*socks5::COMMON_TCP_HANDSHAKE_REPLY);
 
         //发送测试数据
-        cs.write(&b"hello"[..]).await.expect("write3 ok");
+        cs.write_all(&b"hello"[..]).await.expect("write3 ok");
         1
     };
 
@@ -401,7 +401,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
 
         let mut readbuf = [0u8; 1024];
 
-        cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
+        cs.write_all(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
@@ -413,7 +413,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
 
         assert_eq!(&readbuf[..n], &[5, 2]);
 
-        cs.write(&[
+        cs.write_all(&[
             1,
             "u0".len() as u8,
             b'u',
@@ -443,14 +443,14 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
 
         writebuf.put(&[(target_port >> 8) as u8, target_port as u8][..]);
 
-        cs.write(&writebuf).await.unwrap();
+        cs.write_all(&writebuf).await.unwrap();
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
         assert_eq!(&readbuf[..n], &*socks5::COMMON_TCP_HANDSHAKE_REPLY);
 
         //发送测试数据
-        cs.write(&b"hello"[..]).await.unwrap();
+        cs.write_all(&b"hello"[..]).await.unwrap();
         1
     };
 
@@ -506,7 +506,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::
 
         let mut readbuf = [0u8; 1024];
 
-        cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
+        cs.write_all(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
@@ -518,7 +518,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::
 
         assert_eq!(&readbuf[..n], &[5, 2]);
 
-        cs.write(&[
+        cs.write_all(&[
             1,
             "u0".len() as u8,
             b'u',
@@ -548,14 +548,14 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::
 
         writebuf.put(&[(target_port >> 8) as u8, target_port as u8][..]);
 
-        cs.write(&writebuf).await.unwrap();
+        cs.write_all(&writebuf).await.unwrap();
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
         assert_eq!(&readbuf[..n], &*socks5::COMMON_TCP_HANDSHAKE_REPLY);
 
         //发送测试数据
-        cs.write(&b"hello"[..]).await.unwrap();
+        cs.write_all(&b"hello"[..]).await.unwrap();
         1
     };
 
@@ -610,7 +610,7 @@ async fn no_auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
     match r.e {
         None => {
             assert!(r.a.unwrap().get_name().unwrap() == name);
-            assert!(r.b == None);
+            assert!(r.b.is_none());
 
             //收到的应为两个 reply 相加, 第一个为5 0, 第二个为 COMMMON_TCP_HANDSHAKE_REPLY
 
@@ -809,7 +809,7 @@ async fn batch_random_bytes_request_no_auth_tcp_handshake_in_mem() -> anyhow::Re
             }
         });
 
-        if !result.is_err() {
+        if result.is_ok() {
             panic!("No panic was caught!, {}", n);
         }
     }
@@ -865,7 +865,7 @@ async fn batch_random_bytes_request_auth_userpass_tcp_handshake_in_mem() -> anyh
             }
         });
 
-        if !result.is_err() {
+        if result.is_ok() {
             panic!("No panic was caught!, {}", n);
         }
     }

@@ -2,19 +2,18 @@ use std::time::Instant;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use futures::executor::block_on;
-use parking_lot::Mutex;
 use ruci::{
     map::{math::*, *},
     net::{helpers::MockTcpStream2, CID},
 };
-use tokio::io::AsyncWriteExt;
+use tokio::{io::AsyncWriteExt, sync::Mutex};
 
 async fn test_adder_r(_l: usize) -> anyhow::Result<()> {
-    let mut x = VEC2.lock();
+    let mut x = VEC2.lock().await;
     let x = &mut *x;
     let x = unsafe { std::mem::transmute::<&mut Vec<u8>, &'static mut Vec<u8>>(x) };
 
-    let mut x2 = VEC3.lock();
+    let mut x2 = VEC3.lock().await;
     let x2 = &mut *x2;
     let x2 = unsafe { std::mem::transmute::<&mut Vec<u8>, &'static mut Vec<u8>>(x2) };
 
@@ -24,9 +23,11 @@ async fn test_adder_r(_l: usize) -> anyhow::Result<()> {
         write_target: None,
     };
 
-    let mut a = Adder::default();
-    a.add_num = 2;
-    a.direction = AddDirection::Write;
+    let a = Adder {
+        add_num: 2,
+        direction: AddDirection::Write,
+        ..Default::default()
+    };
 
     let r = a
         .maps(
@@ -43,7 +44,7 @@ async fn test_adder_r(_l: usize) -> anyhow::Result<()> {
     let r = r.c;
     let mut r = r.try_unwrap_tcp().expect("last_result as c");
     {
-        r.write(&mut VEC1.lock()).await?;
+        r.write_all(&VEC1.lock().await).await?;
     }
 
     Ok(())

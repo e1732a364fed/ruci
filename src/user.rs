@@ -261,13 +261,13 @@ mod test {
 
         let x = um.auth_user_by_authstr("plaintext:u");
 
-        if x != None {
+        if x.is_some() {
             return Err(anyhow!("shit,not none"));
         }
 
         let x = um.auth_user_by_authstr("plaintext:u2\np2");
 
-        if x == None {
+        if x.is_none() {
             Err(anyhow!("shit,none"))
         } else {
             Ok(())

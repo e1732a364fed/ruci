@@ -369,7 +369,7 @@ mod test {
             let r = ser.handshake(CID::default(), Box::new(nc), None).await;
             // println!("server: {r:?}",)
             match r {
-                Ok(r) => return r,
+                Ok(r) => r,
                 Err(e) => panic!("{e}"),
             }
         });

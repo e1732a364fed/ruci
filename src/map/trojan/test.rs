@@ -164,7 +164,7 @@ async fn udp() -> anyhow::Result<()> {
     let mut nu = TcpStream::connect(ula).await?;
 
     println!("try send,  ",);
-    nu.write(b"abc").await?;
+    nu.write_all(b"abc").await?;
     println!("ok send");
 
     let readr = rx.recv().await;
@@ -182,7 +182,7 @@ async fn udp() -> anyhow::Result<()> {
     buf.extend_from_slice(data);
 
     println!("try send2, {}", ula);
-    nu.write(&buf).await?;
+    nu.write_all(&buf).await?;
     println!("ok send2");
 
     let readr = rx.recv().await;

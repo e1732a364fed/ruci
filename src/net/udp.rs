@@ -366,7 +366,7 @@ mod test {
             };
             let mut i = 0;
             while i != 5 {
-                let n = w1.write(&mut buf, &ta_u2).await?;
+                let n = w1.write(&buf, &ta_u2).await?;
                 println!("w write to,{} {:?}", &ta_u2, &buf[..n]);
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
@@ -423,7 +423,7 @@ mod test {
             while i != 5 {
                 i += 1;
 
-                let n = w.write(&mut buf_to_write, &ta).await?;
+                let n = w.write(&buf_to_write, &ta).await?;
                 println!("w write to,{} {:?}", &ta, &buf_to_write[..n]);
 
                 tokio::time::sleep(Duration::from_secs(1)).await;

@@ -33,9 +33,11 @@ async fn test_adder_r() -> anyhow::Result<()> {
         write_target: Some(writev),
     };
 
-    let mut a = Adder::default();
-    a.add_num = 2;
-    a.direction = AddDirection::Write;
+    let a = Adder {
+        add_num: 2,
+        direction: AddDirection::Write,
+        ..Default::default()
+    };
 
     let r = a
         .maps(
@@ -52,8 +54,8 @@ async fn test_adder_r() -> anyhow::Result<()> {
     let r = r.c;
     let mut r = r.try_unwrap_tcp()?;
     {
-        let mut buf = [1u8, 2, 3];
-        r.write(&mut buf).await?;
+        let buf = [1u8, 2, 3];
+        r.write_all(&buf).await?;
         let mut v = writevc.lock();
         println!("it     be {:?}", v);
         assert!(v.eq(&vec![3, 4, 5]));
@@ -61,8 +63,8 @@ async fn test_adder_r() -> anyhow::Result<()> {
     }
 
     {
-        let mut buf = [253u8, 254, 255];
-        r.write(&mut buf).await?;
+        let buf = [253u8, 254, 255];
+        r.write_all(&buf).await?;
         let v = writevc.lock();
         println!("it     be {:?}", v);
         assert!(v.eq(&vec![255, 0, 1]));
@@ -78,9 +80,11 @@ async fn test_adder_w() -> anyhow::Result<()> {
         write_target: None,
     };
 
-    let mut a = Adder::default();
-    a.add_num = 2;
-    a.direction = AddDirection::Read;
+    let a = Adder {
+        add_num: 2,
+        direction: AddDirection::Read,
+        ..Default::default()
+    };
 
     let r = a
         .maps(
@@ -98,7 +102,7 @@ async fn test_adder_w() -> anyhow::Result<()> {
     let mut r = r.try_unwrap_tcp()?;
     {
         let mut buf = [0u8; 3];
-        r.read(&mut buf).await?;
+        r.read_exact(&mut buf).await?;
 
         println!("it     be {:?}", buf);
         assert_eq!(buf, [3u8, 4, 5]);
@@ -143,8 +147,8 @@ async fn test_counter1() -> anyhow::Result<()> {
                 let db = v.pop().expect("vec has 1 data ");
                 let ub = v.pop().expect("vec has 2 data ");
 
-                let mut inital_data = [1u8, 2, 3];
-                r.c.try_unwrap_tcp()?.write(&mut inital_data).await?;
+                let inital_data = [1u8, 2, 3];
+                r.c.try_unwrap_tcp()?.write_all(&inital_data).await?;
 
                 let v = writevc.lock();
 
