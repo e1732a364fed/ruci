@@ -360,14 +360,15 @@ pub enum Stream {
     None,
 }
 impl Stream {
-    pub async fn try_shutdown(self) {
+    pub async fn try_shutdown(self) -> io::Result<()> {
         if let Stream::TCP(mut t) = self {
-            let _ = t.shutdown().await;
+            t.shutdown().await?
         } else if let Stream::UDP(mut c) = self {
             use crate::net::addr_conn::AsyncWriteAddrExt;
 
-            let _ = c.1.shutdown().await;
+            c.1.shutdown().await?
         }
+        Ok(())
     }
 
     pub fn try_unwrap_tcp(self) -> io::Result<Conn> {

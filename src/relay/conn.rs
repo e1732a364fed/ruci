@@ -1,4 +1,5 @@
 use super::*;
+use bytes::BytesMut;
 use log::{info, log_enabled, warn};
 use std::io;
 use std::sync::Arc;
@@ -6,6 +7,7 @@ use std::time::Duration;
 
 use crate::map::*;
 use crate::net;
+use crate::net::Stream;
 
 /// 初级监听为tcp的 链式转发.
 ///
@@ -108,29 +110,21 @@ pub async fn handle_conn<'a>(
         }
     };
 
-    let out_conn = out_stream;
-
     if is_direct {
-        match out_conn {
-            net::Stream::TCP(out_conn) => {
-                cp_tcp::cp_tcp(
-                    cid,
-                    listen_result.c.take().unwrap().try_unwrap_tcp()?,
-                    out_conn,
-                    listen_result.b.take(),
-                    ti,
-                )
-                .await;
-            }
-            net::Stream::UDP(_) => todo!(),
-            net::Stream::None => unimplemented!(),
-        }
+        cp_stream(
+            cid,
+            listen_result.c.take().unwrap(),
+            out_stream,
+            listen_result.b.take(),
+            ti,
+        )
+        .await;
     } else {
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
                 TcpOutAccumulator::accumulate(
                     cid,
-                    out_conn.try_unwrap_tcp()?,
+                    out_stream,
                     outc_iterator,
                     Some(target_addr),
                     listen_result.b.take(),
@@ -142,33 +136,44 @@ pub async fn handle_conn<'a>(
         if let Err(e) = dial_result {
             warn!("{}, dial out client timeout, {}", state, e);
             //let _ = in_conn.shutdown();
-            //let _ = out_tcp.shutdown();
+            //let _ = out_stream.try_shutdown();
             return Err(e.into());
         }
         let dial_result = dial_result.unwrap();
         if let Err(e) = dial_result {
             warn!("{}, dial out client failed, {}", state, e);
             //let _ = in_conn.shutdown();
-            //let _ = out_tcp.shutdown();
+            //let _ = out_stream.try_shutdown();
             return Err(e);
         }
 
-        let (out_conn, remain_target_addr, _extra_out_data_vec) = dial_result.unwrap();
+        let (out_stream, remain_target_addr, _extra_out_data_vec) = dial_result.unwrap();
         if let Some(rta) = remain_target_addr {
             warn!(
                 "{}, dial out client succeed, but the target_addr is not consumed, {} ",
                 state, rta
             );
         }
-        cp_tcp::cp_tcp(
-            cid,
-            listen_result.c.take().unwrap().try_unwrap_tcp()?,
-            out_conn.try_unwrap_tcp()?,
-            None,
-            ti,
-        )
-        .await;
+        cp_stream(cid, listen_result.c.take().unwrap(), out_stream, None, ti).await;
     }
 
     Ok(())
+}
+
+pub async fn cp_stream(
+    cid: u32,
+    s1: Stream,
+    s2: Stream,
+    ed: Option<BytesMut>, //earlydata
+    ti: Option<Arc<net::TransmissionInfo>>,
+) {
+    match (s1, s2) {
+        (Stream::TCP(s0), Stream::TCP(s1)) => cp_tcp::cp_tcp(cid, s0, s1, ed, ti).await,
+        (Stream::TCP(_), Stream::UDP(_)) => todo!(),
+        (Stream::UDP(_), Stream::TCP(_)) => todo!(),
+        (Stream::UDP(_), Stream::UDP(_)) => todo!(),
+        _ => {
+            warn!("can't cp stream when either of them is None");
+        }
+    }
 }

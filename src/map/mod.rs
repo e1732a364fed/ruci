@@ -450,7 +450,7 @@ pub struct TcpOutAccumulator<'a> {
 impl<'a> TcpOutAccumulator<'a> {
     pub async fn accumulate<IterOutMapperBoxRef>(
         cid: u32,
-        base: net::Conn,
+        base: Stream,
         mut outmappers: IterOutMapperBoxRef,
         target_addr: Option<net::Addr>,
         early_data: Option<BytesMut>,
@@ -463,7 +463,7 @@ impl<'a> TcpOutAccumulator<'a> {
         let mut last_r = MapResult {
             a: target_addr,
             b: early_data,
-            c: Some(Stream::TCP(base)),
+            c: Some(base),
             d: None,
             e: None,
         };
