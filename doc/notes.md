@@ -469,5 +469,6 @@ ip route add {v} dev {original_dev_name} metric 100
 
 ## 日志
 
-从0.0.6起，ruci 不再继续开发 suit 模式。所留代码仅作参考使用
+从0.0.6起，ruci 不再继续开发 suit 模式。
+从0.0.7起，ruci 移除了 suit 模式。
 

@@ -1,3 +1,8 @@
+/*!
+Provides functions to resolve dns through customized dns servers.
+
+Using hickory_resolver.
+ */
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::net::SocketAddr;

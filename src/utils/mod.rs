@@ -4,12 +4,14 @@ use anyhow::bail;
 use bytes::BytesMut;
 use tracing::{trace, warn};
 
+/// remove first character
 pub fn rem_first(value: &str) -> &str {
     let mut chars = value.chars();
     chars.next();
     chars.as_str()
 }
 
+/// bytes to Captalized hex string(like 1234FF)
 pub struct HexSlice<'a>(pub &'a [u8]);
 
 impl fmt::Display for HexSlice<'_> {
