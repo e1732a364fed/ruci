@@ -132,11 +132,22 @@ where
                     Err(_) => break,
                     Ok((m, _ad)) => {
                         if m > 0 {
-
+                            //debug!("cp_addr_to_conn, read got {m}");
                             let r = w1.write(&buf0[..m]).await;
                             if let Ok(n) = r{
+                                //debug!("cp_addr_to_conn, write ok {n}");
+
                                 whole_write += n;
 
+                                let r = w1.flush().await;
+                                if r.is_err(){
+                                    debug!("cp_addr_to_conn, write  flush notok ");
+                                    break;
+                                }
+
+                            }else{
+                                debug!("cp_addr_to_conn, write notok ");
+                                break;
                             }
 
                         }

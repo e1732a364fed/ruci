@@ -14,29 +14,50 @@ use std::{
 use tokio::{io::ReadBuf, net::UdpSocket};
 
 /// 固定用同一个 udpsocket 发送，到不同的远程地址也是如此
-pub struct Conn(Arc<UdpSocket>);
+#[derive(Clone)]
+pub struct Conn {
+    u: Arc<UdpSocket>,
+    peer_addr: Option<Addr>,
+}
 
 impl Conn {
-    pub fn new(u: UdpSocket) -> Self {
-        Conn(Arc::new(u))
-    }
-
-    pub fn duplicate(&self) -> Conn {
-        Conn(self.0.clone())
+    /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
+    /// 以及用 send 而不是 send_to
+    ///
+    pub fn new(u: UdpSocket, peer_addr: Option<Addr>) -> Self {
+        Conn {
+            u: Arc::new(u),
+            peer_addr,
+        }
     }
 }
 
-pub fn new(u: UdpSocket) -> AddrConn {
+pub fn new(u: UdpSocket, peer_addr: Option<Addr>) -> AddrConn {
     let a = Arc::new(u);
     let b = a.clone();
-    AddrConn::new(Box::new(Conn(a)), Box::new(Conn(b)))
+    AddrConn::new(
+        Box::new(Conn {
+            u: a,
+            peer_addr: peer_addr.clone(),
+        }),
+        Box::new(Conn { u: b, peer_addr }),
+    )
 }
 
 /// wrap u with Arc, then return 2 copys.
 pub fn duplicate(u: UdpSocket) -> (Conn, Conn) {
     let a = Arc::new(u);
     let b = a.clone();
-    (Conn(a), Conn(b))
+    (
+        Conn {
+            u: a,
+            peer_addr: None,
+        },
+        Conn {
+            u: b,
+            peer_addr: None,
+        },
+    )
 }
 
 impl AsyncWriteAddr for Conn {
@@ -46,10 +67,14 @@ impl AsyncWriteAddr for Conn {
         buf: &[u8],
         addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        let sor = addr.get_socket_addr_or_resolve();
-        match sor {
-            Ok(so) => self.0.poll_send_to(cx, buf, so),
-            Err(e) => Poll::Ready(Err(io::Error::other(e))),
+        if self.peer_addr.is_some() || addr.eq(&Addr::default()) {
+            self.u.poll_send(cx, buf)
+        } else {
+            let sor = addr.get_socket_addr_or_resolve();
+            match sor {
+                Ok(so) => self.u.poll_send_to(cx, buf, so),
+                Err(e) => Poll::Ready(Err(io::Error::other(e))),
+            }
         }
     }
 
@@ -69,19 +94,30 @@ impl AsyncReadAddr for Conn {
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
         let mut rbuf = ReadBuf::new(buf);
-        let r = self.0.poll_recv_from(cx, &mut rbuf);
-        match r {
-            Poll::Ready(r) => match r {
-                Ok(so) => Poll::Ready(Ok((
-                    rbuf.filled().len(),
-                    crate::net::Addr {
-                        addr: NetAddr::Socket(so),
-                        network: Network::UDP,
-                    },
-                ))),
-                Err(e) => Poll::Ready(Err(e)),
-            },
-            Poll::Pending => Poll::Pending,
+        if let Some(pa) = self.peer_addr.as_ref() {
+            let r = self.u.poll_recv(cx, &mut rbuf);
+            match r {
+                Poll::Ready(r) => match r {
+                    Ok(_) => Poll::Ready(Ok((rbuf.filled().len(), pa.clone()))),
+                    Err(e) => Poll::Ready(Err(e)),
+                },
+                Poll::Pending => Poll::Pending,
+            }
+        } else {
+            let r = self.u.poll_recv_from(cx, &mut rbuf);
+            match r {
+                Poll::Ready(r) => match r {
+                    Ok(so) => Poll::Ready(Ok((
+                        rbuf.filled().len(),
+                        crate::net::Addr {
+                            addr: NetAddr::Socket(so),
+                            network: Network::UDP,
+                        },
+                    ))),
+                    Err(e) => Poll::Ready(Err(e)),
+                },
+                Poll::Pending => Poll::Pending,
+            }
         }
     }
 }

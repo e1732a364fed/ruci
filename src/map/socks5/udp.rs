@@ -101,36 +101,43 @@ impl AsyncReadAddr for Conn {
         match r {
             Poll::Pending => Poll::Pending,
 
-            Poll::Ready(r) => match r {
-                Err(e) => Poll::Ready(Err(e)),
-                Ok(so) => {
-                    if !so.eq(&self.peer_soa) {
-                        // 读到不来自peer的信息时不报错, 直接舍弃
-                        info!("socks5 udp got msg not from peer, will ignore discard it.");
-                        return Poll::Pending;
-                    }
-                    let bs = rbuf.filled();
+            Poll::Ready(r) => {
+                match r {
+                    Err(e) => Poll::Ready(Err(e)),
+                    Ok(so) => {
+                        if !eq_socket_addr(&so, &self.peer_soa) {
+                            // 读到不来自peer的信息时不报错, 直接舍弃
+                            info!("socks5 udp got msg not from peer, will ignore discard it. is: {:?}, should be: {:?}", so, self.peer_soa);
+                            return Poll::Pending;
+                        }
 
-                    let r = decode_read(bs);
+                        let bs = rbuf.filled();
 
-                    match r {
-                        Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
+                        let r = decode_read(bs);
 
-                        Ok((mut actual_buf, soa)) => {
-                            let wlen = min(buf.len(), actual_buf.len());
-                            actual_buf.copy_to_slice(&mut buf[..wlen]);
+                        match r {
+                            Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
 
-                            Poll::Ready(Ok::<(usize, net::Addr), io::Error>((
-                                wlen,
-                                crate::net::Addr {
-                                    addr: NetAddr::Socket(soa),
-                                    network: Network::UDP,
-                                },
-                            )))
+                            Ok((mut actual_buf, soa)) => {
+                                let wlen = min(buf.len(), actual_buf.len());
+                                actual_buf.copy_to_slice(&mut buf[..wlen]);
+
+                                // if log_enabled!(log::Level::Debug) {
+                                //     debug!("socks5 udp got msg,{wlen} {soa}, {:?}", &buf[..wlen])
+                                // }
+
+                                Poll::Ready(Ok::<(usize, net::Addr), io::Error>((
+                                    wlen,
+                                    crate::net::Addr {
+                                        addr: NetAddr::Socket(soa),
+                                        network: Network::UDP,
+                                    },
+                                )))
+                            }
                         }
                     }
                 }
-            },
+            }
         }
     }
 }

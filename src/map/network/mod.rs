@@ -43,7 +43,7 @@ impl Name for Direct {
 #[async_trait]
 impl Mapper for Direct {
     /// dial params.a.
-    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+    async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a {
             Some(a) => a,
             None => {
@@ -52,10 +52,22 @@ impl Mapper for Direct {
         };
 
         if log_enabled!(log::Level::Debug) {
-            debug!("direct dial, {} , {}", a, cid);
+            debug!(
+                "direct dial, {} , {}, {:?} {:?}",
+                a,
+                cid,
+                behavior,
+                params.b.as_ref().and_then(|b| Some(b.len()))
+            );
         }
 
-        let dial_r = a.try_dial().await;
+        let dial_r = match behavior {
+            ProxyBehavior::ENCODE => match a.network {
+                Network::UDP => a.try_dial_udp().await,
+                _ => a.try_dial().await,
+            },
+            _ => a.try_dial().await,
+        };
         match dial_r {
             Ok(mut stream) => {
                 if matches!(stream, Stream::TCP(_)) && self.is_tail_of_chain() && params.b.is_some()

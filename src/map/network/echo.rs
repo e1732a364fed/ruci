@@ -19,20 +19,25 @@ impl Mapper for Echo {
         match params.c {
             Stream::TCP(_) => todo!(),
             Stream::UDP(mut u) => {
-                info!("{cid} udp consumed by echo");
+                debug!("{cid} udp consumed by echo, {:?}", params.b);
 
                 tokio::spawn(async move {
                     let mut buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
                     loop {
+                        //debug!("echo reading");
                         let r = u.r.read(&mut buf).await;
+
                         match r {
                             Ok((n, a)) => {
+                                //debug!("echo read got n, {:?} {}", &buf[..n], a);
+
                                 let r = u.w.write(&buf[..n], &a).await;
                                 if let Err(e) = r {
                                     info!("{cid} echo write stoped by: {e}");
 
                                     break;
                                 }
+                                //debug!("echo write n ok,{}", n);
                             }
                             Err(e) => {
                                 info!("{cid} echo read stoped by: {e}");

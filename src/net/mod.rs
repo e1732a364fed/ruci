@@ -204,6 +204,28 @@ pub fn gen_random_higher_port() -> u16 {
     rng.gen_range(10240..=65535)
 }
 
+/// work better than use a.eq(b).
+///
+/// it checks if a or b is  loopback or unspecified (this will be equal too)
+///
+pub fn eq_socket_addr(a: &SocketAddr, b: &SocketAddr) -> bool {
+    if a.eq(b) {
+        true
+    } else {
+        if a.port() != b.port() {
+            false
+        } else {
+            if a.ip().is_loopback() && b.ip().is_unspecified() {
+                true
+            } else if a.ip().is_unspecified() && b.ip().is_loopback() {
+                true
+            } else {
+                false
+            }
+        }
+    }
+}
+
 /// default: ipv4 0.0.0.0:0
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NetAddr {
@@ -445,6 +467,33 @@ impl Addr {
         }
     }
 
+    /// only for udp. Unlike try_dial, it will bind to 0.0.0.0:0
+    /// to get a random port, then connect to the target addr.
+    pub async fn try_dial_udp(&self) -> Result<Stream> {
+        match self.network {
+            Network::UDP => {
+                let so = self.get_socket_addr_or_resolve()?;
+
+                let u = UdpSocket::bind("0.0.0.0:0").await?;
+                u.connect(so).await?;
+                let mut u = udp::new(u, Some(self.clone()));
+                u.default_write_to = Some(self.clone());
+                Ok(Stream::UDP(u))
+            }
+
+            _ => bail!(
+                "try_dial_udp failed, not supported network: {}",
+                self.network
+            ),
+        }
+    }
+
+    /// dial tcp/udp/unix_domain_socket
+    ///
+    /// ## udp:
+    ///
+    /// Addr 的 try_dial 中的 udp 其实是 listen, 它会bind到Addr
+    ///
     pub async fn try_dial(&self) -> Result<Stream> {
         match self.network {
             Network::TCP => {
@@ -457,8 +506,7 @@ impl Addr {
                 let so = self.get_socket_addr_or_resolve()?;
 
                 let u = UdpSocket::bind(so).await?;
-                let u = udp::new(u);
-                //u.default_write_to = Some(self.clone());
+                let u = udp::new(u, None);
                 Ok(Stream::UDP(u))
             }
             #[cfg(unix)]

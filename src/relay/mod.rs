@@ -13,7 +13,7 @@ use bytes::BytesMut;
 use log::{debug, info, log_enabled, warn};
 
 use crate::net::addr_conn::AsyncWriteAddrExt;
-use crate::net::{self, Stream, CID};
+use crate::net::{self, Addr, Stream, CID};
 
 use self::acc::MIterBox;
 use self::route::OutSelector;
@@ -221,6 +221,13 @@ pub async fn cp_udp(
         if let Some(real_first_target) = first_target {
             debug!("cp_udp: writing ed");
             let r = out_conn.w.write(&real_ed, &real_first_target).await;
+            if let Err(e) = r {
+                warn!("cp_udp: writing ed failed: {e}");
+                return;
+            }
+        } else {
+            debug!("cp_udp: writing ed without real_first_target");
+            let r = out_conn.w.write(&real_ed, &Addr::default()).await;
             if let Err(e) = r {
                 warn!("cp_udp: writing ed failed: {e}");
                 return;
