@@ -22,6 +22,9 @@ fn direction_match_write(endpoint_type: ProxyBehavior, direction: i8) -> bool {
         || matches!(endpoint_type, ProxyBehavior::ENCODE) && direction == READ_DIRECTION
 }
 
+pub const WRTIE_IS_STEGO: u8 = 0;
+pub const WRTIE_IS_REAL: u8 = 1;
+
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
 pub struct Embedder {
@@ -105,7 +108,7 @@ impl Map for Embedder {
 
                 MapResult::new_c(Box::new(conn)).a(params.a).build()
             }
-            ProxyBehavior::UNSPECIFIED => panic!("shoudn't happen"),
+            _ => panic!("shoudn't happen"),
         }
     }
 }
@@ -409,14 +412,18 @@ impl AsyncRead for EmbedConn {
                                 debug!("read got EOF");
                                 return Poll::Ready(Ok(()));
                             }
-                            if n < 2 {
+                            if n < 3 {
                                 self.cur_info_read_buf().clear();
-                                debug!("read got n < 2 ");
+                                debug!("read got n < 3 ");
                                 continue;
                             }
+                            let is_stego = self.cur_info_read_buf().get_u8() == WRTIE_IS_STEGO;
+
                             let cl = self.cur_info_read_buf().get_u16() as usize;
 
-                            debug!("read got cl: {}", cl);
+                            debug!("read got cl: {}, is_stego: {}", cl, is_stego);
+
+                            // 隐写包是没有cl的，is_stego 后面两字节的 cl和整个包的其余部分 都是 padding
 
                             self.read_state.content_len = Some(cl);
 
@@ -464,6 +471,7 @@ impl EmbedConn {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
         is_first_buf: bool,
+        is_stego: bool,
     ) -> Poll<WriteBufResult> {
         debug!(
             "want to write buf len: {}, {}",
@@ -493,17 +501,22 @@ impl EmbedConn {
             }
         }
 
-        let actual_allowed_data_len = cur_info.length - 2;
+        let actual_allowed_data_len = cur_info.length - 3;
 
         // 写时，分两种情况
-        // 如果是 buf.len() <= cur_info.length - 2, 则 直接 加一个 2字节的包头 后写入, 且加上一个 padding, 使
+        // 如果是 buf.len() <= cur_info.length - 3, 则 直接 加一个 3字节的包头 后写入, 且加上一个 padding, 使
         // 实际写入的长度 正好等于 cur_info.length，
 
-        // 而如果不满足上面条件，则 只 截取 buf 中 长度为 cur_info.length - 2 的数据， 然后 加上一个 2字节的包头 后写入
+        // 而如果不满足上面条件，则 只 截取 buf 中 长度为 cur_info.length - 3 的数据， 然后 加上一个 3字节的包头 后写入
 
         let len_to_write_after_head = actual_allowed_data_len.min(buf.len());
 
         let mut fitted_buf = BytesMut::with_capacity(cur_info.length);
+        if is_stego {
+            fitted_buf.put_u8(WRTIE_IS_STEGO);
+        } else {
+            fitted_buf.put_u8(WRTIE_IS_REAL);
+        }
         fitted_buf.put_u16(len_to_write_after_head as u16);
         fitted_buf.put_slice(&buf[..len_to_write_after_head]);
 
@@ -562,7 +575,7 @@ impl AsyncWrite for EmbedConn {
             match self.write_state.take() {
                 None => {
                     debug!("write buf when write_state is None");
-                    let r = self.write_buf(cur_info, cx, buf, false);
+                    let r = self.write_buf(cur_info, cx, buf, false, false);
                     match ready!(r) {
                         WriteBufResult::Continue => {
                             debug!("write continue");
@@ -578,7 +591,7 @@ impl AsyncWrite for EmbedConn {
                                 "write first buf {}",
                                 &first_buf[..50.min(first_buf.len())].escape_ascii()
                             );
-                            let r = self.write_buf(cur_info, cx, &first_buf, true);
+                            let r = self.write_buf(cur_info, cx, &first_buf, true, false);
 
                             let rl = first_buf.len();
 
