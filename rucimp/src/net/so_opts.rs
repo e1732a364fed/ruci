@@ -6,7 +6,6 @@ edited based on (MIT) https://github.com/lazytiger/trojan-rs/blob/master/src/sys
 */
 
 use std::{
-    convert::TryFrom,
     io::{Error, ErrorKind, Result},
     net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     os::unix::io::AsRawFd,
@@ -92,8 +91,7 @@ pub fn tproxy_udp_recv_from_with_destination<T: AsRawFd>(
 
         msg.msg_control = control_buf.as_mut_ptr() as *mut _;
         // Note: some platform define msg_controllen as size_t, some define as u32
-        msg.msg_controllen = TryFrom::try_from(control_buf.len())
-            .expect("failed to convert usize to msg_controllen");
+        msg.msg_controllen = control_buf.len();
 
         let fd = socket.as_raw_fd();
         let ret = libc::recvmsg(fd, &mut msg, 0);

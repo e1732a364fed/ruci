@@ -39,6 +39,9 @@ use tracing::warn;
 
 use crate::map::{recorder, ws};
 
+#[cfg(feature = "steganography")]
+use crate::map::spe1;
+
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 use crate::map::tproxy::{self, TcpResolver};
 
@@ -330,7 +333,9 @@ pub enum InMapConfig {
     Stack,
 
     #[cfg(feature = "steganography")]
-    SPE1,
+    SPE1 {
+        qa: Option<Vec<(String, String)>>,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -376,7 +381,9 @@ pub enum OutMapConfig {
     Quic(crate::map::quic_common::ClientConfig),
 
     #[cfg(feature = "steganography")]
-    SPE1,
+    SPE1 {
+        qa: Option<Vec<(String, String)>>,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -582,8 +589,7 @@ impl ToMapBox for InMapConfig {
                 sockopt,
                 ext,
             } => Box::new(crate::map::tproxy::UDPListener {
-                listen_addr: net::Addr::from_network_addr_url(&listen_addr)
-                    .expect("listen_addr ok"),
+                listen_addr: net::Addr::from_network_addr_url(listen_addr).expect("listen_addr ok"),
                 sopt: sockopt.clone(),
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             }),
@@ -591,8 +597,11 @@ impl ToMapBox for InMapConfig {
             InMapConfig::Stack => Box::<crate::map::tcp_ip_stack_smoltcp::Stack>::default(),
 
             #[cfg(feature = "steganography")]
-            InMapConfig::SPE1 => Box::new(crate::map::spe1::ClientOrServer {
-                qa: Arc::new(crate::map::spe1::QaData::new_simple()),
+            InMapConfig::SPE1 { qa } => Box::new(spe1::ClientOrServer {
+                qa: Arc::new(match qa {
+                    Some(qa) => spe1::QaData::from(qa.to_vec()),
+                    None => spe1::QaData::new_simple(),
+                }),
                 is_server: true,
                 ext_fields: Some(MapExtFields::default()),
             }),
@@ -719,8 +728,11 @@ impl ToMapBox for OutMapConfig {
             }
 
             #[cfg(feature = "steganography")]
-            OutMapConfig::SPE1 => Box::new(crate::map::spe1::ClientOrServer {
-                qa: Arc::new(crate::map::spe1::QaData::new_simple()),
+            OutMapConfig::SPE1 { qa } => Box::new(spe1::ClientOrServer {
+                qa: Arc::new(match qa {
+                    Some(qa) => spe1::QaData::from(qa.to_vec()),
+                    None => spe1::QaData::new_simple(),
+                }),
                 is_server: false,
                 ext_fields: Some(MapExtFields::default()),
             }),

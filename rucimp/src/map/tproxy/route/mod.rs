@@ -139,14 +139,12 @@ pub fn run_auto_route6(opts: &Options) -> anyhow::Result<()> {
 
     let _ = down_auto_route6(opts);
 
-    let list = format!(
-        r#"ip -6 rule add fwmark 1 table 106
+    let list = r#"ip -6 rule add fwmark 1 table 106
 ip -6 route add local ::/0 dev lo table 106
 ip6tables -t mangle -N rucimp6
 ip6tables -t mangle -A rucimp6 -d ::1/128 -j RETURN
 ip6tables -t mangle -A rucimp6 -d fe80::/10 -j RETURN
-ip6tables -t mangle -A rucimp6 -d fd00::/8 -p tcp -j RETURN"#,
-    );
+ip6tables -t mangle -A rucimp6 -d fd00::/8 -p tcp -j RETURN"#;
 
     let list = list.split('\n').collect_vec();
 
@@ -155,7 +153,7 @@ ip6tables -t mangle -A rucimp6 -d fd00::/8 -p tcp -j RETURN"#,
     if also_udp {
         run_command(
             "ip6tables",
-            &format!("-t mangle -A rucimp6 -d fd00::/8 -p udp -j RETURN"),
+            "-t mangle -A rucimp6 -d fd00::/8 -p udp -j RETURN",
         )?;
     }
 
@@ -175,12 +173,10 @@ ip6tables -t mangle -A rucimp6 -d fd00::/8 -p tcp -j RETURN"#,
         )?;
     }
 
-    let list = format!(
-        r#"ip6tables -t mangle -A PREROUTING -j rucimp6
+    let list = r#"ip6tables -t mangle -A PREROUTING -j rucimp6
 ip6tables -t mangle -N rucimp_self6
 ip6tables -t mangle -A rucimp_self6 -d fe80::/10 -j RETURN
-ip6tables -t mangle -A rucimp_self6 -d fd00::/8 -p tcp -j RETURN"#
-    );
+ip6tables -t mangle -A rucimp_self6 -d fd00::/8 -p tcp -j RETURN"#;
 
     let list = list.split('\n').collect_vec();
 
@@ -189,7 +185,7 @@ ip6tables -t mangle -A rucimp_self6 -d fd00::/8 -p tcp -j RETURN"#
     if also_udp {
         run_command(
             "ip6tables",
-            &format!("-t mangle -A rucimp_self6 -d fd00::/8 -p udp -j RETURN"),
+            "-t mangle -A rucimp_self6 -d fd00::/8 -p udp -j RETURN",
         )?;
     }
 
