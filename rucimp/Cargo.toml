@@ -28,6 +28,11 @@ maxminddb = { version = "0.24", optional = true }
 
 mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lot","luau","macros"] , optional = true }
 
+libc = { version = "0.2", optional = true }
+
+socket2 ={ version = "0.5.6", optional = true } 
+
+
 macro_mapper ={ path = "../crates/macro_mapper" }
 
 
@@ -40,6 +45,7 @@ route = ["ipnet" ,"iprange" ,"regex"]
 geoip = ["maxminddb", "route"]
 
 tun = ["ruci/tun"]
+sockopt = ["libc", "socket2"]
 
 
 [[example]]

@@ -3,4 +3,5 @@ target/
 ruci_config/
 *.mmdb
 .DS_Store
+.vscode/
 testfile.txt

@@ -2,9 +2,12 @@
 
  定义了 一些配置格式, 以及以这些配置格式运行代理的方法
 
+以及一些对 ruci 的扩展
+
 */
 pub mod chain;
 pub mod map;
+pub mod net;
 pub mod suit;
 pub mod user;
 
