@@ -1,3 +1,7 @@
+/*!
+Defines common part for various quic implementations.
+ */
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
