@@ -2,11 +2,11 @@
 
 - [X] Ruci : 如此：
 - [X] Rucimp: 如此实现~
-- [ ] Rucimple: 如此简单！
+- [ ] Rip: 如此简单！
 
-项目命名采用了谐音。同时Ru指代rust, ruci 与 如此谐音 ,cimple则与 simple 谐音。
-Rucimple可读作：如森剖。根项目可读作"如C"或 lucy。
-在与 verysimple 对比的语境中，本项目也可称rp，verysimple 可称 vp
+项目命名采用了谐音。同时Ru指代rust, ruci 与 如此谐音.
+rucimp = ruci + imp,
+ruci可读作"如C"或 lucy。
 
 ## 介绍
 
@@ -32,7 +32,7 @@ ruci 是基础框架, 其中定义一些trait 和基本结构与方法，实现�
 
 rucimp 中提供若干流映射函数, 定义多种配置文件格式, 并提供一些 example 程序
 
-rucimple 是最终的全功能的可执行文件，包含一些系统路由的配置功能。其在另外的github 仓库中保管
+rip 是最终的全功能的可执行文件，包含一些系统路由的配置功能。其在另外的github 仓库中保管
 
 具体名词解释请看下文。
 
@@ -105,7 +105,7 @@ ruci对代理的原理加以更高的抽象化，认为任何协议都可被认�
 其它可能的情况比如 Socks5+WS+TLS+WS+Socks5+TLS.，甚至你可以造出一些逻辑结构，只要有最终出口就行，如 Socks5 - repeat N [TLS1-TLS2] - Socks5
 发挥你的想象力吧。
 
-而作为兼容vp的suit配置格式实际上也是运行在链式结构中的。因此 rp 将比vp更通用，功能更多，自定性更高。
+而作为兼容verysimple的suit配置格式实际上也是运行在链式结构中的。因此 ruci 将比verysimple更通用，功能更多，自定性更高。
 
 能够定义动态的链式结构 (如有循环和跳转)的链式配置文件要采用脚本语言格式。 这里使用 Lua
 
