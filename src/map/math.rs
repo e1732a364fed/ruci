@@ -183,10 +183,9 @@ impl crate::map::Mapper for Adder {
                     direction: self.direction,
                 };
 
-                MapResult::builder()
+                MapResult::newc(Box::new(cc))
                     .a(params.a)
                     .b(params.b)
-                    .c(Box::new(cc))
                     .build()
             }
             Stream::UDP(_) => {

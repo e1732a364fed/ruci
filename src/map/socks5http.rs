@@ -5,6 +5,7 @@
 use futures::executor::block_on;
 use log::debug;
 use macro_mapper::DefaultMapperExt;
+use map::Stream;
 
 use crate::map::{self, MapResult};
 use crate::net::CID;
@@ -94,7 +95,7 @@ impl Server {
 
             if r.b.is_some() {
                 let c = match r.c {
-                    Some(c) => c,
+                    Stream::TCP(c) => c,
 
                     _ => unimplemented!(),
                 };

@@ -7,7 +7,7 @@ use rustls::{
 };
 use tokio::io::AsyncWriteExt;
 
-use self::map::CID;
+use self::{map::CID, net::Stream};
 
 use super::*;
 
@@ -128,9 +128,9 @@ impl Client {
                 bc.write_all(&ed).await?;
                 bc.flush().await?;
             }
-            Ok(mrb.c(bc).build())
+            Ok(mrb.c(Stream::c(bc)).build())
         } else {
-            Ok(mrb.b(b).c(bc).build())
+            Ok(mrb.b(b).c(Stream::c(bc)).build())
         }
     }
 }

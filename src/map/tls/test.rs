@@ -49,7 +49,12 @@ async fn dial_tls_in_mem() {
         .c;
 
     let mut buf = [0u8; 1024];
-    let n = r.unwrap().read(&mut buf[..]).await.unwrap();
+    let n = r
+        .try_unwrap_tcp()
+        .unwrap()
+        .read(&mut buf[..])
+        .await
+        .unwrap();
 
     println!("{}, {:?}", n, &buf[..n]);
 }
@@ -83,7 +88,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
 
     let mut buf = [3u8; 3];
 
-    let mut r = r.unwrap();
+    let mut r = r.try_unwrap_tcp()?;
     let r = r.as_mut();
     let n = r.write(&mut buf[..]).await?;
     r.flush().await?;
@@ -135,7 +140,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Resul
 
     let mut buf = [0u8; 1024];
 
-    let n = conn.unwrap().read(&mut buf[..]).await?;
+    let n = conn.try_unwrap_tcp()?.read(&mut buf[..]).await?;
 
     info!("server read {}, {:?}", n, &buf[..n]);
     tokio::time::sleep(Duration::from_secs(1)).await;

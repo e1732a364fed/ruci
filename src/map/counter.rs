@@ -142,7 +142,7 @@ impl Mapper for Counter {
                 MapResult::builder()
                     .a(params.a)
                     .b(params.b)
-                    .c(Box::new(cc))
+                    .c(Stream::c(Box::new(cc)))
                     .d(AnyData::B(Box::new(cd)))
                     .build()
             }

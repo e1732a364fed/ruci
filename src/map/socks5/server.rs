@@ -14,6 +14,7 @@ use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
 use log::{debug, log_enabled, warn};
 use macro_mapper::DefaultMapperExt;
+use map::Stream;
 use std::{
     cmp::min,
     io::{self, Error},
@@ -456,7 +457,7 @@ impl Server {
             return Ok(MapResult {
                 a: Some(ad),
                 b: buf_to_ob(buf),
-                c: Some(base),
+                c: Stream::c(base),
                 d, //将 该登录的用户信息 作为 额外信息 传回
                 ..Default::default()
             });
@@ -476,7 +477,7 @@ impl Server {
 
         Ok(MapResult {
             b: buf_to_ob(buf),
-            c: Some(base),
+            c: Stream::c(base),
             e: Some(anyhow!("socks5: not supported cmd, {}", cmd)),
             ..Default::default()
         })

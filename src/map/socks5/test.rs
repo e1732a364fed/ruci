@@ -278,7 +278,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];
-        let n = r.c.unwrap().read(&mut readbuf[..]).await?;
+        let n = r.c.try_unwrap_tcp()?.read(&mut readbuf[..]).await?;
         assert_eq!(&readbuf[..n], &[b'h', b'e', b'l', b'l', b'o']);
 
         Ok::<(), anyhow::Error>(())
@@ -390,7 +390,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];
-        let n = r.c.unwrap().read(&mut readbuf[..]).await.unwrap();
+        let n = r.c.try_unwrap_tcp()?.read(&mut readbuf[..]).await.unwrap();
         assert_eq!(&readbuf[..n], &b"hello"[..]);
 
         Ok::<(), anyhow::Error>(())
@@ -495,7 +495,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];
-        let n = r.c.unwrap().read(&mut readbuf[..]).await.unwrap();
+        let n = r.c.try_unwrap_tcp()?.read(&mut readbuf[..]).await.unwrap();
         assert_eq!(&readbuf[..n], &b"hello"[..]);
 
         Ok::<_, anyhow::Error>(())

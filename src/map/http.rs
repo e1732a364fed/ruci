@@ -23,7 +23,7 @@ use crate::{
     Name,
 };
 
-use super::{MapperBox, ToMapper};
+use super::{MapperBox, Stream, ToMapper};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
@@ -229,7 +229,7 @@ impl Server {
         Ok(MapResult {
             a: Some(ta),
             b: buf_to_ob(buf),
-            c: Some(base),
+            c: Stream::c(base),
             d: authed_user.map(|up| {
                 let b: Box<dyn User> = Box::new(up);
                 map::AnyData::B(Box::new(b))

@@ -107,11 +107,7 @@ impl TcpDialer {
         let r = TcpStream::connect(dial_a.get_socket_addr().expect("dial_a has socket addr")).await;
 
         match r {
-            Ok(c) => MapResult::builder()
-                .a(pass_a)
-                .b(pass_b)
-                .c(Box::new(c))
-                .build(),
+            Ok(c) => MapResult::newc(Box::new(c)).a(pass_a).b(pass_b).build(),
             Err(e) => MapResult::from_e(e),
         }
     }
@@ -234,7 +230,7 @@ impl TcpStreamGenerator {
                                 let pa = Addr{ addr:net::NetAddr::Socket(raddr), network: net::Network::TCP };
 
                                 let r = tx.send(
-                                    MapResult::builder().c(Box::new(tcpstream))
+                                    MapResult::newc(Box::new(tcpstream))
                                     .d(AnyData::Addr(pa))
                                     .build(),
 
@@ -294,8 +290,7 @@ impl TcpStreamGenerator {
 
                         let r = tx
                             .send(
-                                MapResult::builder()
-                                    .c(Box::new(tcpstream))
+                                MapResult::newc(Box::new(tcpstream))
                                     .d(AnyData::Addr(pa))
                                     .build(),
                             )
@@ -335,7 +330,7 @@ impl Mapper for TcpStreamGenerator {
         };
 
         match r {
-            Ok(rx) => MapResult::builder().g(rx).build(),
+            Ok(rx) => MapResult::builder().c(Stream::g(rx)).build(),
             Err(e) => MapResult::builder().e(e).build(), //MapResult::from_err(e),
         }
     }

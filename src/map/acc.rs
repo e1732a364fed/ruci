@@ -79,8 +79,6 @@ pub async fn accumulate(
 
     let mut tag: String = String::new();
 
-    let mut last_stream = oc_ou_og_to_stream(last_r.c, last_r.u, last_r.g);
-
     for adder in mappers.by_ref() {
         let input_data = InputData {
             calculated_data: calculated_output_vec
@@ -107,7 +105,7 @@ pub async fn accumulate(
                 },
                 behavior,
                 MapParams {
-                    c: last_stream,
+                    c: last_r.c,
                     a: last_r.a,
                     b: last_r.b,
                     d: input_data,
@@ -126,9 +124,7 @@ pub async fn accumulate(
 
         calculated_output_vec.push(last_r.d);
 
-        last_stream = oc_ou_og_to_stream(last_r.c, last_r.u, last_r.g);
-
-        if last_stream.is_none_or_generator() {
+        if last_r.c.is_none_or_generator() {
             break;
         }
         if last_r.e.is_some() {
@@ -139,7 +135,7 @@ pub async fn accumulate(
     AccumulateResult {
         a: last_r.a,
         b: last_r.b,
-        c: last_stream,
+        c: last_r.c,
         d: calculated_output_vec,
         e: last_r.e,
         id: if last_r.new_id.is_some() {
@@ -178,27 +174,16 @@ pub async fn accumulate_from_start(
         return Err(e);
     }
 
-    if let Some(rx) = first_r.g {
+    if let Stream::Generator(rx) = first_r.c {
         in_iter_accumulate_forever(CID::default(), rx, tx, inmappers, oti).await;
     } else {
         match &first_r.c {
-            Some(c) => {
-                warn!(
-                    "accumulate_from_start: not a stream generator, will accumulate directly. {}",
-                    c.name()
-                );
+            Stream::None => {
+                warn!("accumulate_from_start: no input stream, still trying to accumulate")
             }
-            None => match &first_r.u {
-                Some(u) => {
-                    warn!(
-                            "accumulate_from_start: not a stream generator, will accumulate directly. {}",
-                            u.name()
-                        );
-                }
-                None => {
-                    warn!("accumulate_from_start: no input stream, still trying to accumulate")
-                }
-            },
+            _ => {
+                warn!("accumulate_from_start: not a stream generator, will accumulate directly.",);
+            }
         }
 
         tokio::spawn(async move {

@@ -104,6 +104,6 @@ impl Mapper for Stdio {
         } else {
             self.configured_target_addr()
         };
-        MapResult::builder().c(Box::new(c)).b(params.b).a(a).build()
+        MapResult::newc(Box::new(c)).b(params.b).a(a).build()
     }
 }

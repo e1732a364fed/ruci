@@ -54,8 +54,6 @@ use typed_builder::TypedBuilder;
 
 use std::{fmt::Debug, io, sync::Arc};
 
-use self::addr_conn::AddrConn;
-
 /// 如果新连接不是udp, 则内含新连接
 pub enum NewConnection {
     TcpConnection(TcpStream),
@@ -134,8 +132,8 @@ pub struct MapResult {
     #[builder(default)]
     pub b: Option<BytesMut>, //pre read buf
 
-    #[builder(default, setter(strip_option))]
-    pub c: Option<Conn>,
+    #[builder(default)]
+    pub c: Stream,
 
     ///extra data, 如果d为 AnyData::B, 则只能被外部调用;, 如果
     /// d为 AnyData::A, 可其可以作为 下一层的 InputData
@@ -145,12 +143,6 @@ pub struct MapResult {
     #[builder(default, setter(strip_option, into))]
     pub e: Option<anyhow::Error>,
 
-    #[builder(default, setter(strip_option))]
-    pub g: Option<tokio::sync::mpsc::Receiver<MapResult>>,
-
-    #[builder(default, setter(strip_option))]
-    pub u: Option<AddrConn>, //udp
-
     /// 有值代表产生了与之前不同的 cid
     #[builder(default, setter(strip_option))]
     pub new_id: Option<CID>,
@@ -159,11 +151,15 @@ pub struct MapResult {
 //some helper initializers
 impl MapResult {
     pub fn c(c: net::Conn) -> Self {
-        MapResult::builder().c(c).build()
+        MapResult::builder().c(Stream::c(c)).build()
+    }
+
+    pub fn newc(c: net::Conn) -> MapResultBuilder<((), (), (Stream,), (), (), ())> {
+        MapResult::builder().c(Stream::c(c))
     }
 
     pub fn cb(c: net::Conn, b: Option<BytesMut>) -> Self {
-        MapResult::builder().c(c).b(b).build()
+        MapResult::builder().c(Stream::c(c)).b(b).build()
     }
 
     pub fn err_str(estr: &str) -> Self {
@@ -182,7 +178,11 @@ impl MapResult {
     }
 
     pub fn ebc(e: anyhow::Error, b: BytesMut, c: net::Conn) -> Self {
-        MapResult::builder().c(c).e(e).b(buf_to_ob(b)).build()
+        MapResult::builder()
+            .c(Stream::c(c))
+            .e(e)
+            .b(buf_to_ob(b))
+            .build()
     }
 
     pub fn buf_err(b: BytesMut, e: anyhow::Error) -> Self {
@@ -193,7 +193,7 @@ impl MapResult {
     }
 
     pub fn abcod(a: net::Addr, b: BytesMut, c: net::Conn, d: Option<AnyData>) -> Self {
-        let builder = MapResult::builder().c(c).a(Some(a)).b(Some(b));
+        let builder = MapResult::builder().c(Stream::c(c)).a(Some(a)).b(Some(b));
         match d {
             Some(d) => builder.d(d).build(),
             None => builder.build(),
@@ -300,16 +300,3 @@ pub trait MapperSync: MapperExt + Send + Sync {}
 impl<T: MapperExt + Send + Sync> MapperSync for T {}
 
 pub type MapperBox = Box<dyn MapperSync>;
-
-fn oc_ou_og_to_stream(c: Option<Conn>, u: Option<AddrConn>, g: Option<StreamGenerator>) -> Stream {
-    match c {
-        Some(c) => Stream::TCP(c),
-        None => match u {
-            Some(u) => Stream::UDP(u),
-            None => match g {
-                Some(g) => Stream::Generator(g),
-                None => Stream::None,
-            },
-        },
-    }
-}

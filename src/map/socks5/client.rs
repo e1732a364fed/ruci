@@ -91,8 +91,7 @@ impl Client {
             base.write_all(&ed).await?;
         }
 
-        Ok(MapResult::builder()
-            .c(base)
+        Ok(MapResult::newc(base)
             .d(map::AnyData::B(Box::new(adopted_method)))
             .build())
     }

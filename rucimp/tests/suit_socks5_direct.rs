@@ -168,7 +168,7 @@ async fn f_dial_future_out_adder(
 
     info!("client{} writing hello...", rid,);
 
-    let mut newconn = newconn.expect("last_result as c");
+    let mut newconn = newconn.try_unwrap_tcp().expect("last_result as c");
 
     newconn.write(&b"hello\n"[..]).await.unwrap();
 

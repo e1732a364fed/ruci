@@ -72,6 +72,7 @@ async fn f_dial_future_tls_out_adder(
         )
         .await
         .c
+        .try_unwrap_tcp()
         .expect("last_result as c");
 
     let a = socks5::client::Client {
@@ -86,6 +87,7 @@ async fn f_dial_future_tls_out_adder(
         )
         .await
         .c
+        .try_unwrap_tcp()
         .expect("last_result as c");
 
     info!("client{} writing hello...", rid,);
