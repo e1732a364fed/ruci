@@ -87,7 +87,7 @@ impl Server {
             .await?;
 
         if r.e.is_some() {
-            debug!("{}", r.e.as_ref().unwrap());
+            debug!("{cid} debug socks5http e, {}", r.e.as_ref().unwrap());
 
             if r.b.is_some() {
                 let c = match r.c {
@@ -95,6 +95,8 @@ impl Server {
 
                     _ => unimplemented!(),
                 };
+                debug!("{cid} try https  ",);
+
                 let rr = self.https.handshake(cid, c, r.b).await?;
 
                 return Ok(rr);

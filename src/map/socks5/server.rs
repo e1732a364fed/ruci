@@ -132,11 +132,13 @@ impl Server {
                     String::from_utf8_lossy(&buf[..min(n, 256)])
                 ));
 
-                return Err(e2);
+                buf.truncate(n);
+                return Ok(MapResult::ebc(e2, buf, base));
             } else {
                 let e2 = Error::other(format!("{}, socks5: unsupported version: {}", cid, v));
 
-                return Err(e2);
+                buf.truncate(n);
+                return Ok(MapResult::ebc(e2, buf, base));
             }
         }
 
@@ -153,7 +155,8 @@ impl Server {
                 cid, nm, n
             ));
 
-            return Err(e3);
+            buf.truncate(n);
+            return Ok(MapResult::ebc(e3, buf, base));
         }
         let (mut authed, mut dealt_none, mut dealt_pass) = (false, false, false);
 
@@ -293,10 +296,13 @@ impl Server {
                         break;
                     }
                     let _ = base.write(&[USERPASS_SUBNEGOTIATION_VERSION, 1]).await;
-                    return Err(Error::new(
+
+                    buf.truncate(n);
+                    let e = Error::new(
                         io::ErrorKind::InvalidData,
                         format!("{}, socks5: auth failed, {}", cid, thisup.auth_strs()),
-                    ));
+                    );
+                    return Ok(MapResult::ebc(e, buf, base));
                 }
                 _ => {} //忽视其它的 auth method
             }
@@ -309,7 +315,8 @@ impl Server {
 
             let e4 = Error::other(format!("{}, socks5: not authed:  {:?}", cid, opt_e));
 
-            return Err(e4);
+            buf.truncate(n);
+            return Ok(MapResult::ebc(e4, buf, base));
         }
 
         if remainn > 0 {
@@ -342,31 +349,34 @@ impl Server {
         }
 
         if n < 7 {
-            return Err(Error::other(format!(
+            let e = Error::other(format!(
                 "{}, socks5: read cmd part failed, msgTooShort: {}",
                 cid, n
-            )));
+            ));
+
+            buf.truncate(n);
+            return Ok(MapResult::ebc(e, buf, base));
         }
         if buf[0] != VERSION5 {
-            return Err(Error::other(format!(
-                "{}, socks5: stage2, wrong verson, {}",
-                cid, buf[0]
-            )));
+            let e = Error::other(format!("{}, socks5: stage2, wrong verson, {}", cid, buf[0]));
+
+            buf.truncate(n);
+            return Ok(MapResult::ebc(e, buf, base));
         }
 
         let cmd = buf[1];
         if cmd == CMD_BIND {
-            return Err(Error::other(format!(
-                "{}, socks5: unsuppoted command CMD_BIND",
-                cid
-            )));
+            let e = Error::other(format!("{}, socks5: unsuppoted command CMD_BIND", cid));
+
+            buf.truncate(n);
+            return Ok(MapResult::ebc(e, buf, base));
         }
 
         if cmd != CMD_UDPASSOCIATE && cmd != CMD_CONNECT {
-            return Err(Error::other(format!(
-                "{}, socks5: unsuppoted command, {}",
-                cid, cmd
-            )));
+            let e = Error::other(format!("{}, socks5: unsuppoted command, {}", cid, cmd));
+
+            buf.truncate(n);
+            return Ok(MapResult::ebc(e, buf, base));
         }
 
         let (mut l, mut off) = (2, 4);
@@ -392,10 +402,10 @@ impl Server {
                 is_name = true;
             }
             _ => {
-                return Err(Error::other(format!(
-                    "{}, socks5: unknown address type: {}",
-                    cid, buf[3]
-                )));
+                let e = Error::other(format!("{}, socks5: unknown address type: {}", cid, buf[3]));
+
+                buf.truncate(n);
+                return Ok(MapResult::ebc(e, buf, base));
             }
         }
         let name: Option<String> = if is_name {
@@ -407,10 +417,13 @@ impl Server {
         let remain = n as i32 - end as i32;
 
         if remain < 0 {
-            return Err(Error::other(format!(
+            let e = Error::other(format!(
                 "{}, socks5: stage2, short of [port] part {}",
                 cid, n
-            )));
+            ));
+
+            buf.truncate(n);
+            return Ok(MapResult::ebc(e, buf, base));
         }
 
         //network octet order, 即大端序, 低地址的数是更重要的字节 (即要左移8的字节).

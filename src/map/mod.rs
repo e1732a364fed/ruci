@@ -232,6 +232,17 @@ impl MapResult {
             Err(e) => MapResult::from_err(e),
         }
     }
+
+    pub fn ebc(e: io::Error, buf: BytesMut, c: net::Conn) -> Self {
+        MapResult {
+            a: None,
+            b: Some(buf),
+            c: Stream::TCP(c),
+            d: None,
+            e: Some(e),
+            new_id: None,
+        }
+    }
     pub fn buf_err(buf: BytesMut, e: io::Error) -> Self {
         MapResult {
             a: None,

@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("working dir: {:?} \n", std::env::current_dir().unwrap());
 
     const RL: &str = "RUST_LOG";
-    let l = env::var(RL).unwrap_or("info".to_string());
+    let l = env::var(RL).unwrap_or("debug".to_string());
 
     if l == "warn" {
         println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";rucimp \n shell like so: RUST_LOG=info ./rucimp")
