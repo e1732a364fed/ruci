@@ -12,6 +12,64 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+
+  build-cross:
+    runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: full
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-linux-android
+          - aarch64-unknown-linux-gnu
+          - aarch64-unknown-linux-musl
+          - i686-unknown-linux-musl
+          - x86_64-unknown-linux-musl
+          - armv7-unknown-linux-musleabihf
+          - armv7-unknown-linux-gnueabihf
+          - arm-unknown-linux-gnueabi
+          - arm-unknown-linux-gnueabihf
+          - arm-unknown-linux-musleabi
+          - arm-unknown-linux-musleabihf
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable
+          rustup default stable
+          rustup override set stable
+          rustup target add --toolchain stable ${{ matrix.target }}
+
+      - name: Install cross
+        run: cargo install cross
+      
+      - name: Build ${{ matrix.target }}
+        run: |
+
+          compile_target=${{ matrix.target }}
+
+          if [[ "$compile_target" == *"-linux-"* || "$compile_target" == *"-apple-"* ]]; then
+            compile_features=" -F api_server -F api_client -F utils"
+          else
+            compile_features=" -F api_server -F api_client -F utils"
+          fi
+
+          cd crates/ruci-cmd
+          make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }} TARGET_FEATURES=$compile_features
+
+      - name: Upload Github Assets
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: rucimp/dist/*.tar.xz
+          tag_name: ${{ inputs.tag || github.ref_name }}    
+
+
   build-ubuntu:
     permissions: write-all
     runs-on: ubuntu-latest

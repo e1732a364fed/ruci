@@ -1,4 +1,4 @@
-name: Rucimp Release
+name: Rucimp Examples Release
 
 on:
   workflow_dispatch:

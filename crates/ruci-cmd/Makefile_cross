@@ -1,16 +1,10 @@
 define compile
-	cargo build --target ${BUILD_TRIPLET} -F api_server -F api_client -F utils --release 
+	cross build --target ${BUILD_TRIPLET} --features "${TARGET_FEATURES}" --release 
 endef
 
 define copy
 	mkdir -p dist
 	cd ../../target/${BUILD_TRIPLET}/release && cp ruci-cmd ../../../crates/ruci-cmd/dist/
-	cp -r ../../resource dist/
-endef
-
-define copy_exe
-	mkdir -p dist
-	cd ../../target/${BUILD_TRIPLET}/release && cp ruci-cmd.exe ../../../crates/ruci-cmd/dist/
 	cp -r ../../resource dist/
 endef
 
@@ -22,11 +16,6 @@ endef
 main:
 	$(call compile)
 	$(call copy)
-	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
-
-exe:
-	$(call compile)
-	$(call copy_exe)
 	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
 
 cp:
