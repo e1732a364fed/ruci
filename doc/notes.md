@@ -124,7 +124,7 @@ BindDialer = {
 }
 ```
 
-### udp fixed_target_addr 转发 问题
+### BindDialer 的 udp fixed_target_addr 转发 问题
 
 fixed_target_addr (dokodemo) 对于 udp BindDialer 有一个问题
 
@@ -156,14 +156,15 @@ www.1.com 的答 是回复给 client1  还是 client2 呢？
 不完美方案：
 
 1. 记录连接的顺序，然后按回答顺序回复给源。（如，记录交作业的顺序，按出成绩的顺序 回复）。问题：出成绩的顺序与交作业的顺序不一定一致
-2. 探查 udp 内容，按答案中的内容匹配后回复给源。问题：这样属于侵犯源的隐私
+2. 探查 udp 内容，按答案中的内容匹配后回复给源。问题：这样属于侵犯源的隐私, 且若不为已知协议则做不到
 3. 将回复 广播给所有 源。问题：这样属于侵犯源的隐私
+4. 独占性: 让用户自行确保同一段时间内只有唯一的客户端连接 ruci的 BindDialer
 
 
-都不完美. 唯一的方案是: 不用 BindDialer 做 udp 转发, 而是 使用 Listener
+都不完美. 绕过的方案是: 不用 BindDialer 做 udp 转发, 而是 使用 Listener
 
 Listener 在 监听 udp, 且 有 udp 的 fixed_target_addr 时, 会对每一个 inbound
-连接新建一个 udp , 建立了一对一的转发, 而不是 一对多的转发, 就没问题了
+连接新建一个 udp 连接 , 建立了一对一的转发, 而不是 一对多的转发, 就没问题了
 
 
 ### 报错示例: socks5 client only support tcplike stream, got NoStream

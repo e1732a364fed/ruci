@@ -29,8 +29,8 @@ use super::{
 /// 只支持 预定义 target_addr
 #[derive(Debug)]
 pub struct FixedTargetAddrUDPListener {
-    pub laddr: Addr,
-    pub dst: Addr,
+    laddr: Addr,
+    fixed_target: Addr,
     rx: mpsc::Receiver<(AddrConn, Addr)>,
     shutdown_tx: Option<oneshot::Sender<()>>,
 }
@@ -116,7 +116,7 @@ impl FixedTargetAddrUDPListener {
             shutdown_tx: Some(shutdown_tx),
             laddr,
             rx,
-            dst,
+            fixed_target: dst,
         })
     }
 
@@ -135,6 +135,19 @@ impl FixedTargetAddrUDPListener {
         if let Some(tx) = tx {
             let _ = tx.send(());
         }
+    }
+
+    pub fn laddr(&self) -> &Addr {
+        &self.laddr
+    }
+    pub fn raddr(&self) -> &Addr {
+        &self.fixed_target
+    }
+}
+
+impl Drop for FixedTargetAddrUDPListener {
+    fn drop(&mut self) {
+        self.shutdown()
     }
 }
 

@@ -2,14 +2,14 @@ use std::{fs::remove_file, path::PathBuf};
 
 use anyhow::{bail, Context};
 use tokio::net::TcpListener;
-use tracing::warn;
+use tracing::{info, warn};
 
 #[cfg(unix)]
 use tokio::net::UnixListener;
 
 use crate::net::{self, Stream};
 
-use super::{udp_listen::FixedTargetAddrUDPListener, Addr};
+use super::{udp_fixed_listen::FixedTargetAddrUDPListener, Addr};
 
 #[derive(Debug)]
 pub enum Listener {
@@ -27,35 +27,51 @@ pub async fn listen(
 ) -> anyhow::Result<Listener> {
     match laddr.network {
         net::Network::TCP => {
-            let r = TcpListener::bind(laddr.get_socket_addr().expect("a has socket addr"))
-                .await
-                .context("tcp listen failed")?;
+            let r = TcpListener::bind(
+                laddr
+                    .get_socket_addr()
+                    .context("listen tcp but has no socket addr")?,
+            )
+            .await
+            .context("tcp listen failed")?;
             Ok(Listener::TCP(r))
         }
-        net::Network::UDP => Ok(Listener::UDP(
-            FixedTargetAddrUDPListener::new(laddr.clone(), opt_fixed_target_addr.unwrap()).await?,
-        )),
+        net::Network::UDP => {
+            let ft = match opt_fixed_target_addr {
+                Some(ft) => ft,
+                None => bail!("listen udp requires a fixed_target_addr"),
+            };
+            Ok(Listener::UDP(
+                FixedTargetAddrUDPListener::new(laddr.clone(), ft).await?,
+            ))
+        }
 
         #[cfg(unix)]
         net::Network::Unix => {
-            let file_n = laddr.get_name().expect("a has a name");
+            let file_n = laddr.get_name().context("listen unix but has no name")?;
             let p = PathBuf::from(file_n.clone());
 
-            // is_file returns false for unix domain socket
-
-            if p.exists() && !p.is_dir() {
-                warn!(
-                    "unix listen: previous {:?} exists, will delete it for new listening.",
-                    p
-                );
-                remove_file(p.clone()).context("unix listen try remove previous file failed")?;
-            }
-            let r = UnixListener::bind(p).context("unix listen failed")?;
+            remove_unix(&p, true)?;
+            let r = UnixListener::bind(p).context("listen unix failed")?;
 
             Ok(Listener::UNIX((r, file_n)))
         }
         _ => bail!("listen not implemented for this network: {}", laddr.network),
     }
+}
+
+fn remove_unix(p: &PathBuf, warn: bool) -> anyhow::Result<()> {
+    // is_file returns false for unix domain socket
+
+    if p.exists() && !p.is_dir() && !p.is_file() {
+        if warn {
+            warn!("unix: previous {:?} exists, will remove it!", p);
+        } else {
+            info!("removing unix: {:?}", p);
+        }
+        remove_file(p.clone()).context("unix try remove previous file failed")?;
+    }
+    Ok(())
 }
 
 impl Drop for Listener {
@@ -84,7 +100,7 @@ impl Listener {
                     Err(e) => format!("no laddr, e:{e}"),
                 }
             }
-            Listener::UDP(u) => format!("{}", u.laddr),
+            Listener::UDP(u) => format!("{}", u.laddr()),
 
             #[cfg(unix)]
             Listener::UNIX(u) => {
@@ -102,17 +118,12 @@ impl Listener {
             #[cfg(unix)]
             Listener::UNIX((_, file_n)) => {
                 let p = PathBuf::from(file_n.clone());
-                if p.exists() && !p.is_dir() {
-                    warn!("unix clean up:  will delete {:?}", p);
-                    let r = remove_file(p.clone()).context("unix clean up delete file failed");
-                    if let Err(e) = r {
-                        warn!("{}", e)
-                    }
+                let r = remove_unix(&p, false);
+                if let Err(e) = r {
+                    warn!("{}", e)
                 }
             }
-            Listener::UDP(ul) => {
-                ul.shutdown();
-            }
+
             _ => {}
         }
     }

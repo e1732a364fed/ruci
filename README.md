@@ -172,6 +172,7 @@ o2node-.->collector
 - [x] tcp, udp, unix domain socket, ip (tun)([tun example](rucimp/examples/README.md#tun))
 - [x] 流量记录 (两种实现, 分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
 - [x] Direct, Blackhole, Listener, BindDialer, Stdio, Fileio
+- [x] fixed_target_addr
 - [x] Tls, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
 - [x] Adder (按字节加法器), Counter, Echo
 - [x] 路由 (tag_route)
