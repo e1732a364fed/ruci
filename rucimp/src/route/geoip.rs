@@ -10,12 +10,25 @@ https://docs.rs/maxminddb/latest/maxminddb/struct.Reader.html
  */
 use std::net::IpAddr;
 
+use log::warn;
 use maxminddb::geoip2;
 
 pub fn get_ip_iso(ip: IpAddr) -> String {
-    let reader = maxminddb::Reader::open_readfile("resource/Country.mmdb").unwrap();
+    let reader = maxminddb::Reader::open_readfile("resource/Country.mmdb")
+        .expect("has resource/Country.mmdb");
 
-    let c: geoip2::Country = reader.lookup(ip).unwrap();
-    c.country.unwrap().iso_code.unwrap().to_string()
+    let r = reader.lookup(ip);
+    let c: geoip2::Country = match r {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("look up maxminddb::Reader failed, {e}");
+            return "".to_string();
+        }
+    };
+    if let Some(c) = c.country {
+        c.iso_code.unwrap_or_default().to_string()
+    } else {
+        "".to_string()
+    }
 }
-//todo: use real file; cache in mem; remove unwrap; add test
+//todo: use real file; cache in mem;  add test

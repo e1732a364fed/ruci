@@ -86,7 +86,7 @@ where
             self.clients.push(d);
         }
 
-        self.default_c = Some(self.clients.first().unwrap().clone());
+        self.default_c = Some(self.clients.first().expect("has at lease a client").clone());
 
         self.servers = c
             .listen
@@ -150,7 +150,7 @@ where
             return Err(io::Error::other("no client"));
         }
 
-        let defaultc = self.default_c.clone().unwrap();
+        let defaultc = self.default_c.clone().expect("has default_c");
 
         //todo: 因为没实现路由功能, 所以现在只能用一个 client, 即 default client
         // 路由后, 要传递给 listen_ser 一个路由表

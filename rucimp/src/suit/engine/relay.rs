@@ -168,12 +168,8 @@ async fn listen_tcp(
     tokio::select! {
         r = async {
             loop {
-                let r = listener.accept().await;
-                if r.is_err(){
+                let (tcpstream, raddr) = listener.accept().await?;
 
-                    break;
-                }
-                let (tcpstream, raddr) = r.unwrap();
 
                 let laddr = laddr.clone();
                 let ti = clone_oti();
@@ -201,7 +197,6 @@ async fn listen_tcp(
 
             }
 
-            Ok::<_, io::Error>(())
         } => {
             r
 
@@ -289,14 +284,17 @@ pub async fn handle_conn<'a>(
 
     let is_direct: bool;
 
-    //todo: 路由功能
-    let real_target_addr = if outc_addr.is_some() {
-        is_direct = false;
-        outc_addr.unwrap()
-    } else {
-        is_direct = true;
-        target_addr.clone()
+    let real_target_addr = match outc_addr {
+        Some(oa) => {
+            is_direct = false;
+            oa
+        }
+        None => {
+            is_direct = true;
+            target_addr.clone()
+        }
     };
+
     state.set_outc_name(outc_name.to_string());
 
     //todo: DNS 功能
@@ -333,25 +331,24 @@ pub async fn handle_conn<'a>(
             })
             .await;
 
-        if let Err(e) = dial_result {
-            warn!("{state}, dial out client timeout, {e}",);
-            //let _ = in_conn.shutdown();
-            //let _ = out_stream.try_shutdown();
-            return Err(e.into());
-        }
-        let dial_result = dial_result.unwrap();
+        let dial_result = match dial_result {
+            Ok(r) => r,
+            Err(e) => {
+                warn!("{state}, dial out client timeout, {e}",);
+                return Err(e.into());
+            }
+        };
+
         if let Some(e) = dial_result.e {
             warn!("{state}, dial out client failed, {e}",);
-            //let _ = in_conn.shutdown();
-            //let _ = out_stream.try_shutdown();
             return Err(e);
-        } else if let Stream::None = dial_result.c {
+        }
+        if let Stream::None = dial_result.c {
             warn!("{state}, dial out client stream got consumed ",);
 
             return Ok(());
         }
 
-        //let (out_stream, remain_target_addr, _extra_out_data_vec) = dial_result;
         if let Some(rta) = dial_result.a {
             warn!("{state}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
         }

@@ -176,7 +176,7 @@ impl MappersVec for SuitStruct {
 #[async_trait]
 impl Suit for SuitStruct {
     fn generate_upper_mappers(&mut self) {
-        let c = self.get_config().unwrap().clone();
+        let c = self.get_config().expect("has valid config").clone();
 
         match self.get_behavior() {
             ProxyBehavior::ENCODE => {

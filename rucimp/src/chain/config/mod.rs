@@ -39,7 +39,10 @@ impl StaticConfig {
                     })
                     .collect::<Vec<_>>();
 
-                chain.last_mut().unwrap().set_is_tail_of_chain(true);
+                chain
+                    .last_mut()
+                    .expect("has a inbound")
+                    .set_is_tail_of_chain(true);
                 chain
             })
             .collect();
@@ -62,7 +65,10 @@ impl StaticConfig {
                     })
                     .collect::<Vec<_>>();
 
-                chain.last_mut().unwrap().set_is_tail_of_chain(true);
+                chain
+                    .last_mut()
+                    .expect("has an outbound")
+                    .set_is_tail_of_chain(true);
                 chain
             })
             .collect::<Vec<_>>()
@@ -72,14 +78,18 @@ impl StaticConfig {
     pub fn get_default_and_outbounds_map(&self) -> (MIterBox, HashMap<String, MIterBox>) {
         let obs = self.get_outbounds();
 
-        let first_o = obs.first().unwrap().clone();
+        let first_o = obs.first().expect("has a outbound").clone();
         let static_first_o = Box::leak(Box::new(first_o));
 
         let static_default_oiter = Box::new(static_first_o.iter());
         let omap = obs
             .into_iter()
             .map(|outbound| {
-                let tag = outbound.iter().next().unwrap().get_chain_tag();
+                let tag = outbound
+                    .iter()
+                    .next()
+                    .expect("outbound has one mapper at least")
+                    .get_chain_tag();
 
                 let static_outbound = Box::leak(Box::new(outbound.clone()));
                 let static_outbound_iter: MIterBox = Box::new(static_outbound.iter());
@@ -92,13 +102,12 @@ impl StaticConfig {
 
     /// panic if the given tag isn't presented in outbounds
     pub fn get_tag_route(&self) -> Option<HashMap<String, String>> {
-        if self.tag_route.is_none() {
-            return None;
-        }
-        let route_tag_pairs = self.tag_route.clone().unwrap();
-        let route_tag_map = route_tag_pairs.into_iter().collect::<HashMap<_, _>>();
+        self.tag_route.as_ref().map(|tr| {
+            let route_tag_pairs = tr.clone();
+            let route_tag_map = route_tag_pairs.into_iter().collect::<HashMap<_, _>>();
 
-        Some(route_tag_map)
+            route_tag_map
+        })
     }
 }
 
@@ -190,7 +199,8 @@ impl ToMapper for InMapperConfig {
             }
             InMapperConfig::Listener(lis) => match lis {
                 Listener::TcpListener(tcp_l_str) => {
-                    let a = net::Addr::from_ip_addr_str("tcp", tcp_l_str).unwrap();
+                    let a =
+                        net::Addr::from_ip_addr_str("tcp", tcp_l_str).expect("ip_addr is valid");
                     Box::new(ruci::map::network::TcpStreamGenerator {
                         fixed_target_addr: Some(a),
                         ..Default::default()
@@ -267,7 +277,7 @@ impl ToMapper for OutMapperConfig {
             OutMapperConfig::Direct => Box::new(ruci::map::network::Direct::default()),
             OutMapperConfig::Dialer(d) => match d {
                 Dialer::TcpDialer(td_str) => {
-                    let a = net::Addr::from_ip_addr_str("tcp", td_str).unwrap();
+                    let a = net::Addr::from_ip_addr_str("tcp", td_str).expect("ip_addr is valid");
                     Box::new(ruci::map::network::TcpDialer {
                         fixed_target_addr: Some(a),
                         ..ruci::map::network::TcpDialer::default()
@@ -325,10 +335,10 @@ mod test {
             }],
             tag_route: None,
         };
-        let toml = toml::to_string(&sc).unwrap();
+        let toml = toml::to_string(&sc).expect("valid toml");
         println!("{:#}", toml);
 
-        let toml: StaticConfig = toml::from_str(&toml).unwrap();
+        let toml: StaticConfig = toml::from_str(&toml).expect("valid toml");
         println!("{:#?}", toml);
     }
 }

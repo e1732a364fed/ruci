@@ -16,7 +16,7 @@ use rucimp::chain::{config::lua, engine::StaticEngine};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("rucimp~ chain\n");
-    let cdir = std::env::current_dir().unwrap();
+    let cdir = std::env::current_dir().expect("has current directory");
     println!("working dir: {:?} \n", cdir);
 
     const RL: &str = "RUST_LOG";
@@ -74,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let contents = r_contents.expect(&("no ".to_owned() + &filename));
 
     let mut se = StaticEngine::default();
-    let sc = lua::load(&contents).unwrap();
+    let sc = lua::load(&contents).expect("has valid lua codes in the file content");
 
     //println!("{:?}", sc);
 

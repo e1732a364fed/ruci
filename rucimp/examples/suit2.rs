@@ -20,8 +20,8 @@ use rucimp::{
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("rucimp~ suit2\n");
-    println!("working dir: {:?} \n", std::env::current_dir().unwrap());
-    let cdir = std::env::current_dir().unwrap();
+    let cdir = std::env::current_dir().expect("has current_dir");
+    println!("working dir: {:?} \n", cdir);
 
     const RL: &str = "RUST_LOG";
     let l = env::var(RL).unwrap_or("info".to_string());

@@ -87,7 +87,7 @@ where
             self.clients.push(d);
         }
 
-        let d = self.clients.first().unwrap();
+        let d = self.clients.first().expect("has a client");
         self.default_c = Some(*d);
 
         let x: Vec<_> = c
@@ -164,7 +164,12 @@ where
         self.servers.iter().for_each(|s| {
             let (tx, rx) = oneshot::channel();
 
-            let task = listen_ser2(*s, self.default_c.unwrap(), Some(self.ti.clone()), rx);
+            let task = listen_ser2(
+                *s,
+                self.default_c.expect("has default_c"),
+                Some(self.ti.clone()),
+                rx,
+            );
             tasks.push(task);
             shutdown_tx_vec.push(tx);
         });
@@ -244,12 +249,7 @@ async fn listen_tcp2(
     tokio::select! {
         r = async {
             loop {
-                let r = listener.accept().await;
-                if r.is_err(){
-
-                    break;
-                }
-                let (tcpstream, raddr) = r.unwrap();
+                let (tcpstream, raddr) = listener.accept().await?;
 
                 let ti = clone_oti();
                 if log_enabled!(Debug) {
@@ -268,7 +268,6 @@ async fn listen_tcp2(
                 );
             }
 
-            Ok::<_, io::Error>(())
         } => {
             r
 

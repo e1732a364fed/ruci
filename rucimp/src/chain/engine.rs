@@ -140,15 +140,15 @@ impl StaticEngine {
     ) -> io::Result<()> {
         loop {
             let ar = arx.recv().await;
-            if ar.is_none() {
+            if let Some(ar) = ar {
+                tokio::spawn(handle_in_accumulate_result(
+                    ar,
+                    out_selector,
+                    Some(ti.clone()),
+                ));
+            } else {
                 break;
             }
-            let ar = ar.unwrap();
-            tokio::spawn(handle_in_accumulate_result(
-                ar,
-                out_selector,
-                Some(ti.clone()),
-            ));
         }
         Ok(())
     }
@@ -162,9 +162,9 @@ impl StaticEngine {
     }
     fn get_tag_route_out_selector(&mut self) -> &'static dyn OutSelector {
         let t = TagOutSelector {
-            outbounds_tag_route_map: self.tag_routes.clone().unwrap(),
+            outbounds_tag_route_map: self.tag_routes.clone().expect("has tag_routes"),
             outbounds_map: self.outbounds.clone(),
-            default: self.default_outbound.clone().unwrap(),
+            default: self.default_outbound.clone().expect("has default_outbound"),
         };
 
         //todo: do the same as try_drop_fixed_selector
@@ -173,7 +173,7 @@ impl StaticEngine {
     }
 
     fn get_fixed_out_selector(&mut self) -> &'static dyn OutSelector {
-        let ib = self.default_outbound.clone().unwrap();
+        let ib = self.default_outbound.clone().expect("has default_outbound");
         let fixed_selector = FixedOutSelector { default: ib };
         let fixed_selector = Box::new(fixed_selector);
         let fixed_selector: &'static FixedOutSelector = Box::leak(fixed_selector);

@@ -13,7 +13,7 @@ pub struct Config {
 impl Config {
     ///panic if the toml_str is invalid
     pub fn from_toml(toml_str: &str) -> Self {
-        toml::from_str(toml_str).unwrap()
+        toml::from_str(toml_str).expect("has valid toml")
     }
 }
 

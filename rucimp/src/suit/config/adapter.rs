@@ -125,7 +125,7 @@ pub fn get_socks5_server_option_from_ldconfig(c: LDConfig) -> socks5::server::Co
 }
 
 pub fn get_socks5_server_option_from_toml_config_str(toml_str: &str) -> socks5::server::Config {
-    let c: LDConfig = toml::from_str(toml_str).unwrap();
+    let c: LDConfig = toml::from_str(toml_str).expect("toml is valid");
     get_socks5_server_option_from_ldconfig(c)
 }
 
