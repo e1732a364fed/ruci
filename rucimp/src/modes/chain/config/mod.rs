@@ -741,11 +741,11 @@ impl TryFrom<InMapConfigWithDataSource> for MapBox {
                 }))
             }
             #[cfg(feature = "lwip")]
-            InMapConfig::StackLwip => Ok(Box::new(crate::map::tcp_ip_stack_lwip::Stack {
+            InMapConfig::StackLwip => Ok(Box::new(crate::map::tcp_ip_stack::lwip::Stack {
                 ext_fields: Some(MapExtFields::default()),
             })),
             #[cfg(feature = "smoltcp")]
-            InMapConfig::StackSmoltcp => Ok(Box::new(crate::map::tcp_ip_stack_smoltcp::Stack {
+            InMapConfig::StackSmoltcp => Ok(Box::new(crate::map::tcp_ip_stack::smoltcp::Stack {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {

@@ -1,3 +1,12 @@
+/*! Defines common code for tcp/ip stack
+ */
+
+#[cfg(feature = "lwip")]
+pub mod lwip;
+
+#[cfg(feature = "smoltcp")]
+pub mod smoltcp;
+
 pub mod udp;
 
 use std::{
@@ -140,7 +149,7 @@ where
 
         let shutdown_atomic: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
         tokio::spawn(async move {
-            crate::map::tcp_ip_stack_common::udp::loop_accept_udp(
+            crate::map::tcp_ip_stack::udp::loop_accept_udp(
                 udp_r.as_mut(),
                 udp_new_msg_tx_stack_end,
                 shutdown_atomic,
@@ -148,7 +157,7 @@ where
             .await
         });
 
-        let mut udp_listener = crate::map::tcp_ip_stack_common::udp::Listener::new(
+        let mut udp_listener = crate::map::tcp_ip_stack::udp::Listener::new(
             udp_new_msg_tx_self_end,
             udp_new_msg_rx_self_end,
         )

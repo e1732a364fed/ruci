@@ -14,13 +14,13 @@ use ruci::{
     net::CID,
 };
 
-use super::tcp_ip_stack_common::udp::{UdpRead, UdpWrite};
-use super::tcp_ip_stack_common::Builder;
+use super::udp::{UdpRead, UdpWrite};
+use super::Builder;
 
 mod udp {
     use std::net::SocketAddr;
 
-    use crate::map::tcp_ip_stack_common::udp::{DataDstSrc, UdpRead, UdpWrite};
+    use crate::map::tcp_ip_stack::udp::{DataDstSrc, UdpRead, UdpWrite};
 
     #[async_trait::async_trait]
     impl UdpWrite for netstack_smoltcp::udp::WriteHalf {
@@ -85,6 +85,6 @@ impl Builder for Stack {
 #[async_trait]
 impl Map for Stack {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        crate::map::tcp_ip_stack_common::maps(cid, params, self).await
+        crate::map::tcp_ip_stack::maps(cid, params, self).await
     }
 }

@@ -16,12 +16,12 @@ use ruci::{
     net::CID,
 };
 
-use super::tcp_ip_stack_common::udp::{UdpRead, UdpWrite};
-use super::tcp_ip_stack_common::Builder;
+use super::udp::{UdpRead, UdpWrite};
+use super::Builder;
 
 mod udp {
 
-    use crate::map::tcp_ip_stack_common::udp::*;
+    use crate::map::tcp_ip_stack::udp::*;
 
     use super::*;
 
@@ -72,6 +72,6 @@ impl Builder for Stack {
 #[async_trait]
 impl Map for Stack {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        crate::map::tcp_ip_stack_common::maps(cid, params, self).await
+        crate::map::tcp_ip_stack::maps(cid, params, self).await
     }
 }
