@@ -4,7 +4,7 @@
 可选功能 file_server, api_client, api_server, utils
 
 针对 rucimp 核心的 可选功能:
-trace, quic, quinn, lua, lua54, use-native-tls, native-tls-vendored, steganography
+trace, quinn, lua, lua54, use-native-tls, native-tls-vendored, steganography, smoltcp, lwip
 
  */
 #[cfg(any(feature = "api_client", feature = "api_server"))]
@@ -74,6 +74,7 @@ pub struct Args {
     #[arg(long)]
     pub in_memory: bool,
 
+    /// TRACE, DEBUG, INFO, WARN, ERROR. (can be lowercase)
     #[arg(short, long)]
     pub log_level: Option<rucimp::modes::LevelWrapper>,
 
@@ -106,12 +107,13 @@ pub struct Args {
     #[arg(long)]
     pub trace: bool,
 
+    /// enable api server
     #[cfg(feature = "api_server")]
     #[serde(default)]
     #[arg(short, long, default_value_t = false)]
     pub api_server: bool,
 
-    /// Default is "127.0.0.1:40681"
+    /// api server's listen addr, default is "127.0.0.1:40681"
     #[cfg(feature = "api_server")]
     #[arg(long)]
     pub api_addr: Option<String>,
@@ -123,6 +125,7 @@ pub struct Args {
     #[arg(long)]
     pub ws_log_addr: Option<String>,
 
+    /// set file server's data-source as a .tar.zip whose data is stored in a base64 string
     #[cfg(feature = "file_server")]
     #[arg(short)]
     #[serde(default)]
