@@ -42,11 +42,11 @@ jobs:
     - name: Install ARM compiler toolchain
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross aarch64-linux-gnu-g++
+        sudo apt-get install -y --no-install-recommends g++-aarch64-linux-gnu libc6-dev-arm64-cross
     - name: Install ARM7 compiler toolchain
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf libc-dev-armhf-cross arm-linux-gnueabihf-g++
+        sudo apt-get install -y --no-install-recommends g++-arm-linux-gnueabihf libc-dev-armhf-cross
     - name: Build ${{ matrix.target }}
       if: ${{ matrix.target != 'x86_64-pc-windows-gnu' }}
       run: |
