@@ -12,6 +12,8 @@ https://datatracker.ietf.org/doc/html/rfc1929
 
 pub mod client;
 pub mod server;
+pub mod udp;
+
 #[cfg(test)]
 mod test;
 

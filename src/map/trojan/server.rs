@@ -161,7 +161,7 @@ impl Server {
         }
 
         if is_udp {
-            let u = udp::split_conn_to_trojan_udp_rw(base);
+            let u = udp::from(base);
             let mut mr = MapResult::builder()
                 .c(Stream::u(u))
                 .a(Some(ta))

@@ -202,6 +202,7 @@ pub fn gen_random_higher_port() -> u16 {
     rng.gen_range(10240..=65535)
 }
 
+/// default: ipv4 0.0.0.0:0
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NetAddr {
     Socket(SocketAddr), //ip+port
@@ -229,6 +230,9 @@ pub enum Network {
 }
 
 impl Network {
+    pub fn is_tcp_or_udp(&self) -> bool {
+        matches!(self, Network::TCP) || matches!(self, Network::UDP)
+    }
     pub fn from_string(s: &str) -> Result<Self> {
         match s {
             "ip" => Ok(Network::IP),

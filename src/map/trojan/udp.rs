@@ -111,7 +111,7 @@ impl AsyncWriteAddr for Writer {
     }
 }
 
-pub fn split_conn_to_trojan_udp_rw(c: net::Conn) -> net::addr_conn::AddrConn {
+pub fn from(c: net::Conn) -> net::addr_conn::AddrConn {
     let (r, w) = tokio::io::split(c);
 
     let ar = Reader { base: Box::pin(r) };

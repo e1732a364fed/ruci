@@ -440,7 +440,7 @@ impl Server {
         buf.truncate(remain as usize);
 
         if log_enabled!(log::Level::Debug) && remain > 0 {
-            debug!("{}, socks5, got earlydata,{}", cid, remain);
+            debug!("{}, socks5 server got earlydata,{}", cid, remain);
         }
 
         //如果name中实际是 123.123.123.123 这种值(或ipv6的样式)，这种情况很常见，
@@ -481,7 +481,7 @@ impl Server {
         Ok(MapResult {
             b: buf_to_ob(buf),
             c: Stream::c(base),
-            e: Some(anyhow!("socks5: not supported cmd, {}", cmd)),
+            e: Some(anyhow!("socks5 server: not supported cmd, {}", cmd)),
             ..Default::default()
         })
     }

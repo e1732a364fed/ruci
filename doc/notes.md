@@ -10,6 +10,11 @@ outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不�
 在 suit 模式中, server 的行为是 listen, client 的行为是 dial; 而在 chain 模式中, inbound
 和 outbound 行为都叫做 map (映射) 
 
+# lib note
+
+ruci中有三种 route 实现 fixed, tag, info; 而 rucimp 有一种完整的 route 实现: RuleSet
+
+
 # dev note
 
 ## feature  

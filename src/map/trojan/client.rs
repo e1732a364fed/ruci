@@ -1,6 +1,7 @@
 use anyhow::bail;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
+use log::debug;
 use macro_mapper::{common_mapper_field, CommonMapperExt};
 use tokio::io::AsyncWriteExt;
 
@@ -39,17 +40,18 @@ impl Client {
         buf.put_u16(CRLF);
 
         let mut is_udp = false;
-        if ta.network == Network::TCP {
-            buf.put_u8(CMD_CONNECT);
-        } else if ta.network == Network::UDP {
-            buf.put_u8(CMD_UDPASSOCIATE);
-            is_udp = true;
-        } else {
-            bail!(
-                "trojan client handshake doesn't support this network: {}",
+        match ta.network {
+            Network::TCP => buf.put_u8(CMD_CONNECT),
+            Network::UDP => {
+                buf.put_u8(CMD_UDPASSOCIATE);
+                is_udp = true;
+            }
+            _ => bail!(
+                "trojan client handshake doesn't support this target network: {}",
                 ta.network
-            )
-        }
+            ),
+        };
+
         helpers::addr_to_socks5_bytes(&ta, &mut buf);
         buf.put_u16(CRLF);
 
@@ -58,6 +60,7 @@ impl Client {
                 if !b.is_empty() {
                     buf.extend_from_slice(b);
                     first_payload = None;
+                    debug!("trojan client writing ed");
                 }
             }
         }
@@ -65,7 +68,7 @@ impl Client {
         base.flush().await?;
 
         if is_udp {
-            let u = udp::split_conn_to_trojan_udp_rw(base);
+            let u = udp::from(base);
             Ok(MapResult::newu(u).b(first_payload).build())
         } else {
             Ok(MapResult::newc(base).b(first_payload).build())

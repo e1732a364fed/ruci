@@ -1,11 +1,18 @@
 use bytes::BufMut;
 use macro_mapper::DefaultMapperExt;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use map::{helpers, Addr, Network};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::UdpSocket,
+};
 
 use self::map::{MapParams, ProxyBehavior, CID};
 use super::*;
-use crate::{map::MapResult, net};
-use anyhow::{anyhow, Ok};
+use crate::{
+    map::{socks5::udp::new_addr_conn, MapResult, MapperExt},
+    net,
+};
+use anyhow::{anyhow, bail, Ok};
 
 #[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Client {
@@ -21,9 +28,16 @@ impl Client {
         cid: CID,
         mut base: net::Conn,
         a: net::Addr,
-        b: Option<BytesMut>,
+        mut b: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
         //let mut base = params.c;
+        let isudp = a.network == Network::UDP;
+        if !a.network.is_tcp_or_udp() {
+            bail!(
+                "trojan client: target_addr's network can't be proxied: {} ",
+                a.network
+            )
+        }
 
         const BUFLEN: usize = 1024; //todo: change this.
         let mut buf = BytesMut::with_capacity(BUFLEN);
@@ -73,27 +87,68 @@ impl Client {
             }
         }
         buf.clear();
-        buf.extend_from_slice(&[VERSION5, CMD_CONNECT, 0][..]);
-        net::helpers::addr_to_socks5_bytes(&a, &mut buf);
-        base.write_all(&buf).await?;
 
-        buf.resize(BUFLEN, 0);
-        n = base.read(&mut buf).await?;
+        if isudp {
+            buf.extend_from_slice(&[VERSION5, CMD_UDPASSOCIATE, 0][..]);
+            net::helpers::addr_to_socks5_bytes(&Addr::default(), &mut buf);
+            base.write_all(&buf).await?;
 
-        if n < 10 || buf[0] != 5 || buf[1] != 0 || buf[2] != 0 {
-            return Err(anyhow!(
-                "{}, socks5 client handshake failed when reading response",
-                cid
-            ));
+            buf.resize(buf.capacity(), 0);
+
+            let n = base.read(&mut buf).await?;
+
+            if n < 3 {
+                bail!("socks5 client udp handshake read failed, too short: {}", n)
+            }
+            assert!(n < 3);
+            if buf[0] != VERSION5 || buf[1] != 0 || buf[2] != 0 {
+                bail!("socks5 client udp handshake read failed, wrong msg");
+            }
+            buf.truncate(n);
+            let server_udp_addr = match helpers::socks5_bytes_to_addr(&mut buf) {
+                std::result::Result::Ok(a) => a,
+                Err(e) => return Err(e.context("socks5 client udp handshake failed")),
+            };
+
+            let server_udp_so = match server_udp_addr.get_socket_addr() {
+                Some(so) => so,
+                None => bail!("socks5 client udp handshake failed, got server addr, but not a valid socketaddr, is {} instead", &server_udp_addr),
+            };
+            let uso = UdpSocket::bind(server_udp_so).await?;
+
+            let ac = new_addr_conn(uso, server_udp_so);
+
+            Ok(MapResult::newu(ac)
+                .b(b)
+                .d(map::AnyData::B(Box::new(adopted_method)))
+                .build())
+        } else {
+            buf.extend_from_slice(&[VERSION5, CMD_CONNECT, 0][..]);
+            net::helpers::addr_to_socks5_bytes(&a, &mut buf);
+            base.write_all(&buf).await?;
+
+            buf.resize(BUFLEN, 0);
+            n = base.read(&mut buf).await?;
+
+            if n < 10 || buf[0] != 5 || buf[1] != 0 || buf[2] != 0 {
+                return Err(anyhow!(
+                    "{}, socks5 client handshake failed when reading response",
+                    cid
+                ));
+            }
+
+            if let Some(ed) = &b {
+                if self.is_tail_of_chain() {
+                    base.write_all(&ed).await?;
+                    b = None
+                }
+            }
+
+            Ok(MapResult::newc(base)
+                .b(b)
+                .d(map::AnyData::B(Box::new(adopted_method)))
+                .build())
         }
-
-        if let Some(ed) = b {
-            base.write_all(&ed).await?;
-        }
-
-        Ok(MapResult::newc(base)
-            .d(map::AnyData::B(Box::new(adopted_method)))
-            .build())
     }
 }
 
@@ -110,7 +165,7 @@ impl map::Mapper for Client {
             Some(ta) => ta,
             None => {
                 return MapResult::err_str(&format!(
-                    "{}, socks5 outadder called without target_addr",
+                    "{}, socks5 client called without target_addr",
                     cid
                 ));
             }
@@ -121,7 +176,7 @@ impl map::Mapper for Client {
                 let r = self.handshake(cid, c, target_addr, params.b).await;
                 MapResult::from_result(r)
             }
-            _ => MapResult::err_str("socks5 only support tcplike stream"),
+            _ => MapResult::err_str("socks5 client only support tcplike stream"),
         }
     }
 }

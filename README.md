@@ -161,23 +161,16 @@ o2node-.->collector
 - [x] 链式架构 
 - [x] suit配置格式 （即旧 verysimple 的 toml 配置）
 - [x] 链式配置格式 (新增)
-- [x] 代理功能 (rucimp/examples/suit, suit2 或 chain )
+- [x] 代理程序 (rucimp/examples: suit 或 chain )
 - [x] 日志 (env_logger)
 - [x] 流量记录 (两种实现，分别用于记录原始流量与实际流量)
 - [x] Direct,Blackhole, TcpListener, TcpDialer, Stdio
 - [x] tls,socks5,http proxy, socks5http, trojan
 - [x] Adder (按字节加法器), Counter (层流量计)
 - [ ] unix domain socket
-- [ ] 路由
+- [x] 路由
 - [ ] 回落
 - [ ] DNS
-
-#### socks5
-
-- [X] Server，Client
-- [x] IPV6,`NOAUTH`, `USERPASS`, `CONNECT`
-- [x] `UDP ASSOCIATE` 仅服务端
-- [ ] Frag
 
 #### 其它
 
