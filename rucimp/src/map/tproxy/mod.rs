@@ -21,7 +21,6 @@ use itertools::Itertools;
 use parking_lot::Mutex;
 use ruci::map::{self, *};
 use ruci::net::addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr};
-use ruci::utils::io_error;
 use ruci::{
     net::{self, *},
     Name,
@@ -155,7 +154,7 @@ impl UDPListener {
         let (shutdown_addrconn_tx, shutdown_addrconn_rx) = oneshot::channel();
 
         let r = match listen_a.network {
-            Network::UDP => so2::rawlisten_udp(&listen_a, &self.sopt).map(|socket| {
+            Network::UDP => so2::block_listen_udp_socket(&listen_a, &self.sopt).map(|socket| {
                 let (tx, rx) = mpsc::channel(1000); //todo: adjust this
 
                 let dst_src_map = Arc::new(Mutex::new(HashMap::new()));
@@ -351,6 +350,7 @@ impl AsyncReadAddr for UdpR {
                     let (current_using_i, left_bound, right_bound) = ad.0;
 
                     let data_l = right_bound - left_bound;
+
                     let bl = buf.len();
                     let len_to_cp = min(bl, data_l);
                     if data_l != len_to_cp {
@@ -381,7 +381,10 @@ impl AsyncReadAddr for UdpR {
                     return Poll::Ready(Ok((len_to_cp, dst)));
                 }
                 None => {
-                    return Poll::Ready(Err(io_error("tproxy UdpR rx closed")));
+                    return Poll::Ready(Err(io::Error::new(
+                        io::ErrorKind::ConnectionAborted,
+                        "tproxy UdpR rx closed",
+                    )));
                 }
             },
             Poll::Pending => return Poll::Pending,
@@ -402,9 +405,13 @@ fn loop_accept_udp(us: Socket, tx: mpsc::Sender<DataDstSrc>) {
     loop {
         let b = unsafe {
             if current_using_i == 0 {
-                &mut VEC
+                // is actually &mut VEC, followed the compiler prompt for 2024 edition
+                // and changed to using addr_of_mut!
+                // https://github.com/rust-lang/rust/issues/114447
+
+                &mut *std::ptr::addr_of_mut!(VEC)
             } else {
-                &mut VEC2
+                &mut *std::ptr::addr_of_mut!(VEC2)
             }
         };
         let buf = &mut b[last_i..last_i + 1500];
@@ -417,7 +424,9 @@ fn loop_accept_udp(us: Socket, tx: mpsc::Sender<DataDstSrc>) {
                 return;
             }
         };
-
+        if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace!("tproxy udp thread got {:?}", r);
+        }
         // 如 本机请求 dns, 则 src 为 本机ip 随机高端口， dst 为 路由器ip 53 端口
         let (n, src, dst) = r;
 

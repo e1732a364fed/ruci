@@ -9,7 +9,6 @@ use tokio::net::{TcpListener, TcpStream, UdpSocket};
 
 use ruci::net::{self, Network, Stream};
 use socket2::{Domain, Protocol, Socket, Type};
-use tracing::debug;
 
 use super::so_opts;
 
@@ -21,6 +20,8 @@ pub struct SockOpt {
 }
 
 /// can listen tcp or dial udp, regard to na.network
+///
+/// will set non_blocking for all conditions other than udp listen
 ///
 pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Result<Socket> {
     let a = na
@@ -59,9 +60,10 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
         if na.network == Network::TCP {
             socket.set_nonblocking(true)?;
         }
-
-        // can't set_nonblocking for dial, or we will get
-        // Operation now in progress (os error 115) when calling connect
+    } else {
+        if na.network == Network::UDP {
+            socket.set_nonblocking(true)?; // NECESSARY!, or it will block the program
+        }
     }
 
     socket.set_reuse_address(true)?;
@@ -77,11 +79,23 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
         socket.bind(&zeroa.into()).context("bind failed")?;
 
         if na.network == Network::TCP {
-            debug!("so2 connecting tcp {}", a);
+            if tracing::enabled!(tracing::Level::TRACE) {
+                tracing::trace!("so2 connecting tcp {}", a);
+            }
             socket
                 .connect_timeout(&a.into(), Duration::from_secs(3))
-                .context("connect failed")?;
-            debug!("so2 connected tcp");
+                .context("so2 tcp connect failed")?;
+
+            if tracing::enabled!(tracing::Level::TRACE) {
+                tracing::trace!("so2 connected tcp {}", a);
+            }
+            //socket.set_nonblocking(true)?;
+
+            // 设回 nonblocking 时, 有时会报 Transport endpoint is not connected, 且变得很卡
+
+            // 至此, 总结:
+            // tcp dial 不要设为 nonblocking, udp dial 要设为 nonblocking
+            // tcp listen 要设为 nonblocking, udp listen 不要设为 nonblocking
         }
     }
 
@@ -103,26 +117,23 @@ pub fn dial_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpStream> {
 /// just bind to empty addr
 pub fn dial_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
     let socket = new_socket2(na, so, false)?;
-    socket.set_nonblocking(true)?; // NECESSARY!
     let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
 
     Ok(s)
 }
 
-pub fn rawlisten_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<Socket> {
-    //debug!("listen_udp {}", na);
+pub fn block_listen_udp_socket(na: &net::Addr, so: &SockOpt) -> anyhow::Result<Socket> {
     let socket = new_socket2(na, so, true)?;
 
     Ok(socket)
 }
 
-/// bind to na
-pub fn listen_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
-    //debug!("listen_udp {}", na);
-    let socket = new_socket2(na, so, true)?;
-    let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
-    Ok(s)
-}
+// /// bind to na
+// pub fn blocklisten_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
+//     let socket = new_socket2(na, so, true)?;
+//     let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
+//     Ok(s)
+// }
 
 pub fn new_socket2_udp_tproxy_dial(laddr: &net::Addr) -> anyhow::Result<Socket> {
     let laddr = laddr

@@ -112,15 +112,20 @@ local dial = {
     }
 }
 
+--[[
+
 local opt_dial = {
     OptDialer = {
-        dial_addr = "tcp://0.0.0.0:10801", -- 用tproxy时, 不能为 127.0.0.1, 须为 0.0.0.0
+        dial_addr = "tcp://0.0.0.0:10801",
         sockopt = {
             so_mark = 255,
             bind_to_device = "enp0s1"
         }
     }
 }
+
+
+--]]
 
 
 local trojan_out = {
@@ -140,7 +145,6 @@ local websocket_out = {
 }
 
 local dial_trojan_chain = { dial, tlsout, trojan_out }
-local opt_dial_trojan_chain = { opt_dial, tlsout, trojan_out }
 local dial_ws_trojan_chain = { dial, tlsout, websocket_out, trojan_out }
 
 local h2_single_out = {
@@ -196,7 +200,6 @@ local out_stdio_chain = { {
 
 local direct_out_chain = { "Direct" }
 
----[=[
 
 local config_1_direct = {
     inbounds = { {
@@ -216,22 +219,18 @@ local config_1_direct = {
 
 }
 
--- ]=]
-
-
-
----[=[
+local tproxy_listen_inbounds =  { {
+    chain = tproxy_listen_tcp_chain,
+    tag = "listen1"
+},
+    {
+        chain = { tproxy_udp_listen },
+        tag = "listen_udp1"
+    }
+}
 
 local config_2_tproxy1 = {
-    inbounds = { {
-        chain = tproxy_listen_tcp_chain,
-        tag = "listen1"
-    },
-        {
-            chain = { tproxy_udp_listen },
-            tag = "listen_udp1"
-        }
-    },
+    inbounds = tproxy_listen_inbounds,
     outbounds = { {
         tag = "direct",
         chain = opt_direct_chain
@@ -247,23 +246,11 @@ local config_2_tproxy1 = {
 
 }
 
--- ]=]
-
----[=[
-
 local config_3_tproxy2 = {
-    inbounds = { {
-        chain = tproxy_listen_tcp_chain,
-        tag = "listen1"
-    },
-        {
-            chain = { tproxy_udp_listen },
-            tag = "listen_udp1"
-        }
-    },
+    inbounds = tproxy_listen_inbounds,
     outbounds = { {
         tag = "out",
-        chain = opt_dial_trojan_chain
+        chain = dial_trojan_chain
     } },
 
     tag_route = { { "listen1", "out" }, { "listen_udp1", "out" } },
@@ -280,10 +267,6 @@ local config_3_tproxy2 = {
 
 }
 
--- ]=]
-
-
----[=[
 
 local config_4_trojan = {
     inbounds = { { chain = listen_socks5http, tag = "listen1" } },
@@ -298,10 +281,6 @@ local config_4_trojan = {
 --]]
 
 }
-
---]=]
-
----[=[
 
 local config_5_unix = {
     inbounds = { { chain = listen_socks5http, tag = "listen1" } },
@@ -320,9 +299,6 @@ local config_5_unix = {
 
 }
 
---]=]
-
----[=[
 local config_6_ws = {
     inbounds = { { chain = listen_socks5http, tag = "listen1" } },
     outbounds = { { tag = "dial1", chain = dial_ws_trojan_chain } },
@@ -332,9 +308,6 @@ local config_6_ws = {
 
 }
 
---]=]
-
----[=[
 local config_7_h2 = {
     inbounds = { { chain = listen_socks5http, tag = "listen1" } },
     outbounds = { { tag = "dial1", chain = dial_h2_trojan_chain } },
@@ -343,9 +316,6 @@ local config_7_h2 = {
     -- (非多路复用. mux的情况见 local_mux_h2.lua 和 local_mux2_h2.lua)
 }
 
---]=]
-
----[=[
 local config_8_quic = {
     inbounds = { {
         chain = listen_socks5http,
@@ -359,9 +329,6 @@ local config_8_quic = {
     -- 演示 inbound 是 socks5http, outbound 是 quic 的情况
 }
 
--- ]=]
-
----[=[
 local config_9_stdin_adder = {
 
     inbounds = {
@@ -380,11 +347,6 @@ local config_9_stdin_adder = {
     outbounds = { { tag = "dial1", chain = out_stdio_chain } }
 }
 
---]=]
-
----[[
-
-
 local config_10_stdin_trojan = {
 
     -- stdin + 1 -> trojan_out
@@ -395,10 +357,6 @@ local config_10_stdin_trojan = {
 
     outbounds = { { tag = "dial1", chain = dial_trojan_chain } }
 }
-
---]]
-
----[[
 
 
 local config_11_stdin_blackhole = {
@@ -413,10 +371,6 @@ local config_11_stdin_blackhole = {
 
     outbounds = { { tag = "dial1", chain = { "Blackhole" } } }
 }
-
---]]
-
----[[
 
 
 local config_12_fileio_trojan = {
@@ -442,10 +396,6 @@ local config_12_fileio_trojan = {
 
     outbounds = { { tag = "dial1", chain = dial_trojan_chain } }
 }
-
---]]
-
----[=[
 
 local config_13_route = {
     inbounds = {
@@ -530,10 +480,6 @@ local config_13_route = {
 
 }
 
--- ]=]
-
----[=[
-
 local config_14_stdio_adder_udp_fixed_target_addr = {
     inbounds = {
         {
@@ -562,9 +508,6 @@ local config_14_stdio_adder_udp_fixed_target_addr = {
 
 }
 
---]=]
-
----[=[
 local config_15_tun = {
 
     inbounds = {
@@ -587,9 +530,8 @@ local config_15_tun = {
     outbounds = { { tag = "dial1", chain = out_stdio_chain } }
 }
 
---]=]
 
-Config = config_2_tproxy1
+Config = config_3_tproxy2
 
 ---[[
 
