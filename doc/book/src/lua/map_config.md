@@ -49,6 +49,7 @@ type = "Direct"
 
 ```lua
 {
+    type = "Direct",
     dns_client = {
         --...
     }--optional
@@ -65,6 +66,7 @@ OptDirect 的出现是 为了给 Direct 添加 sockopt 选项。使用 tproxy �
 
 ```lua
 {
+    type = "OptDirect",
     sockopt= {
         --...
     },
@@ -104,6 +106,8 @@ BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中至少�
 
 ```lua
 {
+    type = "BindDialer",
+
     bind_addr = "",
     dial_addr = "",
 
@@ -157,6 +161,7 @@ in
 
 ```lua
 {
+    type = "OptDialer",
     dial_addr= "",
     sockopt= {}, --optional
     dns_client = {}, --optional
@@ -172,6 +177,7 @@ in
 
 ```lua
 {
+    type = "Listener",
     listen_addr ="",
     ext={},--optional
 }
@@ -183,6 +189,7 @@ in
 
 ```lua
 {
+    type = "TcpOptListener",
     listen_addr ="",
     sockopt={},
     ext={},--optional
@@ -199,6 +206,7 @@ in/out
 
 ```lua
 {
+    type = "Stdio",
     write_mode = "Bytes", --optional
     ext={},--optional
 }
@@ -214,6 +222,7 @@ in/out
 
 ```lua
 {
+    type = "Fileio",
     i="",
     o="",
     sleep_interval=1, --optional, 正整数
@@ -286,6 +295,7 @@ local tproxy_listen_inbounds = {
 
 ```lua
 {
+    type = "TproxyUdpListener",
     listen_addr="",
     sockopt={},
     ext={}, --optional
@@ -302,7 +312,8 @@ rucimp/src/map/tproxy/route/mod.rs
 
 ```lua
 {
-    -- tproxy 监听的端口, 默认为 12345
+    type = "TproxyTcpResolver",
+     -- tproxy 监听的端口, 默认为 12345
     port=12345, --  正整数
     route_ipv6= false,
     proxy_local_udp_53=false,
@@ -340,7 +351,8 @@ type = "Http"
 可选用户密码组合, 内容均为可选
 
 ```lua
-{ -- Socks5, Http
+{
+    type = "Socks5", -- Http
     userpass: "username1 password1",
     more: { "username2 password2", "username3 password3"},
 }
@@ -354,6 +366,7 @@ type = "Http"
 in:
 ```lua
 {
+    type = "Trojan", 
     password: "password1",
     more: { "password2", "password3"},
 }
@@ -375,6 +388,7 @@ in:
 
 ```lua
 {
+    type = "TLS", 
     cert="c.crt",
     key="k.key",
     alpn = { "h2", "h3"},--optional
@@ -385,6 +399,7 @@ out:
 
 ```lua
 {
+    type = "TLS", 
     host="www.myhost.com",
     insecure=false,
     alpn = { "h2", "h3"},--optional
@@ -414,6 +429,7 @@ in
 
 ```lua
 {
+    type = "H2", 
     is_grpc=false,--optional
     http_config={},--optional
 }
@@ -426,6 +442,7 @@ out
 
 ```lua
 {
+    type = "H2Single", 
     is_grpc=false,--optional
     http_config={},--optional
 },
@@ -439,6 +456,7 @@ out
 
 ```lua
 {
+    type = "H2Mux", 
     is_grpc=false,--optional
     http_config={},--optional
 },
@@ -453,6 +471,7 @@ in:
 
 ```lua
 {
+    type = "WebSocket", 
     http_config = {
        --...
     } --optional
@@ -483,6 +502,7 @@ quic 的 监听端 是直接接管 udp 层的, listen_addr 在这里指定, 而�
 
 ```lua
 {
+    type = "Quic", 
     key="",
     cert="",
     listen_addr="",
@@ -494,6 +514,7 @@ out:
 
 ```lua
  {
+    type = "Quic", 
     server_addr="",
     server_name="www.mytest.com",
     cert="",--optional
@@ -515,7 +536,10 @@ cert：可给出 服务端的 证书, 这样就算 insecure = false 也通过验
 隐写示例协议1
 
 ```lua
-{ qa = { { "q1", "a1" }, { "q2", "a2" } } }
+{ 
+    type = "SPE1", 
+    qa = { { "q1", "a1" }, { "q2", "a2" } } 
+}
 ```
 
 qa 中要为 2的偶数次幂个 问答对，问答的内容任意填。但是内容越真实，隐写效果越好。
@@ -531,7 +555,7 @@ qa 中要为 2的偶数次幂个 问答对，问答的内容任意填。但是�
 ## Lua: lua自定义协议
 
 ```lua
-{ file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" }
+{ type = "Lua", file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" }
 ```
 
 lua自定义协议 的写法是高级用法，见  [lua自定义协议](user_defined_protocol.md)
@@ -546,7 +570,7 @@ in/out
 in/out
 
 ```lua
-{value=3}
+{type = "Adder", value=3}
 ```
 
 给 输出 的信息 每字节都加 给定的数值。比如 输入abc, value=1, 则输出为 bcd
@@ -562,6 +586,7 @@ in
 
 ```lua
 {
+    type = "HttpFilter",
     --...
 }
 ```

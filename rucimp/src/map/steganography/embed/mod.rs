@@ -101,7 +101,7 @@ impl Map for Embedder {
             }
         }
 
-        let (ready_tx, ready_rx) = tokio::sync::watch::channel(false);
+        let (write_info_ready_tx, write_info_ready_rx) = tokio::sync::watch::channel(false);
 
         let shut_atom = Arc::new(AtomicBool::new(false));
 
@@ -111,7 +111,7 @@ impl Map for Embedder {
             read_state: Default::default(),
             write_state: Default::default(),
             write_info_rx,
-            ready_tx,
+            write_info_ready_tx,
             shutdown_atom: shut_atom.clone(),
         };
 
@@ -124,7 +124,7 @@ impl Map for Embedder {
                 writer: &mut w,
                 write_rx: &mut write_rx,
                 write_info_tx,
-                write_info_ready_rx: ready_rx,
+                write_info_ready_rx: write_info_ready_rx,
                 read_tx,
                 invert,
                 shutdown_atom: shut_atom.clone(),
@@ -157,7 +157,7 @@ pub struct EmbedConn {
     read_rx: Receiver<BytesMut>,
 
     // 用于向Player发送信号，准备请求下一次写入的最大长度
-    ready_tx: tokio::sync::watch::Sender<bool>,
+    write_info_ready_tx: tokio::sync::watch::Sender<bool>,
 
     shutdown_atom: Arc<AtomicBool>,
 }
@@ -304,19 +304,19 @@ impl AsyncWrite for EmbedConn {
             }
         }
         // 向Player发送信号，请求下一次写入的最大长度
-        let r = self.ready_tx.send(true);
+        let r = self.write_info_ready_tx.send(true);
         if let Err(e) = r {
             return Poll::Ready(Err(io::Error::other(format!("self.ready_tx.send {e}"))));
         }
 
-        // Player 收到信号时，会发回允许写入的最大包长。如果Player正忙，则会反回Pending
+        // Player 收到信号时，会发回允许写入的最大包长。如果Player正忙，则会返回Pending
         let r = self.write_info_rx.poll_recv(cx);
 
         match ready!(r) {
             None => Poll::Ready(Err(io::Error::other("write_info_rx got None"))),
 
             Some(length) => {
-                let r2 = self.ready_tx.send(false);
+                let r2 = self.write_info_ready_tx.send(false);
                 if let Err(e) = r2 {
                     return Poll::Ready(Err(io::Error::other(format!("self.ready_tx.send {e}"))));
                 }

@@ -36,7 +36,7 @@ Config = {
 
 inbounds/outbounds 是 [inbound/outbound](#inboundoutbound) 的列表:
 
-    inbounds = { inbound1, inbound2, ... }
+    inbounds = { inbound1_tag = {} , inbound2_tag = {}, ... }
 
 ## inbound/outbound
 

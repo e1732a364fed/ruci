@@ -56,6 +56,7 @@ termux 用户可以下载 后缀为 `aarch64-linux-android.tar.xz` 的版本
 
     chmod +x ruci-cmd
 
+
 ## 开始使用
 
 在ruci-cmd 所在的文件夹中：
@@ -92,6 +93,19 @@ resource 文件夹中的内容有助于参考使用，建议保留。
 调节日志等级为 debug:
 
     ./ruci-cmd -l debug
+
+# ruci-gui
+
+另一种使用 ruci 的方式是使用 gui, 来自 [ruci-webui](https://github.com/e1732a364fed/ruci-webui/) 项目，
+它使用 tauri 编译了 桌面和 安卓平台的 gui，内置了 ruci内核
+
+到 https://github.com/e1732a364fed/ruci-webui/releases/ 下载最新的编译版本。
+
+启动该gui后，可在 Control Panel 中 点击 “检查服务器状态”，它会显示 `服务器状态: {"status":"running"}`
+这表示 内核已经正在运行。然后 点击 “选择配置文件”，再点击 “启动引擎”，就可以运行 您的 ruci 配置了。
+
+ruci-gui 的 Node Editor 还提供了一种很方便的 “节点编辑器”，可以 以可视化的方式编辑您的配置文件。
+而 Control Panel 中又提供了一些方便的小工具。
 
 
 # 接下来

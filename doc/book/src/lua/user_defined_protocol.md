@@ -10,7 +10,7 @@ local config_21_lua_example1 = {
         listen1 = listen_socks5http,
     },
     outbounds = {
-        dial1 = { dial, tlsout, trojan_out, { Lua = { file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" } } }
+        dial1 = { dial, tlsout, trojan_out, { type = "Lua" ,file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2"} }
     }
 }
 ```
