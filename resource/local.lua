@@ -18,8 +18,8 @@ l2 = {
         -- ruci 中, Listener,TcpOptListener, BindDialer, Stdio, Fileio 都能如此配置
 
         ext = {
-            -- fixed_target_addr = "udp://127.0.0.1:40800"
-            fixed_target_addr = "1.1.1.1:80"
+            fixed_target_addr = "udp://114.114.114.114:53"
+            --fixed_target_addr = "1.1.1.1:80" -- 不给://时 默认为 tcp
         }
         --]]
     }
@@ -334,7 +334,7 @@ config = {
 
 --]=]
 
----[=[
+--[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },
@@ -442,14 +442,21 @@ config = {
 
 --]]
 
---[=[
+---[=[
 
 config = {
     inbounds = {{
         chain = listen_socks5http,
         tag = "l1"
     }, {
-        chain = {l2},
+        chain = {{
+            BindDialer = {
+                bind_addr = "udp://127.0.0.1:20800",
+                ext = {
+                    fixed_target_addr = "udp://114.114.114.114:53"
+                }
+            }
+        }},
         tag = "l2"
     }, {
         chain = {l3, tlsin},
@@ -460,7 +467,7 @@ config = {
         chain = {"Direct"}
     }, {
         tag = "d2",
-        chain = {dial, tlsout}
+        chain = dial_trojan_chain
     }, {
         tag = "fallback_d",
         chain = {{
@@ -469,7 +476,7 @@ config = {
     }},
 
     ---[==[
-    tag_route = {{"l1", "d1"}, {"l2", "d1"}, {"l3", "d2"}},
+    tag_route = {{"l1", "d1"}, {"l2", "d2"}, {"l3", "d2"}},
 
     fallback_route = {{"l1", "fallback_d"}}
 
@@ -480,11 +487,11 @@ config = {
     rule_route = {{
         mode = "WhiteList",
         out_tag = "d1",
-        in_tags = {"l1","l2"}
+        in_tags = {"l1"}
     }, {
         mode = "WhiteList",
         out_tag = "d2",
-        in_tags = {"l3"}
+        in_tags = {"l3","l2"}
     }, {
         mode = "WhiteList",
         out_tag = "fallback_d",
@@ -501,7 +508,7 @@ config = {
 
 这两种给出的配置在行为上是等价的
 
-该 路由 示例明确指出, l1将被路由到d1, l2 -> d1, l3 -> d2, 且 l1 的回落为 fallback_d
+该 路由 示例明确指出, l1将被路由到d1, l2 -> d2, l3 -> d2, 且 l1 的回落为 fallback_d
 
 --]]
 

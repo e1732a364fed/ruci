@@ -60,7 +60,7 @@ pub async fn handle_in_stream(
             behavior: ProxyBehavior::DECODE,
             initial_state: MapResult::builder().c(in_conn).build(),
             mappers: ins_iterator,
-
+            chain_tag: String::new(),
             #[cfg(feature = "trace")]
             trace: Vec::new(),
         }),
@@ -164,6 +164,7 @@ pub async fn handle_in_fold_result(
             }
         }
     }
+    debug!(cid = %cid, in_tag = listen_result.chain_tag, target_addr = %target_addr, "try select out",);
 
     let outbound = out_selector
         .select(
@@ -201,7 +202,7 @@ pub async fn handle_in_fold_result(
                     ..Default::default()
                 },
                 mappers: outbound,
-
+                chain_tag: String::new(),
                 #[cfg(feature = "trace")]
                 trace: Vec::new(),
             })

@@ -288,10 +288,14 @@ impl Engine {
         #[cfg(feature = "route")]
         {
             if self.rule_sets.is_some() {
+                debug!("use rule_sets");
                 self.get_rule_sets_out_selector()
             } else if self.tag_routes.is_some() || self.fallback_routes.is_some() {
+                debug!("use tag_routes");
+
                 self.get_tag_route_out_selector()
             } else {
+                debug!("use fixed_out_selector");
                 self.get_fixed_out_selector()
             }
         }

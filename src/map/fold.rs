@@ -144,6 +144,8 @@ pub struct FoldParams {
     pub initial_state: MapResult,
     pub mappers: DMIterBox,
 
+    pub chain_tag: String,
+
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,
 }
@@ -178,7 +180,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
     let mut calculated_output_vec: Vec<Option<Box<dyn Data>>> = Vec::new();
     calculated_output_vec.push(last_r.d);
 
-    let mut tag: String = String::new();
+    let mut tag: String = params.chain_tag;
 
     loop {
         let adder = if mappers.requires_no_data() {
@@ -283,11 +285,9 @@ pub async fn fold_from_start(
             MapParams::builder().shutdown_rx(shutdown_rx).build(),
         )
         .await;
+    let first_tag = first.get_chain_tag().to_string();
     if let Some(e) = first_r.e {
-        let e = e.context(format!(
-            "fold_from_start failed, tag: {} ",
-            first.get_chain_tag()
-        ));
+        let e = e.context(format!("fold_from_start failed, tag: {} ", first_tag));
         //use {:#} to show full chain of anyhow::Error
 
         warn!(cid = %in_cid,"{:#} ", e);
@@ -328,6 +328,7 @@ pub async fn fold_from_start(
                 behavior: ProxyBehavior::DECODE,
                 initial_state: first_r,
                 mappers: inmappers,
+                chain_tag: first_tag,
 
                 #[cfg(feature = "trace")]
                 trace: vec![first.name().to_string()],
@@ -442,6 +443,8 @@ fn spawn_fold_forever(params: SpawnFoldForeverParams) {
             behavior: ProxyBehavior::DECODE,
             initial_state: params.new_stream_info,
             mappers: miter,
+
+            chain_tag: String::new(),
 
             #[cfg(feature = "trace")]
             trace: params.trace,
