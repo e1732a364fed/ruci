@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "tokio" ]
     paths-ignore: 
-      - '*.md'
+      - '**.md'
       - '.github/workflows/*.yml'
       - 'Makefile'
       - 'Cross.toml'
@@ -13,7 +13,7 @@ on:
   pull_request:
     branches: [ "tokio" ]
     paths-ignore: 
-      - '*.md'
+      - '**.md'
 
 env:
   CARGO_TERM_COLOR: always
