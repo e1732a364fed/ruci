@@ -60,7 +60,7 @@ pub(crate) fn create_interface(device: &mut SmoltcpDevice) -> smoltcp::iface::In
 pub(crate) struct MyRxToken<'a> {
     data: &'a mut [u8],
 }
-impl<'a> RxToken for MyRxToken<'a> {
+impl RxToken for MyRxToken<'_> {
     fn consume<R, F>(self, f: F) -> R
     where
         F: FnOnce(&[u8]) -> R,
@@ -169,11 +169,13 @@ impl Default for DeviceData {
 }
 
 impl Device for SmoltcpDevice {
-    type RxToken<'a> = MyRxToken<'a>
+    type RxToken<'a>
+        = MyRxToken<'a>
     where
         Self: 'a;
 
-    type TxToken<'a> = MyTxToken
+    type TxToken<'a>
+        = MyTxToken
     where
         Self: 'a;
 

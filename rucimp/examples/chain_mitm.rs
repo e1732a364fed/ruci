@@ -33,10 +33,10 @@ async fn main() -> anyhow::Result<()> {
         outbounds: vec![OutMapConfigChain {
             tag: "mitm_dail_trojan".to_string(),
             chain: vec![
-                OutMapConfig::BindDialer(BindDialerConfig {
+                OutMapConfig::BindDialer(Box::new(BindDialerConfig {
                     dial_addr: Some("127.0.0.1:10801".to_string()),
                     ..Default::default()
-                }),
+                })),
                 OutMapConfig::TLS(ruci::map::tls::client::TlsClientOptions {
                     host: Some("www.google.com".to_string()),
                     insecure: true,

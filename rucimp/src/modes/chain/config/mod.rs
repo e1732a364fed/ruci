@@ -266,10 +266,10 @@ pub struct BindDialerConfig {
 
     pub ext: Option<Ext>,
 }
-impl TryFrom<BindDialerConfig> for MapBox {
+impl TryFrom<Box<BindDialerConfig>> for MapBox {
     type Error = anyhow::Error;
 
-    fn try_from(value: BindDialerConfig) -> Result<Self, Self::Error> {
+    fn try_from(value: Box<BindDialerConfig>) -> Result<Self, Self::Error> {
         use anyhow::Context;
 
         let opt_bind_a = match value.bind_addr {
@@ -333,10 +333,10 @@ impl TryFrom<StdioConfig> for MapBox {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapConfig {
-    Echo,                         //单流消耗器
-    Stdio(StdioConfig),           //单流发生器
-    Fileio(FileConfig),           //单流发生器
-    BindDialer(BindDialerConfig), //单流发生器 (Box: #[warn(clippy::large_enum_variant)])
+    Echo,                              //单流消耗器
+    Stdio(StdioConfig),                //单流发生器
+    Fileio(FileConfig),                //单流发生器
+    BindDialer(Box<BindDialerConfig>), //单流发生器 (Box: #[warn(clippy::large_enum_variant)])
     Listener {
         listen_addr: String,
         ext: Option<Ext>,
@@ -406,11 +406,11 @@ pub enum InMapConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapConfig {
-    Blackhole,                    //单流消耗器
-    Direct(DirectConfig),         //单流发生器
-    Stdio(StdioConfig),           //单流发生器
-    Fileio(FileConfig),           //单流发生器
-    BindDialer(BindDialerConfig), //单流发生器
+    Blackhole,                         //单流消耗器
+    Direct(DirectConfig),              //单流发生器
+    Stdio(StdioConfig),                //单流发生器
+    Fileio(FileConfig),                //单流发生器
+    BindDialer(Box<BindDialerConfig>), //单流发生器
     Adder(i8),
     Counter,
     Recorder(recorder::Config),

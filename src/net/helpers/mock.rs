@@ -81,14 +81,14 @@ pub struct MockTcpStream2<'a> {
     pub write_data: &'a mut Vec<u8>,
     pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
 }
-impl<'a> crate::Name for MockTcpStream2<'a> {
+impl crate::Name for MockTcpStream2<'_> {
     fn name(&self) -> &str {
         "mock_tcp_stream2"
     }
 }
 
-impl<'a> Unpin for MockTcpStream2<'a> {}
-impl<'a> AsyncRead for MockTcpStream2<'a> {
+impl Unpin for MockTcpStream2<'_> {}
+impl AsyncRead for MockTcpStream2<'_> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         _: &mut Context,
@@ -111,7 +111,7 @@ impl<'a> AsyncRead for MockTcpStream2<'a> {
     }
 }
 
-impl<'a> AsyncWrite for MockTcpStream2<'a> {
+impl AsyncWrite for MockTcpStream2<'_> {
     fn poll_write(
         mut self: Pin<&mut Self>,
         _: &mut Context,
