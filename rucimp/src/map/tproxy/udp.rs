@@ -340,11 +340,11 @@ pub struct Writer {
     dst: Addr,
     conn_map: ConnMap,
 }
-impl Name for Writer {
-    fn name(&self) -> &str {
-        "tproxy_udp_w"
-    }
-}
+// impl Name for Writer {
+//     fn name(&self) -> &str {
+//         "tproxy_udp_w"
+//     }
+// }
 
 impl AsyncWriteAddr for Writer {
     fn poll_write_addr(
