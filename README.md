@@ -3,6 +3,7 @@
 [![release][1]][2] 
 [![FOSSA Status][3]][4]
 
+![logo](logo.svg)
 
 [1]: https://img.shields.io/github/v/release/e1732a364fed/ruci
 [2]: https://github.com/e1732a364fed/ruci/releases/latest
