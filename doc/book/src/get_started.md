@@ -46,6 +46,13 @@ apple silicon（m1,m2,m3,m4） 下载
     tar xf archive.tar.xz
     chmod +x ruci-cmd
 
+若报 xz: Cannot exec: No such file or directory，可运行下面命令(ubuntu)安装 xz, 安了就好了:
+
+```sh
+sudo apt install xz-utils
+```
+
+
 ### 安卓
 
 termux 用户可以下载 后缀为 `aarch64-linux-android.tar.xz` 的版本

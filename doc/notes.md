@@ -6,6 +6,12 @@
 
 ## tls
 
+### openssl
+
+因为feature use-native-tls 编译使用了 native-tls, 因此会在 linux 版本中需要 openssl 3 安装在 机器上才行
+
+但是有些老机器上的 openssl 是 1.1.1 版的
+
 ### 证书
 
 证书与key 的 文件格式 都是明文 base64 的 pem 文本格式的，但是 其解码后的二进制格式又分为很多种。
