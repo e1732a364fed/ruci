@@ -2,6 +2,7 @@ use self::dynamic::NextSelector;
 
 use super::*;
 use async_trait::async_trait;
+use lua::dynamic::Bounded;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Result, Value};
 
@@ -19,8 +20,12 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
     Ok(c)
 }
 
-const BOUNDED_DYNAMIC_INBOUND_SELECTOR_NAME: &str = "dyn_inbound_next_selector";
-const BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME: &str = "dyn_outbound_next_selector";
+//todo: 写得太乱了，improve code
+
+// const BOUNDED_DYNAMIC_INBOUND_SELECTOR_NAME: &str = "dyn_inbound_next_selector";
+// const BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME: &str = "dyn_outbound_next_selector";
+
+const GET_DYN_SELECTOR_FOR: &str = "get_dyn_selector_for";
 
 /// test if the lua text is ok for bounded dynamic
 pub fn try_load_bounded_dynamic(lua_text: &str) -> Result<()> {
@@ -29,31 +34,147 @@ pub fn try_load_bounded_dynamic(lua_text: &str) -> Result<()> {
 
     let lg = lua.globals();
 
-    let _s1: LuaFunction = lg.get(BOUNDED_DYNAMIC_INBOUND_SELECTOR_NAME)?;
-    let _s2: LuaFunction = lg.get(BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME)?;
+    let _s1: LuaFunction = lg.get(GET_DYN_SELECTOR_FOR)?;
+    // let _s2: LuaFunction = lg.get(BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME)?;
 
     Ok(())
 }
 
-pub fn load_bounded_dynamic(lua_text: &str) -> Result<(LuaNextSelector, LuaNextSelector)> {
-    let lua = Lua::new();
-    lua.load(lua_text).eval()?;
-
-    let lua2 = Lua::new();
-    lua2.load(lua_text).eval()?;
-
-    Ok((
-        LuaNextSelector {
-            lua: Arc::new(tokio::sync::Mutex::new(lua)),
-            func_name: String::from(BOUNDED_DYNAMIC_INBOUND_SELECTOR_NAME),
-        },
-        LuaNextSelector {
-            lua: Arc::new(tokio::sync::Mutex::new(lua2)),
-            func_name: String::from(BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME),
-        },
-    ))
+pub struct SelectorHelper<'a> {
+    pub inbounds_selector: HashMap<String, LuaNextSelector2<'a>>,
+    pub outbounds_selector: HashMap<String, LuaNextSelector2<'a>>,
 }
 
+pub fn load_bounded_dynamic_leak(
+    lua_text: String,
+) -> Result<(
+    StaticConfig,
+    Vec<DMIterBox>,
+    DMIterBox,
+    Arc<HashMap<String, DMIterBox>>,
+)> {
+    let lua = Lua::new();
+    let lua = Box::leak(Box::new(lua));
+    let (sc, sh) = load_bounded_dynamic_helper(lua, lua_text)?;
+
+    let (a, b, c) = get_dmiter_from_static_config_and_helper(sc.clone(), sh);
+    Ok((sc, a, b, c))
+}
+
+pub fn load_bounded_dynamic_helper<'a>(
+    lua: &'a Lua,
+    lua_text: String,
+) -> Result<(StaticConfig, SelectorHelper<'a>)> {
+    lua.load(lua_text).eval()?;
+
+    let lg = lua.globals();
+
+    let clt: LuaTable = lg.get("config")?;
+
+    let getter: LuaFunction = lg.get(GET_DYN_SELECTOR_FOR)?;
+
+    let c: StaticConfig = lua.from_value(Value::Table(clt))?;
+    let x: HashMap<String, LuaNextSelector2> = c
+        .inbounds
+        .iter()
+        .map(|x| {
+            let tag = x.tag.as_ref().unwrap();
+
+            let x = match getter.call::<String, LuaFunction>(tag.to_string()) {
+                Ok(rst) => rst,
+                Err(err) => {
+                    panic!("get dyn_bounded_selector for {tag} err: {}", err);
+                }
+            };
+            (tag.to_string(), LuaNextSelector2(x))
+        })
+        .collect();
+
+    let y: HashMap<String, LuaNextSelector2> = c
+        .outbounds
+        .iter()
+        .map(|x| {
+            let tag = &x.tag;
+
+            let x = match getter.call::<String, LuaFunction>(tag.to_string()) {
+                Ok(rst) => rst,
+                Err(err) => {
+                    panic!("get dyn_bounded_selector for {tag} err: {}", err);
+                }
+            };
+            (tag.to_string(), LuaNextSelector2(x))
+        })
+        .collect();
+
+    let sh = SelectorHelper {
+        inbounds_selector: x,
+        outbounds_selector: y,
+    };
+
+    Ok((c, sh))
+}
+
+/// returns inbounds, first_outbound, outbound_map
+pub fn get_dmiter_from_static_config_and_helper(
+    c: StaticConfig,
+    mut sh: SelectorHelper<'static>,
+) -> (Vec<DMIterBox>, DMIterBox, Arc<HashMap<String, DMIterBox>>) {
+    let ibs = c.get_inbounds();
+    let v: Vec<DMIterBox> = ibs
+        .into_iter()
+        .map(|v| {
+            let tag = v.last().unwrap().get_chain_tag().to_string();
+            let inbound: Vec<_> = v.into_iter().map(|o| Arc::new(o)).collect();
+
+            let selector = Box::new(sh.inbounds_selector.remove(&tag).unwrap());
+
+            let x: DMIterBox = Box::new(Bounded {
+                mb_vec: inbound,
+                current_index: 0,
+                history: Vec::new(),
+                selector,
+            });
+            x
+        })
+        .collect();
+
+    let obs = c.get_outbounds();
+
+    let mut first_o: Option<DMIterBox> = None;
+
+    let omap: HashMap<String, DMIterBox> = obs
+        .into_iter()
+        .map(|outbound| {
+            let tag = outbound
+                .iter()
+                .next()
+                .expect("outbound should has at least one mapper ")
+                .get_chain_tag();
+
+            let ts = tag.to_string();
+            let outbound: Vec<_> = outbound.into_iter().map(|o| Arc::new(o)).collect();
+
+            let selector = Box::new(sh.outbounds_selector.remove(&ts).unwrap());
+
+            let outbound_iter: DMIterBox = Box::new(Bounded {
+                mb_vec: outbound,
+                current_index: 0,
+                history: Vec::new(),
+                selector,
+            });
+
+            if let None = first_o {
+                first_o = Some(outbound_iter.clone());
+            }
+
+            (ts, outbound_iter)
+        })
+        .collect();
+
+    (v, first_o.expect("has a outbound"), Arc::new(omap))
+}
+
+/// 弊端：使用 global中的名，慢
 #[derive(Debug, Clone)]
 pub struct LuaNextSelector {
     lua: Arc<tokio::sync::Mutex<Lua>>,
@@ -88,29 +209,31 @@ impl NextSelector for LuaNextSelector {
     }
 }
 
-// #[derive(Debug, Clone)]
-// pub struct LuaNextSelector<'a>(LuaFunction<'a>);
+/// 弊端：有生命周期
+#[derive(Debug, Clone)]
+pub struct LuaNextSelector2<'a>(LuaFunction<'a>);
 
-// unsafe impl<'a> Send for LuaNextSelector<'a> {}
-// unsafe impl<'a> Sync for LuaNextSelector<'a> {}
+unsafe impl<'a> Send for LuaNextSelector2<'a> {}
+unsafe impl<'a> Sync for LuaNextSelector2<'a> {}
 
-// impl<'a> NextSelector for LuaNextSelector<'a> {
-//     fn next_index(
-//         &self,
-//         this_index: usize,
-//         data: Option<Vec<ruci::map::OptVecData>>,
-//     ) -> Option<usize> {
-//         let w = OptVecOptVecDataLuaWrapper(data);
+#[async_trait]
+impl<'a> NextSelector for LuaNextSelector2<'a> {
+    async fn next_index(
+        &self,
+        this_index: usize,
+        data: Option<Vec<ruci::map::OptVecData>>,
+    ) -> Option<usize> {
+        let w = OptVecOptVecDataLuaWrapper(data);
 
-//         match self.0.call::<_, usize>((this_index, w)) {
-//             Ok(rst) => Some(rst),
-//             Err(err) => {
-//                 warn!("{}", err);
-//                 None
-//             }
-//         }
-//     }
-// }
+        match self.0.call::<_, usize>((this_index, w)) {
+            Ok(rst) => Some(rst),
+            Err(err) => {
+                warn!("{}", err);
+                None
+            }
+        }
+    }
+}
 
 /*
 //////////////////////////////////////////////////////////////////////////////

@@ -18,10 +18,7 @@ use tokio::sync::{
     oneshot::{self, Sender},
 };
 
-use super::config::{
-    dynamic::{Bounded, NextSelector},
-    StaticConfig,
-};
+use super::config::{lua, StaticConfig};
 
 #[derive(Default)]
 pub struct Engine {
@@ -74,30 +71,14 @@ impl Engine {
         self.tag_routes = sc.get_tag_route();
     }
 
-    // pub fn init_dynamic(
-    //     &mut self,
-    //     sc: StaticConfig,
-    //     ibs: Box<dyn NextSelector>,
-    //     obs: Box<dyn NextSelector>,
-    // ) {
-    //     let inbounds = sc.get_inbounds();
-    //     self.inbounds = inbounds
-    //         .into_iter()
-    //         .map(|v| {
-    //             let inbound: Vec<_> = v.into_iter().map(|o| Arc::new(o)).collect();
-
-    //             let x: DMIterBox = Box::new(Bounded {});
-
-    //             //let x: DMIterBox = Box::new(DynVecIterWrapper(inbound.into_iter()));
-    //             x
-    //         })
-    //         .collect();
-
-    //     let (d, m) = sc.get_default_and_outbounds_map();
-    //     self.default_outbound = Some(d);
-    //     self.outbounds = Arc::new(m);
-    //     self.tag_routes = sc.get_tag_route();
-    // }
+    pub fn init_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
+        let (sc, ibs, default_o, ods) = lua::load_bounded_dynamic_leak(config_string)?;
+        self.inbounds = ibs;
+        self.default_outbound = Some(default_o);
+        self.outbounds = ods;
+        self.tag_routes = sc.get_tag_route();
+        Ok(())
+    }
 
     pub fn inbounds_count(&self) -> usize {
         self.inbounds.len()

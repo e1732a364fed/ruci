@@ -272,6 +272,17 @@ config = {
 
 -- 演示 动态链的 选择器用法
 
+
+function get_dyn_bounded_selector_for(tag)
+    if tag == "listen1" then 
+        return dyn_inbound_next_selector
+    end
+     if tag == "dial1" then 
+        return dyn_outbound_next_selector
+    end
+end
+
+
 dyn_inbound_next_selector = function (this_index, ovov)
     print(ovov:is_some())
     print(ovov:len())

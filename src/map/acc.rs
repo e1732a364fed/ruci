@@ -142,6 +142,8 @@ pub struct AccumulateParams {
 
 ///  accumulate 是一个作用很强的函数,是 mappers 的累加器
 ///
+/// 它的做法类似 Iterator 的 fold
+///
 /// cid 为 跟踪 该连接的 标识
 /// 返回的元组包含新的 Conn 和 可能的目标地址
 ///
