@@ -23,3 +23,6 @@ pub mod rustls21;
 
 #[cfg(feature = "quinn")]
 pub mod quinn;
+
+#[cfg(feature = "smoltcp")]
+pub mod tcp_ip_stack_smoltcp;

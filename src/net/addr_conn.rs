@@ -377,7 +377,7 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
                                 continue;
                             },
                             _ => {
-                                // udp timeout 时 常会发生, 因此不能认为是错误
+                                // udp timeout 时常 会发生, 因此不能认为是错误
                                 debug!(name = name,"cp_addr got e, will break: {e}");
                             },
                         }

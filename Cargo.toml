@@ -1,4 +1,9 @@
-workspace = { members = [ "rucimp" ,"./", "crates/macro_map", "crates/ruci-cmd"]  }
+workspace = { members = [
+    "rucimp",
+    "./",
+    "crates/macro_map",
+    "crates/ruci-cmd",
+] }
 [package]
 name = "ruci"
 version = "0.0.6"
@@ -6,7 +11,7 @@ edition = "2021"
 readme = "README.md"
 description = "a network proxy framework"
 categories = ["network-programming"]
- 
+
 [profile.release]
 lto = "fat"
 codegen-units = 1
@@ -19,18 +24,18 @@ incremental = false
 [dependencies]
 tracing = "0.1.40"
 
-rand = { version = "0.8.5" , features = ["small_rng" ]}
+rand = { version = "0.8.5", features = ["small_rng"] }
 bytes = "1"
 futures = "0.3"
 futures-util = "0.3.30"
-async-trait = "0.1.77" 
+async-trait = "0.1.77"
 tokio = { version = "1", features = ["full"] }
-tokio-util = "0.7.10"
+tokio-util = { version = "0.7.10", features = ["io"] }
 pin-project-lite = "0.2.13"
 scopeguard = "1.2.0"
 parking_lot = "0.12.1"
 lazy_static = "1"
-smallvec = {version = "1.13.1", features = ["serde"]}
+smallvec = { version = "1.13.1", features = ["serde"] }
 
 serde = { version = "1", features = ["derive"] }
 typetag = "0.2.16"
@@ -43,13 +48,13 @@ base64 = "0.21.7"
 sha2 = "0.10.8"
 
 tokio-rustls = "0.25.0"
-rustls = { version = "0.22" }  
+rustls = { version = "0.22" }
 rustls-pemfile = "1.0"
 webpki-roots = "0.22.6"
 
-macro_map ={ path = "crates/macro_map" }
+macro_map = { path = "crates/macro_map" }
 
-tun2 = { version = "1", features = ["async"] ,optional = true}
+tun2 = { version = "1", features = ["async"], optional = true }
 
 
 [features]
@@ -60,7 +65,7 @@ trace = []
 
 [dev-dependencies]
 env_logger = "0.11.1"
-criterion = {version = "0.5.1", features = ["async_tokio"]}
+criterion = { version = "0.5.1", features = ["async_tokio"] }
 
 [[bench]]
 name = "mathadd"
