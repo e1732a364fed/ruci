@@ -16,6 +16,7 @@ use ruci::relay;
 use std::sync::Arc;
 use tokio::io;
 use tokio::net::TcpListener;
+use tokio::sync::oneshot;
 
 use ruci::map::*;
 use ruci::net::{self, Addr};
@@ -196,6 +197,7 @@ pub async fn listen_ser(
     ins: Arc<dyn Suit>,
     outc: Arc<dyn Suit>,
     oti: Option<Arc<net::TransmissionInfo>>,
+    shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
     let n = ins.network();
     match n {
@@ -206,7 +208,7 @@ pub async fn listen_ser(
                     outc.network()
                 )
             }
-            listen_tcp(ins, outc, oti).await
+            listen_tcp(ins, outc, oti, shutdown_rx).await
         }
         _ => Err(io::Error::other(format!(
             "such network not supported: {}",
@@ -220,9 +222,11 @@ async fn listen_tcp(
     ins: Arc<dyn Suit>,
     outc: Arc<dyn Suit>,
     oti: Option<Arc<net::TransmissionInfo>>,
+    shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
     let laddr = ins.addr_str().to_string();
-    info!("start listen tcp {}", laddr);
+    let wn = ins.whole_name().to_string();
+    info!("start listen tcp {}, {}", laddr, wn);
 
     let listener = TcpListener::bind(laddr.clone()).await?;
 
@@ -230,31 +234,48 @@ async fn listen_tcp(
     let insc = move || ins.clone();
     let outcc = move || outc.clone();
 
-    loop {
-        let (tcpstream, raddr) = listener.accept().await?;
+    tokio::select! {
+        r = async {
+            loop {
+                let r = listener.accept().await;
+                if r.is_err(){
 
-        let laddr = laddr.clone();
-        let ti = clone_oti();
-        let ins = insc();
-        let outc = outcc();
+                    break;
+                }
+                let (tcpstream, raddr) = r.unwrap();
 
-        tokio::spawn(async move {
-            if log_enabled!(Debug) {
-                debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
+                let laddr = laddr.clone();
+                let ti = clone_oti();
+                let ins = insc();
+                let outc = outcc();
+
+                tokio::spawn(async move {
+                    if log_enabled!(Debug) {
+                        debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
+                    }
+
+                    let _ = relay::tcp::handle_tcp(
+                        tcpstream,
+                        ins.whole_name(),
+                        outc.whole_name(),
+                        ins.get_mappers_vec().iter(),
+                        outc.get_mappers_vec().iter(),
+                        outc.addr(),
+                        ti,
+                    )
+                    .await;
+                });
+
             }
 
-            let _ = relay::tcp::handle_tcp(
-                tcpstream,
-                ins.whole_name(),
-                outc.whole_name(),
-                ins.get_mappers_vec().iter(),
-                outc.get_mappers_vec().iter(),
-                outc.addr(),
-                ti,
-            )
-            .await;
-        });
-    }
+            Ok::<_, io::Error>(())
+        } => {
+            r
 
-    //Ok(())
+        }
+        _ = shutdown_rx => {
+            info!("terminating accept loop, {}",wn);
+            Ok(())
+        }
+    }
 }

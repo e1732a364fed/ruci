@@ -16,7 +16,13 @@ use suit::config::LDConfig;
 use suit::*;
 
 use serde::{Deserialize, Serialize};
-use tokio::{sync::Mutex, task};
+use tokio::{
+    sync::{
+        oneshot::{self, Sender},
+        Mutex,
+    },
+    task,
+};
 
 /// Engine 级别的 Config，比proxy级的 Config 多了一些信息，如api server部分和 engine 部分
 #[derive(Debug, Deserialize, Serialize)]
@@ -30,7 +36,7 @@ where
     FInadder: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
     FOutadder: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
 {
-    running: Arc<Mutex<u8>>, //这里约定，所有对 engine的热更新都要先访问running的锁
+    running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
 
     servers: Vec<Arc<dyn Suit>>,
     clients: Vec<Arc<dyn Suit>>,
@@ -47,15 +53,15 @@ where
     LI: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
     LO: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
 {
-    pub fn new(load_inadder_func: LI, load_outadder_func: LO) -> Self {
+    pub fn new(load_inmapper_func: LI, load_outmapper_func: LO) -> Self {
         SuitEngine {
             ti: Arc::new(TransmissionInfo::default()),
             servers: Vec::new(),
             clients: Vec::new(),
             default_c: None,
-            running: Arc::new(Mutex::new(0)),
-            load_inmappers_func: load_inadder_func,
-            load_outmappers_func: load_outadder_func,
+            running: Arc::new(Mutex::new(None)),
+            load_inmappers_func: load_inmapper_func,
+            load_outmappers_func: load_outmapper_func,
         }
     }
 
@@ -152,7 +158,8 @@ where
         &self,
     ) -> std::io::Result<Vec<impl Future<Output = Result<(), std::io::Error>>>> {
         let mut running = self.running.lock().await;
-        if *running == 1 {
+        if let None = *running {
+        } else {
             return Err(io::Error::other("already started!"));
         }
         if self.server_count() == 0 {
@@ -162,25 +169,37 @@ where
             return Err(io::Error::other("no client"));
         }
 
-        *running = 1;
         let defaultc = self.default_c.clone().unwrap();
 
         //todo: 因为没实现路由功能，所以现在只能用一个 client, 即 default client
         // 路由后，要传递给 listen_ser 一个路由表
 
         let mut tasks = Vec::new();
+        let mut shutdown_tx_vec = Vec::new();
+
         self.servers.iter().for_each(|s| {
-            let task = listen_ser((*s).clone(), defaultc.clone(), Some(self.ti.clone()));
+            let (tx, rx) = oneshot::channel();
+
+            let task = listen_ser((*s).clone(), defaultc.clone(), Some(self.ti.clone()), rx);
             tasks.push(task);
+            shutdown_tx_vec.push(tx);
         });
         debug!("engine will run with {} listens", tasks.len());
+
+        *running = Some(shutdown_tx_vec);
         return Ok(tasks);
     }
 
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
     pub async fn stop(&self) {
         let mut running = self.running.lock().await;
-        *running = 0;
+        let opt = running.take();
+
+        if let Some(v) = opt {
+            v.into_iter().for_each(|shutdown_tx| {
+                let _ = shutdown_tx.send(());
+            });
+        }
 
         let ss = self.servers.as_slice();
         for s in ss {

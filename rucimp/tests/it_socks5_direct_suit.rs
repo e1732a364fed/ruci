@@ -14,7 +14,7 @@ use std::{env::set_var, io, sync::Arc, time::Duration};
 
 use bytes::{BufMut, BytesMut};
 use futures::{pin_mut, select, FutureExt};
-use log::info;
+use log::{info, warn};
 use ruci::map::{self, socks5::*};
 use ruci::map::{socks5, MappersVec};
 use ruci::{map::Mapper, net, user::UserPass};
@@ -25,6 +25,7 @@ use rucimp::suit::config::Config;
 use rucimp::{suit::*, SuitEngine};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
+use tokio::sync::oneshot;
 
 const WAITSECS: u64 = ruci::relay::READ_HANDSHAKE_TIMEOUT + 2;
 const WAITID: i32 = 10101;
@@ -41,6 +42,9 @@ async fn f_dial_future(
     the_target_port: u16,
 ) {
     info!("start run f_dial_future, {}", rid);
+
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
     let mut cs = TcpStream::connect((listen_host_str, listen_port))
         .await
         .unwrap();
@@ -130,6 +134,8 @@ async fn f_dial_future_out_adder(
     the_target_port: u16,
 ) -> io::Result<()> {
     info!("start run f_dial_future, {}", rid);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
     let cs = TcpStream::connect((listen_host_str, listen_port))
         .await
         .unwrap();
@@ -194,6 +200,8 @@ async fn f_dial_future_earlydata(
     the_target_port: u16,
 ) {
     info!("start run f_dial_future, {}", rid);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
     let mut cs = TcpStream::connect((listen_host_str, listen_port))
         .await
         .unwrap();
@@ -348,10 +356,12 @@ async fn socks5_direct_and_request() -> std::io::Result<()> {
     let alsuit = Arc::new(lsuit);
     let alsuitc = alsuit.clone();
 
+    let (tx, rx) = oneshot::channel();
+
     let listen_future = async {
         info!("try start listen");
 
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti)).await;
+        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
 
         info!("r {:?}", r);
     };
@@ -363,7 +373,8 @@ async fn socks5_direct_and_request() -> std::io::Result<()> {
     let listen_future = listen_future.fuse();
     let dial_future = f_dial_future(1, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
 
-    pin_mut!(listen_future, dial_future);
+    let sleep_f = tokio::time::sleep(Duration::from_secs(100)).fuse();
+    pin_mut!(listen_future, dial_future, sleep_f);
 
     /*
 
@@ -381,6 +392,10 @@ async fn socks5_direct_and_request() -> std::io::Result<()> {
             info!("dial finished first , {:?}",arc_tic);
 
         },
+        _ = sleep_f =>{
+
+            let _ = tx.send(());
+        }
     }
 
     Ok(())
@@ -407,11 +422,12 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
 
     let alsuit = Arc::new(lsuit);
     let alsuitc = alsuit.clone();
+    let (tx, rx) = oneshot::channel();
 
     let listen_future = async {
         info!("try start listen");
 
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti)).await;
+        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
 
         info!("r {:?}", r);
     };
@@ -424,7 +440,8 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
     let dial_future =
         f_dial_future_out_adder(1, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
 
-    pin_mut!(listen_future, dial_future);
+    let sleep_f = tokio::time::sleep(Duration::from_secs(100)).fuse();
+    pin_mut!(listen_future, dial_future, sleep_f);
 
     select! {
         () = listen_future => {
@@ -434,6 +451,10 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
             info!("dial finished first , {:?}",r);
 
         },
+        _ = sleep_f =>{
+
+            let _ = tx.send(());
+        }
     }
     Ok(())
 }
@@ -458,11 +479,12 @@ async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()>
 
     let alsuit = Arc::new(lsuit);
     let alsuitc = alsuit.clone();
+    let (tx, rx) = oneshot::channel();
 
     let listen_future = async {
         info!("try start listen");
 
-        let r = listen_ser(alsuit, Arc::new(csuit), None).await;
+        let r = listen_ser(alsuit, Arc::new(csuit), None, rx).await;
 
         info!("r {:?}", r);
     };
@@ -474,7 +496,8 @@ async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()>
     let listen_future = listen_future.fuse();
     let dial_future = f_dial_future(1, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
 
-    pin_mut!(listen_future, dial_future);
+    let sleep_f = tokio::time::sleep(Duration::from_secs(100)).fuse();
+    pin_mut!(listen_future, dial_future, sleep_f);
 
     select! {
         () = listen_future => {
@@ -484,6 +507,11 @@ async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()>
             info!("dial finished first ", );
 
         },
+        _ = sleep_f =>{
+
+            let _ = tx.send(());
+        }
+
     }
 
     Ok(())
@@ -517,11 +545,12 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
 
     let alsuit = Arc::new(lsuit);
     let alsuitc = alsuit.clone();
+    let (tx, rx) = oneshot::channel();
 
     let listen_future = async {
         info!("try start listen, {}", wn);
 
-        let r = listen_ser(alsuit, Arc::new(csuit), None).await;
+        let r = listen_ser(alsuit, Arc::new(csuit), None, rx).await;
 
         info!("r {:?}", r);
     };
@@ -533,7 +562,8 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
     let listen_future = listen_future.fuse();
     let dial_future = f_dial_future(1, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
 
-    pin_mut!(listen_future, dial_future);
+    let sleep_f = tokio::time::sleep(Duration::from_secs(100)).fuse();
+    pin_mut!(listen_future, dial_future, sleep_f);
 
     select! {
         () = listen_future => {
@@ -543,6 +573,11 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
             info!("dial finished first ", );
 
         },
+        _ = sleep_f =>{
+
+            let _ = tx.send(());
+        }
+
     }
 
     Ok(())
@@ -570,11 +605,12 @@ async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
 
     let alsuit = Arc::new(lsuit);
     let alsuitc = alsuit.clone();
+    let (tx, rx) = oneshot::channel();
 
     let listen_future = async {
         info!("try start listen");
 
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti)).await;
+        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
 
         info!("r {:?}", r);
     };
@@ -587,7 +623,8 @@ async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
     let dial_future =
         f_dial_future_earlydata(1, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
 
-    pin_mut!(listen_future, dial_future);
+    let sleep_f = tokio::time::sleep(Duration::from_secs(100)).fuse();
+    pin_mut!(listen_future, dial_future, sleep_f);
 
     select! {
         () = listen_future => {
@@ -597,6 +634,11 @@ async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
             info!("dial finished first , {:?}",arc_tic);
 
         },
+        _ = sleep_f =>{
+
+            let _ = tx.send(());
+        }
+
     }
 
     Ok(())
@@ -629,11 +671,12 @@ async fn socks5_direct_longwait_write_and_request() {
 
     let alsuit = Arc::new(lsuit);
     let alsuitc = alsuit.clone();
+    let (tx, rx) = oneshot::channel();
 
     let listen_future = async {
         info!("try start listen");
 
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti)).await;
+        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
 
         info!("r {:?}", r);
     };
@@ -646,7 +689,8 @@ async fn socks5_direct_longwait_write_and_request() {
     let dial_future =
         f_dial_future(WAITID, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
 
-    pin_mut!(listen_future, dial_future);
+    let sleep_f = tokio::time::sleep(Duration::from_secs(100)).fuse();
+    pin_mut!(listen_future, dial_future, sleep_f);
 
     select! {
         () = listen_future => {
@@ -656,6 +700,11 @@ async fn socks5_direct_longwait_write_and_request() {
             info!("dial finished first, will return in 2 secs... , {:?}",arc_tic);
 
         },
+        _ = sleep_f =>{
+
+            let _ = tx.send(());
+        }
+
     }
 
     tokio::time::sleep(Duration::from_secs(2)).await;
@@ -825,11 +874,12 @@ async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
 
     let alsuit = Arc::new(lsuit);
     let alsuitc = alsuit.clone();
+    let (tx, rx) = oneshot::channel();
 
     let listen_future = async {
         info!("try start listen");
 
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti)).await;
+        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
 
         info!("r {:?}", r);
     };
@@ -841,8 +891,9 @@ async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
     let listen_future = listen_future.fuse();
     let dial_future = f_dial_future(1, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
     let dial_future2 = f_dial_future(2, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
+    let sleep_f = tokio::time::sleep(Duration::from_secs(100)).fuse();
 
-    pin_mut!(listen_future, dial_future, dial_future2);
+    pin_mut!(listen_future, dial_future, dial_future2, sleep_f);
 
     let mut i = 2;
 
@@ -860,12 +911,17 @@ async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
                 i -= 1;
 
             },
+            _ = sleep_f =>{
+
+                let _ = tx.send(());
+                warn!("sleep timeout");
+                break;
+            }
+
         }
     }
 
-    info!("test ok, will return in 2 secs... ");
-
-    tokio::time::sleep(Duration::from_secs(2)).await;
+    info!("test ok ");
 
     Ok(())
 }
