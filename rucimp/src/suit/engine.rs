@@ -15,7 +15,7 @@ use tokio::{
 
 use super::config;
 
-/// Engine 级别的 Config，比proxy级的 Config 多了一些信息，如api server部分和 engine 部分
+/// Engine 级别的 Config, 比proxy级的 Config 多了一些信息, 如api server部分和 engine 部分
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub proxy_config: crate::suit::config::Config,
@@ -27,7 +27,7 @@ where
     FInadder: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
     FOutadder: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
 {
-    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
+    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<TransmissionInfo>,
 
     servers: Vec<Arc<dyn Suit>>,
@@ -128,7 +128,7 @@ where
     /// blocking, return only if all servers stoped listening.
     /// calls start_with_tasks
     ///
-    /// 该方法不能用 block_on 调用，只能用 await
+    /// 该方法不能用 block_on 调用, 只能用 await
     pub async fn block_run(&self) -> io::Result<()> {
         /*
         let rtasks = self.start_with_tasks().await;
@@ -161,8 +161,8 @@ where
 
         let defaultc = self.default_c.clone().unwrap();
 
-        //todo: 因为没实现路由功能，所以现在只能用一个 client, 即 default client
-        // 路由后，要传递给 listen_ser 一个路由表
+        //todo: 因为没实现路由功能, 所以现在只能用一个 client, 即 default client
+        // 路由后, 要传递给 listen_ser 一个路由表
 
         let mut tasks = Vec::new();
         let mut shutdown_tx_vec = Vec::new();

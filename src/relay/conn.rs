@@ -255,6 +255,22 @@ where
     fn select(&self, params: Vec<Option<AnyData>>) -> T;
 }
 
+pub struct FixedOutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox> + Clone + Send,
+{
+    pub mappers: T,
+}
+
+impl<'a, T> OutSelector<'a, T> for FixedOutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox> + Clone + Send + Sync,
+{
+    fn select(&self, _params: Vec<Option<AnyData>>) -> T {
+        self.mappers.clone()
+    }
+}
+
 pub async fn handle_in_accumulate_result<'a, T, T2>(
     mut listen_result: AccumulateResult<'a, T>,
 
@@ -287,86 +303,52 @@ where
         )
     }
 
-    let mut outc_iterator = out_selector.select(listen_result.d);
-
-    let outc_addr = match outc_iterator.by_ref().last() {
-        Some(oi) => oi.get_target_addr(),
-        None => None,
-    };
-    let is_direct: bool;
-
-    let real_target_addr = if outc_addr.is_some() {
-        is_direct = false;
-        outc_addr.unwrap()
-    } else {
-        is_direct = true;
-        target_addr.clone()
-    };
+    let outc_iterator = out_selector.select(listen_result.d);
 
     //todo: DNS 功能
 
-    let out_stream = match real_target_addr.try_dial().await {
-        Ok(t) => t,
-        Err(e) => {
-            warn!("{cid}, parse target addr failed, {real_target_addr} , {e}",);
-            let _ = listen_result.c.try_shutdown().await;
-            return Err(e);
-        }
-    };
-
-    if is_direct {
-        cp_stream(
-            cid.clone(),
-            listen_result.c,
-            out_stream,
-            listen_result.b.take(),
-            ti,
-        )
+    let cidc = cid.clone();
+    let dial_result =
+        tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
+            map::accumulate::<_>(
+                cidc,
+                ProxyBehavior::ENCODE,
+                MapResult {
+                    a: Some(target_addr),
+                    b: listen_result.b.take(),
+                    c: Stream::None,
+                    d: None,
+                    e: None,
+                    id: None,
+                },
+                outc_iterator,
+            )
+            .await
+        })
         .await;
-    } else {
-        let cidc = cid.clone();
-        let dial_result =
-            tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                map::accumulate::<_>(
-                    cidc,
-                    ProxyBehavior::ENCODE,
-                    MapResult {
-                        a: Some(target_addr),
-                        b: listen_result.b.take(),
-                        c: out_stream,
-                        d: None,
-                        e: None,
-                        id: None,
-                    },
-                    outc_iterator,
-                )
-                .await
-            })
-            .await;
 
-        if let Err(e) = dial_result {
-            warn!("{cid}, dial out client timeout, {e}",);
-            //let _ = in_conn.shutdown();
-            //let _ = out_stream.try_shutdown();
-            return Err(e.into());
-        }
-        let dial_result = dial_result.unwrap();
-        if let Some(e) = dial_result.e {
-            warn!("{cid}, dial out client failed, {e}",);
-            //let _ = in_conn.shutdown();
-            //let _ = out_stream.try_shutdown();
-            return Err(e);
-        } else if let Stream::None = dial_result.c {
-            info!("{cid}, dial out client stream got consumed ",);
-
-            return Ok(());
-        }
-
-        if let Some(rta) = dial_result.a {
-            warn!("{cid}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
-        }
-        cp_stream(cid.clone(), listen_result.c, dial_result.c, None, ti).await;
+    if let Err(e) = dial_result {
+        warn!("{cid}, dial out client timeout, {e}",);
+        //let _ = in_conn.shutdown();
+        //let _ = out_stream.try_shutdown();
+        return Err(e.into());
     }
+    let dial_result = dial_result.unwrap();
+    if let Some(e) = dial_result.e {
+        warn!("{cid}, dial out client failed, {e}",);
+        //let _ = in_conn.shutdown();
+        //let _ = out_stream.try_shutdown();
+        return Err(e);
+    } else if let Stream::None = dial_result.c {
+        info!("{cid}, dial out client stream got consumed ",);
+
+        return Ok(());
+    }
+
+    if let Some(rta) = dial_result.a {
+        warn!("{cid}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
+    }
+    cp_stream(cid.clone(), listen_result.c, dial_result.c, None, ti).await;
 
     Ok(())
 }

@@ -1,7 +1,7 @@
 /*!
 module proxy define some important traits for proxy
 
-几个关键部分: State, Stream, Mapper
+几个关键部分: State, Stream, Mapper,accumulate , accumulate_from_start
 
 ruci 包中实现 Mapper 的模块有: math, counter, tls, socks5, trojan
 
@@ -585,7 +585,7 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
         .await;
 
     if r.e.is_some() {
-        warn!("accumulate_from_start, returned by e");
+        warn!("accumulate_from_start, returned by e, {}", r.e.unwrap());
         return;
     }
     if let Stream::Generator(rx) = r.c {

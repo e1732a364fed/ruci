@@ -1,4 +1,4 @@
-use log::info;
+use log::{debug, info, log_enabled};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::mpsc::{self, Receiver},
@@ -18,8 +18,22 @@ impl Name for Direct {
 
 #[async_trait]
 impl Mapper for Direct {
-    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, _params: MapParams) -> MapResult {
-        unimplemented!()
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        let a = params.a.unwrap();
+
+        if log_enabled!(log::Level::Debug) {
+            debug!("direct dial, {} , {}", a, cid);
+        }
+
+        let aso = a.get_socket_addr_or_resolve().unwrap();
+        let r = TcpStream::connect(aso).await;
+
+        match r {
+            Ok(c) => {
+                return MapResult::c(Box::new(c));
+            }
+            Err(e) => return MapResult::from_err(e),
+        }
     }
 }
 

@@ -1,7 +1,11 @@
 use futures::Future;
 use log::{debug, info};
 use parking_lot::Mutex;
-use ruci::{map::*, net::TransmissionInfo, relay::conn::handle_in_accumulate_result};
+use ruci::{
+    map::*,
+    net::TransmissionInfo,
+    relay::conn::{handle_in_accumulate_result, FixedOutSelector},
+};
 use std::{io, sync::Arc};
 use tokio::sync::{
     mpsc,
@@ -149,21 +153,5 @@ impl StaticEngine {
         //     s.stop();
         // }
         info!("stopped");
-    }
-}
-
-pub struct FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send,
-{
-    pub mappers: T,
-}
-
-impl<'a, T> ruci::relay::conn::OutSelector<'a, T> for FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send + Sync,
-{
-    fn select(&self, _params: Vec<Option<AnyData>>) -> T {
-        self.mappers.clone()
     }
 }

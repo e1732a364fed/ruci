@@ -320,22 +320,6 @@ async fn listen_tcp(
     }
 }
 
-pub struct FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send,
-{
-    pub mappers: T,
-}
-
-impl<'a, T> relay::conn::OutSelector<'a, T> for FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send + Sync,
-{
-    fn select(&self, _params: Vec<Option<AnyData>>) -> T {
-        self.mappers.clone()
-    }
-}
-
 /// blocking loop listen ins tcp。calls handle_conn_clonable inside the loop.
 async fn listen_tcp2(
     ins: &'static dyn Suit,
@@ -351,7 +335,7 @@ async fn listen_tcp2(
 
     let clone_oti = move || oti.clone();
 
-    let selector = FixedOutSelector {
+    let selector = relay::conn::FixedOutSelector {
         mappers: outc.get_mappers_vec().iter(),
     };
     let selector = Box::new(selector);
