@@ -52,7 +52,7 @@ use log::{info, log_enabled, warn};
 use tokio::{net::TcpStream, sync::oneshot};
 use typed_builder::TypedBuilder;
 
-use std::{fmt::Debug, io, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 /// 如果新连接不是udp, 则内含新连接
 pub enum NewConnection {

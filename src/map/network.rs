@@ -194,7 +194,7 @@ impl TcpStreamGenerator {
     pub async fn listen_addr(
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
-    ) -> io::Result<Receiver<MapResult>> {
+    ) -> anyhow::Result<Receiver<MapResult>> {
         let r = TcpListener::bind(a.clone().get_socket_addr().expect("a has socket addr")).await;
 
         match r {
@@ -250,12 +250,16 @@ impl TcpStreamGenerator {
                 });
                 Ok(rx)
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                let mut e: anyhow::Error = e.into();
+                e = e.context(format!("listen {} failed", a));
+                Err(e)
+            }
         }
     }
 
-    /// not recommended
-    pub async fn listen_addr_forever(a: &net::Addr) -> io::Result<Receiver<MapResult>> {
+    /// not recommended, use listen_addr
+    pub async fn listen_addr_forever(a: &net::Addr) -> anyhow::Result<Receiver<MapResult>> {
         let r = TcpListener::bind(a.clone().get_socket_addr().expect("a has socket addr")).await;
 
         match r {
@@ -297,7 +301,7 @@ impl TcpStreamGenerator {
                 });
                 Ok(rx)
             }
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 }
@@ -324,7 +328,7 @@ impl Mapper for TcpStreamGenerator {
 
         match r {
             Ok(rx) => MapResult::builder().c(Stream::g(rx)).build(),
-            Err(e) => MapResult::builder().e(e).build(), //MapResult::from_err(e),
+            Err(e) => MapResult::from_e(e),
         }
     }
 }

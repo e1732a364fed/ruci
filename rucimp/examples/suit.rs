@@ -18,7 +18,7 @@ use rucimp::{
 
 /// 使用 config.suit.toml, resource/local.suit.toml, 或 用户提供的参数作为配置文件
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> anyhow::Result<()> {
     println!("rucimp~ suit2\n"); //it's the second impl version of suit
     let cdir = std::env::current_dir().expect("has current_dir");
     println!("working dir: {:?} \n", cdir);

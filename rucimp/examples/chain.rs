@@ -14,7 +14,7 @@ use log::{debug, info, log_enabled, warn, Level};
 use rucimp::chain::{config::lua, engine::Engine};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> anyhow::Result<()> {
     println!("rucimp~ chain\n");
     let cdir = std::env::current_dir().expect("has current directory");
     println!("working dir: {:?} \n", cdir);

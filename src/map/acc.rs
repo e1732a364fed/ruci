@@ -1,5 +1,5 @@
 /*!
-* 提供一些累加方法
+* provide facilities for accumulating
 
 struct AccumulateResult
 
@@ -170,7 +170,13 @@ pub async fn accumulate_from_start(
         )
         .await;
     if let Some(e) = first_r.e {
-        warn!("accumulate_from_start, returned by e, {}", e);
+        let e = e.context(format!(
+            "accumulate_from_start failed, tag: {} ",
+            first.get_chain_tag()
+        ));
+        //use {:#} to show full chain of anyhow::Error
+
+        warn!("{:#} ", e);
         return Err(e);
     }
 
