@@ -18,7 +18,7 @@ pub struct SockOpt {
 pub async fn new_socket2(na: &net::Addr, so: &SockOpt) -> anyhow::Result<Socket> {
     let a = na
         .get_socket_addr()
-        .with_context("listen_tcp failed, requires a has socket addr")?;
+        .context("listen_tcp failed, requires a has socket addr")?;
 
     let is_udp = na.network == Network::UDP;
 

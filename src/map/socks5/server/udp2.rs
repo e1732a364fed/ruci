@@ -43,7 +43,7 @@ pub(super) async fn udp_associate(
     ];
     base.write_all(&reply)
         .await
-        .with_context(|| "socks5 server udp handshake write new addr to client failed")?;
+        .context("socks5 server udp handshake write new addr to client failed")?;
 
     info!("{cid} socks5: listening a udp port for the user, port: {port}");
 
@@ -54,7 +54,7 @@ pub(super) async fn udp_associate(
         user_udp_socket.recv_from(&mut buf),
     )
     .await
-    .with_context(|| "socks5 server listen user first udp msg failed")??;
+    .context("socks5 server listen user first udp msg failed")??;
 
     buf.truncate(n);
 
@@ -72,7 +72,7 @@ pub(super) async fn udp_associate(
     }
 
     let ad = decode_udp_diagram(&mut buf)
-        .with_context(|| "socks5 server udp handshake decode first addr failed")?;
+        .context("socks5 server udp handshake decode first addr failed")?;
 
     let clientsoa = if unspecified {
         so

@@ -419,10 +419,10 @@ impl Addr {
                 debug!("Addr dialing IP {}", self);
                 let (tun_name, dial_addr, netmask) = self
                     .to_name_ip_netmask()
-                    .with_context(|| "Addr::try_dial tun, to_name_ip_netmask failed")?;
+                    .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
                 let c = tun::dial(tun_name, dial_addr, netmask)
                     .await
-                    .with_context(|| "Addr::try_dial tun, dial failed")?;
+                    .context("Addr::try_dial tun, dial failed")?;
                 Ok(Stream::Conn(Box::new(c)))
             }
             Network::TCP => {

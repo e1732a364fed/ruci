@@ -28,7 +28,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         Ok(
             tokio::time::timeout(Duration::from_secs(10), reqwest::get(ad + url))
                 .await
-                .with_context(|| "request waiting for too long")??,
+                .context("request waiting for too long")??,
         )
     }
 

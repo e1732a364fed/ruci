@@ -155,7 +155,7 @@ trace 还会将每条连接的 ub, db 信息记录下来
 
 ## 其它
 
-使用 anyhow 的 context 会导致变慢，要改用 with_context
+使用 anyhow 的 context 会导致变慢，若有初始化开销 则要改用 with_context
 
 再比如，要用 ok_or_else, 而不是 ok_or
 
