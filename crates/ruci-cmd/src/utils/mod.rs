@@ -14,19 +14,16 @@ pub const MMDB_DOWNLOAD_LINK: &str =
 #[derive(Subcommand, Clone)]
 pub enum Commands {
     /// download Country.mmdb
-    DownloadMMDB,
+    MMDB,
 
     /// download wintun.zip
-    DownloadWINTUN,
+    WINTUN,
 
     /// calculate trojan hash for a plain text password
-    CalcuTrojanHash {
-        password: String,
-    },
+    CalcuTrojanHash { password: String },
 
-    GenerateSelfSignedCert {
-        names: Vec<String>,
-    },
+    /// generate self signed root certificate
+    GenCer { names: Vec<String> },
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -35,14 +32,14 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         None => return Ok(()),
     };
     match cmd {
-        Commands::DownloadMMDB => {
+        Commands::MMDB => {
             download_mmdb().await?;
         }
-        Commands::DownloadWINTUN => {
+        Commands::WINTUN => {
             download_wintun().await?;
         }
         Commands::CalcuTrojanHash { password } => calcu_trojan_hash(&password),
-        Commands::GenerateSelfSignedCert { names } => {
+        Commands::GenCer { names } => {
             use rcgen::generate_simple_self_signed;
 
             let cert = generate_simple_self_signed(names).unwrap();

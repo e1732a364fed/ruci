@@ -45,9 +45,14 @@ make BUILD_VERSION=my_version BUILD_TRIPLET=aarch64-apple-darwin
 
 生成自签名根证书:
 
-./ruci-cmd utils generate-self-signed-cert localhost www.mytest.com
+./ruci-cmd utils gen-cer localhost www.mytest.com
 
 会生成 generated.crt 和 generated.key
+
+./ruci-cmd utils mmdb
+
+./ruci-cmd utils wintun
+
 
 # api server
 
