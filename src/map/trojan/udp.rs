@@ -101,7 +101,7 @@ impl AsyncReadAddr for Reader {
                                 the_buf2.truncate(data_len);
 
                                 let real_len = min(data_len, r_buf.len());
-                                debug!("trojan reader read got real_len {:?}", real_len);
+                                //debug!("trojan reader read got real_len {:?}", real_len);
 
                                 the_buf2.copy_to_slice(&mut r_buf[..real_len]);
                                 //r_buf.put(&the_buf2[..real_len]);
@@ -172,7 +172,7 @@ impl AsyncWriteAddr for Writer {
         let actual_l = buf2.len();
 
         let r = self.base.as_mut().poll_write(cx, &buf2);
-        debug!("trojan writer write got {data_l} {actual_l} {:?}", r);
+        //debug!("trojan writer write got {data_l} {actual_l} {:?}", r);
 
         buf2.clear();
         self.last_buf = Some(buf2);

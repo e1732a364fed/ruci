@@ -227,9 +227,9 @@ config = {
     tag_route = {{"listen1", "direct"}, {"listen_udp1", "direct"}},
 
     --[[
-这个 config 块是演示 inbound 是 socks5http, outbound 是 direct 的情况
+这个 config 块是演示 inbound 是 tproxy, outbound 是 direct 的情况
 
-但是用了 透明代理功能. 其只能在 linux 上使用.
+透明代理tproxy 只能在 linux 上使用.
 --]]
 
 }
@@ -256,9 +256,9 @@ config = {
     tag_route = {{"listen1", "out"}, {"listen_udp1", "out"}},
 
     --[[
-这个 config 块是演示 inbound 是 socks5http, outbound 是  
+这个 config 块是演示 inbound 是 tproxy, outbound 是  trojan
+透明代理tproxy 只能在 linux 上使用.
 
-但是用了 透明代理功能. 其只能在 linux 上使用.
 --]]
 
 }

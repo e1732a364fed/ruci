@@ -322,110 +322,10 @@ pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 
 // todo improve the codes below
 
-/*
-async fn read_once_notimeout<R1: AddrReadTrait, W1: AddrWriteTrait>(
-    name: &str,
-    r1: &mut R1,
-    w1: &mut W1,
-    buf: &mut [u8],
-) -> anyhow::Result<usize> {
-    debug!("read1 {name} called");
-
-    match r1.read(buf).await {
-        Err(e) => {
-            bail!("read_once_notimeout GOT ERROR {e}");
-        }
-        Ok((m, ad)) => {
-            if m > 0 {
-                debug!("read1 {name} will write {m}");
-                let r = w1.write(&buf[..m], &ad).await;
-                let r2 = w1.flush().await;
-                let r = if let Err(e) = r2 { Err(e) } else { r };
-
-                debug!("read1 {name} write got {r:?}");
-
-                match r {
-                    Ok(n) => {
-                        if n < m {
-                            debug!("read_once n<m {n} {m}")
-                        }
-                        return Ok(r?);
-                    }
-                    Err(e) => {
-                        bail!("write addrconn err {e}");
-                    }
-                }
-            }
-            bail!("read <=0 {m}");
-        }
-    }
-}
-
-async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
-    name: &str,
-    r1: &mut R1,
-    w1: &mut W1,
-    no_timeout: bool,
-    buf: &mut [u8],
-) -> anyhow::Result<usize> {
-    if no_timeout {
-        return read_once_notimeout(name, r1, w1, buf).await;
-    }
-
-    tokio::select! {
-        _ = tokio::time::sleep(CP_UDP_TIMEOUT) =>{
-            bail!("read_once timeout");
-        }
-
-        r = r1.read(buf) =>{
-            match r {
-                Err(e) => {
-                    bail!("read_once GOT ERROR {e}");
-
-                },
-                Ok((m, ad)) => {
-                    if m > 0 {
-                        //写udp 是不会卡住的, 但addr_conn底层可能不是 udp
-
-                        let fut = tokio::time::timeout(Duration::from_secs(1),async {
-                            let r = w1.write(&buf[..m], &ad).await;
-                            let r2 = w1.flush().await;
-                            if let Err(e) = r2{
-                                Err(e)
-                            }else{
-                                r
-                            }
-                        }).await;
-                        match fut{
-                            Ok(r) => match r {
-                                Ok(n) => {
-                                    if n < m {
-                                        debug!("read_once n<m {n} {m}")
-                                    }
-                                    return Ok(r?)},
-                                Err(e) => {
-                                    bail!("write addrconn err {e}");
-                                },
-                            },
-                            Err(_) => {
-                                debug!("write addrconn timeout");
-                                return Ok(0);
-                            },
-                        }
-
-                    }
-                    bail!("read <=0 {m}") ;
-                }
-            }
-        }
-    } //select
-}
-
- */
-
 enum ReadOnceState {
     ToRead,
     ToWrite,
+    ToFlush,
 }
 
 pub struct ReadOnceFuture<'a, R1: AddrReadTrait, W1: AddrWriteTrait> {
@@ -434,6 +334,7 @@ pub struct ReadOnceFuture<'a, R1: AddrReadTrait, W1: AddrWriteTrait> {
     buf: &'a mut [u8],
 
     m: usize,
+    n: usize,
     ad: Addr,
     state: ReadOnceState,
 }
@@ -445,6 +346,7 @@ impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> ReadOnceFuture<'a, R1, W1> {
             w1,
             buf,
             m: 0,
+            n: 0,
             ad: Addr::default(),
             state: ReadOnceState::ToRead,
         }
@@ -488,7 +390,8 @@ impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> ReadOnceFuture<'a, R1, W1> {
                                 if n < m {
                                     debug!("read_once n<m {n} {m}")
                                 }
-                                return Poll::Ready(Ok(n));
+                                self.n = n;
+                                self.state = ReadOnceState::ToFlush;
                             }
                             Err(e) => {
                                 return Poll::Ready(Err(io_error(format!(
@@ -496,6 +399,19 @@ impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> ReadOnceFuture<'a, R1, W1> {
                                 ))))
                             }
                         },
+                    }
+                }
+                ReadOnceState::ToFlush => {
+                    let r = Pin::new(&mut *self.w1).poll_flush_addr(cx);
+                    match r {
+                        Poll::Ready(r) => match r {
+                            Ok(_) => {
+                                self.state = ReadOnceState::ToRead;
+                                return Poll::Ready(Ok(self.n));
+                            }
+                            Err(e) => return Poll::Ready(Err(e)),
+                        },
+                        Poll::Pending => return Poll::Pending,
                     }
                 }
             } // match state
@@ -540,18 +456,11 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
                 }
             }
 
-            // r = read_once(&name,&mut r1, &mut w1, no_timeout,buf.as_mut()) =>{
-            //     match r {
-            //         Ok(n) => whole_write+=n,
-            //         Err(e) => {
-            //             debug!("cp_addr got e {e}");
-            //             break},
-            //     }
-            // }
             _ = shutdown_rx.recv() =>{
                 break;
             }
         }
+        tokio::task::yield_now().await;
     } //loop
 
     // 实测 用一个loop + 小 buf 的实现 比用 两个 spawn + mpsc 快很多. 后者非常卡顿几乎不可用
