@@ -252,7 +252,7 @@ pub async fn handle_in_fold_result(
         return Err(e);
     }
     if let Stream::None = dial_result.c {
-        warn!(
+        info!(
             cid = %cid, is_fallback = is_fallback,
             "fold outbound stream got consumed ",
         );

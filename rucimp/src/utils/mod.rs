@@ -5,7 +5,7 @@ Provides some helper functions to read a certain resource file or to wait the sh
 use std::{io, path::Path};
 
 use tokio::signal;
-use tracing::{debug, info};
+use tracing::info;
 
 use crate::COMMON_DIRS;
 use data_source::{DataSource, SyncFolderSource};
@@ -18,8 +18,6 @@ pub fn default_file_source() -> DataSource {
 /// try folders in COMMON_DIRS
 ///
 /// try the default_file given or the first cmd argument
-///
-/// and will set current dir to the directory
 pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyhow::Result<Vec<u8>> {
     let filename = match arg_file.as_ref() {
         Some(a) => a,
@@ -37,10 +35,10 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
 
     cd.push(r.1.unwrap());
 
-    if cd.exists() {
-        std::env::set_current_dir(cd).expect("set_current_dir ok");
-        debug!("set current dir to {:?}", std::env::current_dir().unwrap());
-    }
+    // if cd.exists() {
+    //     std::env::set_current_dir(cd).expect("set_current_dir ok");
+    //     debug!("set current dir to {:?}", std::env::current_dir().unwrap());
+    // }
 
     Ok(r.0)
 }

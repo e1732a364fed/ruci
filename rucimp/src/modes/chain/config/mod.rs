@@ -220,10 +220,19 @@ impl StaticConfig {
         r.clash_rules
             .clone()
             .and_then(|file_name| {
-                let (d, _) = data_source.get_file_content(Path::new(&file_name)).ok()?;
-                let cs = String::from_utf8_lossy(&d);
-                let mut method_rules_map =
-                    clash_rules::parse_rules(&clash_rules::load_rules_from_str(cs.as_ref()).ok()?);
+                let content_str = {
+                    if file_name.ends_with("yml") || file_name.ends_with("yaml") {
+                        let (d, _) = data_source.get_file_content(Path::new(&file_name)).ok()?;
+                        String::from_utf8_lossy(&d).to_string()
+                    } else {
+                        // 不以 yml/yaml 结尾 则可能传入的直接就是 yaml 的内容
+                        file_name
+                    }
+                };
+
+                let mut method_rules_map = clash_rules::parse_rules(
+                    &clash_rules::load_rules_from_str(content_str.as_ref()).ok()?,
+                );
 
                 if let Some(f) = &r.geosite {
                     let (d, _) = data_source.get_file_content(Path::new(f)).ok()?;
@@ -357,7 +366,7 @@ pub enum InMapConfig {
     Echo,                              //单流消耗器
     Stdio(StdioConfig),                //单流发生器
     Fileio(FileConfig),                //单流发生器
-    BindDialer(Box<BindDialerConfig>), //单流发生器 (Box: #[warn(clippy::large_enum_variant)])
+    BindDialer(Box<BindDialerConfig>), //单流发生器
     Listener {
         listen_addr: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -408,9 +417,6 @@ pub enum InMapConfig {
     #[cfg(feature = "quinn")]
     Quic(crate::map::quic_common::ServerConfig),
 
-    // tcp/ip stack
-    // #[cfg(feature = "smoltcp")]
-    // Stack2,
     #[cfg(feature = "smoltcp")]
     StackSmoltcp,
     #[cfg(feature = "lwip")]
