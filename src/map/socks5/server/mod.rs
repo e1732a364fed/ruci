@@ -327,24 +327,6 @@ impl Server {
 
         if remainn > 0 {
             //客户端把下一条信息和第一条信息合在一起发了过来
-            /*
-            // buf 为 [u8;1024] 的情况, 要进行一次从后搬到前的拷贝
-
-                let right = &mut buf[n - remainn..n];
-
-                //不能有多个可变借用，下面代码不行
-                //&buf[..].copy_from_slice(&right[..remainn]);
-
-                // 获取 right 的指针和长度
-                let right_ptr = right.as_mut_ptr();
-
-                // 将 right 的内容复制到 buf 的起点处
-                unsafe {
-                    std::ptr::copy(right_ptr, buf.as_mut_ptr(), remainn);
-                }
-
-
-             */
 
             //buf 为 BytesMut 时，直接advance
 
