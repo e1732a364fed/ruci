@@ -9,14 +9,11 @@ use serde::Serialize;
 
 #[derive(Subcommand, Debug, Clone, Serialize, Deserialize)]
 pub enum Commands {
-    ConnectionCount {
-        addr: Option<String>,
-    },
+    /// check all connection count
+    ConnectionCount { addr: Option<String> },
 
-    /// stop server
-    Stop {
-        addr: Option<String>,
-    },
+    /// stop the running engine. This won't stop the api-server.
+    Stop { addr: Option<String> },
 }
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
     let cmd = match command {
@@ -38,14 +35,14 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         Commands::ConnectionCount { addr } => {
             let ad = get_real_addr(addr);
 
-            let response = timeout_get(ad, "/cc").await?;
+            let response = timeout_get(ad, "/api/connections/count").await?;
 
-            println!("cc:{}", response.text().await?)
+            println!("api/connections/count:{}", response.text().await?)
         }
         Commands::Stop { addr } => {
             let ad = get_real_addr(addr);
 
-            let response = timeout_get(ad, "/stop_engine").await?;
+            let response = timeout_get(ad, "/api/engine/stop").await?;
 
             println!("response:{}", response.text().await?)
         }
