@@ -104,6 +104,44 @@ pub fn addr_to_socks5_bytes(ta: &Addr, buf: &mut BytesMut) {
     }
 }
 
+/// Wrap R: AsyncRead + Unpin,W: AsyncWrite + Unpin to an AsyncConn
+pub struct RWWrapper<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> {
+    pub r: R,
+    pub w: W,
+}
+
+impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> AsyncRead for RWWrapper<R, W> {
+    #[inline]
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.r).poll_read(cx, buf)
+    }
+}
+
+impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> AsyncWrite for RWWrapper<R, W> {
+    #[inline]
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        Pin::new(&mut self.w).poll_write(cx, buf)
+    }
+
+    #[inline]
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.w).poll_flush(cx)
+    }
+
+    #[inline]
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.w).poll_shutdown(cx)
+    }
+}
+
 /// wrap base connection with an early data buffer, read from
 /// the buffer first.
 pub struct EarlyDataWrapper {

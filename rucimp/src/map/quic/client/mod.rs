@@ -74,7 +74,7 @@ impl Client {
                 connection.keep_alive(true)?;
 
                 *conn = Some(connection);
-                debug!(cid = %cid, "inited new s2n_quic connection");
+                debug!(cid = %cid, "inited new quic connection");
             } else {
                 let mut real_conn = conn.take().unwrap();
                 let stream_r = real_conn.open_bidirectional_stream().await;

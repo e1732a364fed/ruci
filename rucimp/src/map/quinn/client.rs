@@ -6,7 +6,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use ruci::map::*;
-use ruci::net::CID;
+use ruci::net::{helpers, CID};
 use ruci::Name;
 use ruci::{map, net::Stream};
 
@@ -45,7 +45,7 @@ impl Name for Client {
 
 impl Client {
     pub fn new(c: quic_common::ClientConfig) -> anyhow::Result<Self> {
-        let tls = {
+        let cc = {
             let cc = rustls21::cc(rustls21::ClientOptions {
                 is_insecure: c.is_insecure.unwrap_or_default(),
                 alpn: c.alpn,
@@ -55,7 +55,7 @@ impl Client {
             quinn::ClientConfig::new(Arc::new(cc))
         };
         let mut endpoint = Endpoint::client("0.0.0.0:0".parse()?)?;
-        endpoint.set_default_client_config(tls);
+        endpoint.set_default_client_config(cc);
 
         let a: SocketAddr = c.server_addr.parse()?;
 
@@ -84,14 +84,14 @@ impl Client {
                 //connection.keep_alive(true)?;
 
                 *conn = Some(connection);
-                debug!(cid = %cid, "inited new s2n_quic connection");
+                debug!(cid = %cid, "inited new quic connection");
             } else {
                 let real_conn = conn.take().unwrap();
                 let stream_r = real_conn.open_bi().await;
                 *conn = Some(real_conn);
 
                 let (se, re) = stream_r?;
-                let stream = super::Stream::new(se, re);
+                let stream = helpers::RWWrapper { w: se, r: re };
 
                 let c: ruci::net::Conn = Box::new(stream);
 

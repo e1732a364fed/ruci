@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ruci::map::*;
-use ruci::net::CID;
+use ruci::net::{helpers, CID};
 use ruci::Name;
 use ruci::{map, net::Stream};
 
@@ -100,7 +100,7 @@ impl Server {
 
                         debug!(cid = %cc, new_cid = %new_cid, raddr = ?connection.remote_address(), "quic server conn got new sub stream");
 
-                        let stream = super::Stream::new(se, re);
+                        let stream = helpers::RWWrapper { w: se, r: re };
 
                         let stream = Box::new(stream);
 
