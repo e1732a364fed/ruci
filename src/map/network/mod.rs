@@ -10,6 +10,7 @@ use super::*;
 use crate::map;
 use crate::Name;
 
+/// BlackHole drops the connection instantly
 #[derive(NoMapperExt, Debug, Default, Clone)]
 pub struct BlackHole {}
 
@@ -30,7 +31,11 @@ impl Mapper for BlackHole {
     }
 }
 
-/// only use MapperExt's is_tail_of_chain. won't use configured_target_addr;
+/// Direct dial target addr directly
+///
+/// # Note
+///
+///  only use [`MapperExt`]'s is_tail_of_chain. won't use configured_target_addr;
 /// if you want to set configured_target_addr, maybe you should use TcpDialer
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
@@ -94,7 +99,7 @@ impl Mapper for Direct {
     }
 }
 
-/// can dial tcp, udp or unix domain socket
+/// Dialer can dial tcp, udp or unix domain socket
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
 pub struct Dialer {}
@@ -120,7 +125,7 @@ impl Dialer {
     }
 }
 
-pub fn get_addr_from_vvd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
+fn get_addr_from_vd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
     for vd in vd.iter().flatten() {
         let ad = vd.get_raddr();
         if ad.is_some() {
@@ -138,7 +143,7 @@ impl Mapper for Dialer {
         match params.c {
             Stream::None => {
                 let vd = params.d;
-                let d = get_addr_from_vvd(vd);
+                let d = get_addr_from_vd(vd);
                 match d {
                     Some(a) => {
                         return Dialer::dial_addr(&a, params.a, params.b).await;

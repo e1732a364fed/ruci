@@ -1,7 +1,9 @@
 /*!
- * 使用 Counter 与 Arc<GlobalTrafficRecorder> 的区别是, Arc<GlobalTrafficRecorder> 是全局解密流量的统计,
- * 而Counter是针对自己持有的 Conn的流量的统计
- */
+Count the traffic bytes of the base connection
+
+* 使用 [`Counter`] 与 [`Arc<GlobalTrafficRecorder>`] 的区别是, [`Arc<GlobalTrafficRecorder>`] 是全局解密流量的统计,
+* 而 [`Counter`] 是针对自己持有的 Conn的流量的统计
+*/
 
 use super::*;
 use std::{
@@ -119,7 +121,7 @@ impl Mapper for Counter {
     /// ignores behavior
     ///
     /// returns dynamic_data with upload and download
-    /// Arc<Atomic64>
+    /// [`Arc<Atomic64>`]`
     ///
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {

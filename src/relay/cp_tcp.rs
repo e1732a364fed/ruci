@@ -1,7 +1,6 @@
 /*!
- * cp_conn 包含4种情况, 对应有无earlydata 和 有无 Arc<GlobalTrafficRecorder>
+ * cp_conn 包含4种情况, 对应有无earlydata 和 有无 [`Arc<GlobalTrafficRecorder>`]
  *
- * （这是将两个条件判断转成状态机的做法）
 */
 
 use crate::net::CID;

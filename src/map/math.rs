@@ -15,8 +15,8 @@ use super::*;
 ///
 /// 输出为输入按字节+(add), 可设置+的方向 AddDirection
 ///
-/// 例如: add 为1, direction为Read 时, 若read 到的值是 [1,2,3],
-/// 则将向外输出 [2,3,4]
+/// 例如: add 为1, direction为Read 时, 若read 到的值是 `[1,2,3]`,
+/// 则将向外输出 `[2,3,4]`
 ///
 pub struct AdderConn {
     pub add: i8,

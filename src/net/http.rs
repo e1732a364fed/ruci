@@ -78,7 +78,7 @@ pub struct RawHeader {
     pub value: String,
 }
 
-///  https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089
+///  <https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089>
 ///
 ///minimum valid request:
 ///

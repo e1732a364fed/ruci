@@ -140,10 +140,10 @@ impl InboundInfoOutTagPair {
     }
 }
 
-/// 一种使用 Vec<InboundInfoOutTagPair> 的 OutSelector 的实现
+/// 一种使用 [`Vec<InboundInfoOutTagPair>`] 的 OutSelector 的实现
 ///
 /// 仅用于 InboundInfoOutTagPair 很少 且每个 InboundInfoOutTagPair 中的
-/// HashSet<InboundInfo> 中的 InboundInfo
+/// [`HashSet<InboundInfo>`] 中的 InboundInfo
 /// 都很少的情况, 即 适用于精确匹配
 ///
 #[derive(Debug)]

@@ -1,12 +1,14 @@
 /*!
 
-Implements the following rfcs:
+Implements socks5 rfcs
 
-https://www.ietf.org/rfc/rfc1928.txt
+See:
+
+<https://www.ietf.org/rfc/rfc1928.txt>
 
 USER/PASSWORD authentication rfc:
 
-https://datatracker.ietf.org/doc/html/rfc1929
+<https://datatracker.ietf.org/doc/html/rfc1929>
 
 */
 

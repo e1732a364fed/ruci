@@ -1,9 +1,7 @@
 /*!
 module map defines some important traits for proxy
 
-几个关键部分: Data, MapParams, MapResult, Mapper, 和 fold 模块
-
-ruci 包中实现 Mapper 的模块有: math, counter,stdio, network, socks5,http, socks5http, trojan,  tls
+几个关键部分: [`Data`], [`MapParams`], [`MapResult`], [`Mapper`], 和 [`mod@fold`] 模块
 
 ruci 将任意代理行为分割成若干个不可再分的
 流映射函数, function map(stream1, args...)-> (stream2, useful_data...)
@@ -12,7 +10,7 @@ ruci 将任意代理行为分割成若干个不可再分的
 流映射函数 的提供者 在本包中被命名为 "Mapper", 映射的行为叫 "maps"
 
 在本包中， 有时使用 “加法” 来指代 映射。以“累加”来指代迭代映射。
-即有时本包会以 "adder" 指代 Mapper
+即有时本包会以 "adder" 指代 [`Mapper`]
 
 按顺序执行若干映射函数 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
 
@@ -21,7 +19,7 @@ ruci 将任意代理行为分割成若干个不可再分的
 按代理的方向, 逻辑上分 Encode 和 Decode 两种, 以 maps 方法的 behavior 参数加以区分.
 
 
-一个完整的代理链 是由 【生成 映射函数 的迭代器】生成的, 其在 fold 模块中有定义
+一个完整的代理链 是由 【生成 映射函数 的迭代器】生成的, 其在 [`fold`] 模块中有定义
 
 
 */
@@ -193,12 +191,12 @@ impl MapResult {
     }
 }
 
-/// indicate the meaning of what the Mapper is really doing
+/// indicate what a Mapper is really doing
 ///
-/// A proxy would have 2 behaviors in general:
+/// A proxy would have two main behaviors in general:
 ///
-/// 1. "encode" the target addr into the stream
-/// 2. "decode" the target addr from the stream
+/// 1. "encode" the target addr and payload into the stream
+/// 2. "decode" the target addr and payload from the stream
 ///
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProxyBehavior {
@@ -212,11 +210,12 @@ pub enum ProxyBehavior {
     DECODE,
 }
 
-/// Mapper: Stream Mapping Function,
+/// Mapper: Stream Mapping Function.
 ///
-/// Generally maps just do a handshake in the old Stream, then perhaps forms a/some new Stream
+/// Generally [`method@Mapper::maps`] just do a handshake in the old Stream, then perhaps forms a/some new Stream
 ///
-/// After encode/decode data in the new Stream,it will be passed to next Mapper
+/// After encode/decode data in the new Stream,it will be passed to
+/// the next Mapper
 ///
 #[async_trait]
 pub trait Mapper: Name + Debug {

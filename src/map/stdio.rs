@@ -1,6 +1,7 @@
 /*!
-* write, read 到 stdio (标准输入输出，即命令行). 理解上, stdio 和 dialer 类似,
-  都是 一种 【 单流发生器 】
+write, read 到 stdio (标准输入输出，即命令行).
+
+在行为上, stdio 和 [`crate::map::network::Dialer`] 类似,  都是 一种 【 单流发生器 】
 */
 
 use crate::map;

@@ -29,7 +29,7 @@ pub trait UserTrait: Debug + Send + Sync {
     fn auth_bytes(&self) -> &[u8]; //与 auth_str 类似; 对于程序来说,bytes更方便处理; 可以与 auth_str 相同, 也可以不同.
 }
 
-/// 如果User的super trait 是 Clone, 则 Box<dyn User> 会报错, says
+/// 如果User的super trait 是 Clone, 则 [`Box<dyn User>`] 会报错, says
 /// can't make into object; 但是用 DynClone 就可以
 pub trait User: UserTrait + DynClone {}
 
@@ -77,7 +77,7 @@ pub struct UserVec(pub Vec<UserBox>);
 
 impl UserVec {
     /// sort_hash always sort vec before hash, meaning that
-    /// the sort_hash for UserVec([a,b,c]) and   UserVec([b,a,c]) is the same
+    /// the sort_hash for `UserVec([a,b,c])` and   `UserVec([b,a,c])` is the same
     pub fn sort_hash<H: std::hash::Hasher>(&self, state: &mut H) {
         let bt: BTreeSet<&UserBox> = self.0.iter().collect();
         bt.iter().for_each(|b| {

@@ -1,27 +1,22 @@
 /*!
-* provide facilities for accumulating dynamic chain
+provide facilities for accumulating dynamic chain
 
 the mod won't store dynamic data during accumulating.
 
-trait: DynIterator, MIter, DMIter
-
-struct DynMIterWrapper, DynVecIterWrapper, FoldResult, FoldParams
-
-* function fold , fold_from_start
 */
 
 use tracing::{debug, info, warn, Level};
 
 use super::*;
 
-/// static iterator for MapperBox
+/// static Iterator for [`MapperBox`]
 pub trait MIter: Iterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug {}
 impl<T: Iterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug> MIter for T {}
 dyn_clone::clone_trait_object!(MIter);
 
 pub type MIterBox = Box<dyn MIter>;
 
-/// dynamic Iterator, can get different next item if the
+/// dynamic Iterator for [`MapperBox`], can get different next item if the
 /// input data is different
 ///
 /// DynIterator is uncountable, because it's input is dynamic, it's
@@ -45,6 +40,7 @@ pub trait DynIterator {
     }
 }
 
+/// async version of [`DynIterator`]
 pub trait DMIter: DynIterator + DynClone + Send + Sync + Debug {}
 impl<T: DynIterator + DynClone + Send + Sync + Debug> DMIter for T {}
 dyn_clone::clone_trait_object!(DMIter);
@@ -53,7 +49,7 @@ pub type DMIterBox = Box<dyn DMIter>;
 
 pub type OVOD = Option<Vec<Option<Box<dyn Data>>>>;
 
-/// 包装 MIterBox 以使其支持 DynIterator
+/// 包装 [`MIterBox`] 以使其支持 [`DynIterator`]
 #[derive(Debug, Clone)]
 pub struct DynMIterWrapper(pub MIterBox);
 
@@ -75,9 +71,9 @@ impl DynIterator for DynMIterWrapper {
     }
 }
 
-/// 包装 std::vec::IntoIter<Arc<MapperBox>> 以使其支持 DynIterator
+/// 包装 [`std::vec::IntoIter<Arc<MapperBox>>`] 以使其支持 [`DynIterator`]
 ///
-/// 比 DynMIterWrapper 少一层装箱
+/// 比 [`DynMIterWrapper`] 少一层装箱
 #[derive(Debug, Clone)]
 pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapperBox>>);
 
@@ -249,7 +245,8 @@ pub async fn fold(params: FoldParams) -> FoldResult {
 }
 
 /// blocking.
-/// 先调用第一个 mapper 生成 流发生器, 然后调用 in_iter_accumulate_forever
+///
+/// 先调用第一个 mapper 生成 流发生器, 然后调用 [`in_iter_accumulate_forever`]
 ///
 /// 但如果 第一个 mapper 生成的不是流发生器而是普通的流, 则会调用 普通的
 /// fold, 累加结束后就会返回
@@ -329,12 +326,12 @@ pub async fn fold_from_start(
     Ok(())
 }
 
-struct InIterAccumulateForeverParams {
-    cid: CID,
-    rx: tokio::sync::mpsc::Receiver<MapResult>,
-    tx: tokio::sync::mpsc::Sender<FoldResult>,
-    dmiter: DMIterBox,
-    o_gtr: Option<Arc<GlobalTrafficRecorder>>,
+pub struct InIterAccumulateForeverParams {
+    pub cid: CID,
+    pub rx: tokio::sync::mpsc::Receiver<MapResult>,
+    pub tx: tokio::sync::mpsc::Sender<FoldResult>,
+    pub dmiter: DMIterBox,
+    pub o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,
@@ -352,7 +349,7 @@ struct InIterAccumulateForeverParams {
 ///
 /// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
 ///
-async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
+pub async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
     let mut rx = params.rx;
     let cid = params.cid;
     let tx = params.tx;
