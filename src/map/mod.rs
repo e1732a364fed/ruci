@@ -239,7 +239,7 @@ impl MapResult {
     }
 
     //Generator
-    pub fn gs(gs: tokio::sync::mpsc::Receiver<Stream>, cid: CID) -> Self {
+    pub fn gs(gs: tokio::sync::mpsc::Receiver<MapResult>, cid: CID) -> Self {
         MapResult {
             a: None,
             b: None,
@@ -612,7 +612,7 @@ pub async fn accumulate_from_start(
 /// 这里只能返回给调用者去处理
 pub async fn in_iter_accumulate_forever(
     cid: CID,
-    mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
+    mut rx: tokio::sync::mpsc::Receiver<MapResult>, //Stream::Generator
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     inmappers: MIterBox,
     oti: Option<Arc<TransmissionInfo>>,
@@ -620,7 +620,7 @@ pub async fn in_iter_accumulate_forever(
     loop {
         let opt_stream = rx.recv().await;
 
-        let stream = match opt_stream {
+        let new_stream_info = match opt_stream {
             Some(s) => s,
             None => break,
         };
@@ -660,7 +660,7 @@ pub async fn in_iter_accumulate_forever(
         }
 
         tokio::spawn(async move {
-            let r = accumulate(cid, ProxyBehavior::DECODE, MapResult::s(stream), mc).await;
+            let r = accumulate(cid, ProxyBehavior::DECODE, new_stream_info, mc).await;
             let _ = txc.send(r).await;
         });
     }

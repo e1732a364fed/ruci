@@ -199,7 +199,7 @@ impl TcpStreamGenerator {
     pub async fn listen_addr(
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
-    ) -> io::Result<Receiver<net::Stream>> {
+    ) -> io::Result<Receiver<MapResult>> {
         let r = TcpListener::bind(a.clone().get_socket_addr().unwrap()).await;
 
         match r {
@@ -223,7 +223,9 @@ impl TcpStreamGenerator {
                                 let (tcpstream, raddr) = r.unwrap();
                                 debug!("new accepted tcp, raddr: {}", raddr);
 
-                                let r = tx.send(Stream::TCP(Box::new(tcpstream))).await;
+                                let pa = Addr{ addr:net::NetAddr::Socket(raddr), network: net::Network::TCP };
+
+                                let r = tx.send(MapResult{ a: None, b: None, c: Stream::TCP(Box::new(tcpstream)), d: Some(AnyData::Addr(pa)), e:None, new_id: None }).await;
                                 if let Err(e) = r {
                                     info!("loop tcp ended,tx e: {}", e);
                                     lastr = Err(io::Error::other(format!("{}",e)));
@@ -249,7 +251,7 @@ impl TcpStreamGenerator {
         }
     }
 
-    pub async fn listen_addr_forever(a: &net::Addr) -> io::Result<Receiver<net::Stream>> {
+    pub async fn listen_addr_forever(a: &net::Addr) -> io::Result<Receiver<MapResult>> {
         let r = TcpListener::bind(a.clone().get_socket_addr().unwrap()).await;
 
         match r {
@@ -268,7 +270,22 @@ impl TcpStreamGenerator {
                         let (tcpstream, raddr) = r.unwrap();
                         info!("new accepted tcp, raddr: {}", raddr);
 
-                        let r = tx.send(Stream::TCP(Box::new(tcpstream))).await;
+                        let pa = Addr {
+                            addr: net::NetAddr::Socket(raddr),
+                            network: net::Network::TCP,
+                        };
+
+                        let r = tx
+                            .send(MapResult {
+                                a: None,
+                                b: None,
+                                c: Stream::TCP(Box::new(tcpstream)),
+                                d: Some(AnyData::Addr(pa)),
+                                e: None,
+                                new_id: None,
+                            })
+                            .await;
+
                         if let Err(e) = r {
                             info!("loop tcp ended,tx e: {}", e);
                             break;

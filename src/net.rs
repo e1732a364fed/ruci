@@ -486,8 +486,9 @@ pub enum Stream {
     TCP(Conn),
     UDP(AddrConn),
 
-    // 比如： tcp listener
-    Generator(tokio::sync::mpsc::Receiver<Stream>),
+    /// 比如： tcp listener. Receiver 中的元素为 MapResult, 是为了
+    /// 方便传递其它信息, 如peer_addr 由 MapResult.a 标识
+    Generator(tokio::sync::mpsc::Receiver<MapResult>),
 
     #[default]
     None,
@@ -545,6 +546,7 @@ impl Stream {
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use crate::map::MapResult;
 use crate::Name;
 
 use self::addr_conn::AddrConn;
