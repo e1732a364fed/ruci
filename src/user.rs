@@ -298,14 +298,14 @@ mod test {
         block_on(um.add_user(up2));
         //println!("um: {:?}", um);
 
-        let x = um.auth_user_by_authstr("u").await;
+        let x = um.auth_user_by_authstr("plaintext:u").await;
         //println!("x {:?}", x);
 
         if x != None {
             return Err(io::Error::other("shit,not none"));
         }
 
-        let x = um.auth_user_by_authstr("u2\np2").await;
+        let x = um.auth_user_by_authstr("plaintext:u2\np2").await;
         //println!("x {:?}", x);
 
         if x == None {
