@@ -24,16 +24,14 @@ pub enum Commands {
     Wintun,
 
     /// calculate trojan hash for a plain text password
-    CalcuTrojanHash {
-        password: String,
-    },
+    CalcuTrojanHash { password: String },
 
     /// generate self signed root certificate and key
-    GenCer {
-        subject_alt_names: Vec<String>,
-    },
+    GenCer { subject_alt_names: Vec<String> },
     GenCA {
         subject_alt_names: Vec<String>,
+        organization_name: Option<String>,
+        common_name: Option<String>,
     },
 
     /// start a interactive lua shell, which is a read–eval–print loop (REPL).
@@ -41,29 +39,21 @@ pub enum Commands {
     Repl,
 
     /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name.
-    Pack {
-        folder: String,
-    },
+    Pack { folder: String },
 
     /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name, then compress it into a .zip file.
     ///
     /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
-    PackZ {
-        folder: String,
-    },
+    PackZ { folder: String },
 
     /// serve folder "static" in plain http.
     ///
     /// default listen is "0.0.0.0:18143"
     #[cfg(feature = "file_server")]
-    ServeStatic {
-        addr: Option<String>,
-    },
+    ServeStatic { addr: Option<String> },
 
     /// print the QrCode of a string in the console.
-    QR {
-        str: String,
-    },
+    QR { str: String },
 
     /// 转换配置文件格式，支持在 lua、toml、yaml 之间互相转换。输入格式将根据文件后缀自动识别
     ConvertFormat {
@@ -87,8 +77,15 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             download_wintun().await?;
         }
         Commands::CalcuTrojanHash { password } => calcu_trojan_hash(&password),
-        Commands::GenCA { subject_alt_names } => {
-            info!("generatiing CA cert and key... with My Company as OrganizationName and My CA Root as CommonName");
+        Commands::GenCA {
+            subject_alt_names,
+            organization_name,
+            common_name,
+        } => {
+            let on = organization_name.unwrap_or("My Company".to_string());
+            let cn = common_name.unwrap_or("My CA Root".to_string());
+
+            info!("generating CA cert and key... with {on} as OrganizationName and {cn} as CommonName");
 
             use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
             use std::fs;
@@ -96,40 +93,44 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             let mut params = CertificateParams::new(subject_alt_names)?;
 
             params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
-            params
-                .distinguished_name
-                .push(DnType::OrganizationName, "My Company");
-            params
-                .distinguished_name
-                .push(DnType::CommonName, "My CA Root");
+            params.distinguished_name.push(DnType::OrganizationName, on);
+            params.distinguished_name.push(DnType::CommonName, cn);
 
             let key_pair = KeyPair::generate()?;
             let cert = params.self_signed(&key_pair)?;
 
-            fs::write("ca_private_key.pem", key_pair.serialize_pem())?;
+            let key_file_name = "ca_private_key.pem";
 
-            fs::write("ca_cert.pem", cert.pem())?;
+            fs::write(key_file_name, key_pair.serialize_pem())?;
 
-            info!("generated ca_private_key as ca_cert.pem");
+            let cert_file_name = "ca_cert.pem";
+
+            fs::write(cert_file_name, cert.pem())?;
+
+            info!("generated {key_file_name} as {cert_file_name}");
         }
         Commands::GenCer {
             subject_alt_names: names,
         } => {
-            info!("generatiing cert and key...");
+            info!("generating cert and key...");
 
             use rcgen::generate_simple_self_signed;
 
-            let cert = generate_simple_self_signed(names).unwrap();
+            let cert = generate_simple_self_signed(names)?;
             let c = cert.key_pair.serialize_pem();
 
-            fs::write("generated.key", c)?;
-            info!("generated key as generated.key");
+            let key_file_name = "generated.key";
+
+            fs::write(key_file_name, c)?;
+            info!("generated key as {key_file_name}");
 
             let c = cert.cert.pem();
 
-            fs::write("generated.crt", c)?;
+            let cert_file_name = "generated.crt";
 
-            info!("generated cert as generated.crt");
+            fs::write(cert_file_name, c)?;
+
+            info!("generated cert as {cert_file_name}");
         }
         #[cfg(any(feature = "lua", feature = "lua54"))]
         Commands::Repl => rucimp::utils::lua_repl(),

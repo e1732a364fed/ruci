@@ -416,6 +416,11 @@ impl Engine {
     ) -> anyhow::Result<()> {
         let mut e = Engine::new();
 
+        debug!(
+            "will run_static_engine with instance_id: {}",
+            e.global_data.run_instance_id
+        );
+
         e.file_source = Arc::new(file_source);
 
         e.init_static(sc)?;
@@ -434,9 +439,12 @@ impl Engine {
 
         debug!("Waiting for join set");
 
-        let r = js.shutdown().await;
+        js.shutdown().await;
 
-        debug!("{:?}", r);
+        debug!(
+            "run_static_engine finished, instance_id: {}",
+            e.global_data.run_instance_id
+        );
 
         Ok(())
     }

@@ -8,11 +8,13 @@
 
 ### 证书
 
+证书与key 的 文件格式 都是明文 base64 的 pem 文本格式的，但是 其解码后的二进制格式又分为很多种。
+
 tls 中,  native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前又只写了pks8 一种情况(即不支持 rsa 和 ecc key);
 
-而默认的 rustls 则支持得更广泛一些,pem格式的 x509证书（后缀可能为 pem, cer 或 crt）, key(rsa, pks8, ecc) 都支持 , 但不支持 pks12 (pfx) 格式
+而默认的 rustls 则支持得更广泛一些, x509证书（后缀可能为 pem, cer 或 crt）, key(rsa, pks8, ecc) 都支持 , 但不支持 pks12 (pfx) 格式
 
-除了用 ruci-cmd utils gen-cer 命令生成自签名根证书, 还可以试图自行用 openssl 命令生成:
+除了用 ruci-cmd utils gen-cer 命令 和 gen-ca 命令 生成自签名根证书, 还可以试图自行用 openssl 命令生成:
 
 生成自签名 key 和 证书:
 
@@ -518,6 +520,7 @@ https://docs.rs/futures/latest/futures/index.html
 
 从0.0.6起，ruci 不再继续开发 suit 模式。
 从0.0.7起，ruci 移除了 suit 模式。同时对 chain 模式 启用 toml配置格式
+从0.0.8起，ruci 移除了 有限动态链 模式。同时对 chain 模式 启用 yaml配置格式
 
 ### 名词
 
