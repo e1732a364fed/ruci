@@ -78,6 +78,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     request.fail_reason = FailReason::None;
 
     if bs.len() < 16 {
+        request.fail_reason = FailReason::TooShort;
         return request;
     }
 
@@ -271,10 +272,10 @@ mod tests {
         assert_eq!(request.fail_reason, FailReason::NoEndMark2);
 
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHeader: Value", false);
-        assert_eq!(request.fail_reason, FailReason::TooShort);
+        assert_eq!(request.fail_reason, FailReason::NoEndMark2);
 
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHeader: Value\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::TooShort);
+        assert_eq!(request.fail_reason, FailReason::NoEndMark2);
     }
 
     #[test]
@@ -298,6 +299,6 @@ mod tests {
     #[test]
     fn test_valid_request() {
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHost:x\r\n\r\n", false);
-        assert_eq!(request.fail_reason, FailReason::TooShort);
+        assert_eq!(request.fail_reason, FailReason::None);
     }
 }
