@@ -166,15 +166,15 @@ pub async fn handle_conn<'a>(
 }
 
 /// mock of  handle_conn, utilize handle_in_accumulate_result and  OutSelector
-pub async fn handle_conn_clonable<T, T2>(
+pub async fn handle_conn_clonable<'a, T, T2>(
     in_conn: net::Conn,
     ins_iterator: T,
-    selector: &'static dyn OutSelector<'_, T2>,
+    selector: &'a dyn OutSelector<'a, T2>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()>
 where
-    T: Iterator<Item = &'static MapperBox>,
-    T2: Iterator<Item = &'static MapperBox>,
+    T: Iterator<Item = &'a MapperBox>,
+    T2: Iterator<Item = &'a MapperBox>,
 {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
@@ -205,12 +205,6 @@ where
             return Err(e.into());
         }
     };
-
-    // let f = FixedOutSelector {
-    //     mappers: outc_iterator,
-    //     addr: outc_addr,
-    // };
-    // let f = Box::new(f);
 
     handle_in_accumulate_result(listen_result, selector, ti).await
 }
@@ -268,16 +262,16 @@ where
     fn select(&self, params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>);
 }
 
-pub async fn handle_in_accumulate_result<T, T2>(
-    mut listen_result: AccumulateResult<'static, T>,
+pub async fn handle_in_accumulate_result<'a, T, T2>(
+    mut listen_result: AccumulateResult<'a, T>,
 
-    out_selector: &'static dyn OutSelector<'_, T2>,
+    out_selector: &'a dyn OutSelector<'a, T2>,
 
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()>
 where
-    T: Iterator<Item = &'static MapperBox>,
-    T2: Iterator<Item = &'static MapperBox>,
+    T: Iterator<Item = &'a MapperBox>,
+    T2: Iterator<Item = &'a MapperBox>,
 {
     let cid = &listen_result.id.unwrap();
     let target_addr = match listen_result.a.take() {
@@ -374,7 +368,6 @@ where
             return Ok(());
         }
 
-        //let (out_stream, remain_target_addr, _extra_out_data_vec) = dial_result;
         if let Some(rta) = dial_result.a {
             warn!("{cid}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
         }
