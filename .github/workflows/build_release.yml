@@ -38,8 +38,8 @@ jobs:
     - name: Install mingw toolchain
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends mingw32
-        sudo apt-get install -y --no-install-recommends x86_64-w64-mingw32 
+        sudo apt-get install -y --no-install-recommends mingw-w64
+        sudo apt-get install -y --no-install-recommends x86_64-w64-mingw-w64 
     - name: Install ARM compiler toolchain
       run: |
         sudo apt-get update
