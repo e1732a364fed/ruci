@@ -11,7 +11,7 @@ pub struct Client {
 
 impl<IO> crate::Name for tokio_rustls::client::TlsStream<IO> {
     fn name(&self) -> &str {
-        "tokio_rustls client stream"
+        "tokio_rustls_client_stream"
     }
 }
 

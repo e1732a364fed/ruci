@@ -476,7 +476,7 @@ impl Server {
 }
 impl Name for Server {
     fn name(&self) -> &'static str {
-        "socks5"
+        "socks5_server"
     }
 }
 #[async_trait::async_trait]

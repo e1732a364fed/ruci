@@ -51,7 +51,7 @@ impl Client {
 }
 impl Name for Client {
     fn name(&self) -> &'static str {
-        "trojan"
+        "trojan_client"
     }
 }
 

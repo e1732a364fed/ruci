@@ -97,7 +97,7 @@ impl Client {
 
 impl crate::Name for Client {
     fn name(&self) -> &'static str {
-        "socks5"
+        "socks5_client"
     }
 }
 

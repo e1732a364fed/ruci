@@ -206,7 +206,7 @@ pub struct MockTcpStream {
 }
 impl crate::Name for MockTcpStream {
     fn name(&self) -> &str {
-        "mock tcpstream"
+        "mock_tcpstream"
     }
 }
 

@@ -163,7 +163,7 @@ impl Server {
 }
 impl Name for Server {
     fn name(&self) -> &'static str {
-        "trojan"
+        "trojan_server"
     }
 }
 

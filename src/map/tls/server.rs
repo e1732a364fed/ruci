@@ -32,7 +32,7 @@ impl fmt::Debug for Server {
 }
 impl<IO> crate::Name for tokio_rustls::server::TlsStream<IO> {
     fn name(&self) -> &str {
-        "tokio_rustls server stream"
+        "tokio_rustls_server_stream"
     }
 }
 

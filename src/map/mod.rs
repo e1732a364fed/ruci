@@ -37,8 +37,8 @@ pub mod trojan;
 mod test;
 
 use crate::net::{
-    self, addr_conn::AddrConn, new_ordered_cid, new_rand_cid, InStreamCID, Stream,
-    TransmissionInfo, CID,
+    self, addr_conn::AddrConn, new_ordered_cid, new_rand_cid, CIDChain, Stream, TransmissionInfo,
+    CID,
 };
 
 use async_trait::async_trait;
@@ -548,7 +548,7 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
                     if u == 0 {
                         CID::new_ordered(&ti.last_connection_id)
                     } else {
-                        CID::Chain(InStreamCID {
+                        CID::Chain(CIDChain {
                             id_list: vec![u, new_ordered_cid(&ti.last_connection_id)],
                         })
                     }

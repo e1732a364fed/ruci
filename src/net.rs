@@ -51,10 +51,10 @@ pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
 }
 
 #[derive(Clone, Debug)]
-pub struct InStreamCID {
+pub struct CIDChain {
     pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
 }
-impl Display for InStreamCID {
+impl Display for CIDChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match (&self.id_list).len() {
             0 => {
@@ -76,7 +76,7 @@ impl Display for InStreamCID {
 #[derive(Clone, Debug)]
 pub enum CID {
     Unit(u32),
-    Chain(InStreamCID),
+    Chain(CIDChain),
 }
 
 impl CID {

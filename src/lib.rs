@@ -13,7 +13,8 @@ pub mod user;
 
 pub const VERSION: &str = "0.0.0";
 
-/// many types in ruci have a name
+/// many types in ruci have a name.
+/// 约定：使用小写字母+下划线的形式
 pub trait Name {
     fn name(&self) -> &str;
 }
