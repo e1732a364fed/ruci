@@ -241,7 +241,11 @@ impl Addr {
         }
     }
 
-    /// 127.0.0.1:80 or www.b.com:80. if unix, then like path/to/file, without the port and colon.
+    /// "tcp",127.0.0.1:80 or "tcp",www.b.com:80.
+    ///
+    ///  if unix, then like path/to/file, without the port and colon.
+    ///
+    /// network must be a valid network str
     pub fn from_addr_str(network: &str, s: &str) -> Result<Self> {
         let ns: Vec<_> = s.split(':').collect();
         let port = if ns.len() != 2 {

@@ -102,7 +102,7 @@ pub trait AsyncUserAuthenticator<T: User> {
 }
 
 /// 简单以字符串存储用户名和密码, 实现User
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct PlainText {
     pub user: String,
     pub pass: String,

@@ -1,3 +1,5 @@
+use std::mem;
+
 use super::*;
 
 use bitflags::bitflags;
@@ -27,10 +29,16 @@ pub trait Data: Debug + Send + Sync + DynClone {
     fn get_raddr(&self) -> Option<net::Addr> {
         None
     }
+    fn take_raddr(&mut self) -> Option<net::Addr> {
+        None
+    }
     fn get_laddr(&self) -> Option<net::Addr> {
         None
     }
     fn get_user(&self) -> Option<Box<dyn User>> {
+        None
+    }
+    fn take_user(&mut self) -> Option<Box<dyn User>> {
         None
     }
 
@@ -50,6 +58,12 @@ impl Data for PlainText {
         let ub = Box::new(self.clone());
         Some(ub)
     }
+
+    fn take_user(&mut self) -> Option<Box<dyn User>> {
+        let ub = Box::new(mem::take(self));
+        Some(ub)
+    }
+
     fn get_flags(&self) -> DataFlags {
         DataFlags::User
     }
@@ -61,6 +75,22 @@ impl Data for u8 {
     }
     fn get_flags(&self) -> DataFlags {
         DataFlags::U8
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RAddr(pub net::Addr);
+
+#[typetag::serde]
+impl Data for RAddr {
+    fn get_raddr(&self) -> Option<net::Addr> {
+        Some(self.0.clone())
+    }
+    fn take_raddr(&mut self) -> Option<net::Addr> {
+        Some(mem::take(&mut self.0))
+    }
+    fn get_flags(&self) -> DataFlags {
+        DataFlags::RAddr
     }
 }
 

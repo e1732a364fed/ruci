@@ -3,11 +3,11 @@ use self::dynamic::NextSelector;
 use super::*;
 use lua::dynamic::Finite;
 use mlua::prelude::*;
-use mlua::{Lua, LuaSerdeExt, Result, Value};
+use mlua::{Lua, LuaSerdeExt, Value};
 
 /// load chain::config::StaticConfig from a lua file which has a
 /// "config" global variable
-pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
+pub fn load_static(lua_text: &str) -> mlua::Result<StaticConfig> {
     let lua = Lua::new();
 
     lua.load(lua_text).eval()?;
@@ -22,7 +22,7 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
 const DYN_SELECTORS_STR: &str = "dyn_selectors";
 
 /// test if the lua text is ok for finite dynamic
-pub fn is_finite_dynamic_available(lua_text: &str) -> Result<()> {
+pub fn is_finite_dynamic_available(lua_text: &str) -> mlua::Result<()> {
     let lua = Lua::new();
     lua.load(lua_text).eval()?;
 
@@ -35,7 +35,7 @@ pub fn is_finite_dynamic_available(lua_text: &str) -> Result<()> {
 
 pub fn load_finite_dynamic(
     lua_text: &str,
-) -> Result<(
+) -> mlua::Result<(
     StaticConfig,
     Vec<DMIterBox>,
     DMIterBox,
@@ -49,7 +49,7 @@ pub fn load_finite_dynamic(
 
 fn load_finite_config_and_selector_map(
     lua_text: &str,
-) -> Result<(StaticConfig, HashMap<String, LuaNextSelector>)> {
+) -> mlua::Result<(StaticConfig, HashMap<String, LuaNextSelector>)> {
     let lua = Lua::new();
 
     lua.load(lua_text).eval()?;
@@ -211,12 +211,14 @@ mod test {
 
     use super::*;
     use mlua::prelude::*;
-    use mlua::{Error, Lua, LuaSerdeExt, Result, UserData, Value};
+    use mlua::{Error, Lua, LuaSerdeExt, UserData, Value};
+    use ruci::map;
+    use ruci::user::PlainText;
 
     use super::*;
 
     #[test]
-    fn testin() -> Result<()> {
+    fn testin() -> mlua::Result<()> {
         let text = r#"
     
         tls = { TLS = {  cert = "test.cert", key = "test.key" } }
@@ -267,7 +269,7 @@ mod test {
     }
 
     #[test]
-    fn testout() -> Result<()> {
+    fn testout() -> mlua::Result<()> {
         let lua = Lua::new();
         let globals = lua.globals();
 
@@ -322,7 +324,7 @@ mod test {
     }
 
     #[test]
-    fn testout2() -> Result<()> {
+    fn testout2() -> mlua::Result<()> {
         let lua = Lua::new();
         let globals = lua.globals();
 
@@ -368,7 +370,7 @@ mod test {
     }
 
     #[test]
-    fn testout3() -> Result<()> {
+    fn testout3() -> mlua::Result<()> {
         let lua = Lua::new();
         let globals = lua.globals();
 
@@ -410,7 +412,7 @@ mod test {
     }
 
     #[test]
-    fn test_tag_route() -> Result<()> {
+    fn test_tag_route() -> mlua::Result<()> {
         let lua = Lua::new();
         let globals = lua.globals();
 
@@ -456,7 +458,7 @@ mod test {
     }
 
     #[test]
-    fn test_rule_route() -> Result<()> {
+    fn test_rule_route() -> mlua::Result<()> {
         let lua = Lua::new();
         let globals = lua.globals();
 
@@ -519,31 +521,36 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_serde_json() -> Result<()> {
+    fn get_ovod() -> anyhow::Result<Option<Vec<Option<Box<dyn ruci::map::Data>>>>> {
         let u1 = 3u8;
-        let va: Box<dyn Data> = Box::new(u1);
-        let vva = Some(vec![Some(va)]);
-        let json_str = serde_json::to_string(&vva).map_err(Error::external)?;
+        let boxed_u1: Box<dyn Data> = Box::new(u1);
+
+        let addr = net::Addr::from_addr_str("tcp", "127.0.0.1:80")?;
+        let boxed_a1: Box<dyn Data> = Box::new(map::RAddr(addr));
+
+        let pt = PlainText::new("user".to_string(), "pass".to_string());
+        let boxed_pt: Box<dyn Data> = Box::new(pt);
+
+        Ok(Some(vec![Some(boxed_u1), Some(boxed_a1), Some(boxed_pt)]))
+    }
+    #[test]
+    fn test_serde_json() -> anyhow::Result<()> {
+        let ovod = get_ovod()?;
+        let json_str = serde_json::to_string_pretty(&ovod).map_err(Error::external)?;
         println!("{}", json_str);
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_pass_in_anydata() -> Result<()> {
-        use std::rc::Rc;
-
-        let u1 = 3u8;
-        let va: Box<dyn Data> = Box::new(u1);
-        let vva = Some(vec![Some(va)]);
+    async fn test_pass_in_data() -> anyhow::Result<()> {
+        let ovod = get_ovod()?;
 
         let lua = Lua::new();
-        let lua = Rc::new(lua);
 
         use mlua::chunk;
         use mlua::Function;
 
-        let handler_fn = lua
+        let f = lua
             .load(chunk! {
                 function(data1)
                     print("data is ",data1)
@@ -556,15 +563,13 @@ mod test {
             .eval::<Function>()
             .expect("cannot create Lua handler");
 
-        let handler: LuaRegistryKey = lua
-            .create_registry_value(handler_fn)
+        let key: LuaRegistryKey = lua
+            .create_registry_value(f)
             .expect("cannot store Lua handler");
 
-        let handler: Function = lua
-            .registry_value(&handler)
-            .expect("cannot get Lua handler");
+        let f: Function = lua.registry_value(&key).expect("cannot get Lua handler");
 
-        if let Err(err) = handler.call_async::<_, ()>(lua.to_value(&vva)?).await {
+        if let Err(err) = f.call_async::<_, ()>(lua.to_value(&ovod)?).await {
             eprintln!("{}", err);
         }
 
@@ -572,7 +577,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn load_dynamic1() -> Result<()> {
+    async fn load_dynamic1() -> anyhow::Result<()> {
         let lua = Lua::new();
         let lua_text = r#"
            function dyn_next_selector(this_index, ovod)
@@ -586,11 +591,9 @@ mod test {
 
         let func: LuaFunction = lua.globals().get("dyn_next_selector")?;
 
-        let u1 = 3u8;
-        let va: Box<dyn Data> = Box::new(u1);
-        let vva = Some(vec![Some(va)]);
+        let ovod = get_ovod()?;
 
-        match func.call::<_, u64>((1, lua.to_value(&vva)?)) {
+        match func.call::<_, u64>((1, lua.to_value(&ovod)?)) {
             Ok(rst) => println!("{}", rst),
             Err(err) => eprintln!("{}", err),
         }

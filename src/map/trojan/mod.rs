@@ -1,7 +1,7 @@
 /*!
  *  See https://trojan-gfw.github.io/trojan/protocol .
  */
-use std::fmt;
+use std::{fmt, mem};
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
@@ -23,7 +23,7 @@ pub const ATYP_IP6: u8 = 4;
 
 pub const CMD_CONNECT: u8 = 1;
 pub const CMD_UDPASSOCIATE: u8 = 3;
-pub const CMD_MUX: u8 = 0x7f; //trojan-gfw 那个文档里并没有提及Mux, 这个定义作者似乎没有在任何文档中提及，所以这个是在trojan-go的源代码文件中找到的。
+pub const CMD_MUX: u8 = 0x7f; //trojan-gfw 那个文档里并没有提及Mux, 这个定义作者似乎没有在任何文档中提及，而这个值是在trojan-go的源代码文件中找到的。
 
 pub const CRLF: u16 = (0x0du16 << 8) + 0x0au16;
 pub const CR: u8 = 0x0d;
@@ -43,7 +43,7 @@ impl<'a> HexSlice<'a> {
     }
 }
 
-// 实际上trojan协议文档写的不严谨，它只说了用hex，没说用大写还是小写。看它代码实现用的是小写。
+// 实际上trojan协议文档写的不严谨，它只说了用hex，没说用大写还是小写。它代码实现用的是小写。
 impl fmt::Display for HexSlice<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.0 {
@@ -96,6 +96,11 @@ impl User {
 impl Data for User {
     fn get_user(&self) -> Option<Box<dyn user::User>> {
         let ub = Box::new(self.clone());
+        Some(ub)
+    }
+
+    fn take_user(&mut self) -> Option<Box<dyn user::User>> {
+        let ub = Box::new(mem::take(self));
         Some(ub)
     }
     fn get_flags(&self) -> DataFlags {
