@@ -3,6 +3,9 @@ workspace = { members = [ "rucimp" ,"./", "crates/macro_mapper"]  }
 name = "ruci"
 version = "0.0.1"
 edition = "2021"
+readme = "README.md"
+description = "a network proxy framework"
+categories = ["network-programming","web-programming"]
  
 [profile.release]
 lto = "fat"

@@ -1,13 +1,13 @@
 /*!
  *
-ruci 库是一个配置无关的代理框架, 通过 user, net 和 map 模块 实现了代理过程的抽象,
-并在 relay 模块提供了一些转发过程的参考.
+ruci is a proxy abstraction framework, that abstracts the progress of network proxy
+by mod user, net , map and relay.
 
-配置相关的进一步实现请参阅 rucimp
+uses tokio.
 
-具体的关键抽象概念请查看 map 模块文档
+See doc of mod map for the basic proxy progress abstraction.
 
-异步库用 tokio
+Refer to rucimp sub crate for config file format related implmetations and for more proxy protocol implements.
 
 */
 
@@ -23,7 +23,7 @@ pub mod user;
 pub const VERSION: &str = "0.0.1";
 
 /// many types in ruci have a name.
-/// 约定：使用小写字母+下划线的形式
+/// use lower case letters + underline
 pub trait Name {
     fn name(&self) -> &str;
 }

@@ -28,7 +28,7 @@ use regex::RegexSet;
 use ruci::{
     map::{acc2::MIterBox, AnyData},
     net::{self, *},
-    relay::route2::{self, *},
+    relay::route::{self, *},
     user::*,
 };
 
@@ -40,7 +40,7 @@ pub struct RuleSetOutSelector {
 }
 
 #[async_trait]
-impl route2::OutSelector for RuleSetOutSelector {
+impl route::OutSelector for RuleSetOutSelector {
     async fn select(
         &self,
         addr: &net::Addr,

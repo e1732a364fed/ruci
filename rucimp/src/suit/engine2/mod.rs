@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use ruci::{
     map::*,
     net::TransmissionInfo,
-    relay::{conn2, route2::*},
+    relay::{conn2, route::*},
 };
 
 use tokio::{

@@ -1,9 +1,21 @@
 /*!
  * module net defines some important parts for proxy.
  *
- * important parts: CID, Addr, ConnTrait, Conn, Stream, TransmissionInfo,
+ * important parts: CID, Network, Addr, ConnTrait, Conn, Stream, TransmissionInfo,
  *  and a cp function for copying data between Conn
- *
+
+ enums:
+CID, Network ,Addr ,Stream
+
+ structs:
+ CIDChain, TransmissionInfo,
+
+trait: ConnTrait
+
+type: Conn
+
+function: cp
+
 */
 pub mod addr_conn;
 pub mod helpers;
@@ -76,7 +88,7 @@ impl Display for CIDChain {
     }
 }
 
-/// state id
+/// stream id ('c' for conn as convention)
 #[derive(Clone, Debug)]
 pub enum CID {
     Unit(u32),
