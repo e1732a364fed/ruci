@@ -10,7 +10,8 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::sync::{broadcast, mpsc, oneshot};
+use tokio::sync::{broadcast, oneshot};
+use tracing::{info, warn};
 
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
 // 只是加了一个 Addr 参数. 这一部分比较难懂.
@@ -427,7 +428,7 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     mut r1: R1,
     mut w1: W1,
     name: String,
-    no_timeout: bool,
+    _no_timeout: bool,
     mut shutdown_rx: broadcast::Receiver<()>,
     is_d: bool,
     opt: Option<Arc<GlobalTrafficRecorder>>,
@@ -445,11 +446,11 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
                     Err(e) => {
                         match e.kind(){
                             io::ErrorKind::Other => {
-                                debug!("cp_addr got other e, will continue {e}");
+                                debug!("cp_addr got other e, will continue. {e}");
                                 continue;
                             },
                             _ => {
-                                debug!("cp_addr got e, will break {e}");
+                                warn!(name = name,"cp_addr got e, will break {e}");
                             },
                         }
 
@@ -459,6 +460,8 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
             }
 
             _ = shutdown_rx.recv() =>{
+                info!("cp_addr got shutdown_rx, will break");
+
                 break;
             }
         }

@@ -57,7 +57,7 @@ impl Reader {
         let mut tmp_rbuf = {
             let buffer = &mut self.buf;
             buffer.clear();
-            buffer.resize(buffer.capacity(), 0);
+            buffer.resize(MAX_DATAGRAM_SIZE, 0);
             ReadBuf::new(&mut buffer[..])
         };
         (
@@ -189,6 +189,9 @@ impl AsyncReadAddr for Reader {
                             return Poll::Ready(Ok((actual_read_len, ad)));
                         }
                         Err(e) => {
+                            buffer.clear();
+                            self.state = ReadState::ReadBase;
+
                             return Poll::Ready(Err(io::Error::other(e)));
                         }
                     }
