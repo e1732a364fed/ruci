@@ -3,7 +3,7 @@ use log::debug;
 // use futures::StreamExt;
 // use packet::ip::Packet;
 // use tokio::io::AsyncReadExt;
-use tun::{AsyncDevice, IntoAddress};
+use tun2::{AsyncDevice, IntoAddress};
 
 use crate::Name;
 
@@ -24,20 +24,20 @@ where
     A1: IntoAddress,
     A2: IntoAddress,
 {
-    let mut config = tun::Configuration::default();
+    let mut config = tun2::Configuration::default();
 
     config
-        .name(tun_name.as_ref().unwrap_or(&String::from("utun321")))
+        .tun_name(tun_name.as_ref().unwrap_or(&String::from("utun321")))
         .address(dial_addr)
         .netmask(netmask)
         .up();
 
     #[cfg(target_os = "linux")]
-    config.platform(|config| {
-        config.packet_information(true);
+    config.platform_config(|config| {
+        config.ensure_root_privileges(true);
     });
 
-    let dev = tun::create_as_async(&config).unwrap();
+    let dev = tun2::create_as_async(&config).unwrap();
 
     // let mut stream = dev.into_framed();
 
