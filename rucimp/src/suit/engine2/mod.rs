@@ -29,9 +29,9 @@ where
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<TransmissionInfo>,
 
-    servers: Vec<&'static dyn Suit>,
-    clients: Vec<&'static dyn Suit>,
-    default_c: Option<&'static dyn Suit>,
+    servers: Vec<Arc<Box<dyn Suit>>>,
+    clients: Vec<Arc<Box<dyn Suit>>>,
+    default_c: Option<Arc<Box<dyn Suit>>>,
 
     load_inmappers_func: FInadder,
     load_outmappers_func: FOutadder,
@@ -82,20 +82,18 @@ where
                     s.push_mapper(Arc::new(proxy_outadder));
                 }
                 let x: Box<dyn Suit> = Box::new(s);
-                let x: &'static dyn Suit = Box::leak(x);
-                x
+                Arc::new(x)
             })
             .collect();
 
         if self.clients.is_empty() {
             let d: Box<dyn Suit> = Box::new(direct_suit());
-            let d: &'static dyn Suit = Box::leak(d);
 
-            self.clients.push(d);
+            self.clients.push(Arc::new(d));
         }
 
         let d = self.clients.first().expect("has a client");
-        self.default_c = Some(*d);
+        self.default_c = Some(d.clone());
 
         let x: Vec<_> = c
             .listen
@@ -110,8 +108,7 @@ where
                     s.push_mapper(Arc::new(proxy_inadder));
                 }
                 let x: Box<dyn Suit> = Box::new(s);
-                let x: &'static dyn Suit = Box::leak(x);
-                x
+                Arc::new(x)
             })
             .collect();
 
@@ -168,12 +165,12 @@ where
         let mut tasks = Vec::new();
         let mut shutdown_tx_vec = Vec::new();
 
-        self.servers.iter().for_each(|s| {
+        self.servers.clone().into_iter().for_each(|s| {
             let (tx, rx) = oneshot::channel();
 
             let task = listen_ser2(
-                *s,
-                self.default_c.expect("has default_c"),
+                s,
+                self.default_c.clone().expect("has default_c"),
                 Some(self.ti.clone()),
                 rx,
             );
@@ -210,8 +207,8 @@ where
 }
 
 pub async fn listen_ser2(
-    ins: &'static dyn Suit,
-    outc: &'static dyn Suit,
+    ins: Arc<Box<dyn Suit>>,
+    outc: Arc<Box<dyn Suit>>,
     oti: Option<Arc<net::TransmissionInfo>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
@@ -235,8 +232,8 @@ pub async fn listen_ser2(
 
 /// blocking loop listen ins tcp。calls handle_conn_clonable inside the loop.
 async fn listen_tcp2(
-    ins: &'static dyn Suit,
-    outc: &'static dyn Suit,
+    ins: Arc<Box<dyn Suit>>,
+    outc: Arc<Box<dyn Suit>>,
     oti: Option<Arc<net::TransmissionInfo>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
