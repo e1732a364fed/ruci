@@ -6,7 +6,7 @@
  */
 pub mod config;
 
-/// uses self-defined relay procedure, which is similar to what's in verysimple project.
+/// uses self-defined relay procedure
 pub mod engine;
 
 #[cfg(test)]

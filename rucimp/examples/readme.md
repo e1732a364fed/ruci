@@ -73,5 +73,3 @@ ping 10.0.0.2
 
 目前 ruci 项目处于开发阶段, 关注点主要在 chain 模式上面. suit 模式目前只有tcp ,
  没有 udp 和 unix domain socket, 也没有路由
-
-如果需要全功能的 suit 格式 的程序, 建议先用 verysimple

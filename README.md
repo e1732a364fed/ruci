@@ -10,14 +10,12 @@ ruci pronounced lucy。
 
 ## 介绍
 
-本项目是 [verysimple](https://github.com/e1732a364fed/v2ray_simple) 项目的继承者，
-是一个网络代理框架，采用rust(Rust 2021 edition 1.75+)
-
-ruci 对代理架构 做了比verysimple 中更高级的抽象，因此功能更强大. 
-verysimple可以说是一个初级项目，而ruci最终将成为一个中级项目.
+本项目是 一个网络代理框架，采用rust(Rust 2021 edition 1.75+)
 
 文档所限，肯定有东西没有涉及到，可提交issue提问或加入讨论。
 本项目不是一个人能做完的，所以欢迎加入我们。注意低调。
+
+一个好的解决问题的模式：有暂时不懂的问题可以先进群问, 确定问题后再发 issue
 
 开发级讨论群:     https://t.me/+6yL4ggeyKY0yNjIx
 用户级channel:    https://t.me/+r5hKQKYyeuowMTcx
@@ -45,8 +43,6 @@ ruci-cmd 是最终的全功能的可执行文件，包含一些系统路由的�
 2. "chain mode", 链式配置，是新的lua格式。
 
 lua格式可参考 [用例](resource/local.lua)  和 [lua配置功能](doc/lua.md) 
-
-toml格式可参考 verysimple
 
 两种配置模式目前可由不同的示例程序运行，如下。
 
@@ -175,7 +171,7 @@ o2node-.->collector
 
 ### rucimp
 
-- [x] suit配置格式 （即旧 verysimple 的 toml 配置）
+- [x] suit配置格式 （toml 配置）
 - [x] chain配置格式 (新增, lua格式)
 - [x] 静态链
 - [x] 动态链(有限动态链, 完全动态链)
