@@ -357,24 +357,16 @@ dyn_config = {
                 }
             end
         end
-    }, {
-        tag = "listen2",
-        generator = function(this_index, data)
-            return -1, {}
-        end
     }},
 
     outbounds = {{
         tag = "dial1",
         generator = function(this_index, data)
             if this_index == -1 then
-                return -1, "Direct"
+                return 0, "Direct"
+            else
+                return -1, {}
             end
-        end
-    }, {
-        tag = "dial2",
-        generator = function(this_index, data)
-            return -1, {}
         end
     }}
 

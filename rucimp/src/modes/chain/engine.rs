@@ -122,6 +122,40 @@ impl Engine {
         Ok(())
     }
 
+    #[cfg(feature = "lua")]
+    pub fn init_lua_infinite(&mut self, config_string: String) -> anyhow::Result<()> {
+        use crate::modes::chain::config::{dynamic::IndexInfinite, lua};
+
+        let gmaps = lua::load_infinite_io(&config_string)?;
+
+        let gi = gmaps.0;
+        let go = gmaps.1;
+
+        self.inbounds = Vec::from_iter(gi.into_iter().map(|(tag, g)| {
+            let g = IndexInfinite::new(tag, Box::new(g));
+            let x: DMIterBox = Box::new(g);
+            x
+        }));
+
+        let mut first_o: Option<DMIterBox> = None;
+
+        let obs: HashMap<String, DMIterBox> = go
+            .into_iter()
+            .map(|(tag, g)| {
+                let g = IndexInfinite::new(tag.clone(), Box::new(g));
+                let x: DMIterBox = Box::new(g);
+                if let None = first_o {
+                    first_o = Some(x.clone());
+                }
+                (tag, x)
+            })
+            .collect();
+
+        self.outbounds = Arc::new(obs);
+        self.default_outbound = first_o;
+        Ok(())
+    }
+
     pub fn inbounds_count(&self) -> usize {
         self.inbounds.len()
     }
@@ -179,7 +213,8 @@ impl Engine {
 
         let out_selector = self.get_out_selector();
 
-        let mut index = 0u32;
+        // must not be 0
+        let mut index = 1u32;
 
         self.inbounds.clone().into_iter().for_each(|miter| {
             let (tx, rx) = oneshot::channel();

@@ -35,7 +35,7 @@ use ruci::{
 use uuid::Uuid;
 
 /// Complete Dynamic Chain using index
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct IndexInfinite {
     pub tag: String,
 
@@ -69,7 +69,7 @@ pub type IndexMapperBox = (i64, Option<Arc<MapperBox>>); //MapperBox 和它的 �
 ///
 /// 若 index 小于0, 则指示迭代结束
 ///
-pub trait IndexNextMapperGenerator: DynClone + Send + Sync {
+pub trait IndexNextMapperGenerator: DynClone + Debug + Send + Sync {
     fn next_mapper(
         &mut self,
         cid: CID,
