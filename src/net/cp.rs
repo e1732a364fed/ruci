@@ -19,8 +19,8 @@ pub type OptUpdater = Option<Updater>;
 
 /// may log debug or do other side-effect stuff with id.
 pub async fn copy<C1: NamedConn, C2: NamedConn>(
-    c1: C1,
-    c2: C2,
+    c1: &mut C1,
+    c2: &mut C2,
     cid: &CID,
     gtr: Option<Arc<GlobalTrafficRecorder>>,
 
@@ -38,35 +38,45 @@ pub async fn copy<C1: NamedConn, C2: NamedConn>(
             )
             .await
         }
-        None => cp(c1, c2).await,
+        None => {
+            let r = cp(c1, c2).await;
+            match r {
+                Ok((u, _u2)) => Ok(u),
+                Err(e) => Err(e),
+            }
+        }
     }
 }
 
 /// pure copy without any side effect
-pub async fn cp<C1: AsyncConn, C2: AsyncConn>(c1: C1, c2: C2) -> Result<u64, Error> {
-    let (mut c1_read, mut c1_write) = tokio::io::split(c1);
-    let (mut c2_read, mut c2_write) = tokio::io::split(c2);
+pub async fn cp<C1: AsyncConn, C2: AsyncConn>(
+    c1: &mut C1,
+    c2: &mut C2,
+) -> Result<(u64, u64), Error> {
+    tokio::io::copy_bidirectional(c1, c2).await
+    // let (mut c1_read, mut c1_write) = tokio::io::split(c1);
+    // let (mut c2_read, mut c2_write) = tokio::io::split(c2);
 
-    let (c1_to_c2, c2_to_c1) = (
-        tokio::io::copy(&mut c1_read, &mut c2_write).fuse(),
-        tokio::io::copy(&mut c2_read, &mut c1_write).fuse(),
-    );
+    // let (c1_to_c2, c2_to_c1) = (
+    //     tokio::io::copy(&mut c1_read, &mut c2_write).fuse(),
+    //     tokio::io::copy(&mut c2_read, &mut c1_write).fuse(),
+    // );
 
-    pin_mut!(c1_to_c2, c2_to_c1);
+    // pin_mut!(c1_to_c2, c2_to_c1);
 
-    futures::select! {
-        r1 = c1_to_c2 => {
-            r1
-        },
-        r2 = c2_to_c1 => {
-            r2
-        },
-    }
+    // futures::select! {
+    //     r1 = c1_to_c2 => {
+    //         r1
+    //     },
+    //     r2 = c2_to_c1 => {
+    //         r2
+    //     },
+    // }
 }
 
 pub async fn cp_with_gr<C1: NamedConn, C2: NamedConn>(
-    c1: C1,
-    c2: C2,
+    c1: &mut C1,
+    c2: &mut C2,
     cid: &CID,
     tr: Arc<GlobalTrafficRecorder>,
 

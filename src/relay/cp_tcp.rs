@@ -44,12 +44,12 @@ pub fn cp_conn(
     };
 }
 
-async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
+async fn no_ti_no_ed(cid: CID, mut in_conn: net::Conn, mut out_conn: net::Conn) {
     debug!(cid = %cid, "relay start");
 
     let _ = net::copy(
-        in_conn,
-        out_conn,
+        &mut in_conn,
+        &mut out_conn,
         &cid,
         None,
         #[cfg(feature = "trace")]
@@ -61,8 +61,8 @@ async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
 
 async fn ti_no_ed(
     cid: CID,
-    in_conn: net::Conn,
-    out_conn: net::Conn,
+    mut in_conn: net::Conn,
+    mut out_conn: net::Conn,
     gtr: Arc<GlobalTrafficRecorder>,
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
@@ -77,8 +77,8 @@ async fn ti_no_ed(
     }
 
     let _ = net::copy(
-        in_conn,
-        out_conn,
+        &mut in_conn,
+        &mut out_conn,
         &cid,
         Some(gtr.clone()),
         #[cfg(feature = "trace")]
@@ -127,8 +127,8 @@ async fn no_ti_ed(
     }
 
     let _ = net::copy(
-        in_conn,
-        out_conn,
+        &mut in_conn,
+        &mut out_conn,
         &cid,
         None,
         #[cfg(feature = "trace")]
@@ -181,8 +181,8 @@ async fn ti_ed(
     }
 
     let _ = net::copy(
-        in_conn,
-        out_conn,
+        &mut in_conn,
+        &mut out_conn,
         &cid,
         Some(gtr.clone()),
         #[cfg(feature = "trace")]
