@@ -6,6 +6,8 @@
 pub mod chain;
 pub mod suit;
 
+pub mod example_common;
+
 #[cfg(feature = "route")]
 pub mod route;
 

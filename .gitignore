@@ -1,4 +1,5 @@
-target/
-.DS_Store
 dist/
+target/
+ruci_config/
 *.mmdb
+.DS_Store

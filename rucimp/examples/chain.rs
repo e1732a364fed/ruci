@@ -4,79 +4,28 @@
 */
 
 use std::{
-    env::{self, set_var},
-    fs,
-    path::PathBuf,
+    env::{self},
     time::Duration,
 };
 
-use log::{debug, info, log_enabled, warn, Level};
-use rucimp::chain::{config::lua, engine::Engine};
+use log::{debug, info, warn};
+use rucimp::{
+    chain::{config::lua, engine::Engine},
+    example_common::{print_env_version, try_get_filecontent},
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    println!("rucimp~ chain\n");
-    let cdir = std::env::current_dir().expect("has current directory");
-    println!("working dir: {:?} \n", cdir);
-
-    const RL: &str = "RUST_LOG";
-    let l = env::var(RL).unwrap_or("info".to_string());
-
-    if l == "warn" {
-        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";rucimp \n shell like so: RUST_LOG=info ./rucimp")
-    }
-
-    set_var(RL, l);
-    env_logger::init();
-
-    println!(
-        "Log Level(env): {:?}",
-        std::env::var(RL).map_or(String::new(), |v| v)
-    );
-
-    if log_enabled!(Level::Info) {
-        info!("version: rucimp_{}", rucimp::VERSION,)
-    }
+    print_env_version("chain");
 
     let args: Vec<String> = env::args().collect();
 
-    let default_file = "local.lua".to_string();
+    let default_fn = "local.lua".to_string();
 
-    let filename = if args.len() > 1 && args[1] != "-s" {
-        &args[1]
-    } else {
-        &default_file
-    };
-
-    let mut r_contents = fs::read_to_string(PathBuf::from(filename));
-    if r_contents.is_err() {
-        debug!("try resource folder");
-        let mut cd = cdir.clone();
-        cd.push("resource");
-
-        if cd.exists() {
-            std::env::set_current_dir(cd)?;
-            r_contents = fs::read_to_string(filename);
-        }
-    }
-    if r_contents.is_err() {
-        debug!("try ../resource folder");
-
-        let mut cd = cdir.clone();
-        cd.push("../resource");
-
-        if cd.exists() {
-            std::env::set_current_dir(cd)?;
-            r_contents = fs::read_to_string(filename);
-        }
-    }
-
-    let contents = r_contents.expect(&("no ".to_owned() + &filename));
+    let contents = try_get_filecontent(&default_fn);
 
     let mut se = Engine::default();
     let sc = lua::load(&contents).expect("has valid lua codes in the file content");
-
-    //println!("{:?}", sc);
 
     se.init(sc);
 
@@ -84,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
 
     let r = se.block_run().await;
 
-    warn!("r {:?}", r);
+    warn!("chain engine run returns: {:?}", r);
 
     if args.len() > 1 && args[1] == "-s" {
         info!("will sleep because of -s");
