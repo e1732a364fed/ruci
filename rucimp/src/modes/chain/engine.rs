@@ -96,6 +96,7 @@ impl Engine {
         }
     }
 
+    /// load static chain
     #[cfg(feature = "lua")]
     pub fn init_lua_static(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
@@ -106,6 +107,7 @@ impl Engine {
         Ok(self.init_static(sc))
     }
 
+    /// load finite dynamic chain
     #[cfg(feature = "lua")]
     pub fn init_lua_finite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
         use anyhow::Context;
@@ -122,6 +124,7 @@ impl Engine {
         Ok(())
     }
 
+    /// load infinite dynamic chain
     #[cfg(feature = "lua")]
     pub fn init_lua_infinite(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::{dynamic::IndexInfinite, lua};
