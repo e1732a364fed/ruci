@@ -113,6 +113,52 @@ impl CID {
             None => CID::new(),
         }
     }
+
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ruci::net::CID;
+    /// use ruci::net::TransmissionInfo;
+    /// use std::sync::Arc;
+    /// let oti = Some(Arc::new(TransmissionInfo::default()));
+    ///
+    /// let mut x = CID::new_by_opti(oti.clone());
+    /// assert!(matches!(x, CID::Unit(1)));
+    /// x.push(oti.clone());
+    /// assert!(matches!(x.clone(), CID::Chain(chain) if chain.id_list[0] == 1));
+    ///
+    /// x.push(oti);
+    /// assert!(
+    ///     matches!(x.clone(), CID::Chain(chain) if chain.id_list[0] == 1 || chain.id_list[1] == 2)
+    /// );
+    ///
+    /// ```
+    pub fn push(&mut self, oti: Option<Arc<TransmissionInfo>>) {
+        let newidnum = match oti.as_ref() {
+            Some(ti) => new_ordered_cid(&ti.last_connection_id),
+            None => new_rand_cid(),
+        };
+
+        match self {
+            CID::Unit(u) => {
+                let x = *u;
+                if x == 0 {
+                    *self = CID::Unit(newidnum);
+                } else {
+                    *self = CID::Chain(CIDChain {
+                        id_list: vec![x, newidnum],
+                    })
+                }
+            }
+            CID::Chain(c) => c.id_list.push(newidnum),
+        };
+    }
+    pub fn clone_push(&self, oti: Option<Arc<TransmissionInfo>>) -> Self {
+        let mut cid = self.clone();
+        cid.push(oti);
+        cid
+    }
 }
 
 impl Default for CID {

@@ -23,7 +23,7 @@ pub struct AccumulateResult {
     pub e: Option<anyhow::Error>,
 
     /// 代表 迭代完成后，最终的 cid
-    pub id: Option<CID>,
+    pub id: CID,
 
     pub chain_tag: String,
     // 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
@@ -139,9 +139,9 @@ pub async fn accumulate(
         d: calculated_output_vec,
         e: last_r.e,
         id: if last_r.new_id.is_some() {
-            last_r.new_id
+            last_r.new_id.expect("is some")
         } else {
-            Some(cid)
+            cid
         },
         left_mappers_iter: mappers,
         chain_tag: tag,
@@ -212,54 +212,30 @@ pub async fn accumulate_from_start(
 ///
 pub async fn in_iter_accumulate_forever(
     cid: CID,
-    mut rx: tokio::sync::mpsc::Receiver<MapResult>, //Stream::Generator
+    mut rx: tokio::sync::mpsc::Receiver<MapResult>,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
-    inmappers: MIterBox,
+    miter: MIterBox,
     oti: Option<Arc<TransmissionInfo>>,
 ) {
     loop {
-        let opt_stream = rx.recv().await;
+        let opt_stream_info = rx.recv().await;
 
-        let new_stream_info = match opt_stream {
+        let new_stream_info = match opt_stream_info {
             Some(s) => s,
             None => break,
-        };
-
-        let mc = inmappers.clone();
-        let txc = tx.clone();
-        let oti = oti.clone();
-
-        let cid = cid.clone();
-        let cid = match cid {
-            CID::Unit(u) => match oti.as_ref() {
-                Some(ti) => {
-                    if u == 0 {
-                        CID::new_ordered(&ti.last_connection_id)
-                    } else {
-                        CID::Chain(CIDChain {
-                            id_list: vec![u, new_ordered_cid(&ti.last_connection_id)],
-                        })
-                    }
-                }
-                None => CID::new(),
-            },
-            CID::Chain(mut c) => match oti.as_ref() {
-                Some(ti) => {
-                    c.id_list.push(new_ordered_cid(&ti.last_connection_id));
-                    CID::Chain(c)
-                }
-                None => {
-                    c.id_list.push(new_rand_cid());
-                    CID::Chain(c)
-                }
-            },
         };
 
         if log_enabled!(log::Level::Info) {
             info!("{cid}, new accepted stream");
         }
 
-        spawn_acc_forever(cid, new_stream_info, mc, txc, oti);
+        spawn_acc_forever(
+            cid.clone_push(oti.clone()),
+            new_stream_info,
+            miter.clone(),
+            tx.clone(),
+            oti.clone(),
+        );
     }
 }
 
@@ -274,12 +250,13 @@ fn spawn_acc_forever(
     oti: Option<Arc<TransmissionInfo>>,
 ) {
     tokio::spawn(async move {
-        let r = accumulate(cid.clone(), ProxyBehavior::DECODE, new_stream_info, miter).await;
+        let r = accumulate(cid, ProxyBehavior::DECODE, new_stream_info, miter).await;
 
         if let Stream::Generator(rx) = r.c {
+            let cid = r.id;
+
             debug!("{cid} spawn_acc_forever recursive");
-            in_iter_accumulate_forever(cid.clone(), rx, txc, r.left_mappers_iter.clone(), oti)
-                .await;
+            in_iter_accumulate_forever(cid, rx, txc, r.left_mappers_iter.clone(), oti).await;
         } else {
             let _ = txc.send(r).await;
         }

@@ -60,10 +60,7 @@ pub async fn handle_in_accumulate_result(
 
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> anyhow::Result<()> {
-    let cid = listen_result
-        .id
-        .as_ref()
-        .expect("listen_result contains an id");
+    let cid = listen_result.id;
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {

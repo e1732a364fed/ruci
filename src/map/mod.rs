@@ -159,7 +159,7 @@ impl MapResult {
     }
 
     pub fn cb(c: net::Conn, b: Option<BytesMut>) -> Self {
-        MapResult::builder().c(Stream::c(c)).b(b).build()
+        MapResult::newc(c).b(b).build()
     }
 
     pub fn err_str(estr: &str) -> Self {
@@ -178,11 +178,7 @@ impl MapResult {
     }
 
     pub fn ebc(e: anyhow::Error, b: BytesMut, c: net::Conn) -> Self {
-        MapResult::builder()
-            .c(Stream::c(c))
-            .e(e)
-            .b(buf_to_ob(b))
-            .build()
+        MapResult::newc(c).e(e).b(buf_to_ob(b)).build()
     }
 
     pub fn buf_err(b: BytesMut, e: anyhow::Error) -> Self {
@@ -193,7 +189,7 @@ impl MapResult {
     }
 
     pub fn abcod(a: net::Addr, b: BytesMut, c: net::Conn, d: Option<AnyData>) -> Self {
-        let builder = MapResult::builder().c(Stream::c(c)).a(Some(a)).b(Some(b));
+        let builder = MapResult::newc(c).a(Some(a)).b(Some(b));
         match d {
             Some(d) => builder.d(d).build(),
             None => builder.build(),
