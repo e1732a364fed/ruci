@@ -37,7 +37,7 @@ impl Client {
             let cc = rustls21::cc(rustls21::ClientOptions {
                 insecure: c.insecure.unwrap_or_default(),
                 alpn: c.alpn,
-                cert_path: c.cert_path.clone(),
+                cert: c.cert.clone(),
             })?;
 
             s2n_quic_rustls::Client::from(cc)

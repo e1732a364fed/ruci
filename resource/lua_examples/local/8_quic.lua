@@ -2,7 +2,7 @@ local quic_config = {
   type = "Quic",
   server_addr = "127.0.0.1:10801",
   alpn = { "h3" },
-  cert_path = "test2.crt",
+  cert = "test2.crt",
   server_name = "www.mytest.com"
 }
 

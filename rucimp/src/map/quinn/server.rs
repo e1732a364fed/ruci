@@ -21,8 +21,8 @@ use ruci_rustls21 as rustls21;
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
 pub struct Server {
-    // tls_key_path: String,
-    // tls_cert_path: String,
+    // tls_key: String,
+    // tls_cert: String,
     listen_addr: String,
     pub alpn: Option<Vec<String>>,
 
@@ -42,16 +42,16 @@ impl Server {
         let tls_server_config = rustls21::sc(
             ruci::map::tls_config::ServerOptions {
                 alpn: c.alpn.clone(),
-                cert_path: c.cert_path.clone(),
-                key_path: c.key_path.clone(),
+                cert: c.cert.clone(),
+                key: c.key.clone(),
             },
             data_source,
         )
         .context("rustls21::sc failed")?;
 
         Ok(Self {
-            // tls_key_path: c.key_path,
-            // tls_cert_path: c.cert_path,
+            // tls_key: c.key,
+            // tls_cert: c.cert,
             listen_addr: c.listen_addr,
             alpn: c.alpn,
             next_cid: Arc::new(AtomicU32::new(1)),

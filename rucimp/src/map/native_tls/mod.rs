@@ -22,10 +22,10 @@ use tracing::debug;
 
 use data_source::DataSource;
 
-pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &DataSource) -> anyhow::Result<Identity> {
-    let cert_file = fs.read_to_string(cert_path)?;
+pub fn load(cert: PathBuf, key: PathBuf, fs: &DataSource) -> anyhow::Result<Identity> {
+    let cert_file = fs.read_to_string(cert)?;
 
-    let key_file = fs.read_to_string(key_path)?;
+    let key_file = fs.read_to_string(key)?;
     let pkcs8 = Identity::from_pkcs8(cert_file.as_bytes(), key_file.as_bytes())
         .context("Identity::from_pkcs8 failed")?;
 

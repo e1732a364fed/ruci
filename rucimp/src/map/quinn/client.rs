@@ -42,7 +42,7 @@ impl Client {
                 ruci::map::tls_config::ClientOptions {
                     insecure: c.insecure.unwrap_or_default(),
                     alpn: c.alpn,
-                    cert_path: c.cert_path.clone(),
+                    cert: c.cert.clone(),
                     ..Default::default()
                 },
                 data_source,

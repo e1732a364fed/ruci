@@ -18,8 +18,8 @@ use crate::map::quic_common::ServerConfig;
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
 pub struct Server {
-    tls_key_path: String,
-    tls_cert_path: String,
+    tls_key: String,
+    tls_cert: String,
     listen_addr: String,
     pub alpn: Option<Vec<String>>,
 
@@ -35,8 +35,8 @@ impl Display for Server {
 impl Server {
     pub fn new(c: ServerConfig) -> Self {
         Self {
-            tls_key_path: c.key_path,
-            tls_cert_path: c.cert_path,
+            tls_key: c.key,
+            tls_cert: c.cert,
             listen_addr: c.listen_addr,
             alpn: c.alpn,
             a_next_cid: Arc::new(AtomicU32::new(1)),
@@ -46,8 +46,8 @@ impl Server {
     async fn start_listen(&self, cid: CID) -> anyhow::Result<map::MapResult> {
         //builder() use default, default will use h3 as alpn
         let mut tls = s2n_quic_rustls::Server::builder().with_certificate(
-            Path::new(self.tls_cert_path.as_str()),
-            Path::new(self.tls_key_path.as_str()),
+            Path::new(self.tls_cert.as_str()),
+            Path::new(self.tls_key.as_str()),
         )?;
         if let Some(a) = &self.alpn {
             tls = tls.with_application_protocols(a.into_iter())?;

@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ServerConfig {
-    pub key_path: String,
-    pub cert_path: String,
+    pub key: String,
+    pub cert: String,
     pub listen_addr: String,
     pub alpn: Option<Vec<String>>,
 }
@@ -17,7 +17,7 @@ pub struct ClientConfig {
     pub server_addr: String,
     pub server_name: String,
 
-    pub cert_path: Option<String>,
+    pub cert: Option<String>,
     pub alpn: Option<Vec<String>>,
     pub insecure: Option<bool>,
 }

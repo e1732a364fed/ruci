@@ -170,7 +170,7 @@ local quic_out_chain = { {
 
     -- 可给出 服务端的 证书, 这样就算 insecure = false 也通过验证
     -- 证书须为 真证书, 或真fullchain 证书, 或自签的根证书
-    cert_path = "test2.crt",
+    cert = "test2.crt",
     server_addr = "127.0.0.1:10801",
 
     -- 须给出 server_name,

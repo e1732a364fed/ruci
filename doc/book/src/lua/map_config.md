@@ -489,8 +489,8 @@ quic 的 监听端 是直接接管 udp 层的, listen_addr 在这里指定, 而�
 
 ```lua
 {
-    key_path="",
-    cert_path="",
+    key="",
+    cert="",
     listen_addr="",
     alpn = { "h2", "h3"},
 }
@@ -502,7 +502,7 @@ out:
  {
     server_addr="",
     server_name="www.mytest.com",
-    cert_path="",--optional
+    cert="",--optional
     alpn = { "h2", "h3"}, --要明确指定 alpn
     insecure=true,--optional
 }
@@ -513,7 +513,7 @@ out:
 ruci 提供的 test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 localhost,
 
 
-cert_path：可给出 服务端的 证书, 这样就算 insecure = false 也通过验证
+cert：可给出 服务端的 证书, 这样就算 insecure = false 也通过验证
 证书须为 真证书, 或真fullchain 证书, 或自签的根证书
 
 ## SPE1: Steganography Protocol Exmaple1

@@ -14,10 +14,7 @@
           "type": "MITM",
           "cert": "test_ca_cert.pem",
           "key": "test_ca_key.pem",
-          "alpn": [
-            "h2",
-            "http/1.1"
-          ]
+          "alpn": ["h2", "http/1.1"]
         }
       ]
     }
@@ -39,11 +36,8 @@
           "type": "TLS",
           "host": "www.google.com",
           "insecure": true,
-          "alpn": [
-            "h2",
-            "http/1.1"
-          ],
-          "cert_path": null
+          "alpn": ["h2", "http/1.1"],
+          "cert": null
         },
         {
           "type": "Trojan",

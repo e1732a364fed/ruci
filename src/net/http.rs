@@ -14,10 +14,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CommonConfig {
     pub method: Option<String>,
+
+    /// 如 https, ws
     pub scheme: Option<String>,
 
-    /// uri 中的 authority, 包含端口号
+    /// uri 中的 authority, 包含端口号，如 user@www.ruci.com:80
     pub authority: String,
+
+    /// 带 前缀`/`
     pub path: String,
     pub headers: Option<BTreeMap<String, String>>,
 

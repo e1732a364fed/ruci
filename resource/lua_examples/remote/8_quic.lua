@@ -5,8 +5,8 @@ local outbound_direct = {
 
 local quic_config = {
   type = "Quic",
-  key_path = "test2.key",
-  cert_path = "test2.crt",
+  key = "test2.key",
+  cert = "test2.crt",
   listen_addr = "0.0.0.0:10801",
   alpn = { "h3" }
 }

@@ -50,15 +50,15 @@ pub mod tls_config {
         pub insecure: bool,
         pub alpn: Option<Vec<String>>,
 
-        pub cert_path: Option<String>,
+        pub cert: Option<String>,
     }
 
     #[derive(Debug, Clone, Default, Serialize, Deserialize)]
     pub struct ServerOptions {
         pub alpn: Option<Vec<String>>,
 
-        pub cert_path: String,
-        pub key_path: String,
+        pub cert: String,
+        pub key: String,
     }
 }
 
