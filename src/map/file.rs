@@ -166,7 +166,7 @@ impl Mapper for FileIO {
 
         let mut buf = params.b;
         if let Some(ped) = self.get_pre_defined_early_data() {
-            debug!("stdio: has pre_defined_early_data");
+            debug!("Fileio: has pre_defined_early_data");
             match buf {
                 Some(mut bf) => {
                     bf.extend_from_slice(&ped);

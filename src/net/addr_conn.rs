@@ -270,7 +270,7 @@ impl<T: AsyncWriteAddr + Unpin + ?Sized> futures::Future for WriteFuture<'_, T> 
 ////////////////////////////////////////////////////////////////////
 */
 
-pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(10); //todo: change this
+pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: change this
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 
 /// 循环读写直到read错误发生. 不会认为 read错误为错误. 每一次read都会以
