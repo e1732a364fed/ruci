@@ -16,14 +16,15 @@ use tun::{AsyncDevice, ToAddress, TunPacketCodec};
 
 use super::Conn;
 
+pub type SinkStream = (
+    SplitSink<Framed<AsyncDevice, TunPacketCodec>, Vec<u8>>,
+    SplitStream<Framed<AsyncDevice, TunPacketCodec>>,
+);
 pub fn create_bind_sink_stream<A1, A2>(
     tun_name: Option<String>,
     bind_addr: A1,
     netmask: A2,
-) -> anyhow::Result<(
-    SplitSink<Framed<AsyncDevice, TunPacketCodec>, Vec<u8>>,
-    SplitStream<Framed<AsyncDevice, TunPacketCodec>>,
-)>
+) -> anyhow::Result<SinkStream>
 where
     A1: ToAddress,
     A2: ToAddress,

@@ -174,18 +174,15 @@ impl Listener {
                                 break;
                             }
 
-                        } else {
-                            if let Some(mut entry) = conn_map.get_mut(&k) {
-                                entry.last_active = Instant::now();
-                                let r = entry.tx.send(data).await;
-                                if let Err(e) = r {
-                                    debug!("lwip UdpListener tx send got e: {e}");
-                                    conn_map.remove(&k);
-                                    continue;
-                                }
+                        } else if let Some(mut entry) = conn_map.get_mut(&k) {
+                            entry.last_active = Instant::now();
+                            let r = entry.tx.send(data).await;
+                            if let Err(e) = r {
+                                debug!("lwip UdpListener tx send got e: {e}");
+                                conn_map.remove(&k);
+                                continue;
                             }
                         }
-
                     }
                 }
             } //loop
@@ -257,9 +254,7 @@ fn new_addr_conn(
         dst,
         conn_map,
     };
-    let ac = AddrConn::new(Box::new(r), Box::new(w));
-    // ac.cached_name = String::from("tproxy_udp");
-    ac
+    AddrConn::new(Box::new(r), Box::new(w))
 }
 
 pub struct Writer {

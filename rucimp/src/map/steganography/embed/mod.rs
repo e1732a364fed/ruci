@@ -124,7 +124,7 @@ impl Map for Embedder {
                 writer: &mut w,
                 write_rx: &mut write_rx,
                 write_info_tx,
-                write_info_ready_rx: write_info_ready_rx,
+                write_info_ready_rx,
                 read_tx,
                 invert,
                 shutdown_atom: shut_atom.clone(),

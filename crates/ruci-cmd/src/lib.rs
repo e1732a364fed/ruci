@@ -29,8 +29,6 @@ use parking_lot::RwLock;
 use rucimp::{modes::CoreArgs, DEFAULT_LUA_CONFIG_FILE_NAME};
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
-#[cfg(feature = "api_server")]
-use utoipa;
 
 mod log_ws;
 
@@ -184,7 +182,7 @@ pub async fn run_main() -> anyhow::Result<()> {
                 }
                 let file_name = args[i + 1].as_str();
                 let file_content = rucimp::utils::default_file_source()
-                    .read_to_string(&file_name)
+                    .read_to_string(file_name)
                     .context(format!("read --cmd-config {} failed", file_name))?;
 
                 if file_name.ends_with(".toml") {
@@ -200,10 +198,10 @@ pub async fn run_main() -> anyhow::Result<()> {
     };
     run_main_with_args(args).await
 }
-/// blocking
 
-pub async fn run_main_with_json_str_args(json: &str) -> anyhow::Result<()> {
-    let args = rucimp::serde_json::from_str(&json)?;
+/// blocking
+pub async fn run_main_with_json_str_args(json_content: &str) -> anyhow::Result<()> {
+    let args = rucimp::serde_json::from_str(json_content)?;
     run_main_with_args(args).await
 }
 
@@ -234,6 +232,10 @@ pub static CORE_STATE: OnceLock<std::sync::Arc<parking_lot::Mutex<State>>> = Onc
 //注意，安卓运行 log 时若 没有 取消 日志文件输出，则会panic
 
 /// non-blocking, using a new multithread tokio runtime.
+///
+/// # Safety
+///
+/// The caller must ensure that json_content is valid UTF-8
 #[no_mangle]
 pub unsafe extern "C" fn c_run_main_with_json_args(
     json_content: *const std::ffi::c_char,
@@ -265,12 +267,13 @@ pub unsafe extern "C" fn c_run_main_with_json_args(
             .unwrap()
     });
 
-    CORE_STATE.get_or_init(|| Arc::new(parking_lot::Mutex::new(State::default())));
+    let state_mutex =
+        CORE_STATE.get_or_init(|| Arc::new(parking_lot::Mutex::new(State::default())));
 
     let f = async {
         let r = run_main_with_args(args).await;
 
-        std::mem::replace(&mut *CORE_STATE.get().unwrap().lock(), State::RunResult(r))
+        std::mem::replace(&mut *state_mutex.lock(), State::RunResult(r))
     };
     let _ = rt.spawn(f);
 
@@ -336,6 +339,7 @@ pub mod android {
     ///         System.loadLibrary("ruci_cmd")
     ///     }
     ///     external fun run(input: String): String
+    ///     external fun state(): String
     /// }
     /// ```
     #[no_mangle]
@@ -349,7 +353,9 @@ pub mod android {
 
     #[no_mangle]
     pub unsafe extern "C" fn Java_com_ruci_android_Class1_state(env: JNIEnv, _: JClass) -> jstring {
-        let r = CORE_STATE.get().unwrap().lock();
+        let r = CORE_STATE
+            .get_or_init(|| Arc::new(parking_lot::Mutex::new(State::default())))
+            .lock();
 
         let x = std::ffi::CString::new(format!("{:?}", &*r)).unwrap();
 
@@ -458,7 +464,11 @@ pub async fn run_main_with_args(mut args: Args) -> anyhow::Result<()> {
                             info!("api server started, running api...");
 
                             let _ = std::mem::replace(
-                                &mut *CORE_STATE.get().unwrap().lock(),
+                                &mut *CORE_STATE
+                                    .get_or_init(|| {
+                                        Arc::new(parking_lot::Mutex::new(State::default()))
+                                    })
+                                    .lock(),
                                 State::Running,
                             );
 
@@ -661,15 +671,17 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     use rucimp::strum::IntoEnumIterator;
 
-    let all_possible_in_maps: Vec<_> = rucimp::modes::chain::config::InMapConfig::iter()
+    let mut all_possible_in_maps: Vec<_> = rucimp::modes::chain::config::InMapConfig::iter()
         .map(|x| ruci::utils::get_debug_head(&x))
         .collect();
+    all_possible_in_maps.sort();
 
     debug!("possible in maps: {}", all_possible_in_maps.join(", "));
 
-    let all_possible_out_maps: Vec<_> = rucimp::modes::chain::config::OutMapConfig::iter()
+    let mut all_possible_out_maps: Vec<_> = rucimp::modes::chain::config::OutMapConfig::iter()
         .map(|x| ruci::utils::get_debug_head(&x))
         .collect();
+    all_possible_out_maps.sort();
 
     debug!("possible out maps: {}", all_possible_out_maps.join(", "));
 
@@ -694,7 +706,12 @@ pub async fn start_engine(
             args.config_file_content = fc;
             args.data_source = Some(std::sync::Arc::new(ds));
 
-            let _ = std::mem::replace(&mut *CORE_STATE.get().unwrap().lock(), State::RunningEngine);
+            let _ = std::mem::replace(
+                &mut *CORE_STATE
+                    .get_or_init(|| Arc::new(parking_lot::Mutex::new(State::default())))
+                    .lock(),
+                State::RunningEngine,
+            );
 
             let r = rucimp::modes::run(
                 args,
