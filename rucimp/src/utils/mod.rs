@@ -12,6 +12,8 @@ use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
 
+/// Defines where to get the content of the requested file name.
+///
 /// Default will use [`crate::COMMON_DIRS`] as folders.
 #[derive(Clone, Debug)]
 pub enum FileSource {

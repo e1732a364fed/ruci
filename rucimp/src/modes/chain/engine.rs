@@ -417,9 +417,7 @@ impl Engine {
     /// A helper function to start an engine, run it until it got shutdown signal, then stop it.
     ///
     /// use init_fn to modify the engine before it runs.
-    pub async fn new_and_run(
-        init_fn: Box<dyn Send + FnOnce(&mut Engine) -> anyhow::Result<()>>,
-    ) -> anyhow::Result<()> {
+    pub async fn new_and_run(init_fn: InitEngineFn) -> anyhow::Result<()> {
         let mut e = Engine::new();
 
         debug!(
@@ -464,3 +462,5 @@ impl Engine {
         Engine::new_and_run(Box::new(f)).await
     }
 }
+
+pub type InitEngineFn = Box<dyn Send + FnOnce(&mut Engine) -> anyhow::Result<()>>;

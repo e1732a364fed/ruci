@@ -235,49 +235,36 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     );
 
     #[allow(unused_mut)]
-    let mut features_list: Vec<&str> = Vec::new();
-
-    #[cfg(feature = "file_server")]
-    features_list.push("file_server");
-
-    #[cfg(feature = "api_server")]
-    features_list.push("api_server");
-
-    #[cfg(feature = "api_client")]
-    features_list.push("api_client");
-
-    #[cfg(feature = "utils")]
-    features_list.push("utils");
-
-    #[cfg(feature = "lua")]
-    features_list.push("lua");
-
-    #[cfg(feature = "lua54")]
-    features_list.push("lua54");
-
-    #[cfg(feature = "trace")]
-    features_list.push("trace");
-
-    #[cfg(feature = "use-native-tls")]
-    features_list.push("native-tls");
-
-    #[cfg(feature = "native-tls-vendored")]
-    features_list.push("native-tls-vendored");
-
-    #[cfg(feature = "quinn")]
-    features_list.push("quinn");
-
-    #[cfg(feature = "quic")]
-    features_list.push("quic");
-
-    #[cfg(feature = "tun")]
-    features_list.push("tun");
-
-    #[cfg(feature = "smoltcp")]
-    features_list.push("smoltcp");
-
-    #[cfg(feature = "steganography")]
-    features_list.push("steganography");
+    let mut features_list: Vec<&str> = vec![
+        #[cfg(feature = "file_server")]
+        "file_server",
+        #[cfg(feature = "api_server")]
+        "api_server",
+        #[cfg(feature = "api_client")]
+        "api_client",
+        #[cfg(feature = "utils")]
+        "utils",
+        #[cfg(feature = "trace")]
+        "trace",
+        #[cfg(feature = "use-native-tls")]
+        "native-tls",
+        #[cfg(feature = "native-tls-vendored")]
+        "native-tls-vendored",
+        #[cfg(feature = "lua")]
+        "lua",
+        #[cfg(feature = "lua54")]
+        "lua54",
+        #[cfg(feature = "quinn")]
+        "quinn",
+        #[cfg(feature = "quic")]
+        "quic",
+        #[cfg(feature = "tun")]
+        "tun",
+        #[cfg(feature = "smoltcp")]
+        "smoltcp",
+        #[cfg(feature = "steganography")]
+        "steganography",
+    ];
 
     info!(
         ruci_cmd = env!("CARGO_PKG_VERSION"),

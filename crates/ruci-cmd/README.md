@@ -75,16 +75,72 @@ quic feature 使用的是 s2n-quic, 其不能在windows编译, 且与其它代�
 
 # utils
 
-生成自签名根证书:
-
-./ruci-cmd utils gen-cer localhost www.mytest.com
-
-会生成 generated_crt_and_key.crt
+## 下载外部依赖文件
 
 ./ruci-cmd utils mmdb
 
 ./ruci-cmd utils wintun
 
+## 生成自签名根证书:
+
+./ruci-cmd utils gen-cer localhost www.mytest.com
+
+会生成 generated.crt 和  generated.key
+
+
+还可以生成 CA证书
+
+./ruci-cmd utils gen-ca My_ORGANIZATION_NAME MyCommonName www.1.com www.2.com
+
+
+## 配置文件格式转换：
+
+ruci-cmd utils convert-format <INPUT_FILE> <OUTPUT_FORMAT>
+如
+ruci-cmd utils convert-format local.lua toml
+
+三种格式在静态链下是可以互相转换的
+
+转后就会生成 local.toml. 如果同名文件存在，就会自动用一个新的名称，不会覆盖。
+
+而且也可以  转换为同格式 ，相当于把 注释删掉然后 标准化一下
+
+## 简易文件服务器
+
+    ./ruci-cmd utils serve-folder
+    ./ruci-cmd utils serve-folder 0.0.0.0:12345
+
+serve-folder 命令 会将 ruci-cmd 当前工作目录下的 "static" 文件夹 作为 文件服务器的根路径。
+
+它不会对用户打印出 static 文件夹中的任何文件，而只有当访问 static 中的用户指定的子文件夹时，才会显示其子文件夹的内容。
+这样就保护了根路径的内容。
+
+这个文件夹名不可更改，这是为了防止错误地将私密文件暴露。
+
+如果不给出监听地址，会自动监听 "0.0.0.0:18143"。
+
+## 打包
+
+    ./ruci-cmd utils pack folder1
+    ./ruci-cmd utils pack-z folder1
+
+pack 和 pack-z 命令 可以对工作目录下的指定文件夹 进行打包。
+
+pack是打包为 tar 文件， pack-z 是在打包为 tar.zip 文件。
+
+它会计算 打包好的 tar 文件的 md5 hash, 并将 该 md5 作为 tar 文件的文件名。
+
+如果是 pack-z, 其依然使用 tar 的 md5 作为 文件名，而不是 zip 的 md5。
+
+## lua 命令行
+
+    ./ruci-cmd utils repl
+
+该命令可以启用一个 lua repl (read, execute, print, loop), 用户可以在里面执行一些lua代码。
+
+## 生成二维码
+
+    ./ruci-cmd utils qr some_string...
 
 # api server
 

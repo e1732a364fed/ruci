@@ -15,6 +15,8 @@ pub const WINTUN_DOWNLOAD_LINK: &str = "https://www.wintun.net/builds/wintun-0.1
 pub const MMDB_DOWNLOAD_LINK: &str =
     "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb";
 
+// 运行示例： ruci-cmd utils convert-format local.lua toml
+
 #[derive(Subcommand, Clone)]
 pub enum Commands {
     /// download Country.mmdb
@@ -29,9 +31,11 @@ pub enum Commands {
     /// generate self signed root certificate and key
     GenCer { subject_alt_names: Vec<String> },
     GenCA {
-        subject_alt_names: Vec<String>,
         organization_name: Option<String>,
+
         common_name: Option<String>,
+
+        subject_alt_names: Vec<String>,
     },
 
     /// start a interactive lua shell, which is a read–eval–print loop (REPL).
@@ -86,6 +90,10 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             let cn = common_name.unwrap_or("My CA Root".to_string());
 
             info!("generating CA cert and key... with {on} as OrganizationName and {cn} as CommonName");
+
+            if !subject_alt_names.is_empty() {
+                info!("and with subject_alt_names: {:?}", subject_alt_names);
+            }
 
             use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
             use std::fs;
@@ -331,7 +339,7 @@ fn print_qrcode_of(str: &str) {
 /// * `input_format` - 输入格式 ("lua", "toml", "yaml")
 /// * `output_format` - 输出格式 ("lua", "toml", "yaml")
 pub fn convert_config(
-    input: &str,
+    input_file_content: &str,
     input_format: &str,
     output_format: &str,
     file_source: FileSource,
@@ -343,14 +351,17 @@ pub fn convert_config(
         "lua" => {
             #[cfg(any(feature = "lua", feature = "lua54"))]
             {
-                rucimp::modes::chain::config::lua::load_static(input, Arc::new(Some(file_source)))
-                    .context("init_lua_static failed")?
+                rucimp::modes::chain::config::lua::load_static(
+                    input_file_content,
+                    Arc::new(Some(file_source)),
+                )
+                .context("init_lua_static failed")?
             }
             #[cfg(not(any(feature = "lua", feature = "lua54")))]
             anyhow::bail!("lua feature not enabled")
         }
-        "toml" => toml::from_str(input)?,
-        "yaml" | "yml" => serde_yaml::from_str(input)?,
+        "toml" => toml::from_str(input_file_content)?,
+        "yaml" | "yml" => serde_yaml::from_str(input_file_content)?,
         _ => anyhow::bail!("unsupported input format: {}", input_format),
     };
 

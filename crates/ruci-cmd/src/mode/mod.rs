@@ -15,7 +15,7 @@ pub async fn get_file(
     use anyhow::Context;
 
     let get_file_f = || -> anyhow::Result<_> {
-        rucimp::utils::try_get_file_content(DEFAULT_LUA_CONFIG_FILE_NAME, Some(&file_name))
+        rucimp::utils::try_get_file_content(DEFAULT_LUA_CONFIG_FILE_NAME, Some(file_name))
             .with_context(|| format!("run chain engine try get file {} failed", file_name))
     };
 
@@ -34,7 +34,7 @@ pub async fn get_file(
             match in_memory {
                 true => crate::utils::dl_url(&url, None).await?.unwrap(),
                 false => {
-                    let _ = crate::utils::dl_url(&url, Some(&file_name)).await?;
+                    let _ = crate::utils::dl_url(&url, Some(file_name)).await?;
 
                     let mut v = vec![];
 

@@ -163,8 +163,13 @@ pub const FRAME_TYPE_GOAWAY: u8 = 0x7;
 pub const FRAME_TYPE_WINDOW_UPDATE: u8 = 0x8;
 pub const FRAME_TYPE_CONTINUATION: u8 = 0x9;
 
+pub struct H2ParseResult {
+    pub settings: Vec<SettingFrame>,
+    pub headers: Vec<(String, String)>,
+}
+
 /// 返回 settings 和 headers
-pub fn parse_frames(buf: &[u8]) -> anyhow::Result<(Vec<SettingFrame>, Vec<(String, String)>)> {
+pub fn parse_frames(buf: &[u8]) -> anyhow::Result<H2ParseResult> {
     // 解析帧头（9字节）
     if buf.len() < 9 {
         bail!("buf.len() < 9")
@@ -216,7 +221,7 @@ pub fn parse_frames(buf: &[u8]) -> anyhow::Result<(Vec<SettingFrame>, Vec<(Strin
         }
     }
 
-    Ok((settings, headers))
+    Ok(H2ParseResult { settings, headers })
 }
 
 #[derive(Debug, Clone)]
