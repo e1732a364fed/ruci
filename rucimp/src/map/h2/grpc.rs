@@ -10,7 +10,7 @@ const MAX_VARINT_LEN64: usize = 10;
 
 pub const CONTENT_TYPE: &str = "content-type";
 pub const GRPC_CONTENT_TYPE: &str = "application/grpc";
-pub const USER_AGENT: &str = "grpc-go/1.41.0";
+pub const USER_AGENT: &str = "rucimp";
 
 pub fn build_grpc_request_from(c: &CommonConfig) -> Request<()> {
     let mut request = Request::builder()
