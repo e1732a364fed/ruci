@@ -36,7 +36,7 @@ impl AsyncReadAddr for Reader {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        mut r_buf: &mut [u8],
+        r_buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
         let mut inner = BytesMut::zeroed(r_buf.len() + helpers::MAX_LEN_SOCKS5_BYTES);
         let mut buf2 = ReadBuf::new(&mut inner[..]);
@@ -48,6 +48,8 @@ impl AsyncReadAddr for Reader {
         //debug!("trojan reader read got {:?}", r);
 
         match r {
+            Poll::Pending => Poll::Pending,
+
             Poll::Ready(re) => {
                 match re {
                     Ok(_) => {
@@ -64,9 +66,9 @@ impl AsyncReadAddr for Reader {
                                     )));
                                 }
 
-                                let l = the_buf2.get_u16() as usize;
-                                if the_buf2.len() - 2 < l {
-                                    return Poll::Ready(Err(io::Error::other(format!("buf len short of data , marked length+2:{}, real length: {}", l+2, the_buf2.len()))));
+                                let data_len = the_buf2.get_u16() as usize;
+                                if the_buf2.len() - 2 < data_len {
+                                    return Poll::Ready(Err(io::Error::other(format!("buf len short of data , marked length+2:{}, real length: {}", data_len+2, the_buf2.len()))));
                                 }
                                 let crlf = the_buf2.get_u16();
                                 if crlf != CRLF {
@@ -75,12 +77,13 @@ impl AsyncReadAddr for Reader {
                                         crlf
                                     ))));
                                 }
-                                the_buf2.truncate(l);
+                                the_buf2.truncate(data_len);
 
-                                let real_len = min(l, r_buf.len());
+                                let real_len = min(data_len, r_buf.len());
                                 debug!("trojan reader read got real_len {:?}", real_len);
 
-                                r_buf.put(&the_buf2[..real_len]);
+                                the_buf2.copy_to_slice(&mut r_buf[..real_len]);
+                                //r_buf.put(&the_buf2[..real_len]);
                                 ad.network = Network::UDP;
 
                                 Poll::Ready(Ok((real_len, ad)))
@@ -91,7 +94,6 @@ impl AsyncReadAddr for Reader {
                     Err(e) => Poll::Ready(Err(e)),
                 }
             }
-            Poll::Pending => Poll::Pending,
         }
     }
 }
@@ -147,7 +149,7 @@ impl AsyncWriteAddr for Writer {
         let actual_l = buf2.len();
 
         let r = self.base.as_mut().poll_write(cx, &buf2);
-        // debug!("trojan writer write got {:?}", r);
+        debug!("trojan writer write got {data_l} {actual_l} {:?}", r);
 
         buf2.clear();
         self.last_buf = Some(buf2);
@@ -198,7 +200,10 @@ pub fn from(c: net::Conn) -> net::addr_conn::AddrConn {
     let ar = Reader { base: Box::pin(r) };
     let aw = Writer::new(w);
 
-    net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw))
+    let mut ac = net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw));
+
+    ac.cached_name = String::from("trojan_udp");
+    ac
 }
 
 #[cfg(test)]

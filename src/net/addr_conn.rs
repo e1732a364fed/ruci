@@ -323,17 +323,26 @@ pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 // todo improve the codes below
 
 async fn read_once_notimeout<R1: AddrReadTrait, W1: AddrWriteTrait>(
+    name: &str,
     r1: &mut R1,
     w1: &mut W1,
     buf: &mut [u8],
 ) -> anyhow::Result<usize> {
+    debug!("read1 {name} called");
+
     match r1.read(buf).await {
         Err(e) => {
-            bail!("read addrconn GOT ERROR {e}");
+            bail!("read_once_notimeout GOT ERROR {e}");
         }
         Ok((m, ad)) => {
             if m > 0 {
+                debug!("read1 {name} will write {m}");
                 let r = w1.write(&buf[..m], &ad).await;
+                let r2 = w1.flush().await;
+                let r = if let Err(e) = r2 { Err(e) } else { r };
+
+                debug!("read1 {name} write got {r:?}");
+
                 match r {
                     Ok(n) => {
                         if n < m {
@@ -352,24 +361,25 @@ async fn read_once_notimeout<R1: AddrReadTrait, W1: AddrWriteTrait>(
 }
 
 async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
+    name: &str,
     r1: &mut R1,
     w1: &mut W1,
     no_timeout: bool,
     buf: &mut [u8],
 ) -> anyhow::Result<usize> {
     if no_timeout {
-        return read_once_notimeout(r1, w1, buf).await;
+        return read_once_notimeout(name, r1, w1, buf).await;
     }
 
     tokio::select! {
         _ = tokio::time::sleep(CP_UDP_TIMEOUT) =>{
-            bail!("read addrconn timeout");
+            bail!("read_once timeout");
         }
 
         r = r1.read(buf) =>{
             match r {
                 Err(e) => {
-                    bail!("read addrconn GOT ERROR {e}");
+                    bail!("read_once GOT ERROR {e}");
 
                 },
                 Ok((m, ad)) => {
@@ -417,7 +427,7 @@ async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
 pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     mut r1: R1,
     mut w1: W1,
-    _name: String,
+    name: String,
     no_timeout: bool,
     mut shutdown_rx: broadcast::Receiver<()>,
     is_d: bool,
@@ -428,7 +438,7 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
 
     loop {
         tokio::select! {
-            r = read_once(&mut r1, &mut w1, no_timeout,buf.as_mut()) =>{
+            r = read_once(&name,&mut r1, &mut w1, no_timeout,buf.as_mut()) =>{
                 match r {
                     Ok(n) => whole_write+=n,
                     Err(e) => {

@@ -10,6 +10,18 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use super::{MapperBox, ProxyBehavior};
 
+#[test]
+fn put() {
+    use bytes::BufMut;
+
+    let mut buf = [0u8; 10];
+    let buf2 = [1u8; 3];
+    let mut r = &mut buf[..];
+    r.put(&buf2[..]);
+    println!("{r:?} ");
+    assert_eq!(r.len(), 7)
+}
+
 #[tokio::test]
 async fn test_adder_r() -> anyhow::Result<()> {
     let writev = Arc::new(Mutex::new(Vec::new()));
