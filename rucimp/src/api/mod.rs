@@ -386,7 +386,7 @@ async fn start_engine(
             tokio::spawn(async move { e.run_with_close_rx(r, false).await });
             id.to_string()
         }
-        Err(r) => format!("{:?}", r),
+        Err(r) => format!("{:?}", Result::<(), anyhow::Error>::Err(r)),
     }
 }
 
