@@ -51,12 +51,12 @@ jobs:
         run: |
 
           compile_target=${{ matrix.target }}
-          compile_features=" -F api_server -F api_client -F utils"
-          
+          compile_features=" -f api_server -f api_client -f utils"
+
           if [[ "$compile_target" == *"-linux-"* || "$compile_target" == *"-apple-"* ]]; then
-            compile_features=" -F api_server -F api_client -F utils"
+            compile_features=" -f api_server -f api_client -f utils"
           else
-            compile_features=" -F api_server -F api_client -F utils"
+            compile_features=" -f api_server -f api_client -f utils"
           fi
 
           cd crates/ruci-cmd
