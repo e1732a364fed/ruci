@@ -102,12 +102,7 @@ impl crate::Name for Client {
 
 #[async_trait::async_trait]
 impl map::Mapper for Client {
-    async fn maps(
-        &self,
-        cid: CID, //state 的 id
-        _behavior: ProxyBehavior,
-        params: MapParams,
-    ) -> MapResult {
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.a.is_none() {
             return MapResult::err_str(&format!(
                 "cid: {}, socks5 outadder called without target_addr",

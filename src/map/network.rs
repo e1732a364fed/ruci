@@ -30,12 +30,7 @@ impl TcpDialer {
 
 #[async_trait]
 impl Mapper for TcpDialer {
-    async fn maps(
-        &self,
-        cid: CID, //state 的 id
-        _behavior: ProxyBehavior,
-        params: MapParams,
-    ) -> MapResult {
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::None => match params.d {
                 Some(d) => {

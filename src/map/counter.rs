@@ -116,12 +116,7 @@ impl Mapper for Counter {
     /// 生成的 MapResult 中的 d 为  Box<CounterData>
     ///
     /// 不分 behavior
-    async fn maps(
-        &self,
-        cid: CID, //state 的 id
-        _behavior: ProxyBehavior,
-        params: MapParams,
-    ) -> MapResult {
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::TCP(mut c) => {
                 let mut ub = 0;

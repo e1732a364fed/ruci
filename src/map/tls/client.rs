@@ -129,7 +129,7 @@ impl map::Mapper for Client {
     // behavior is always encode
     async fn maps(
         &self,
-        cid: CID, //state 的 id
+        cid: CID,
         _behavior: ProxyBehavior,
         params: map::MapParams,
     ) -> map::MapResult {

@@ -172,7 +172,7 @@ impl Name for Server {
 impl Mapper for Server {
     async fn maps(
         &self,
-        cid: CID, //state 的 id
+        cid: CID,
         _behavior: map::ProxyBehavior,
         params: map::MapParams,
     ) -> MapResult {

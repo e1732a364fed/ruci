@@ -375,12 +375,7 @@ pub trait Mapper: crate::Name + DynClone {
     ///
     /// 与 InAdder 一样，它返回一个可选的额外数据  OptData
     ///
-    async fn maps(
-        &self,
-        cid: CID, //state 的 id
-        behavior: ProxyBehavior,
-        params: MapParams,
-    ) -> MapResult;
+    async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult;
 }
 
 pub trait ToMapper {

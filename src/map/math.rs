@@ -116,12 +116,7 @@ impl ToMapper for i8 {
 
 #[async_trait]
 impl crate::map::Mapper for Adder {
-    async fn maps(
-        &self,
-        cid: CID, //state 的 id
-        _behavior: ProxyBehavior,
-        params: MapParams,
-    ) -> MapResult {
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::TCP(c) => {
                 let cc = AdderConn {
