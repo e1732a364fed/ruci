@@ -17,7 +17,7 @@ pub struct InAutoRouteParams {
     pub tun_dev_name: Option<String>,
     pub tun_gateway: Option<String>,
     pub router_ip: Option<String>,
-    pub original_dev_name: Option<String>,
+    pub original_dev_name: Option<String>, // not used for macos
     pub direct_list: Option<Vec<String>>,
     pub dns_list: Option<Vec<String>>,
 }
