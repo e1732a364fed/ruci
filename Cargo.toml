@@ -3,7 +3,7 @@ workspace = { members = [
     "./",
     "crates/macro_map",
     "crates/ruci-cmd",
-    "crates/ruci-tls",
+    "crates/rucimp-tls",
 ] }
 [package]
 name = "ruci"

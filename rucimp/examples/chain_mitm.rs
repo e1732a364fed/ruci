@@ -4,8 +4,8 @@
  这里手动配置 StaticConfig, 不使用 加载配置文件的方式
 */
 
-use ruci_tls::server::TlsServerOptions;
 use rucimp::modes::chain::{config::*, engine::Engine};
+use rucimp_tls::server::TlsServerOptions;
 
 mod shared;
 #[tokio::main]
@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
                     dial_addr: Some("127.0.0.1:10801".to_string()),
                     ..Default::default()
                 })),
-                OutMapConfig::TLS(ruci_tls::client::TlsClientOptions {
+                OutMapConfig::TLS(rucimp_tls::client::TlsClientOptions {
                     host: Some("www.google.com".to_string()),
                     insecure: true,
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
@@ -75,7 +75,7 @@ async fn run_engine_server_end() -> anyhow::Result<()> {
                     leak_target_addr: Some(true),
                     ..Default::default()
                 }),
-                OutMapConfig::TLS(ruci_tls::client::TlsClientOptions {
+                OutMapConfig::TLS(rucimp_tls::client::TlsClientOptions {
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
                     ..Default::default()
                 }),

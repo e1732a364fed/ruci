@@ -11,12 +11,13 @@ use bytes::BytesMut;
 use ruci::{
     map::{self, MapExtFields, MapResult, ProxyBehavior},
     net::{self, helpers::EarlyDataWrapper, CID},
-    utils::FileSource,
     Name,
 };
 
 use macro_map::*;
 use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
+
+use crate::utils::FileSource;
 
 pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &FileSource) -> anyhow::Result<Identity> {
     let cert_file = fs.read_to_string(cert_path)?;
@@ -30,7 +31,7 @@ pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &FileSource) -> anyhow::R
 
 impl Server {
     pub fn from(
-        sc: &ruci_tls::server::TlsServerOptions,
+        sc: &rucimp_tls::server::TlsServerOptions,
         fs: &FileSource,
     ) -> anyhow::Result<Server> {
         let id = load(sc.cert.clone(), sc.key.clone(), fs).context("load cert or key failed")?;
@@ -110,7 +111,7 @@ impl map::Map for Server {
 #[map_ext_fields]
 #[derive(Clone, Debug, MapExt)]
 pub struct Client {
-    pub config: ruci_tls::client::TlsClientOptions,
+    pub config: rucimp_tls::client::TlsClientOptions,
 }
 
 impl Name for Client {

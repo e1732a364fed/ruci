@@ -6,13 +6,13 @@ use criterion::{criterion_group, criterion_main, Criterion};
 fn t(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
-    let mut d = rt.block_on(ruci_tls::test2::test_init(1)).unwrap();
+    let mut d = rt.block_on(rucimp_tls::test2::test_init(1)).unwrap();
 
     c.bench_function("tls 1", move |b| {
         b.iter_custom(|iters| {
             let start = Instant::now();
             for _i in 0..iters {
-                let _ = rt.block_on(ruci_tls::test2::test_write(&mut d));
+                let _ = rt.block_on(rucimp_tls::test2::test_write(&mut d));
             }
             start.elapsed()
         })
@@ -22,13 +22,13 @@ fn t(c: &mut Criterion) {
 fn t2(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
-    let mut d = rt.block_on(ruci_tls::test2::test_init(2)).unwrap();
+    let mut d = rt.block_on(rucimp_tls::test2::test_init(2)).unwrap();
 
     c.bench_function("tls 2", move |b| {
         b.iter_custom(|iters| {
             let start = Instant::now();
             for _i in 0..iters {
-                let _ = rt.block_on(ruci_tls::test2::test_write(&mut d));
+                let _ = rt.block_on(rucimp_tls::test2::test_write(&mut d));
             }
             start.elapsed()
         })
@@ -38,13 +38,13 @@ fn t2(c: &mut Criterion) {
 fn t3(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
-    let mut d = rt.block_on(ruci_tls::test2::test_init(3)).unwrap();
+    let mut d = rt.block_on(rucimp_tls::test2::test_init(3)).unwrap();
 
     c.bench_function("tls 3", move |b| {
         b.iter_custom(|iters| {
             let start = Instant::now();
             for _i in 0..iters {
-                let _ = rt.block_on(ruci_tls::test2::test_write(&mut d));
+                let _ = rt.block_on(rucimp_tls::test2::test_write(&mut d));
             }
             start.elapsed()
         })
