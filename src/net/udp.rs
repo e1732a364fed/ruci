@@ -4,13 +4,12 @@
 */
 use super::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use super::*;
-use futures::executor::block_on;
 use std::cmp::min;
+use std::sync::Mutex;
 use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-use tokio::sync::Mutex;
 use tokio::{io::ReadBuf, net::UdpSocket};
 
 //固定用同一个 udpsocket 发送，到不同的远程地址也是如此
@@ -105,7 +104,7 @@ impl AsyncWriteAddr for MockStream {
         let mut x = Vec::from(buf);
 
         if let Some(swt) = &self.write_target {
-            let mut v = block_on(swt.lock());
+            let mut v = swt.lock().unwrap();
             v.append(&mut x);
         } else {
             if self.write_data.len() == 0 {
@@ -285,7 +284,7 @@ mod test {
 
         print!("test: cp addr end");
 
-        assert_eq!(&nv, writevc.lock().await.deref());
+        assert_eq!(&nv, writevc.lock().unwrap().deref());
         Ok(())
     }
 }
