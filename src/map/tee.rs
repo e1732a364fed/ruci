@@ -1,5 +1,5 @@
 /*!
-为 tee 功能实现 生成 [`StreamGenerator`] 的 Map
+Implements a [`Map`] that returns a [`StreamGenerator`] which split the original stream into 3 streams.
 
 
 ## 关于

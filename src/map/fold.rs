@@ -1,9 +1,7 @@
 /*!
-provide facilities for folding dynamic chain
+Provides facilities for folding dynamic chains, which is the core process of proxy.
 
-fold 模块是整个 ruci 链式架构的最核心部分
-
-the mod won't store dynamic data during folding.
+Process provided by mod [`mod@fold`] won't store dynamic data during folding.
 
 几个关键部分: [`MIter`],  [`DynIterator`],  [`DMIterBox`], [`FoldParams`], [`FoldResult`], [`fn@fold`], [`fold_from_start`],
 

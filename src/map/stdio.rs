@@ -1,5 +1,5 @@
 /*!
-Defines a Map that write, read stdio (标准输入输出, 即命令行).
+Defines a [`Map`] that writes and reads stdio (标准输入输出, 即命令行).
 
 在流行为上, stdio 和 [`crate::map::network::BindDialer`] 类似,  都是 一种 【 单流发生器 】
 */

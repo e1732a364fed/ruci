@@ -1,6 +1,6 @@
-/*! module listen provide a function [`listen`] to listen systen level
+/*! Provides a function [`listen`] to listen systen level
 sockets, like tcp, udp and unix domain socket, whose result is a
-[`Listener`]
+[`Listener`].
  */
 use anyhow::{bail, Context};
 use tokio::net::TcpListener;

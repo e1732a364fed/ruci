@@ -1,6 +1,6 @@
 /*!
- * module route provides functions for routing system network data
- * to the tun device.
+Provides functions for routing system network data
+to the tun device.
  */
 
 use std::time::Duration;

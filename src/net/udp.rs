@@ -1,5 +1,5 @@
 /*!
-为 [`tokio::net::UdpSocket`] 实现 [`crate::net::addr_conn`] 中的trait, 实现的结构为 [`Conn`]
+Implements traits in mod [`crate::net::addr_conn`] for [`tokio::net::UdpSocket`] , and the resulting structure is [`Conn`].
 
 */
 use crate::utils::io_error;

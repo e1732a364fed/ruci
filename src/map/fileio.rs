@@ -1,5 +1,5 @@
 /*!
-实现对文件读写的Map
+Implements a [`Map`] for reading and writing files.
 
 */
 use crate::map;

@@ -1,5 +1,5 @@
 /*!
-module addr_conn defines a structure [`AddrConn`], and facilities around it.
+Defines a structure [`AddrConn`], and facilities around it.
 
 It provides several functions for copying data bewteen [`AddrReadTrait`] and [`AddrWriteTrait`], like
 [`cp_addr`], and a [fn@`cp`] function for copying data between [`AddrConn`] (which consists of [`AddrReadTrait`] and [`AddrWriteTrait`])

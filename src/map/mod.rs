@@ -1,7 +1,7 @@
 /*!
-module map defines some important traits for proxy, and submodules that implements them
+Defines some important traits for proxy, and submodules that implements them.
 
-几个关键部分: [`Data`], [`MapParams`], [`MapResult`], [`Map`], 和 [`mod@fold`] 模块
+Important parts: [`Data`], [`MapParams`], [`MapResult`], [`Map`], and module [`mod@fold`]
 
 ruci 将任意代理行为分割成若干个不可再分的
 流映射, function map(stream1, args...)-> (stream2, useful_data...)
@@ -199,7 +199,7 @@ impl MapResult {
     }
 }
 
-/// indicate what a Map is really doing
+/// Indicates what a Map is really doing, (encoding, decoding, or unspecified).
 ///
 /// A proxy would have two main behaviors in general:
 ///

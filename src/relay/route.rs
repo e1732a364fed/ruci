@@ -1,5 +1,5 @@
 /*!
-定义了一些 如何由inbound 的各种信息判断应该选哪个 outbound 作为出口 的方法
+Defines some methods for choosing which outbound as outlet by the information of the inbound.
 
 它被一些代理称为 ACL (Access Control List), 但这个名称并不准确, "路由规则"更加准确. 因为
 不仅可以用于 "防火墙", 还可以用于分流

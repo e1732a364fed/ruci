@@ -1,5 +1,5 @@
 /*!
-implements Map for http proxy
+Implements a [`Map`] for http proxy.
  */
 
 use std::cmp::min;
@@ -23,7 +23,7 @@ use crate::{
     Name,
 };
 
-use super::{MapBox, MapExtFields, Stream, ToMapBox};
+use super::{Map, MapBox, MapExtFields, Stream, ToMapBox};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
@@ -251,7 +251,7 @@ impl Server {
 }
 
 #[async_trait::async_trait]
-impl map::Map for Server {
+impl Map for Server {
     async fn maps(
         &self,
         cid: CID,

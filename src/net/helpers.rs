@@ -1,3 +1,7 @@
+/*!
+Defines some address related helper functions, some wrappers that wraps AsyncConn to provide more features, and some fake Stream implementations for debugging.
+ */
+
 use std::{io, net::Ipv4Addr, pin::Pin, task::Poll};
 
 use crate::Name;

@@ -1,5 +1,5 @@
 /*!
-Defines Map s for tls server and client
+Defines [`map::Map`]s for tls server and client.
 
 uses rustls 0.22
  */

@@ -1,6 +1,6 @@
 /*!
-module addr provides facilities to generate, represent and decompose network addresses,
-by important parts like [`Network`], [`NetAddr`], [`IPName`], and [`Addr`]
+Provides facilities to generate, represent and decompose network addresses,
+by important parts like [`Network`], [`NetAddr`], [`IPName`], and [`Addr`].
  */
 use super::*;
 

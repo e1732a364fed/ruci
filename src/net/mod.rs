@@ -1,5 +1,5 @@
 /*!
-module net defines some important parts for proxy.
+Defines some important parts for networking.
 
 Important parts: [`CID`], [`AsyncConn`], [`Conn`], [`Stream`], [`GlobalTrafficRecorder`],
  and several submodules.
@@ -261,7 +261,7 @@ impl CID {
 
 pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 
-/// default is None
+/// Represents one of the four different kinds of streams. Default is [`Stream::None`]
 #[derive(Default)]
 pub enum Stream {
     ///  raw ip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
@@ -393,7 +393,7 @@ impl Stream {
     }
 }
 
-/// 用于全局状态监视和流量统计
+/// A struct that is used to record the global status of proxy and the total traffic.
 ///
 /// ## About Real Data Traffic and Original Traffic
 ///
@@ -417,9 +417,9 @@ pub struct GlobalTrafficRecorder {
     pub ub: AtomicU64,
 }
 
-/// AsyncConn 将 可异步读写的功能抽象出来.
+/// Abstracts the feature of being able to do both asynchronous reading and writing.
 ///
-/// [`TcpStream`] 也实现了 AsyncConn
+/// [`TcpStream`] of tokio implements AsyncConn.
 ///
 pub trait AsyncConn: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
 impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync> AsyncConn for T {}

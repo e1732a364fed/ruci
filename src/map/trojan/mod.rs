@@ -1,5 +1,5 @@
 /*!
-Implements <https://trojan-gfw.github.io/trojan/protocol> .
+Defines [`crate::map::Map`]s that implements <https://trojan-gfw.github.io/trojan/protocol> .
  */
 use std::{fmt, mem};
 

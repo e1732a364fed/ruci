@@ -1,5 +1,5 @@
 /*!
-Defines Maps that can generate a/some basic Stream like ip/tcp/udp/uds, or can consume a Stream.
+Defines [`Map`]s that can either generate basic Stream(s) like ip/tcp/udp/uds, or consume a Stream.
 */
 
 pub mod accept;

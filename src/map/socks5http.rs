@@ -1,5 +1,5 @@
 /*!
-Defines a Map that can accept both socks5 and http proxy request.
+Defines a [`Map`] that can accept both socks5 and http proxy request.
 
 It will try socks5 first . If not socks5, fallbacks to http proxy
  */
@@ -18,7 +18,7 @@ use crate::{
     Name,
 };
 
-use super::{http_proxy, socks5, MapBox, MapExtFields, ToMapBox};
+use super::{http_proxy, socks5, Map, MapBox, MapExtFields, ToMapBox};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -117,7 +117,7 @@ impl Server {
 }
 
 #[async_trait::async_trait]
-impl map::Map for Server {
+impl Map for Server {
     async fn maps(
         &self,
         cid: CID,

@@ -1,6 +1,5 @@
 /*!
-
-Implements socks5 rfcs
+Defines [`map::Map`]s that implement socks5 rfcs.
 
 See:
 
