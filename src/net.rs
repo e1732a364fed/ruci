@@ -45,9 +45,13 @@ pub fn new_rand_cid() -> u32 {
     rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
 }
 
+pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
+    lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
+}
+
 #[derive(Clone)]
 pub struct InStreamCID {
-    id_list: Vec<u32>, //首项为根id，末项为末端stream的id
+    pub id_list: Vec<u32>, //首项为根id，末项为末端stream的id
 }
 impl Display for InStreamCID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -82,8 +86,8 @@ impl CID {
 
     /// new with ordered id
     pub fn new_ordered(lastid: &std::sync::atomic::AtomicU32) -> CID {
-        let li = lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        CID::Unit(li + 1)
+        let li = new_ordered_cid(lastid);
+        CID::Unit(li)
     }
 }
 

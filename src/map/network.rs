@@ -6,8 +6,6 @@ use tokio::{
 
 use crate::Name;
 
-use self::net::TransmissionInfo;
-
 use super::*;
 
 #[derive(Clone, Debug)]
@@ -118,7 +116,6 @@ impl Mapper for TcpDialer {
 #[derive(Clone, Debug)]
 pub struct TcpStreamGenerator {
     pub addr: Option<net::Addr>,
-    pub oti: Option<Arc<TransmissionInfo>>,
 }
 
 impl Name for TcpStreamGenerator {
@@ -228,10 +225,7 @@ impl Mapper for TcpStreamGenerator {
         };
 
         match r {
-            Ok(rx) => match self.oti.as_ref() {
-                Some(ti) => MapResult::gs(rx, CID::new_ordered(&ti.last_connection_id)),
-                None => MapResult::gs(rx, CID::new()),
-            },
+            Ok(rx) => MapResult::gs(rx, CID::default()),
             Err(e) => MapResult::from_err(e),
         }
     }

@@ -1,6 +1,6 @@
 print("this is a lua config file")
 
-listen = { Listener = { TcpListener = "0.0.0.0:1080" }  }
+listen = { Listener = { TcpListener = "0.0.0.0:10800" }  }
 chain1 = {
     listen,
     { Socks5 = {   } },

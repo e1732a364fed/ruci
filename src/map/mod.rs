@@ -32,7 +32,10 @@ pub mod trojan;
 #[cfg(test)]
 mod test;
 
-use crate::net::{self, addr_conn::AddrConn, Stream, CID};
+use crate::net::{
+    self, addr_conn::AddrConn, new_ordered_cid, new_rand_cid, InStreamCID, Stream,
+    TransmissionInfo, CID,
+};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -565,6 +568,7 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
     shutdown_rx: oneshot::Receiver<()>,
 
     mut inmappers: IterMapperBoxRef,
+    oti: Option<Arc<TransmissionInfo>>,
 ) where
     IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
 {
@@ -588,96 +592,14 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
         return;
     }
     if let Stream::Generator(rx) = r.c {
-        in_iter_accumulate_forever::<IterMapperBoxRef>(CID::default(), rx, tx, inmappers).await;
+        in_iter_accumulate_forever::<IterMapperBoxRef>(CID::default(), rx, tx, inmappers, oti)
+            .await;
     } else {
         warn!("accumulate_from_start, not a stream generator");
 
         return;
     }
 }
-
-/// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
-/// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
-///
-/// 因为要spawn, 所以对 Iter 的类型提了比 accumulate更高的要求, 加了
-/// Clone + Send + 'static
-///
-/// 将每一条子连接的accumulate 结果 用 tx 发送出去;
-///
-/// 如果子连接又是一个 Stream::Generator, 则会继续调用 in_iter_accumulate_forever
-///
-/// block until shutdown_rx or rx got closed
-///
-/*
-pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
-    cid: CID,
-    mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
-    shutdown_rx: oneshot::Receiver<()>,
-    tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
-    inmappers: IterMapperBoxRef,
-    hyperparameter_vec: Option<IterOptData>,
-) where
-    IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
-    IterOptData: Iterator<Item = OptData> + Clone + Send + 'static,
-{
-    tokio::select! {
-
-        _r = async move{
-            loop {
-                let opt_stream = rx.recv().await;
-                if opt_stream.is_none() {
-                    break;
-                }
-                let stream = opt_stream.unwrap();
-
-                let mc = inmappers.clone();
-                let txc = tx.clone();
-                let hvc = hyperparameter_vec.clone();
-                let cid = cid.clone();
-                tokio::spawn(async move {
-                    let r = accumulate::<IterMapperBoxRef, IterOptData>(
-                        cid,
-                        ProxyBehavior::DECODE,
-                        MapResult::s(stream),
-                        mc,
-                        hvc,
-                    )
-                    .await;
-                    if r.e.is_none(){
-
-                        if let Stream::Generator(s_rx) = r.c{
-
-                            let cid = r.id.unwrap();
-                            let _ = in_iter_accumulate_forever::<IterMapperBoxRef, IterOptData>(
-                                cid,
-                                s_rx,
-                                txc,
-                                r.left_mappers_iter,
-                                None,
-                            );
-
-                            return;
-                        }
-
-                    }
-
-                    let _ = txc.send(r).await;
-                });
-            }
-
-            //Ok::<_, io::Error>(())
-
-        } => {
-            //r
-        }
-
-        _ = shutdown_rx => {
-            info!("in_iter_accumulate terminating by shutdown_rx");
-            //Ok(())
-        }
-    }
-}
-*/
 
 /// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
@@ -693,6 +615,7 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
     tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
     inmappers: IterMapperBoxRef,
+    oti: Option<Arc<TransmissionInfo>>,
 ) where
     IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
 {
@@ -705,7 +628,34 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
 
         let mc = inmappers.clone();
         let txc = tx.clone();
+        let oti = oti.clone();
+
         let cid = cid.clone();
+        let cid = match cid {
+            CID::Unit(u) => match oti.as_ref() {
+                Some(ti) => {
+                    if u == 0 {
+                        CID::new_ordered(&ti.last_connection_id)
+                    } else {
+                        CID::Chain(InStreamCID {
+                            id_list: vec![u, new_ordered_cid(&ti.last_connection_id)],
+                        })
+                    }
+                }
+                None => CID::new(),
+            },
+            CID::Chain(mut c) => match oti.as_ref() {
+                Some(ti) => {
+                    c.id_list.push(new_ordered_cid(&ti.last_connection_id));
+                    CID::Chain(c)
+                }
+                None => {
+                    c.id_list.push(new_rand_cid());
+                    CID::Chain(c)
+                }
+            },
+        };
+
         tokio::spawn(async move {
             let r = accumulate::<IterMapperBoxRef>(
                 cid,
@@ -722,6 +672,7 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
                         s_rx,
                         txc,
                         r.left_mappers_iter,
+                        oti,
                     );
 
                     return;

@@ -103,12 +103,13 @@ impl StaticEngine {
 
             let (atx, mut arx) = mpsc::channel(100);
 
+            let oti = self.ti.clone();
             let t1 = async {
                 let a = (*inmappers).clone();
                 let a = Box::new(a);
                 let a = Box::leak(a);
 
-                accumulate_from_start(atx, rx, a.iter()).await;
+                accumulate_from_start(atx, rx, a.iter(), Some(oti)).await;
                 Ok(())
             };
 
