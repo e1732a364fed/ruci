@@ -403,7 +403,7 @@ end
 
 -- 完全动态链不使用 固定的列表 来预定义任何Mappers, 它只给出一个函数
 -- generator, generator 根据参数内容来动态生成 [Mapper], 如果不想
--- 重复生成以前生成过的Mapper, 则可以返回一个已存在的索引
+-- 重复生成以前生成过的Mapper, 则可以返回一个已创建过的Mapper (参见其它包含 infinite 的配置文件中的示例)
 
 local inspect = require("inspect")
 
@@ -416,13 +416,13 @@ infinite = {
     inbounds = {{
         tag = "listen1",
 
-        generator = function(cid, this_index, data)
-            if this_index == -1 then
+        generator = function(cid, state_index, data)
+            if state_index == -1 then
                 return 0, {
                     stream_generator = {
                         Listener = "0.0.0.0:10800"
                     },
-                    new_thread_fn = function(cid, this_index, data)
+                    new_thread_fn = function(cid, state_index, data)
                         -- print("lua: cid",inspect(cid))
                         -- table.insert(my_cid_record,cid)
                         -- print("lua: cid cache",inspect(my_cid_record))
@@ -439,8 +439,8 @@ infinite = {
 
     outbounds = {{
         tag = "dial1",
-        generator = function(cid, this_index, data)
-            if this_index == -1 then
+        generator = function(cid, state_index, data)
+            if state_index == -1 then
                 return 0, "Direct"
             else
                 return -1, {}

@@ -2,11 +2,28 @@
 
 链式配置中，每条链都必须标一个 tag
 
-## tls 证书
+## tls
+
+### 证书
 
 tls 中， native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前又只写了pks8 一种情况(即不支持 rsa 和 ecc key);
 
 而默认的 rustls 则支持得更广泛一些,pem格式的 x509证书（后缀可能为 pem, cer 或 crt）, key(rsa, pks8, ecc) 都支持 ，但不支持 pks12 (pfx) 格式
+
+### alpn 的行为
+
+
+server:
+Protocol names we support, most preferred first. If empty we don't do ALPN at all.
+
+client:
+Which ALPN protocols we include in our client hello. If empty, no ALPN extension is sent
+
+如果任意一方的alpn 都没给出，则连接都通过；如果两方 alph 都给出，则只有匹配了才通过
+
+native-tls 的 server 不支持手动设置 alpn
+
+
 
 ## 名词
 
@@ -161,6 +178,18 @@ trace 会将chain 中经过的每一个 Mapper的 name 记录下来, 放到 `Vec
 如果是静态链, 则记录一个 chain_tag 就能知道完整的 链信息
 
 trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来，这是最耗性能的
+
+
+## HttpFilter
+
+为了支持对 普通 http 请求的回落，加一个 叫 HttpFilter 的 Mapper
+
+这样可以同时在 grpc 和 ws 中使用
+
+因为 tungstenite (websocket包) 对错误请求是自行返回 http 响应的，而我们为了回落到其它 Mapper ，
+就要 绕过 tungstenite 的处理
+
+
 
 
 ## 其它
