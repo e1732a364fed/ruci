@@ -336,7 +336,7 @@ pub trait MappersVec {
 /// 不使用累加器。
 ///
 /// 一种统计正确流量的办法是，将 Tcp连接包装一层专门记录流量的层，见 counter 模块
-pub struct TcpInAccumulator<'a> {
+pub struct InAccumulator<'a> {
     phantom: std::marker::PhantomData<&'a i32>,
 }
 
@@ -348,13 +348,13 @@ pub struct AccumulateResult {
     pub e: Option<io::Error>,
 }
 
-impl<'a> TcpInAccumulator<'a> {
+impl<'a> InAccumulator<'a> {
     ///  accumulate 是一个作用很强的函数
     /// extra_data_vec 若不为空，其须与 inadders提供同数量的元素, 否则
     /// 将panic
     pub async fn accumulate<IterInMapperBoxRef, IterOptData>(
         cid: u32,
-        initial_conn: net::Conn,
+        initial_conn: Stream,
         mut mappers: IterInMapperBoxRef,
         mut hyperparameter_vec: Option<IterOptData>,
     ) -> AccumulateResult
@@ -365,7 +365,7 @@ impl<'a> TcpInAccumulator<'a> {
         let mut last_r: MapResult = MapResult {
             a: None,
             b: None,
-            c: Some(Stream::TCP(initial_conn)),
+            c: Some(initial_conn),
             d: None,
             e: None,
         };
@@ -443,11 +443,11 @@ impl<'a> TcpInAccumulator<'a> {
 ///只有代理层会用到目标地址】
 ///
 
-pub struct TcpOutAccumulator<'a> {
+pub struct OutAccumulator<'a> {
     phantom: std::marker::PhantomData<&'a i32>,
 }
 
-impl<'a> TcpOutAccumulator<'a> {
+impl<'a> OutAccumulator<'a> {
     pub async fn accumulate<IterOutMapperBoxRef>(
         cid: u32,
         base: Stream,

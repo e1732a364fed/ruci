@@ -44,7 +44,8 @@ pub async fn handle_conn<'a>(
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             type T = std::vec::IntoIter<OptData>;
-            TcpInAccumulator::accumulate::<_, T>(cid, in_conn, ins_iterator, None).await
+            InAccumulator::accumulate::<_, T>(cid, net::Stream::TCP(in_conn), ins_iterator, None)
+                .await
         })
         .await;
 
@@ -114,7 +115,7 @@ pub async fn handle_conn<'a>(
     } else {
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                TcpOutAccumulator::accumulate(
+                OutAccumulator::accumulate(
                     cid,
                     out_stream,
                     outc_iterator,
