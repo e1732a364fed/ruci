@@ -11,3 +11,7 @@ pub mod relay;
 pub mod user;
 
 pub const VERSION: &str = "0.0.0";
+
+pub trait Name {
+    fn name(&self) -> &str;
+}

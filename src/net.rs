@@ -14,6 +14,7 @@ use futures::{io::Error, FutureExt};
 use log::{debug, log_enabled};
 use rand::Rng;
 use std::io;
+use std::net::TcpStream;
 use std::{fmt::Debug, net::Ipv4Addr};
 use std::{
     fmt::{Display, Formatter},
@@ -22,6 +23,12 @@ use std::{
 };
 use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
+
+impl crate::Name for TcpStream {
+    fn name(&self) -> &str {
+        "tcpstream"
+    }
+}
 
 pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
     match ip_addr {
