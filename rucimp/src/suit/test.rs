@@ -1,4 +1,4 @@
-use crate::SuitConfigHolder;
+use crate::suit::SuitConfigHolder;
 
 use super::config::Config;
 

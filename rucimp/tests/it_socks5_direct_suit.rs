@@ -22,7 +22,8 @@ use rucimp::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
 use rucimp::suit::config::Config;
-use rucimp::{suit::*, SuitEngine};
+use rucimp::suit::engine::SuitEngine;
+use rucimp::suit::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
@@ -751,7 +752,7 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-    se.load_config(rucimp::Config { proxy_config: c });
+    se.load_config(rucimp::suit::engine::Config { proxy_config: c });
 
     let listen_future = async {
         info!("try start listen");
@@ -815,7 +816,7 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-    se.load_config(rucimp::Config { proxy_config: c });
+    se.load_config(rucimp::suit::engine::Config { proxy_config: c });
 
     let listen_future = async {
         info!("try start listen");

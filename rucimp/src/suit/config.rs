@@ -74,7 +74,7 @@ pub struct LDConfig {
 mod test {
     use toml::Table;
 
-    use crate::config::Config;
+    use crate::suit::config::Config;
 
     #[test]
     fn test() {
