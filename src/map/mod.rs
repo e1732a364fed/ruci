@@ -439,9 +439,13 @@ where
 
 /// 用于 已知一个初始点为 Stream::Generator, 向其所有子连接进行accumulate，
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator，或e不为None
-pub async fn propagation<IterMapperBoxRef, IterOptData>(
+///
+/// 因为要spawn, 所以对 Iter 的类型提了比 accumulate更高的要求，加了
+/// Clone + Send + 'static
+///
+pub async fn iter_accumulate<IterMapperBoxRef, IterOptData>(
     cid: u32,
-    mut rx: tokio::sync::mpsc::Receiver<Stream>,
+    mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     mappers: IterMapperBoxRef,
     hyperparameter_vec: Option<IterOptData>,
