@@ -60,7 +60,7 @@ native-tls 的 server 不支持手动设置 alpn
 
 ## tproxy
 
-使用 tproxy 时, 确保是 linux 系统, 并 安装了 iptables
+使用 tproxy 时, 确保是 linux 系统, 并 安装了 iptables (`apt install iptables`)
 
 若要 代理 局域网内其它设备, root 权限运行
 
@@ -277,9 +277,29 @@ quinn: 全没问题
 
 而且 s2n-quic 在 windows 无法编译通过
 
-## 编译参数
+## 编译运行问题
 
+tproxy,tun 要使用sudo 运行
+
+### 1
 `panic = "abort"` 不能在 windows release 版中正常运行
+
+### 2
+windows上运行 gnu 版会报 应用程序无法正常启动, 0xc00007b
+
+英文:
+
+`The application was unable to start correctly (0xc000007b).`
+
+### 3
+linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
+
+1. 更新系统的glibc或 
+2. 使用 musl 版
+3. 自己编译
+
+更新系统的 glibc 是比较危险的做法, 推荐使用 musl
+
 
 
 ## 其它
