@@ -44,14 +44,16 @@ tokio-tungstenite = "0.21.0"
 http = "1.1.0"
 thiserror = "1.0.58"
 
-s2n-quic = {version = "1",default-features = false, features = ["provider-address-token-default", "provider-tls-rustls"], optional = true}
-s2n-quic-rustls = {version = "0.34.0",optional = true}
 rustls = { version = "0.21" ,optional = true ,features = ["dangerous_configuration", "quic"]}  
+rustls-pemfile = {version = "1.0",optional = true}
+webpki-roots = {version = "0.22.6",optional = true}
 
 quinn = {version = "0.10.2",optional = true}
 
-rustls-pemfile = "1.0"
-webpki-roots = "0.22.6"
+s2n-quic = {version = "1",default-features = false, features = ["provider-address-token-default", "provider-tls-rustls"], optional = true}
+s2n-quic-rustls = {version = "0.34.0",optional = true}
+
+
 
 [dev-dependencies]
 chrono = "0.4.34"
@@ -61,8 +63,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [features]
 default = ["route","geoip"]
 
-quic = ["s2n-quic","s2n-quic-rustls","rustls"]
-quinn = ["rustls","dep:quinn"]
+rustls21 = ["dep:rustls", "rustls-pemfile", "webpki-roots"]
+
+quic = ["s2n-quic","s2n-quic-rustls","rustls21"]
+quinn = ["rustls21","dep:quinn"]
 
 tun = ["ruci/tun"]
 trace = ["ruci/trace"]

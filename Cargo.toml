@@ -14,6 +14,7 @@ panic = "abort"
 debug = false
 strip = true
 debug-assertions = false
+incremental = false
 #opt-level = 'z' # use this and upx will get the smallest binary
 
 [dependencies]

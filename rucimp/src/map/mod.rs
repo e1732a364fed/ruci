@@ -18,7 +18,7 @@ pub mod quic_common;
 #[cfg(feature = "quic")]
 pub mod quic;
 
-#[cfg(any(feature = "quic", feature = "quinn"))]
+#[cfg(feature = "rustls21")]
 pub mod rustls21;
 
 #[cfg(feature = "quinn")]
