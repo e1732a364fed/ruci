@@ -9,6 +9,10 @@ use std::env::{self, set_var};
 use anyhow::Ok;
 use clap::{Parser, Subcommand, ValueEnum};
 use log::{info, log_enabled, Level};
+use rucimp::{
+    example_common::{try_get_filecontent, wait_close_sig},
+    modes::chain::config::lua,
+};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
@@ -77,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
     println!("LogLevel {}!", args.log_level);
 
     match args.sub_cmds {
-        None => {}
+        None => start_engine(args.mode, args.config).await?,
 
         Some(cs) => match cs {
             #[cfg(feature = "api_server")]
@@ -124,4 +128,27 @@ pub fn print_env_version() {
         return;
     }
     info!("version: ruci-cmd: rucimp_{}", rucimp::VERSION,)
+}
+
+async fn start_engine(m: Mode, f: String) -> anyhow::Result<()> {
+    match m {
+        Mode::C => {
+            let contents = try_get_filecontent(&f)?;
+
+            let mut se = rucimp::modes::chain::engine::Engine::default();
+            let sc = lua::load(&contents).expect("has valid lua codes in the file content");
+
+            se.init(sc);
+
+            let se = Box::new(se);
+
+            se.run().await?;
+
+            wait_close_sig().await?;
+
+            se.stop().await;
+        }
+        Mode::S => todo!(),
+    }
+    Ok(())
 }
