@@ -25,7 +25,9 @@ pub(crate) async fn run(
 
     let mut e = rucimp::modes::chain::engine::Engine::default();
 
-    let (contents, file_source) = crate::mode::get_file(&mut file_name, args.in_memory).await?;
+    let (contents, file_source) = crate::mode::get_config_file(&mut file_name, args.in_memory)
+        .await
+        .context("get_config_file failed")?;
 
     use anyhow::Context;
 
@@ -87,7 +89,8 @@ pub(crate) async fn run(
 
 /// 阻塞运行Engine, 其运行结束后 会自动对 Engine 调用 reset
 async fn run_engine(e: &mut Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow::Result<()> {
-    let mut js = e.run().await?;
+    use anyhow::Context;
+    let mut js = e.run().await.context("run_engine got error")?;
 
     info!("started rucimp chain engine");
 

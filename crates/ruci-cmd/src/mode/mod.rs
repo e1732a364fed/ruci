@@ -9,67 +9,73 @@ use tracing::debug;
 pub mod chain;
 
 #[allow(unused)]
-pub async fn get_file(
+pub async fn get_config_file(
     file_name: &mut String,
     in_memory: bool,
 ) -> anyhow::Result<(String, FileSource)> {
     use anyhow::Context;
 
+    let mut file_source = rucimp::utils::default_file_source();
+    file_source
+        .insert_current_working_dir()
+        .context("insert_current_working_dir failed")?;
+
     let get_file_f = || -> anyhow::Result<_> {
-        rucimp::utils::try_get_file_content(DEFAULT_LUA_CONFIG_FILE_NAME, Some(file_name))
-            .with_context(|| format!("run chain engine try get file {} failed", file_name))
+        let mut r = file_source.get_file_content(&file_name);
+
+        if r.is_err() {
+            r = file_source.get_file_content(DEFAULT_LUA_CONFIG_FILE_NAME);
+        }
+
+        Ok(r?)
     };
 
     //获取到文件的 bytes, 或通过下载 或读取文件. 若 in_memory 给出则下载的文件不持久化
 
-    let mut file_bytes_v = if file_name.starts_with("http://") || file_name.starts_with("https://")
-    {
-        #[cfg(feature = "utils")]
-        {
-            use std::io::Read;
+    let (mut file_bytes_v, found_dir) =
+        if file_name.starts_with("http://") || file_name.starts_with("https://") {
+            #[cfg(feature = "utils")]
+            {
+                use std::io::Read;
 
-            let url: String = file_name.to_string();
+                let url: String = file_name.to_string();
 
-            file_name.replace_range(.., url.split('/').last().unwrap());
+                file_name.replace_range(.., url.split('/').last().unwrap());
 
-            match in_memory {
-                true => crate::utils::dl_url(&url, None).await?.unwrap(),
-                false => {
-                    let _ = crate::utils::dl_url(&url, Some(file_name)).await?;
+                match in_memory {
+                    true => (crate::utils::dl_url(&url, None).await?.unwrap(), None),
+                    false => {
+                        let _ = crate::utils::dl_url(&url, Some(file_name)).await?;
 
-                    let mut v = vec![];
+                        let mut v = vec![];
 
-                    let mut file = std::fs::File::open(file_name.clone())?;
-                    file.read_to_end(&mut v)?;
+                        let mut file = std::fs::File::open(file_name.clone())?;
+                        file.read_to_end(&mut v)?;
 
-                    v
+                        (v, None)
+                    }
                 }
             }
-        }
 
-        #[cfg(not(feature = "utils"))]
-        {
+            #[cfg(not(feature = "utils"))]
+            {
+                get_file_f()?
+            }
+        } else {
             get_file_f()?
-        }
-    } else {
-        get_file_f()?
-    };
+        };
 
     // zip, tar, lua/toml 三种情况. zip 要解压
     // 之后若为 tar, 则会将 Engine 的 FileSource 设为 该tar, 后续 Engine 访问文件都会只在该tar 中寻找
 
-    if file_name.ends_with(".zip") {
+    if file_name.to_lowercase().ends_with(".zip") {
         let real_fn = file_name.strip_suffix(".zip").unwrap_or(file_name);
 
         file_bytes_v = rucimp::utils::extract_vec_from_zip(real_fn, file_bytes_v)?;
         *file_name = real_fn.to_string();
     }
 
-    let mut file_source = rucimp::utils::default_file_source();
-
-    file_source.insert_current_working_dir()?;
-
-    if file_name.ends_with(".tar") {
+    if file_name.to_lowercase().ends_with(".tar") {
         let tar_file_bytes_v = file_bytes_v;
         let md5_s = format!(
             "{:x}",
@@ -88,14 +94,19 @@ pub async fn get_file(
             debug!("md5 match")
         }
 
-        //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua 或 local.toml
+        //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua, local.toml 或 local.json
         let mut real_file_bytes_r =
             rucimp::utils::get_file_from_tar(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
 
         if real_file_bytes_r.is_err() {
             real_file_bytes_r = rucimp::utils::get_file_from_tar("local.toml", &tar_file_bytes_v);
         }
-        let real_file_bytes = real_file_bytes_r?;
+
+        if real_file_bytes_r.is_err() {
+            real_file_bytes_r = rucimp::utils::get_file_from_tar("local.json", &tar_file_bytes_v);
+        }
+
+        let real_file_bytes = real_file_bytes_r.context("get_file_from_tar failed")?;
 
         file_source = FileSource::Tar(tar_file_bytes_v);
         file_bytes_v = real_file_bytes;

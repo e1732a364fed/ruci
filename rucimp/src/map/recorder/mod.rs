@@ -319,8 +319,6 @@ impl From<PayloadInfo> for har::v1_2::Entries {
     }
 }
 
-//todo: implement async save
-
 impl From<InfoData> for har::Har {
     fn from(val: InfoData) -> Self {
         let entries = val
