@@ -25,6 +25,7 @@ use ruci::{
 };
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
 
 /// 静态配置中有初始化后即确定的 Mapper 数量
@@ -35,6 +36,7 @@ pub struct StaticConfig {
 
     pub tag_route: Option<Vec<(String, String)>>,
 
+    #[cfg(feature = "route")]
     pub rule_route: Option<Vec<RuleSetConfig>>,
 }
 
@@ -131,6 +133,7 @@ impl StaticConfig {
         })
     }
 
+    #[cfg(feature = "route")]
     pub fn get_rule_route(&self) -> Option<Vec<RuleSet>> {
         let mut result = self.rule_route.clone().map(|rr| {
             let x: Vec<RuleSet> = rr.into_iter().map(|r| r.to_ruleset()).collect();

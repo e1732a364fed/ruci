@@ -61,7 +61,11 @@ impl Engine {
 
     pub fn load_routes_from(&mut self, sc: StaticConfig) {
         self.tag_routes = sc.get_tag_route();
-        self.rule_sets = sc.get_rule_route();
+
+        #[cfg(feature = "route")]
+        {
+            self.rule_sets = sc.get_rule_route();
+        }
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) {
@@ -276,7 +280,18 @@ impl Engine {
     }
 
     fn get_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
-        if self.rule_sets.is_some() {
+        let use_routesets = {
+            #[cfg(feature = "route")]
+            {
+                self.rule_sets.is_some()
+            }
+            #[cfg(not(feature = "route"))]
+            {
+                false
+            }
+        };
+
+        if use_routesets {
             self.get_rulesets_out_selector()
         } else if self.tag_routes.is_some() {
             self.get_tag_route_out_selector()
@@ -285,6 +300,7 @@ impl Engine {
         }
     }
 
+    #[cfg(feature = "route")]
     fn get_rulesets_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
         let s = RuleSetOutSelector {
             outbounds_rules_vec: self.rule_sets.clone().expect("has rule_sets"),
