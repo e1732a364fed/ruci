@@ -79,7 +79,7 @@ quic feature 使用的是 s2n-quic, 其不能在windows编译, 且与其它代�
 
 ./ruci-cmd utils gen-cer localhost www.mytest.com
 
-会生成 generated.crt 和 generated.key
+会生成 generated_crt_and_key.crt
 
 ./ruci-cmd utils mmdb
 

@@ -1,0 +1,6 @@
+[book]
+authors = ["e1732a364fed"]
+language = "zh"
+multilingual = false
+src = "src"
+title = "ruci_manual"

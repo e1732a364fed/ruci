@@ -12,7 +12,9 @@ ruci pronounced lucy.
 
 A network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+)
 
-入门 ruci 可阅读 [Introduction_zh.md](doc/Introduction_zh.md)
+用户 入门 ruci 可阅读 [SUMMARY.md](doc/book/src/SUMMARY.md)
+
+Developer 入门 ruci 可阅读 [Introduction_zh.md](doc/Introduction_zh.md)
 
 See [notes.md](doc/notes.md) for more notes.
 
@@ -43,11 +45,6 @@ ruci-cmd is the ultimate full feature executable, including utils, api-client an
 具体名词解释请看下文. 
 
 ## Configuration Mode
-
-由下文可知, ruci现在支持两种配置格式, 
-
-1. "suit mode", 是扁平配置, uses `toml`. (suit 含义是 "套装")
-2. "chain mode", 链式配置, uses `lua`. 
 
 For lua configuration, see [local.lua](resource/local.lua), [remote.lua](resource/remote.lua)  和 [lua配置说明](doc/lua.md) 
 
@@ -182,11 +179,10 @@ o2node-.->collector
 - [x] MathAdder (按字节加法器), Counter, Echo
 - [x] 路由 (tag_route)
 - [x] 回落
-- [ ] DNS
+- [x] DNS: client
 
 ### rucimp
 
-- [x] suit配置格式 （toml 格式）
 - [x] chain配置格式 (动态链须为lua格式)
 - [x] static chain (静态链)
 - [x] dynamic chain (finite, infinite) (动态链)(有限动态链, 完全动态链)
@@ -197,14 +193,14 @@ o2node-.->collector
 - [x] http_filter, websocket(including early data)
 - [x] h2, grpc
 - [x] quic
-- [ ] vpn_test1
-- [ ] tcp/ip stack (smoltcp)
-- [ ] ss?, vmess?
+- [ ] vpn_test1 （目前只有 单ip转发）
+- [x] tcp/ip stack (smoltcp) (测试阶段，暂不稳定)
+- [ ] ss
+- [ ] vmess
 
 ### ruci-cmd
 
 - [x] chain mode support
-- [ ] suit mode support
 - [x] api_server
 - [x] api_client
 - [x] utils
