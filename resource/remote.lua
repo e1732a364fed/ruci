@@ -2,35 +2,35 @@ print("this is a lua config file")
 
 -- lua 的好处有很多, 你可以定义很多变量
 
-tcp = {
+local tcp = {
     Listener = {
         listen_addr = "0.0.0.0:10801"
     }
 }
-unix = {
+local unix = {
     Listener = {
         listen_addr = "unix://file1"
     }
 }
 
-opt_direct_chain = {{
+local opt_direct_chain = {{
     OptDirect = {
         so_mark = 255,
         bind_to_device = "enp0s1"
     }
 }}
 
-socks5_chain = {tcp, {
+local socks5_chain = {tcp, {
     Socks5 = {}
 }}
-http_chain = {tcp, {
+local http_chain = {tcp, {
     Http = {}
 }}
-socks5http_chain = {tcp, {
+local socks5http_chain = {tcp, {
     Socks5Http = {}
 }}
 
-tls = {
+local tls = {
     -- NativeTLS = {
     TLS = {
         cert = "test.crt",
@@ -40,27 +40,27 @@ tls = {
     }
 }
 
-trojan_in = {
+local trojan_in = {
     Trojan = {
         password = "mypassword"
     }
 }
 
-trojan_chain = {tcp, trojan_in}
-trojans_chain = {tcp, tls, trojan_in}
+local trojan_chain = {tcp, trojan_in}
+local trojans_chain = {tcp, tls, trojan_in}
 
-http_filter = {
+local http_filter = {
     HttpFilter = {
         authority = "myhost",
         path = "/path1"
     }
 }
 
-basic_ws = {
+local basic_ws = {
     WebSocket = {}
 }
 
-ws = {
+local ws = {
     WebSocket = {
         http_config = {
             authority = "myhost",
@@ -74,11 +74,11 @@ ws = {
 -- if http_filter is used, 
 -- http_config field in WebSocket can be omitted.
 
-ws_trojans_chain = {tcp, tls, http_filter, basic_ws, trojan_in}
+local ws_trojans_chain = {tcp, tls, http_filter, basic_ws, trojan_in}
 
 -- ws_trojans_chain = {tcp, tls, ws, trojan_in}
 
-in_h2_trojans_chain = {tcp, tls, {
+local in_h2_trojans_chain = {tcp, tls, {
     H2 = {
         is_grpc = true,
         http_config = {
@@ -88,7 +88,7 @@ in_h2_trojans_chain = {tcp, tls, {
     }
 }, trojan_in}
 
-in_quic_chain = {{
+local in_quic_chain = {{
     Quic = {
         key_path = "test2.key",
         cert_path = "test2.crt",
@@ -97,21 +97,21 @@ in_quic_chain = {{
     }
 }, trojan_in}
 
-dial = {
+local dial = {
     BindDialer = {
         dial_addr = "tcp://0.0.0.0:10801"
     }
 }
 
-dial_trojan = {dial, {
+local dial_trojan = {dial, {
     Trojan = "mypassword"
 }}
 
-out_stdio_chain = {{
+local out_stdio_chain = {{
     Stdio = {}
 }}
 
-direct_out_chain = {"Direct"}
+local direct_out_chain = {"Direct"}
 
 config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}

@@ -1,12 +1,12 @@
 -- 演示了 用完全动态链实现 h2 mux outbound 的配置
 -- 关注 outbounds 的 generator 部分, 它实现了单h2连接的多路复用
-dial_config = {
+local dial_config = {
     BindDialer = {
         dial_addr = "tcp://0.0.0.0:10801"
     }
 }
 
-tlsout_config = {
+local tlsout_config = {
     --NativeTLS = {
     TLS = {
         host = "www.1234.com",
@@ -15,11 +15,11 @@ tlsout_config = {
 
     }
 }
-trojan_out_config = {
+local trojan_out_config = {
     Trojan = "mypassword"
 }
 
-h2_out_config = {
+local h2_out_config = {
     H2Mux = {
         is_grpc = true,
         http_config = {

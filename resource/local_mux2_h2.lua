@@ -1,14 +1,14 @@
 -- 演示了 用完全动态链实现 h2 mux outbound 的配置
 -- 关注 outbounds 的 generator 部分, 它实现了 max_num 条 主h2连接的多路复用
-max_num = 12
+local max_num = 12
 
-dial_config = {
+local dial_config = {
     BindDialer = {
         dial_addr = "tcp://0.0.0.0:10801"
     }
 }
 
-tlsout_config = {
+local tlsout_config = {
     TLS = {
         host = "www.1234.com",
         insecure = true,
@@ -16,7 +16,7 @@ tlsout_config = {
 
     }
 }
-trojan_out_config = {
+local trojan_out_config = {
     Trojan = "mypassword"
 }
 
@@ -28,15 +28,15 @@ local common_part = {
     }
 }
 
-h2_out_config = {
+local h2_out_config = {
     H2Mux = common_part
 }
 
-h2_single_out_config = {
+local h2_single_out_config = {
     H2Single = common_part
 }
 
-h2_out_pool = {}
+local h2_out_pool = {}
 -- local inspect = require("inspect")
 infinite = {
 

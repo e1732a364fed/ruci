@@ -3,14 +3,14 @@ print("this is a lua config file")
 -- lua 的好处有很多, 你可以定义很多变量
 -- 真正的配置块是 config 变量, 可以用搜索快速找到它
 
-listen = {
-    Listener = { listen_addr = "0.0.0.0:10800"}
+local listen = {
+    Listener = { listen_addr = "0.0.0.0:10800" }
 }
-l2 = {
-    Listener = { 
+local l2 = {
+    Listener = {
         listen_addr = "udp://0.0.0.0:20800",
 
-        ---[[ 
+        ---[[
 
         -- 如果 ext 中的 fixed_target_addr 给出, 则其行为等价于
         -- 一些其它代理程序中 所定义的 "dokodemo door (任意门)"
@@ -24,11 +24,11 @@ l2 = {
         --]]
     }
 }
-l3 = {
-    Listener = { listen_addr = "[::1]:30800"}
+local l3 = {
+    Listener = { listen_addr = "[::1]:30800" }
 }
 
-tproxy_tcp_listen = {
+local tproxy_tcp_listen = {
     TcpOptListener = {
         listen_addr = "0.0.0.0:12345",
         sockopt = {
@@ -37,7 +37,7 @@ tproxy_tcp_listen = {
     }
 }
 
-tproxy_udp_listen = {
+local tproxy_udp_listen = {
     TproxyUdpListener = {
         listen_addr = "udp://0.0.0.0:12345",
         sockopt = {
@@ -46,42 +46,42 @@ tproxy_udp_listen = {
     }
 }
 
-listen_socks5 = {listen, {
+local listen_socks5 = { listen, {
     Socks5 = {}
-}}
-listen_http = {listen, {
+} }
+local listen_http = { listen, {
     Http = {}
-}}
-listen_socks5http = {listen, {
+} }
+local listen_socks5http = { listen, {
     Socks5Http = {}
-}}
+} }
 
-tproxy_listen_tcp_chain = {
+local tproxy_listen_tcp_chain = {
     tproxy_tcp_listen, {
-        TproxyTcpResolver = {
-            port = 12345,
-            --auto_route_tcp = true, -- only set route for tcp
-            auto_route = true, -- auto_route will set route for both tcp and udp at the appointed port
+    TproxyTcpResolver = {
+        port = 12345,
+        --auto_route_tcp = true, -- only set route for tcp
+        auto_route = true,         -- auto_route will set route for both tcp and udp at the appointed port
 
-            route_ipv6 = true, -- 如果为true, 则  也会 对 ipv6 网段执行 自动路由
+        route_ipv6 = true,         -- 如果为true, 则  也会 对 ipv6 网段执行 自动路由
 
-            proxy_local_udp_53 = true, -- 如果为true, 则 udp 53 端口不会直连, 而是会流经 tproxy
+        proxy_local_udp_53 = true, -- 如果为true, 则 udp 53 端口不会直连, 而是会流经 tproxy
 
-            -- local_net4 = "192.168.0.0/16" -- 直连 ipv4 局域网段 不给出时, 默认即为 192.168.0.0/16
-        }
+        -- local_net4 = "192.168.0.0/16" -- 直连 ipv4 局域网段 不给出时, 默认即为 192.168.0.0/16
     }
 }
+}
 
-opt_direct_chain = {
+local opt_direct_chain = {
     {
-        OptDirect ={
+        OptDirect = {
             so_mark = 255,
             bind_to_device = "enp0s1"
         }
     }
 }
 
-tlsout = {
+local tlsout = {
     -- NativeTLS = {
     TLS = {
         host = "www.1234.com",
@@ -91,29 +91,29 @@ tlsout = {
     }
 }
 
-tlsin = {
+local tlsin = {
     TLS = {
         cert = "test.crt",
         key = "test.key"
     }
 }
 
-trojan_in = {
+local trojan_in = {
     Trojan = {
         password = "mypassword"
     }
 }
 
-listen_trojan = {listen, trojan_in}
+local listen_trojan = { listen, trojan_in }
 
-dial = {
+local dial = {
     BindDialer = {
         dial_addr = "tcp://0.0.0.0:10801"
     }
 }
 
-opt_dial = {
-    OptDialer ={
+local opt_dial = {
+    OptDialer = {
         dial_addr = "tcp://0.0.0.0:10801", -- 用tproxy时, 不能为 127.0.0.1, 须为 0.0.0.0
         sockopt = {
             so_mark = 255,
@@ -123,15 +123,15 @@ opt_dial = {
 }
 
 
-trojan_out = {
+local trojan_out = {
     Trojan = "mypassword"
 }
 
--- http 请求 (ws,h2 有用到)中的 authority 会被填到 
+-- http 请求 (ws,h2 有用到)中的 authority 会被填到
 -- 实际 http/1.1 请求 中的 Host header中 和 h2 请求中的  Request Pseudo-Header Fields 中的 authority 中,
 -- 之所以不叫它 host 是因为它是可以包含端口号的
 
-websocket_out = {
+local websocket_out = {
     WebSocket = {
         authority = "myhost",
         path = "/path1",
@@ -139,11 +139,11 @@ websocket_out = {
     }
 }
 
-dial_trojan_chain = {dial, tlsout, trojan_out}
-opt_dial_trojan_chain = {opt_dial, tlsout, trojan_out}
-dial_ws_trojan_chain = {dial, tlsout, websocket_out, trojan_out}
+local dial_trojan_chain = { dial, tlsout, trojan_out }
+local opt_dial_trojan_chain = { opt_dial, tlsout, trojan_out }
+local dial_ws_trojan_chain = { dial, tlsout, websocket_out, trojan_out }
 
-h2_single_out = {
+local h2_single_out = {
     H2Single = {
         is_grpc = true,
         http_config = {
@@ -153,63 +153,63 @@ h2_single_out = {
     }
 }
 
-quic_out_chain = {{
+local quic_out_chain = { {
     Quic = {
         --is_insecure = true,
 
         -- 可给出 服务端的 证书, 这样就算 is_insecure = false 也通过验证
         -- 证书须为 真证书, 或真fullchain 证书, 或自签的根证书
-        cert_path = "test2.crt", 
+        cert_path = "test2.crt",
         server_addr = "127.0.0.1:10801",
 
-        -- 须给出 server_name, 
+        -- 须给出 server_name,
         --  且 若 is_insecure 为 false, 须为 证书中所写的 CN 或 Subject Alternative Name;
-        -- ruci 提供的 test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 localhost, 
+        -- ruci 提供的 test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 localhost,
 
         server_name = "www.mytest.com",
 
-        alpn = {"h3"} --要明确指定 alpn
+        alpn = { "h3" } --要明确指定 alpn
     }
-}, trojan_out}
+}, trojan_out }
 
-dial_h2_trojan_chain = {dial, tlsout, h2_single_out, trojan_out}
+local dial_h2_trojan_chain = { dial, tlsout, h2_single_out, trojan_out }
 
-stdio_socks5_chain = {{
+local stdio_socks5_chain = { {
     Stdio = {}
 }, {
     Socks5 = {}
-}}
+} }
 
 -- stdin + 1 , 在命令行输入 a, 会得到b, 输入1, 得2, 依此类推
 -- 设了 abc 为预先信息, 刚连上后就会发出abc 信号
-in_stdio_adder_chain = {{
+local in_stdio_adder_chain = { {
     Stdio = {
         pre_defined_early_data = "abc"
     }
 }, {
     Adder = 1
-}}
+} }
 
-out_stdio_chain = {{
+local out_stdio_chain = { {
     Stdio = {}
-}}
+} }
 
-direct_out_chain = {"Direct"}
+local direct_out_chain = { "Direct" }
 
---[=[
+---[=[
 
-config = {
-    inbounds = {{
+local config_1_direct = {
+    inbounds = { {
         chain = listen_socks5http,
         tag = "listen1"
-    }},
-    outbounds = {{
+    } },
+    outbounds = { {
         tag = "dial1",
-        chain = {"Direct"}
-    }}
+        chain = { "Direct" }
+    } }
 
     --[[
-这个 config 块是演示 inbound 是 socks5http, outbound 是 direct 的情况
+演示 inbound 是 socks5http, outbound 是 direct 的情况
 
 它是一个基本的本地代理示例. 运行它, 设置您的系统代理为相应端口, 看看能不能正常访问网络吧
 --]]
@@ -220,27 +220,27 @@ config = {
 
 
 
---[=[
+---[=[
 
-config = {
-    inbounds = {{
+local config_2_tproxy1 = {
+    inbounds = { {
         chain = tproxy_listen_tcp_chain,
         tag = "listen1"
     },
-    {
-        chain = {tproxy_udp_listen},
-        tag = "listen_udp1"
-    }
+        {
+            chain = { tproxy_udp_listen },
+            tag = "listen_udp1"
+        }
     },
-    outbounds = {{
+    outbounds = { {
         tag = "direct",
         chain = opt_direct_chain
-    }},
+    } },
 
-    tag_route = {{"listen1", "direct"}, {"listen_udp1", "direct"}},
+    tag_route = { { "listen1", "direct" }, { "listen_udp1", "direct" } },
 
     --[[
-这个 config 块是演示 inbound 是 tproxy, outbound 是 direct 的情况
+演示 inbound 是 tproxy, outbound 是 direct 的情况
 注意 direct 用的是 opt_direct, 用了 somark 和 bind_to_device
 透明代理tproxy 只能在 linux 上使用.
 --]]
@@ -249,27 +249,27 @@ config = {
 
 -- ]=]
 
---[=[
+---[=[
 
-config = {
-    inbounds = {{
+local config_3_tproxy2 = {
+    inbounds = { {
         chain = tproxy_listen_tcp_chain,
         tag = "listen1"
     },
-    {
-        chain = {tproxy_udp_listen},
-        tag = "listen_udp1"
-    }
+        {
+            chain = { tproxy_udp_listen },
+            tag = "listen_udp1"
+        }
     },
-    outbounds = {{
+    outbounds = { {
         tag = "out",
         chain = opt_dial_trojan_chain
-    }},
+    } },
 
-    tag_route = {{"listen1", "out"}, {"listen_udp1", "out"}},
+    tag_route = { { "listen1", "out" }, { "listen_udp1", "out" } },
 
     --[[
-这个 config 块是演示 inbound 是 tproxy, outbound 是  trojan out 的情况
+演示 inbound 是 tproxy, outbound 是  trojan out 的情况
 透明代理tproxy 只能在 linux 上使用.
 
 另外, 如果在 listen tproxy 的同一主机上 监听 trojan ,即同一电脑上运行 remote.lua 中的 对应配置,
@@ -283,14 +283,14 @@ config = {
 -- ]=]
 
 
---[=[
+---[=[
 
-config = {
-    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
-    outbounds = { { tag="dial1", chain = dial_trojan_chain } }
+local config_4_trojan = {
+    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
+    outbounds = { { tag = "dial1", chain = dial_trojan_chain } }
 
---[[
-这个 config 块是演示 inbound 是 socks5http, outbound 是 trojan+tls 的情况
+    --[[
+演示 inbound 是 socks5http, outbound 是 trojan+tls 的情况
 
 它是一个基本的远程代理示例. 运行它, 设置您的系统代理为相应端口,
 并参照 remote.lua 在另一个终端 运行 另一部分,
@@ -301,19 +301,19 @@ config = {
 
 --]=]
 
---[=[
+---[=[
 
-config = {
-    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
-    outbounds = { 
-        { 
-            tag="dial1", 
-            chain = { { BindDialer =  { dial_addr = "unix://file1"} }, tlsout, trojan_out } 
-        } 
+local config_5_unix = {
+    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
+    outbounds = {
+        {
+            tag = "dial1",
+            chain = { { BindDialer = { dial_addr = "unix://file1" } }, tlsout, trojan_out }
+        }
     }
 
---[[
-这个 config 块 与上面的 示例类似, 但是它 的 dial 是用的 unix domain socket 
+    --[[
+与上面的 示例类似, 但是它 的 dial 是用的 unix domain socket
 与此对应的 remote.lua 中 也应该是 unix 的监听
 
 --]]
@@ -322,54 +322,54 @@ config = {
 
 --]=]
 
---[=[
-config = {
-    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
-    outbounds = { { tag="dial1", chain = dial_ws_trojan_chain } },
+---[=[
+local config_6_ws = {
+    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
+    outbounds = { { tag = "dial1", chain = dial_ws_trojan_chain } },
 
--- 演示 inbound 是 socks5http, outbound 是 tcp+tls+ws+trojan 的情况
+    -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+ws+trojan 的情况
 
 
 }
 
 --]=]
 
---[=[
-config = {
-    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
-    outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },
+---[=[
+local config_7_h2 = {
+    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
+    outbounds = { { tag = "dial1", chain = dial_h2_trojan_chain } },
 
-    -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+h2+trojan 的情况 
+    -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+h2+trojan 的情况
     -- (非多路复用. mux的情况见 local_mux_h2.lua 和 local_mux2_h2.lua)
 }
 
 --]=]
 
---[=[
-config = {
-    inbounds = {{
+---[=[
+local config_8_quic = {
+    inbounds = { {
         chain = listen_socks5http,
         tag = "listen1"
-    }},
-    outbounds = {{
+    } },
+    outbounds = { {
         tag = "dial1",
         chain = quic_out_chain
-    }}
+    } }
 
-    -- 演示 inbound 是 socks5http, outbound 是 quic 的情况 
+    -- 演示 inbound 是 socks5http, outbound 是 quic 的情况
 }
 
 -- ]=]
 
---[=[
-config = {
+---[=[
+local config_9_stdin_adder = {
 
-    inbounds = { 
-        {chain = in_stdio_adder_chain, tag = "listen1"} ,
+    inbounds = {
+        { chain = in_stdio_adder_chain, tag = "listen1" },
     },
 
---[[
-这个 config 块是演示 inbound 是 stdio (命令行)+1, outbound 也是stdio的情况, 
+    --[[
+演示 inbound 是 stdio (命令行)+1, outbound 也是stdio的情况,
 
 此时需要注意, 该配置下 命令行 的输入会既用作 inbound 的输入, 也用作 outbound 的输入;
 
@@ -377,86 +377,89 @@ config = {
 
 --]]
 
-    outbounds = { { tag="dial1", chain = out_stdio_chain } }
+    outbounds = { { tag = "dial1", chain = out_stdio_chain } }
 }
 
 --]=]
 
---[[
+---[[
 
 
-config = {
+local config_10_stdin_trojan = {
 
--- stdin + 1 -> trojan_out
+    -- stdin + 1 -> trojan_out
 
-    inbounds = { 
-        {chain = in_stdio_adder_chain, tag = "listen1"} ,
+    inbounds = {
+        { chain = in_stdio_adder_chain, tag = "listen1" },
     },
 
-    outbounds = { { tag="dial1", chain = dial_trojan_chain } }
+    outbounds = { { tag = "dial1", chain = dial_trojan_chain } }
 }
 
 --]]
 
---[[
+---[[
 
 
-config = {
+local config_11_stdin_blackhole = {
 
--- stdin + 1 -> blackhole
+    -- stdin + 1 -> blackhole
 
-    inbounds = { 
-        {chain = in_stdio_adder_chain, tag = "listen1"} ,
+    inbounds = {
+        { chain = in_stdio_adder_chain, tag = "listen1" },
     },
 
     --expected warn: dial out client stream got consumed
 
-    outbounds = { { tag="dial1", chain = { "Blackhole" } } }
+    outbounds = { { tag = "dial1", chain = { "Blackhole" } } }
 }
 
 --]]
 
---[[
+---[[
 
 
-config = {
+local config_12_fileio_trojan = {
 
--- fileio -> trojan_out
+    -- fileio -> trojan_out
 
-    inbounds = { 
+    inbounds = {
         {
-            chain = { 
-                { 
-                    Fileio={ 
-                          i= "local.suit.toml", o = "testfile.txt", 
-                          sleep_interval = 500, bytes_per_turn = 10, 
-                            ext = { fixed_target_addr= "fake.com:80" } 
-                    } 
-                }  
-            } , tag = "listen1"
-        } ,
+            chain = {
+                {
+                    Fileio = {
+                        i = "local.suit.toml",
+                        o = "testfile.txt",
+                        sleep_interval = 500,
+                        bytes_per_turn = 10,
+                        ext = { fixed_target_addr = "fake.com:80" }
+                    }
+                }
+            },
+            tag = "listen1"
+        },
     },
 
-    outbounds = { { tag="dial1", chain = dial_trojan_chain } }
+    outbounds = { { tag = "dial1", chain = dial_trojan_chain } }
 }
 
 --]]
 
---[=[
+---[=[
 
-config = {
+local config_13_route = {
     inbounds = {
-    --     {
-    --     chain = listen_socks5http,
-    --     tag = "l1"
-    -- },
-    
-    {
-        -- 测试: dig @127.0.0.1 -p 20800 www.baidu.com
+        {
+            chain = listen_socks5http,
+            tag = "l1"
+        },
 
-        chain = {
-            l2, -- 多客户端连接的情况
-            --[[
+        {
+            -- 测试: dig @127.0.0.1 -p 20800 www.baidu.com
+
+            chain = {
+                l2, -- 多客户端连接的情况
+                --[[
             {
                 -- 只允许单客户端连接的情况
 
@@ -468,30 +471,30 @@ config = {
                 }
             }
             --]]
-    
-    },
-        tag = "l2"
-    }, {
-        chain = {l3, tlsin},
+
+            },
+            tag = "l2"
+        }, {
+        chain = { l3, tlsin },
         tag = "l3"
-    }},
-    outbounds = {{
+    } },
+    outbounds = { {
         tag = "d1",
-        chain = {"Direct"}
+        chain = { "Direct" }
     }, {
         tag = "d2",
         chain = dial_trojan_chain
     }, {
         tag = "fallback_d",
-        chain = {{
+        chain = { {
             BindDialer = { dial_addr = "tcp://0.0.0.0:80" }
-        }}
-    }},
+        } }
+    } },
 
     ---[==[
-    tag_route = {{"l1", "d1"}, {"l2", "d2"}, {"l3", "d2"}},
+    tag_route = { { "l1", "d1" }, { "l2", "d2" }, { "l3", "d2" } },
 
-    fallback_route = {{"l1", "fallback_d"}}
+    fallback_route = { { "l1", "fallback_d" } }
 
     -- ]==]
 
@@ -515,7 +518,7 @@ config = {
     -- ]==]
 
     --[[
-这个 config 块是演示 多in多out的情况, 只要outbounds有多个, 您就应该考虑使用路由配置
+演示 多in多out的情况, 只要outbounds有多个, 您就应该考虑使用路由配置
 
 路由同时给出了 使用 tag_route + fallback_route 的 简单配置 和用 rule_route 的复杂配置
 
@@ -529,30 +532,30 @@ config = {
 
 -- ]=]
 
---[=[
+---[=[
 
-config = {
-    inbounds = { 
+local config_14_stdio_adder_udp_fixed_target_addr = {
+    inbounds = {
         {
             tag = "in_stdio_adder_chain",
 
-            chain =  { 
-                { 
-                    Stdio={ 
-                        fixed_target_addr= "udp://127.0.0.1:20800", 
-                        pre_defined_early_data = "abc" 
-                    } 
-                } , 
-                { Adder = 1 } 
+            chain = {
+                {
+                    Stdio = {
+                        fixed_target_addr = "udp://127.0.0.1:20800",
+                        pre_defined_early_data = "abc"
+                    }
+                },
+                { Adder = 1 }
             }
-        } , 
-    } ,
-    outbounds = { 
-        { tag="d1", chain = { dial, { Socks5 = {} } } } , 
+        },
+    },
+    outbounds = {
+        { tag = "d1", chain = { dial, { Socks5 = {} } } },
     },
 
---[[
-这个 config 块是演示 试图用 socks5 客户端向 一个 本地 udp 监听发起请求.
+    --[[
+演示 试图用 socks5 客户端向 一个 本地 udp 监听发起请求.
 
 该配置对应的 remote.lua 的 配置应该是 socks5 监听 -> direct
 --]]
@@ -562,33 +565,35 @@ config = {
 --]=]
 
 ---[=[
-config = {
+    local config_15_tun = {
 
-    inbounds = { 
+    inbounds = {
 
         --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
         -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
-        {chain = { { BindDialer= { bind_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
+        { chain = { { BindDialer = { bind_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1" },
     },
 
---[[
-这个 config 块是演示 inbound 是 ip, outbound 是stdio的情况, 
+    --[[
+演示 inbound 是 ip, outbound 是stdio的情况,
 
 此时需要注意, 该配置下 要用 sudo 运行, 且 rucimp 的 "tun" feature 是打开的
 
-它会建一个 叫 utun321 的 utun 虚拟网卡, 然后 ruci 会监听 其 网卡的 10.0.0.1 
+它会建一个 叫 utun321 的 utun 虚拟网卡, 然后 ruci 会监听 其 网卡的 10.0.0.1
 
 --]]
 
-    outbounds = { { tag="dial1", chain = out_stdio_chain } }
+    outbounds = { { tag = "dial1", chain = out_stdio_chain } }
 }
 
 --]=]
 
+config = config_2_tproxy1
+
 ---[[
 
--- 有限动态链的 选择器用法 的基本演示 
+-- 有限动态链的 选择器用法 的基本演示
 -- 有限动态链使用 config 所提供的列表, 在 dyn_selectors 中动态地
 -- 根据参数 返回列表的索引值
 -- 下面 示例是 最简单的示例, 使得动态链的行为和静态链相同
@@ -619,14 +624,14 @@ infinite = {
 
     -- 下面这个演示 与第一个普通示例 行为上等价
 
-    inbounds = {{
+    inbounds = { {
         tag = "listen1",
 
         generator = function(cid, state_index, data)
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = { listen_addr = "0.0.0.0:10800"}
+                        Listener = { listen_addr = "0.0.0.0:10800" }
                     },
                     new_thread_fn = function(cid, state_index, data)
                         -- print("lua: cid",inspect(cid))
@@ -641,9 +646,9 @@ infinite = {
                 }
             end
         end
-    }},
+    } },
 
-    outbounds = {{
+    outbounds = { {
         tag = "dial1",
         generator = function(cid, state_index, data)
             if state_index == -1 then
@@ -652,7 +657,7 @@ infinite = {
                 return -1, {}
             end
         end
-    }}
+    } }
 
 }
 
