@@ -93,8 +93,8 @@ direct_out_chain = {"Direct"}
 config = {
     inbounds = { 
     --  {chain = trojan_chain, tag = "listen1"} ,
-      {  chain = ws_trojans_chain,  tag = "listen1"  } 
-    --{ chain = in_h2_trojans_chain, tag = "listen1" } 
+    --  {  chain = ws_trojans_chain,  tag = "listen1"  } 
+    { chain = in_h2_trojans_chain, tag = "listen1" } 
     -- {chain = socks5http_chain, tag = "listen1"} ,
     -- {chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
     -- {chain = { { Dialer =  "udp://127.0.0.1:20800" } , "Echo" }, tag = "udp_echo"} ,
