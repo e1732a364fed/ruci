@@ -125,8 +125,9 @@ impl BindDialer {
 
         pass_a: Option<net::Addr>,
         pass_b: Option<BytesMut>,
+        udp_fix_target_listen: Option<bool>,
     ) -> MapResult {
-        let r = net::Addr::bind_dial(bind_a, dial_a).await;
+        let r = net::Addr::bind_dial(bind_a, dial_a, udp_fix_target_listen).await;
 
         match r {
             Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
@@ -159,9 +160,22 @@ impl Mapper for BindDialer {
 
                 let mut target_addr = params.a;
 
+                let mut udp_fix_target_listen: Option<bool> = None;
+
                 if self.configured_target_addr().is_some() {
-                    debug!(cid = %cid, "BindDialer using fixed_target_addr");
                     target_addr = self.configured_target_addr().cloned();
+
+                    debug!(cid = %cid,target_addr = ?target_addr, "BindDialer using fixed_target_addr");
+
+                    udp_fix_target_listen = Some(false);
+                }
+
+                if let Some(a) = &self.bind_addr {
+                    if let Network::UDP = a.network {
+                        if udp_fix_target_listen.is_some() {
+                            udp_fix_target_listen = Some(true)
+                        }
+                    }
                 }
 
                 match d {
@@ -171,6 +185,7 @@ impl Mapper for BindDialer {
                             Some(&a),
                             target_addr,
                             params.b,
+                            udp_fix_target_listen,
                         )
                         .await;
                     }
@@ -181,6 +196,7 @@ impl Mapper for BindDialer {
                             self.dial_addr.as_ref(),
                             target_addr,
                             params.b,
+                            udp_fix_target_listen,
                         )
                         .await;
                     }

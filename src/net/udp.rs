@@ -2,6 +2,8 @@
  * 为 UdpSocket 实现 net::addr_conn 中的trait
 
 */
+use crate::utils::io_error;
+
 use super::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use super::*;
 use std::io;
@@ -10,11 +12,24 @@ use std::{
     task::{Context, Poll},
 };
 use tokio::{io::ReadBuf, net::UdpSocket};
+
+#[derive(Default, Clone, Copy, Debug)]
+pub enum Mode {
+    #[default]
+    Dial,
+
+    FixTargetListen,
+}
+
 /// Implements AddrConn trait
 ///
 /// 固定用同一个 udp socket 发送, 到不同的远程地址也是如此
 #[derive(Clone)]
 pub struct Conn {
+    pub last_laddr: Option<Arc<parking_lot::Mutex<Addr>>>,
+
+    pub mode: Mode,
+
     u: Arc<UdpSocket>,
     peer_addr: Option<Addr>,
 }
@@ -30,10 +45,18 @@ impl Conn {
     /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
     /// 以及用 send 而不是 send_to
     ///
-    pub fn new(u: UdpSocket, peer_addr: Option<Addr>) -> Self {
+    pub fn new(u: UdpSocket, peer_addr: Option<Addr>, udp_fix_target_listen: bool) -> Self {
+        let mode = if udp_fix_target_listen {
+            Mode::FixTargetListen
+        } else {
+            Mode::Dial
+        };
+
         Conn {
             u: Arc::new(u),
             peer_addr,
+            last_laddr: None,
+            mode,
         }
     }
 }
@@ -43,16 +66,33 @@ impl Conn {
 /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
 /// 以及用 send 而不是 send_to
 ///
-pub fn new(u: UdpSocket, peer_addr: Option<Addr>) -> AddrConn {
+pub fn new(u: UdpSocket, peer_addr: Option<Addr>, udp_fix_target_listen: bool) -> AddrConn {
     let a = Arc::new(u);
     let b = a.clone();
-    AddrConn::new(
-        Box::new(Conn {
-            u: a,
-            peer_addr: peer_addr.clone(),
-        }),
-        Box::new(Conn { u: b, peer_addr }),
-    )
+    let mode = if udp_fix_target_listen {
+        Mode::FixTargetListen
+    } else {
+        Mode::Dial
+    };
+
+    let last_laddr: Option<Arc<parking_lot::Mutex<Addr>>> = match mode {
+        Mode::Dial => None,
+        Mode::FixTargetListen => Some(Arc::new(parking_lot::Mutex::new(Addr::default()))),
+    };
+
+    let c1 = Conn {
+        last_laddr: last_laddr.clone(),
+        mode,
+        u: a,
+        peer_addr: peer_addr.clone(),
+    };
+    let c2 = Conn {
+        u: b,
+        peer_addr,
+        last_laddr,
+        mode,
+    };
+    AddrConn::new(Box::new(c1), Box::new(c2))
 }
 
 /// wrap u with Arc, then return 2 copies.
@@ -63,10 +103,14 @@ pub fn duplicate(u: UdpSocket) -> (Conn, Conn) {
         Conn {
             u: a,
             peer_addr: None,
+            last_laddr: None,
+            mode: Mode::Dial,
         },
         Conn {
             u: b,
             peer_addr: None,
+            last_laddr: None,
+            mode: Mode::Dial,
         },
     )
 }
@@ -89,8 +133,19 @@ impl AsyncWriteAddr for Conn {
             let sor = addr.get_socket_addr_or_resolve();
             match sor {
                 Ok(so) => {
-                    self.u.poll_send_to(cx, buf, so)
-                    //debug!("udp poll_send_to got {:?}", r);
+                    if let Mode::FixTargetListen = self.mode {
+                        let laddr = match &self.last_laddr {
+                            Some(a) => a.lock().get_socket_addr().unwrap(),
+                            None => {
+                                return Poll::Ready(Err(io_error(
+                                    "udp write mode FixTargetListen, no last_laddr",
+                                )))
+                            }
+                        };
+                        self.u.poll_send_to(cx, buf, laddr)
+                    } else {
+                        self.u.poll_send_to(cx, buf, so)
+                    }
                 }
                 Err(e) => Poll::Ready(Err(io::Error::other(e))),
             }
@@ -108,7 +163,7 @@ impl AsyncWriteAddr for Conn {
 
 impl AsyncReadAddr for Conn {
     fn poll_read_addr(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
@@ -133,15 +188,18 @@ impl AsyncReadAddr for Conn {
                 Poll::Ready(r) => match r {
                     Ok(so) => {
                         let r_len = r_buf.filled().len();
-                        // debug!("udp read got {}", r_len);
+                        //debug!("udp read got {} {so}", r_len);
 
-                        Poll::Ready(Ok((
-                            r_len,
-                            crate::net::Addr {
-                                addr: NetAddr::Socket(so),
-                                network: Network::UDP,
-                            },
-                        )))
+                        let addr = crate::net::Addr {
+                            addr: NetAddr::Socket(so),
+                            network: Network::UDP,
+                        };
+                        if let Mode::FixTargetListen = self.mode {
+                            let mut mg = self.last_laddr.as_mut().unwrap().lock();
+                            *mg = addr.clone()
+                        }
+
+                        Poll::Ready(Ok((r_len, addr)))
                     }
                     Err(e) => Poll::Ready(Err(e)),
                 },

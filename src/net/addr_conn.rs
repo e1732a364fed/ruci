@@ -327,21 +327,13 @@ async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
     w1: &mut W1,
     buf: &mut [u8],
 ) -> io::Result<usize> {
-    let r = r1.read(buf).await;
+    let (u, a) = r1.read(buf).await?;
+
+    let u = w1.write(&buf[..u], &a).await?;
+
+    let r = w1.flush().await;
     match r {
-        Ok((u, a)) => {
-            let r = w1.write(&buf[..u], &a).await;
-            match r {
-                Ok(u) => {
-                    let r = w1.flush().await;
-                    match r {
-                        Ok(_) => Ok(u),
-                        Err(e) => Err(e),
-                    }
-                }
-                Err(e) => Err(e),
-            }
-        }
+        Ok(_) => Ok(u),
         Err(e) => Err(e),
     }
 }

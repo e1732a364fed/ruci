@@ -404,7 +404,7 @@ impl Addr {
 
                 let u = UdpSocket::bind("0.0.0.0:0").await?;
                 u.connect(so).await?;
-                let mut u = udp::new(u, Some(self.clone()));
+                let mut u = udp::new(u, Some(self.clone()), false);
                 u.default_write_to = Some(self.clone());
                 Ok(Stream::AddrConn(u))
             }
@@ -447,7 +447,7 @@ impl Addr {
                 let so = self.get_socket_addr_or_resolve()?;
 
                 let u = UdpSocket::bind(so).await?;
-                let u = udp::new(u, None);
+                let u = udp::new(u, None, false);
                 Ok(Stream::AddrConn(u))
             }
             #[cfg(unix)]
@@ -476,7 +476,11 @@ impl Addr {
     ///
     /// 对于 tcp/uds, dial_a 须提供，否则将报错
     ///
-    pub async fn bind_dial(bind_a: Option<&Self>, dial_a: Option<&Self>) -> Result<Stream> {
+    pub async fn bind_dial(
+        bind_a: Option<&Self>,
+        dial_a: Option<&Self>,
+        udp_fix_target_listen: Option<bool>,
+    ) -> Result<Stream> {
         if bind_a.is_none() && dial_a.is_none() {
             bail!("bind_dial: bind_a and dial_a are both none");
         }
@@ -537,14 +541,18 @@ impl Addr {
 
                 let u = UdpSocket::bind(bind_so).await?;
                 let u = match dial_a {
-                    None => udp::new(u, None),
+                    None => udp::new(u, None, udp_fix_target_listen.unwrap_or_default()),
 
                     Some(dial_a) => {
                         let dial_so = dial_a.get_socket_addr_or_resolve()?;
 
                         u.connect(dial_so).await?;
 
-                        udp::new(u, Some(dial_a.clone()))
+                        udp::new(
+                            u,
+                            Some(dial_a.clone()),
+                            udp_fix_target_listen.unwrap_or_default(),
+                        )
                     }
                 };
                 Ok(Stream::AddrConn(u))

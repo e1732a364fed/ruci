@@ -445,10 +445,15 @@ config = {
 ---[=[
 
 config = {
-    inbounds = {{
-        chain = listen_socks5http,
-        tag = "l1"
-    }, {
+    inbounds = {
+    --     {
+    --     chain = listen_socks5http,
+    --     tag = "l1"
+    -- },
+    
+    {
+        -- 测试: dig @127.0.0.1 -p 20800 www.baidu.com
+        
         chain = {{
             BindDialer = {
                 bind_addr = "udp://127.0.0.1:20800",

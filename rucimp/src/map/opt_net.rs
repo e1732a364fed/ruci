@@ -130,7 +130,7 @@ impl Mapper for OptDirect {
         let dial_r: anyhow::Result<Stream> = match behavior {
             ProxyBehavior::ENCODE => match a.network {
                 Network::UDP => so2::dial_udp(&a, &self.sopt)
-                    .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None))),
+                    .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None, false))),
                 Network::TCP => so2::dial_tcp(&a, &self.sopt).map(|s| Stream::Conn(Box::new(s))),
                 _ => todo!(),
             },
@@ -209,7 +209,7 @@ impl OptDialer {
         debug!("start dial");
         let r = match dial_a.network {
             Network::UDP => so2::dial_udp(&dial_a, &self.sockopt)
-                .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None))),
+                .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None, false))),
             Network::TCP => {
                 so2::dial_tcp(&dial_a, &self.sockopt).map(|s| Stream::Conn(Box::new(s)))
             }
