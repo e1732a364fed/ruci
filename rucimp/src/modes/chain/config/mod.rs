@@ -43,10 +43,7 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::{
-    map::{recorder, ws},
-    utils::init_tls_server_pem_option,
-};
+use crate::{map::ws, utils::init_tls_server_pem_option};
 use data_source::{DataSource, SyncFolderSource};
 
 #[cfg(feature = "steganography")]
@@ -383,7 +380,7 @@ pub enum InMapConfig {
         value: i8,
     },
     Counter,
-    Recorder(recorder::Config),
+    Recorder(ruci_recorder::Config),
     TLS(ruci::map::tls_config::ServerOptions),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
@@ -405,10 +402,9 @@ pub enum InMapConfig {
     #[cfg(feature = "quinn")]
     Quic(crate::map::quic_common::ServerConfig),
 
-    /// tcp/ip stack
+    // tcp/ip stack
     // #[cfg(feature = "smoltcp")]
     // Stack2,
-
     #[cfg(feature = "smoltcp")]
     StackSmoltcp,
     #[cfg(feature = "lwip")]
@@ -446,7 +442,7 @@ pub enum OutMapConfig {
         value: i8,
     },
     Counter,
-    Recorder(recorder::Config),
+    Recorder(ruci_recorder::Config),
     TLS(ruci::map::tls_config::ClientOptions),
 
     #[cfg(feature = "sockopt")]

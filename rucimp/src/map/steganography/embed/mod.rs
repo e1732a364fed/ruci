@@ -15,7 +15,7 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tracing::{debug, info};
 
-use crate::map::recorder::{PayloadInfo, READ_DIRECTION, WRITE_DIRECTION};
+use ruci_recorder::{PayloadInfo, READ_DIRECTION, WRITE_DIRECTION};
 
 pub const WRTIE_IS_STEGO: u8 = 0;
 pub const WRTIE_IS_REAL: u8 = 1;
@@ -36,12 +36,12 @@ impl Embedder {
         let extension = ext.as_str();
 
         let extension = match extension {
-            "json" => crate::map::recorder::OutputFileExtension::Json,
-            "cbor" => crate::map::recorder::OutputFileExtension::Cbor,
+            "json" => ruci_recorder::OutputFileExtension::Json,
+            "cbor" => ruci_recorder::OutputFileExtension::Cbor,
             _ => anyhow::bail!("invalid file extension: {}", extension),
         };
 
-        let info_data = crate::map::recorder::InfoData::new(file_content, extension)?;
+        let info_data = ruci_recorder::InfoData::new(file_content, extension)?;
         Ok(Self {
             file: Arc::new(info_data.payload),
             ext_fields: Default::default(),

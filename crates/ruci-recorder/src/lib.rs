@@ -728,7 +728,7 @@ impl From<InfoData> for har::Har {
             log: har::Spec::V1_2(har::v1_2::Log {
                 creator: har::v1_2::Creator {
                     name: "ruci".to_string(),
-                    version: crate::VERSION.to_string(),
+                    version: ruci::VERSION.to_string(),
                     comment: None,
                 },
 

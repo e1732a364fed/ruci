@@ -25,6 +25,7 @@ members = [
   "crates/ruci-cmd",
   "crates/ruci-rustls22",
   "crates/ruci-rustls21",
+  "crates/ruci-recorder",
 ]
 
 [workspace.dependencies]
@@ -60,6 +61,8 @@ reqwest = { version = "0.12", default-features = false, features = [
 ] }
 
 toml = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+serde_json = "1.0"
 
 
 [dependencies]

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 ruci = { path = ".." }
 macro_map = { path = "../crates/macro_map" }
+ruci-recorder = { path = "../crates/ruci-recorder" }
 ruci-rustls22 = { path = "../crates/ruci-rustls22" }
 ruci-rustls21 = { path = "../crates/ruci-rustls21", optional = true }
 user_trait = { workspace = true }
@@ -32,10 +33,9 @@ utoipa = { workspace = true, optional = true }
 reqwest = { workspace = true }
 utoipa-swagger-ui = { version = "9", optional = true, features = ["axum"] }
 
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
 
-serde_json = "1.0"
-serde_cbor = "0.11"
+serde_json = { workspace = true }
 serde_path_to_error = "0.1"
 
 strum = "0.27"
@@ -47,12 +47,15 @@ base64 = "0.22"
 itertools = "0.14"
 thiserror = "2"
 
-
-ipnet = { version = "2" }
-iprange = { version = "0.6" }
-regex = { version = "1" }
 clash_rules = "0.1.19"
 geosite-rs = "0.1.6"
+
+
+http = "1.1"
+tokio-tungstenite = "0.21"
+h2 = { version = "0.4" }
+hpack = "0.3"
+
 
 mlua = { version = "0.10", features = [
   "serialize",
@@ -71,11 +74,6 @@ rlimit = { version = "0.10", optional = true }
 
 native-tls = { version = "0.2", features = ["alpn"], optional = true }
 tokio-native-tls = { version = "0.3", optional = true }
-
-http = "1.1"
-tokio-tungstenite = "0.21"
-h2 = { version = "0.4" }
-hpack = "0.3"
 
 
 quinn = { version = "0.10", optional = true }
@@ -108,8 +106,6 @@ md5 = "0.7"
 zip = "2.2"
 
 
-har = "0.8.1"
-
 TinyUFO = { version = "0.1", optional = true }
 
 
@@ -135,6 +131,9 @@ wiremock = "0.6"
 
 [features]
 default = ["sockopt"]
+
+trace = ["ruci/trace"]
+
 steganography = []
 api_server = ["axum", "tower-http", "TinyUFO", "utoipa", "utoipa-swagger-ui"]
 file_server = ["axum", "tower-http"]
@@ -142,24 +141,18 @@ file_server = ["axum", "tower-http"]
 # quic = ["s2n-quic", "s2n-quic-rustls", "ruci-rustls21"]
 quinn = ["ruci-rustls21", "dep:quinn"]
 
-trace = ["ruci/trace"]
 
 lua = ["mlua/luau", "serde-lua-table", "rustyline"]
 lua54 = ["mlua/lua54", "mlua/vendored", "serde-lua-table", "rustyline"]
 
-# route = ["ipnet", "iprange", "regex"]
-
 sockopt = ["libc", "socket2", "rlimit"]
 
 use-native-tls = ["native-tls", "tokio-native-tls"]
-
 native-tls-vendored = ["native-tls/vendored", "tokio-native-tls/vendored"]
 
 
 lwip = ["netstack-lwip"]
 smoltcp = ["netstack-smoltcp"]
-
-# smoltcp = ["dep:smoltcp", "netstack-smoltcp"]
 
 
 [[example]]

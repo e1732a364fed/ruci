@@ -1971,15 +1971,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iprange"
-version = "0.6.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37209be0ad225457e63814401415e748e2453a5297f9b637338f5fb8afa4ec00"
-dependencies = [
- "ipnet",
-]
-
-[[package]]
 name = "is-terminal"
 version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3263,6 +3254,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruci-recorder"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "futures",
+ "har",
+ "macro_map",
+ "pin-project",
+ "ruci",
+ "serde",
+ "serde_cbor",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "ruci-rustls21"
 version = "0.0.1"
 dependencies = [
@@ -3322,11 +3332,8 @@ dependencies = [
  "futures-lite",
  "geosite-rs",
  "h2",
- "har",
  "hpack",
  "http",
- "ipnet",
- "iprange",
  "itertools 0.14.0",
  "lazy_static",
  "libc",
@@ -3340,16 +3347,15 @@ dependencies = [
  "pin-project",
  "quinn 0.10.2",
  "rand 0.9.0",
- "regex",
  "reqwest",
  "rlimit",
  "ruci",
+ "ruci-recorder",
  "ruci-rustls21",
  "ruci-rustls22",
  "rustyline",
  "serde",
  "serde-lua-table",
- "serde_cbor",
  "serde_json",
  "serde_path_to_error",
  "socket2",
