@@ -23,7 +23,6 @@ incremental = false
 
 [dependencies]
 tracing = "0.1.40"
-
 rand = { version = "0.8.5", features = ["small_rng"] }
 bytes = "1"
 futures = "0.3"
@@ -38,6 +37,8 @@ lazy_static = "1"
 smallvec = { version = "1.13.1", features = ["serde"] }
 
 serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+
 typetag = "0.2.16"
 dyn-clone = "1"
 anyhow = "1"

@@ -251,11 +251,11 @@ local config_1_direct_dns = {
         chain = listen_socks5http,
         tag = "listen1"
     },
-    {
-        chain = { listen_fixed_target},
-        tag = "listen2"
+        {
+            chain = { listen_fixed_target },
+            tag = "listen2"
+        },
     },
-},
     outbounds = { {
         tag = "dial1",
         chain = { direct_with_dns }
@@ -693,7 +693,38 @@ local config_17_tcp_ip_stack = {
 }
 --]]
 
-Config = config_1_direct_dns
+
+local config_18_recorder_at_listen = {
+    inbounds = { {
+        chain = { listen, "Recorder", {
+            Socks5Http = {}
+        } },
+        tag = "listen1"
+    },
+    },
+    outbounds = { {
+        tag = "dial1",
+        chain = { direct }
+    } }
+
+}
+
+local config_19_recorder_at_dial = {
+    inbounds = { {
+        chain = { listen, {
+            Socks5Http = {}
+        } },
+        tag = "listen1"
+    },
+    },
+    outbounds = { {
+        tag = "dial1",
+        chain = { direct, "Recorder" }
+    } }
+
+}
+
+Config = config_18_recorder_at_listen
 
 --[[
 

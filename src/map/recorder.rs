@@ -1,7 +1,9 @@
 /*!
 Defines a [`Map`] that records the traffic bytes of the base connection.
 
-format: [`RecordData`]， [`RecordAddrData`]
+format: [`RecordData`]， [`RecordData`]
+
+Write to a file record_{}.log when the connection's writer got closed.
 */
 
 use super::*;
@@ -16,11 +18,14 @@ use async_trait::async_trait;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use macro_map::{map_ext_fields, MapExt};
+use tracing::info;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct RecordData {
     pub cid: CID,
     pub behavior: ProxyBehavior,
+
+    /// customized by user as a marker
     pub custom_str: String,
     pub upload_data: Vec<DataPiece>,
     pub download_data: Vec<DataPiece>,
@@ -32,26 +37,30 @@ pub struct DataPiece {
     pub time: std::time::Duration,
 
     /// data send/recv at this instant
-    pub data: Vec<u8>,
+    pub data: PayloadData,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct RecordAddrData {
-    pub cid: CID,
-    pub behavior: ProxyBehavior,
-    pub custom_str: String,
-
-    pub upload_data: Vec<DataAddrPiece>,
-    pub download_data: Vec<DataAddrPiece>,
+#[derive(Serialize, Deserialize, Debug)]
+pub enum PayloadData {
+    Pure(Vec<u8>),
+    Addr((Addr, Vec<u8>)),
+}
+impl Default for PayloadData {
+    fn default() -> Self {
+        PayloadData::Pure(Vec::new())
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct DataAddrPiece {
-    /// duration since the start of the connection
-    pub time: std::time::Duration,
-
-    /// data send/recv at this instant with the remote addr
-    pub data: (Addr, Vec<u8>),
+impl RecordData {
+    fn save(&self) {
+        let r = serde_json::to_writer_pretty(
+            std::fs::File::create(format!("record_{}.log", self.cid)).unwrap(),
+            &self,
+        );
+        if let Err(e) = r {
+            tracing::warn!("save to file got error: {e}");
+        }
+    }
 }
 
 /// takes ownership of base Conn
@@ -79,12 +88,25 @@ impl AsyncRead for RecorderConn {
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         let r = self.base.as_mut().poll_read(cx, buf);
-        if let Poll::Ready(Ok(())) = &r {
-            let d = self.since();
-            self.record_buffer.download_data.push(DataPiece {
-                time: d,
-                data: buf.filled().to_vec(),
-            })
+        if let Poll::Ready(r) = &r {
+            match r {
+                Ok(_) => {
+                    let d = self.since();
+                    let d = DataPiece {
+                        time: d,
+                        data: PayloadData::Pure(buf.filled().to_vec()),
+                    };
+                    self.record_buffer.download_data.push(d)
+                }
+                Err(e) => {
+                    info!(
+                        cid = %self.record_buffer.cid,
+                        "recorder read got err, Saving to file; err: {e}",
+                    );
+
+                    self.record_buffer.save();
+                }
+            }
         }
         r
     }
@@ -102,7 +124,7 @@ impl AsyncWrite for RecorderConn {
             let d = self.since();
             self.record_buffer.upload_data.push(DataPiece {
                 time: d,
-                data: buf[..*u].to_vec(),
+                data: PayloadData::Pure(buf[..*u].to_vec()),
             })
         }
         r
@@ -119,6 +141,12 @@ impl AsyncWrite for RecorderConn {
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<io::Result<()>> {
+        info!(
+            cid = %self.record_buffer.cid,
+            "recorder got shutdown, Saving to file...",
+        );
+
+        self.record_buffer.save();
         self.base.as_mut().poll_shutdown(cx)
     }
 }
@@ -126,7 +154,7 @@ impl AsyncWrite for RecorderConn {
 struct RecordAddrConnR {
     base: Pin<Box<dyn addr_conn::AddrReadTrait>>,
     start: time::Instant,
-    record_buffer: RecordAddrData,
+    record_buffer: RecordData,
 }
 impl RecordAddrConnR {
     fn since(&self) -> time::Duration {
@@ -143,7 +171,7 @@ impl crate::Name for RecordAddrConnR {
 struct RecordAddrConnW {
     base: Pin<Box<dyn addr_conn::AddrWriteTrait>>,
     start: time::Instant,
-    record_buffer: RecordAddrData,
+    record_buffer: RecordData,
 }
 impl RecordAddrConnW {
     fn since(&self) -> time::Duration {
@@ -164,18 +192,13 @@ impl AsyncReadAddr for RecordAddrConnR {
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
         let r = self.base.as_mut().poll_read_addr(cx, buf);
-        if let Poll::Ready(r) = r {
-            match r {
-                Ok((n, ad)) => {
-                    let d = self.since();
-                    self.record_buffer.download_data.push(DataAddrPiece {
-                        time: d,
-                        data: (ad.clone(), buf.to_vec()),
-                    });
-                    Poll::Ready(io::Result::Ok((n, ad)))
-                }
-                Err(_) => Poll::Ready(r),
-            }
+        if let Poll::Ready(Ok((n, ad))) = r {
+            let d = self.since();
+            self.record_buffer.download_data.push(DataPiece {
+                time: d,
+                data: PayloadData::Addr((ad.clone(), buf.to_vec())),
+            });
+            Poll::Ready(io::Result::Ok((n, ad)))
         } else {
             r
         }
@@ -191,19 +214,14 @@ impl AsyncWriteAddr for RecordAddrConnW {
     ) -> Poll<io::Result<usize>> {
         let r = self.base.as_mut().poll_write_addr(cx, buf, addr);
 
-        if let Poll::Ready(r) = r {
-            match r {
-                Ok(n) => {
-                    let d = self.since();
-                    self.record_buffer.upload_data.push(DataAddrPiece {
-                        time: d,
-                        data: (addr.clone(), buf[..n].to_vec()),
-                    });
+        if let Poll::Ready(Ok(n)) = r {
+            let d = self.since();
+            self.record_buffer.upload_data.push(DataPiece {
+                time: d,
+                data: PayloadData::Addr((addr.clone(), buf[..n].to_vec())),
+            });
 
-                    Poll::Ready(io::Result::Ok(n))
-                }
-                Err(_) => Poll::Ready(r),
-            }
+            Poll::Ready(io::Result::Ok(n))
         } else {
             r
         }
@@ -214,6 +232,12 @@ impl AsyncWriteAddr for RecordAddrConnW {
     }
 
     fn poll_close_addr(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        info!(
+            cid = %self.record_buffer.cid,
+            "recorder ac got shutdown, Saving to file..."
+        );
+        self.record_buffer.save();
+
         self.base.as_mut().poll_close_addr(cx)
     }
 }
@@ -258,7 +282,7 @@ impl Map for Recorder {
                     r: Box::new(RecordAddrConnR {
                         base: Box::pin(ac.r),
                         start: now,
-                        record_buffer: RecordAddrData {
+                        record_buffer: RecordData {
                             cid: cid.clone(),
                             behavior,
                             custom_str: self.custom_str.clone(),
@@ -269,7 +293,7 @@ impl Map for Recorder {
                     w: Box::new(RecordAddrConnW {
                         base: Box::pin(ac.w),
                         start: now,
-                        record_buffer: RecordAddrData {
+                        record_buffer: RecordData {
                             cid: cid.clone(),
                             behavior,
                             custom_str: self.custom_str.clone(),
