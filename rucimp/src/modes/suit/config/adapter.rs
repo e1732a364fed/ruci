@@ -28,6 +28,7 @@ pub fn load_in_mappers_by_str_and_ld_config(s: &str, c: LDConfig) -> Option<Mapp
                 addr: "todo!()".to_string(),
                 cert: PathBuf::from(c.cert.unwrap_or_default()),
                 key: PathBuf::from(c.key.unwrap_or_default()),
+                alpn: c.alpn,
             });
             Some(Box::new(a))
         }
@@ -83,6 +84,7 @@ pub fn load_out_mappers_by_str_and_ld_config(s: &str, c: LDConfig) -> Option<Map
             let a = tls::client::Client::new(tls::client::ClientOptions {
                 domain: c.host.unwrap_or_default(),
                 is_insecure: c.insecure.unwrap_or_default(),
+                alpn: c.alpn,
             });
             Some(Box::new(a))
         }

@@ -271,12 +271,14 @@ pub struct File {
 pub struct TlsIn {
     cert: String,
     key: String,
+    alpn: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TlsOut {
     host: String,
     insecure: Option<bool>,
+    alpn: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -339,6 +341,7 @@ impl ToMapperBox for InMapperConfig {
                 addr: "todo!()".to_string(),
                 cert: PathBuf::from(c.cert.clone()),
                 key: PathBuf::from(c.key.clone()),
+                alpn: c.alpn.clone(),
             }
             .to_mapper_box(),
 
@@ -452,6 +455,7 @@ impl ToMapperBox for OutMapperConfig {
                 let a = tls::client::Client::new(tls::client::ClientOptions {
                     domain: c.host.clone(),
                     is_insecure: c.insecure.unwrap_or_default(),
+                    alpn: c.alpn.clone(),
                 });
                 Box::new(a)
             }

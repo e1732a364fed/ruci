@@ -34,6 +34,7 @@ async fn dial_tls_in_mem() {
     let a = tls::client::Client::new(ClientOptions {
         domain: "www.baidu.com".to_string(),
         is_insecure: true,
+        ..Default::default()
     });
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443).unwrap();
     println!("will out, {}", ta);
@@ -74,6 +75,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
     let a = tls::client::Client::new(ClientOptions {
         domain: "www.baidu.com".to_string(),
         is_insecure: true,
+        ..Default::default()
     });
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.
 
@@ -121,6 +123,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Resul
         addr: "todo!()".to_string(),
         cert: path,
         key: path2,
+        ..Default::default()
     });
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())

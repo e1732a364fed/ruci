@@ -21,10 +21,14 @@ pub fn load_ser_config(options: &ServerOptions) -> io::Result<ServerConfig> {
     let key = load_keys(&k)?;
 
     //todo: we don't use client authentication yet
-    let config = rustls::ServerConfig::builder()
+    let mut config = rustls::ServerConfig::builder()
         .with_client_cert_verifier(Arc::new(NoClientAuth))
         .with_single_cert(certs, key)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+
+    if let Some(a) = &options.alpn {
+        config.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
+    }
 
     Ok(config)
 }
@@ -113,6 +117,7 @@ mod test {
             addr: "todo!()".to_string(),
             cert: path,
             key: path2,
+            ..Default::default()
         });
 
         println!("{:#?}", r);

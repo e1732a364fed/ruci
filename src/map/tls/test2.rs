@@ -25,6 +25,7 @@ async fn dial_future(
     let a = super::client::Client::new(ClientOptions {
         domain: "test.domain".to_string(),
         is_insecure: true,
+        ..Default::default()
     });
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.
 
@@ -74,6 +75,7 @@ async fn listen_future(
         addr: "todo!()".to_string(),
         cert: path,
         key: path2,
+        ..Default::default()
     });
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())

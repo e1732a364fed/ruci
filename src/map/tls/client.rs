@@ -38,6 +38,7 @@ fn default_cc() -> ClientConfig {
 pub struct ClientOptions {
     pub domain: String,
     pub is_insecure: bool,
+    pub alpn: Option<Vec<String>>,
 }
 
 impl Client {
@@ -48,6 +49,9 @@ impl Client {
             config
                 .dangerous()
                 .set_certificate_verifier(Arc::new(SuperDanVer {}));
+        }
+        if let Some(a) = opt.alpn {
+            config.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
         }
 
         Client {

@@ -182,6 +182,7 @@ impl Suit for SuitStruct {
                     let a = tls::client::Client::new(tls::client::ClientOptions {
                         domain: c.host.unwrap_or_default(),
                         is_insecure: c.insecure.unwrap_or_default(),
+                        alpn: c.alpn,
                     });
                     self.push_mapper(Arc::new(Box::new(a)));
                 }
@@ -192,6 +193,7 @@ impl Suit for SuitStruct {
                         addr: "todo!()".to_string(),
                         cert: c.cert.expect("need cert file  in config").into(),
                         key: c.key.expect("need key file in config").into(),
+                        alpn: c.alpn,
                     };
                     let sa = tls::server::Server::new(so);
                     self.in_mappers.push(Arc::new(Box::new(sa)));

@@ -74,6 +74,7 @@ async fn f_dial_future_tls_out_adder(
     let a = tls::client::Client::new(ClientOptions {
         domain: "do.main".to_string(),
         is_insecure: true,
+        ..Default::default()
     });
 
     let cid = CID::default();
