@@ -238,7 +238,7 @@ async fn listen_tcp2(
 
     let iter = outc.get_mappers_vec().iter();
     let ib = Box::new(iter);
-    let selector = Box::new(FixedOutSelector { mappers: ib });
+    let selector = Box::new(FixedOutSelector { default: ib });
     let selector = Box::leak(selector);
 
     tokio::select! {

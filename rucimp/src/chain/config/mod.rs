@@ -33,7 +33,11 @@ impl StaticConfig {
                 let mut chain = config_chain
                     .chain
                     .iter()
-                    .map(|mapper_config| mapper_config.to_mapper())
+                    .map(|mapper_config| {
+                        let mut mapper = mapper_config.to_mapper();
+                        mapper.set_chain_tag(config_chain.tag.as_ref().unwrap_or(&String::new()));
+                        mapper
+                    })
                     .collect::<Vec<_>>();
 
                 chain.last_mut().unwrap().set_is_tail_of_chain(true);
@@ -56,7 +60,13 @@ impl StaticConfig {
                         let mut chain = config_chain
                             .chain
                             .iter()
-                            .map(|mapper_config| mapper_config.to_mapper())
+                            .map(|mapper_config| {
+                                let mut mapper = mapper_config.to_mapper();
+                                mapper.set_chain_tag(
+                                    config_chain.tag.as_ref().unwrap_or(&String::new()),
+                                );
+                                mapper
+                            })
                             .collect::<Vec<_>>();
 
                         chain.last_mut().unwrap().set_is_tail_of_chain(true);

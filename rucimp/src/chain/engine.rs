@@ -93,7 +93,7 @@ impl StaticEngine {
         let it = defaultc.iter();
         let ib = Box::new(it);
 
-        let fixed_selector = FixedOutSelector { mappers: ib };
+        let fixed_selector = FixedOutSelector { default: ib };
         let fixed_selector = Box::new(fixed_selector);
         let fixed_selector: &'static FixedOutSelector = Box::leak(fixed_selector);
 
