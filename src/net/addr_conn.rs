@@ -209,6 +209,8 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
 
         select! {
             _ = sleepf =>{
+                debug!("read addrconn timeout");
+
                 break;
             }
             r = readf =>{
@@ -220,7 +222,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
                             //写udp 是不会卡住的, 但addr_conn底层可能不是 udp
 
                             let sleepf2 = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
-                            let wf = w1.write(&buf0[..], &ad).fuse();
+                            let wf = w1.write(&buf0[..m], &ad).fuse();
 
                             pin_mut!(sleepf2, wf);
                             select!{
@@ -228,8 +230,8 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
                                      debug!("write addrconn timeout");
                                 }
                                 r = wf =>{
-                                    if r.is_err() {
-                                        debug!("write addrconn got err, {}",r.unwrap());
+                                    if let Err(e) = r {
+                                        debug!("write addrconn got err, {}",e);
                                         break;
                                     }
                                 }

@@ -4,10 +4,13 @@
 */
 use super::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use super::*;
+use futures::executor::block_on;
+use std::cmp::min;
 use std::{
     pin::Pin,
     task::{Context, Poll},
 };
+use tokio::sync::Mutex;
 use tokio::{io::ReadBuf, net::UdpSocket};
 
 pub struct Conn {
@@ -68,13 +71,74 @@ impl AsyncReadAddr for Conn {
     }
 }
 
+#[derive(Debug)]
+pub struct MockStream {
+    pub read_data: Vec<u8>,
+    pub write_data: Vec<u8>,
+    pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
+}
+
+impl AsyncWriteAddr for MockStream {
+    fn poll_write_addr(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buf: &[u8],
+        _addr: &Addr,
+    ) -> Poll<io::Result<usize>> {
+        debug!("MockUdp: write called");
+
+        let mut x = Vec::from(buf);
+
+        if let Some(swt) = &self.write_target {
+            let mut v = block_on(swt.lock());
+            v.append(&mut x);
+        } else {
+            if self.write_data.len() == 0 {
+                self.write_data = x;
+            } else {
+                self.write_data.append(&mut x)
+            }
+        }
+
+        Poll::Ready(Ok(buf.len()))
+    }
+
+    fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+}
+
+impl AsyncReadAddr for MockStream {
+    fn poll_read_addr(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<(usize, Addr)>> {
+        debug!("MockUdp: read called");
+
+        let cp_size: usize = min(self.read_data.len(), buf.len());
+        buf.copy_from_slice(&self.read_data[..cp_size]);
+
+        let new_len = self.read_data.len() - cp_size;
+
+        self.read_data.copy_within(cp_size.., 0);
+        self.read_data.truncate(new_len);
+
+        Poll::Ready(Ok((cp_size, crate::net::Addr::default())))
+    }
+}
+
 #[allow(unused)]
 mod test {
     use futures_util::join;
 
     use super::*;
     use crate::net::addr_conn::{AddrReadTrait, AsyncReadAddrExt, AsyncWriteAddrExt};
-    use std::{io, str::FromStr, time::Duration};
+    use std::{io, ops::Deref, str::FromStr, time::Duration};
 
     const CAP: usize = 1500;
 
@@ -113,7 +177,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test() -> io::Result<()> {
+    async fn test1() -> io::Result<()> {
         let u = UdpSocket::bind("127.0.0.1:12345").await?;
         let u2 = UdpSocket::bind("127.0.0.1:23456").await?;
         let (mut r, mut w) = duplicate(u);
@@ -151,6 +215,67 @@ mod test {
         join!(w1, r1, r2);
         println!("join end");
 
+        Ok(())
+    }
+
+    /// test the auto timeout feature in addrconn
+    /// it will write a data once per second for 5 times,
+    ///
+    /// then it should hung for CP_TIMEOUT of time, then returns.
+    ///
+    #[tokio::test]
+    async fn test_addrconn_cp() -> io::Result<()> {
+        let u = UdpSocket::bind("127.0.0.1:12345").await?;
+
+        let ad2_str = "127.0.0.1:23456";
+        let u2 = UdpSocket::bind(ad2_str).await?;
+
+        let (mut r, mut w) = duplicate(u);
+        let (mut r2, mut w2) = duplicate(u2);
+
+        let writev = Arc::new(Mutex::new(Vec::new()));
+        let writevc = writev.clone();
+
+        let mut ms = MockStream {
+            read_data: Vec::new(),
+            write_data: Vec::new(),
+            write_target: Some(writev),
+        };
+        let mut buf_to_write = [0u8, 1, 2, 3, 4];
+
+        let w1 = tokio::task::spawn(async move {
+            let ta = crate::net::Addr {
+                addr: NetAddr::Socket(
+                    SocketAddr::from_str(ad2_str)
+                        .map_err(|x| io::Error::other(format!("{}", x)))?,
+                ),
+                network: Network::TCP,
+            };
+            let mut i = 0;
+            loop {
+                i += 1;
+
+                let n = w.write(&mut buf_to_write, &ta).await?;
+                println!("w write to,{} {:?}", &ta, &buf_to_write[..n]);
+
+                if i == 5 {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+            println!("w2 end");
+
+            Ok::<(), io::Error>(())
+        });
+
+        crate::net::addr_conn::cp_addr(r2, ms).await;
+
+        let nv = buf_to_write.repeat(5);
+
+        print!("test: cp addr end");
+        //print!("test: ms w, {:?}", writevc.lock().await);
+
+        assert_eq!(&nv, writevc.lock().await.deref());
         Ok(())
     }
 }
