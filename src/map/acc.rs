@@ -80,23 +80,15 @@ pub async fn accumulate(
     let mut tag: String = String::new();
 
     for adder in mappers.by_ref() {
-        let input_data = InputData {
-            calculated_data: calculated_output_vec
-                .last()
-                .and_then(|x: &Option<AnyData>| {
-                    x.as_ref().and_then(|y| match y {
-                        AnyData::A(a) => Some(AnyData::A(a.clone())),
-                        _ => None,
-                    })
-                }),
-            hyperparameter: None,
-        };
-        let input_data =
-            if input_data.calculated_data.is_none() && input_data.calculated_data.is_none() {
-                None
-            } else {
-                Some(input_data)
-            };
+        let input_data = calculated_output_vec
+            .last()
+            .and_then(|x: &Option<AnyData>| {
+                x.as_ref().and_then(|y| match y {
+                    AnyData::A(a) => Some(AnyData::A(a.clone())),
+                    _ => None,
+                })
+            });
+
         if log_enabled!(log::Level::Debug) {
             debug!("acc: {cid} , adder: {}", adder.name())
         }

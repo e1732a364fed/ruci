@@ -124,55 +124,45 @@ impl Mapper for Dialer {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::None => match params.d {
-                Some(d) => {
-                    if let Some(d) = d.calculated_data {
-                        match d {
-                            AnyData::Addr(a) => {
-                                return Dialer::dial_addr(&a, params.a, params.b).await
+                Some(d) => match d {
+                    AnyData::Addr(a) => return Dialer::dial_addr(&a, params.a, params.b).await,
+                    AnyData::A(arc) => {
+                        let a: Option<Addr>;
+                        {
+                            let v = arc.lock();
+                            let aa = v.downcast_ref::<net::Addr>();
+                            a = aa.map(|x| x.clone());
+                        }
+                        match a {
+                            Some(a) => {
+                                return Dialer::dial_addr(&a, params.a, params.b).await;
                             }
-                            AnyData::A(arc) => {
-                                let a: Option<Addr>;
-                                {
-                                    let v = arc.lock();
-                                    let aa = v.downcast_ref::<net::Addr>();
-                                    a = aa.map(|x| x.clone());
-                                }
-                                match a {
-                                    Some(a) => {
-                                        return Dialer::dial_addr(&a, params.a, params.b).await;
-                                    }
-                                    None => {
-                                        return MapResult::err_str(
-                                            "Dialer got dial addr paramater but it's None",
-                                        )
-                                    }
-                                }
-                            }
-                            AnyData::B(mut b) => {
-                                let a = b.downcast_mut::<net::Addr>();
-                                match a {
-                                    Some(a) => {
-                                        return Dialer::dial_addr(a, params.a, params.b).await
-                                    }
-                                    None => {
-                                        return MapResult::err_str(
-                                            "Dialer got dial addr paramater but it's None",
-                                        )
-                                    }
-                                }
-                            }
-
-                            _ => {
-                                return MapResult::err_str(&format!(
-                                    "{cid} Dialer can't dial without an address-",
-                                ));
+                            None => {
+                                return MapResult::err_str(
+                                    "Dialer got dial addr paramater but it's None",
+                                )
                             }
                         }
                     }
-                    return MapResult::err_str(&format!(
-                        "{cid} Dialer can't dial without an address",
-                    ));
-                }
+                    AnyData::B(mut b) => {
+                        let a = b.downcast_mut::<net::Addr>();
+                        match a {
+                            Some(a) => return Dialer::dial_addr(a, params.a, params.b).await,
+                            None => {
+                                return MapResult::err_str(
+                                    "Dialer got dial addr paramater but it's None",
+                                )
+                            }
+                        }
+                    }
+
+                    _ => {
+                        return MapResult::err_str(&format!(
+                            "{cid} Dialer can't dial without an address-",
+                        ));
+                    }
+                },
+
                 None => {
                     if let Some(configured_dial_a) = &self.configured_target_addr() {
                         return Dialer::dial_addr(configured_dial_a, params.a, params.b).await;

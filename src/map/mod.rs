@@ -69,10 +69,10 @@ pub enum AnyData {
 
 pub type OptData = Option<AnyData>;
 
-pub struct InputData {
-    pub calculated_data: OptData, //由上层计算得到的数据
-    pub hyperparameter: OptData,  // 超参数, 即不上层计算决定的数据
-}
+// pub struct InputData {
+//     pub calculated_data: OptData, //由上层计算得到的数据
+//     pub hyperparameter: OptData,  // 超参数, 即不上层计算决定的数据
+// }
 
 /// the parameter for Mapper's maps method
 #[derive(Default, TypedBuilder)]
@@ -90,7 +90,7 @@ pub struct MapParams {
     pub b: Option<BytesMut>,
 
     #[builder(default, setter(strip_option))]
-    pub d: Option<InputData>,
+    pub d: Option<AnyData>,
 
     /// if Stream is a Generator, shutdown_rx should be provided.
     /// it will stop generating if shutdown_rx got msg.
@@ -115,10 +115,7 @@ impl MapParams {
         let rb = MapResult::builder().a(self.a).b(self.b).c(self.c);
 
         match self.d {
-            Some(d) => match d.calculated_data {
-                Some(d) => rb.d(d).build(),
-                None => rb.build(),
-            },
+            Some(d) => rb.d(d).build(),
             None => rb.build(),
         }
     }

@@ -1,18 +1,6 @@
-use std::{
-    io,
-    pin::Pin,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
-    task::Poll,
-};
-
 use async_trait::async_trait;
-use log::{debug, log_enabled};
 use ruci::map::{self, *};
 use ruci::{net::*, Name};
-use tokio::io::{AsyncRead, AsyncWrite};
 
 use macro_mapper::{mapper_ext_fields, MapperExt};
 
@@ -40,15 +28,10 @@ impl Mapper for Tproxy {
                             "Tproxy needs data for local_addr, got None data.",
                         )
                     }
-                }
-                .calculated_data;
-                let ap = match ap {
-                    Some(a) => a,
-                    None => {
-                        return MapResult::err_str(
-                            "Tproxy needs data for local_addr, got None data.",
-                        )
-                    }
+                };
+                let (raddr, laddr) = match ap {
+                    AnyData::RLAddr(a) => a,
+                    _ => return MapResult::err_str("Tproxy needs RLAddr , got other data."),
                 };
                 MapResult::newc(c).build()
             }
