@@ -27,3 +27,10 @@ lua = ["mlua"]
 [[example]]
 name = "chain"
 required-features = ["lua"]
+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+

@@ -13,6 +13,7 @@ env:
 
 jobs:
   build-ubuntu:
+    permissions: write-all
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: full
@@ -53,7 +54,7 @@ jobs:
         cd rucimp
         make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
 
-    - name: Build ${{ matrix.target }}
+    - name: Build exe
       if: ${{ matrix.target == 'x86_64-pc-windows-gnu' }}
       run: |
         cd rucimp
@@ -68,6 +69,7 @@ jobs:
         file_glob: true
 
   build-unix:
+    permissions: write-all
     runs-on: ${{ matrix.os }}
     env:
       RUST_BACKTRACE: full
