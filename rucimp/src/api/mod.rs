@@ -430,6 +430,7 @@ pub async fn app_working_dir() -> String {
     format!("{r:?}")
 }
 
+#[cfg(feature = "file_server")]
 fn serve_folder_by_tar_data_source_base64(
     mut app: Router,
     file_server_tar_data_source_base64: String,

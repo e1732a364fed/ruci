@@ -26,10 +26,10 @@ pub enum Commands {
     /// download Country.mmdb
     Mmdb,
 
-    /// download wintun.zip
+    /// download wintun.zip and auto extract the wintun.dll
     Wintun,
 
-    /// download ruci-webui's dist folder
+    /// download ruci-webui's dist folder and extract it.
     Webui,
 
     /// calculate trojan hash for a plain text password
@@ -398,7 +398,50 @@ async fn download_mmdb() -> anyhow::Result<()> {
 
 async fn download_wintun() -> anyhow::Result<()> {
     const WINTUN_ZIP: &str = "wintun.zip";
-    dl_url(WINTUN_DOWNLOAD_LINK, Some(WINTUN_ZIP)).await?;
+    const WINTUN_DLL: &str = "wintun.dll";
+    if std::fs::exists(WINTUN_DLL).unwrap_or(false) {
+        info!("wintun.dll already exists!");
+        return Ok(());
+    }
+
+    if !std::fs::exists(WINTUN_ZIP).unwrap_or(false) {
+        dl_url(WINTUN_DOWNLOAD_LINK, Some(WINTUN_ZIP)).await?;
+    }
+
+    let data = std::fs::read(WINTUN_ZIP)?;
+
+    use anyhow::Context;
+    use rucimp::zip::ZipArchive;
+    use std::io::Cursor;
+    use std::io::Read;
+    use std::io::Write;
+    let cursor = Cursor::new(data);
+    let mut archive = ZipArchive::new(cursor).context("Failed to open ZIP archive")?;
+    use std::fs::File;
+
+    let arch_str = match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        "arm" => "arm",
+        "x86" => "x86",
+        "x86_64" => "amd64",
+        _ => std::env::consts::ARCH,
+    };
+
+    let mut file = archive
+        .by_name(&format!("wintun/bin/{arch_str}/wintun.dll"))
+        .context("Failed to find the file in the archive")?;
+
+    let mut out_file = File::create(WINTUN_DLL).context("Failed to create output file")?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)
+        .context("Failed to read file from archive")?;
+
+    out_file
+        .write_all(&buffer)
+        .context("Failed to write to output file")?;
+
+    info!("wintun.dll extracted successfully!");
+
     Ok(())
 }
 
