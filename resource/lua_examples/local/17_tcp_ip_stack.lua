@@ -1,39 +1,35 @@
-Config = {
-  ["outbounds"] = {
-    {
-      ["chain"] = {
-        {
-          ["OptDirect"] = {
-            ["sockopt"] = {
-              ["bind_to_device"] = "wlp3s0",
-              ["so_mark"] = 255
-            },
-          }
-        }
-      },
-      ["tag"] = "dial1"
-    }
+local sockopt_config = {
+  bind_to_device = "wlp3s0",
+  so_mark = 255
+}
+
+local outbound_opt_direct = {
+  chain = { {
+    OptDirect = { sockopt = sockopt_config }
+  } },
+  tag = "dial1"
+}
+
+local tun_config = {
+  in_auto_route = {
+    tun_dev_name = "utun321",
+    dns_list = { "114.114.114.114" },
+    original_dev_name = "en0",
+    tun_gateway = "10.0.0.1",
+    router_ip = "192.168.0.1"
   },
-  ["inbounds"] = {
-    {
-      ["chain"] = {
-        {
-          ["BindDialer"] = {
-            ["in_auto_route"] = {
-              ["tun_dev_name"] = "utun321",
-              ["dns_list"] = {
-                "114.114.114.114"
-              },
-              ["original_dev_name"] = "en0",
-              ["tun_gateway"] = "10.0.0.1",
-              ["router_ip"] = "192.168.0.1"
-            },
-            ["bind_addr"] = "ip://10.0.0.1:24#utun321",
-          }
-        },
-        "Stack"
-      },
-      ["tag"] = "listen1"
-    }
-  }
+  bind_addr = "ip://10.0.0.1:24#utun321"
+}
+
+local inbound_tun_stack = {
+  chain = {
+    { BindDialer = tun_config },
+    "Stack"
+  },
+  tag = "listen1"
+}
+
+Config = {
+  outbounds = { outbound_opt_direct },
+  inbounds = { inbound_tun_stack }
 }

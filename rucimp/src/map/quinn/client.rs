@@ -1,6 +1,8 @@
+use anyhow::Context;
 use quinn::Endpoint;
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -33,13 +35,20 @@ impl Name for Client {
 }
 
 impl Client {
-    pub fn new(c: quic_common::ClientConfig) -> anyhow::Result<Self> {
+    pub fn new(
+        c: quic_common::ClientConfig,
+        read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+    ) -> anyhow::Result<Self> {
         let cc = {
-            let cc = rustls21::cc(rustls21::ClientOptions {
-                is_insecure: c.is_insecure.unwrap_or_default(),
-                alpn: c.alpn,
-                cert_path: c.cert_path.clone(),
-            })?;
+            let cc = rustls21::cc(
+                rustls21::ClientOptions {
+                    is_insecure: c.is_insecure.unwrap_or_default(),
+                    alpn: c.alpn,
+                    cert_path: c.cert_path.clone(),
+                },
+                read_fn,
+            )
+            .context("load rustls21 client config failed")?;
 
             quinn::ClientConfig::new(Arc::new(cc))
         };

@@ -74,6 +74,7 @@ impl StaticConfig {
         &self,
         file_source: Arc<Option<FileSource>>,
     ) -> anyhow::Result<Vec<Vec<MapBox>>> {
+        use anyhow::Context;
         use itertools::Itertools;
 
         let listens: Vec<_> = self
@@ -89,7 +90,9 @@ impl StaticConfig {
                             file_source: file_source.clone(),
                         };
 
-                        let map: anyhow::Result<MapBox> = config_with_fs.try_into();
+                        let map: anyhow::Result<MapBox> = config_with_fs
+                            .try_into()
+                            .context("config_with_fs.try_into failed");
                         map.map(|mut map| {
                             map.set_chain_tag(config_chain.tag.as_deref().unwrap_or(""));
                             map
@@ -542,7 +545,14 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                     .get_file_content(&s.to_string_lossy())
                     .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
                     .map_err(std::io::Error::other),
-                None => std::fs::read_to_string(s),
+                None => {
+                    let r = std::fs::read_to_string(s);
+
+                    if r.is_err() {
+                        tracing::debug!("std::fs::read_to_string failed");
+                    }
+                    r
+                }
             };
 
             Box::new(f)
@@ -647,7 +657,10 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::Quic(c) => Ok(Box::new(quic::server::Server::new(c))),
 
             #[cfg(feature = "quinn")]
-            InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(c))),
+            InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(
+                c,
+                read_file_fn,
+            )?)),
 
             #[cfg(feature = "sockopt")]
             InMapConfig::TcpOptListener {
@@ -735,6 +748,24 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
     type Error = anyhow::Error;
 
     fn try_from(value: OutMapConfigWithFileSource) -> Result<Self, Self::Error> {
+        use anyhow::Context;
+
+        let file_source = value.file_source;
+
+        let read_file_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>> = {
+            let fc = file_source.clone();
+
+            let f = move |s: PathBuf| match fc.as_ref() {
+                Some(fs) => fs
+                    .get_file_content(&s.to_string_lossy())
+                    .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
+                    .map_err(std::io::Error::other),
+                None => std::fs::read_to_string(s),
+            };
+
+            Box::new(f)
+        };
+
         match value.config {
             OutMapConfig::Stdio(sc) => sc.try_into(),
             OutMapConfig::Fileio(f) => {
@@ -817,7 +848,8 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
 
             #[cfg(feature = "quinn")]
             OutMapConfig::Quic(c) => Ok(Box::new(
-                crate::map::quinn::client::Client::new(c).expect("legal quic client config"),
+                crate::map::quinn::client::Client::new(c, read_file_fn)
+                    .context("load quic client config failed")?,
             )),
 
             #[cfg(feature = "sockopt")]
@@ -857,7 +889,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                         lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
-                        file_source: value.file_source,
+                        file_source: file_source.clone(),
                     })),
                     Err(_) => todo!(),
                 }

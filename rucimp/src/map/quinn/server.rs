@@ -1,5 +1,6 @@
 use quinn::{Endpoint, ServerConfig};
 
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
@@ -18,12 +19,14 @@ use crate::map::{quic_common, rustls21};
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
 pub struct Server {
-    tls_key_path: String,
-    tls_cert_path: String,
+    // tls_key_path: String,
+    // tls_cert_path: String,
     listen_addr: String,
     pub alpn: Option<Vec<String>>,
 
     next_cid: Arc<AtomicU32>,
+
+    cached_server_config: rustls::ServerConfig,
 }
 
 impl Name for Server {
@@ -33,23 +36,31 @@ impl Name for Server {
 }
 
 impl Server {
-    pub fn new(c: quic_common::ServerConfig) -> Self {
-        Self {
-            tls_key_path: c.key_path,
-            tls_cert_path: c.cert_path,
+    pub fn new(
+        c: quic_common::ServerConfig,
+        read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+    ) -> anyhow::Result<Self> {
+        let tls_server_config = rustls21::sc(
+            rustls21::ServerOptions {
+                alpn: c.alpn.clone(),
+                cert_path: c.cert_path.clone(),
+                key_path: c.key_path.clone(),
+            },
+            read_fn,
+        )?;
+
+        Ok(Self {
+            // tls_key_path: c.key_path,
+            // tls_cert_path: c.cert_path,
             listen_addr: c.listen_addr,
             alpn: c.alpn,
             next_cid: Arc::new(AtomicU32::new(1)),
             ext_fields: Some(MapExtFields::default()),
-        }
+            cached_server_config: tls_server_config,
+        })
     }
     async fn start_listen(&self, cid: CID) -> anyhow::Result<map::MapResult> {
-        let server_config = rustls21::sc(rustls21::ServerOptions {
-            alpn: self.alpn.clone(),
-            cert_path: self.tls_cert_path.clone(),
-            key_path: self.tls_key_path.clone(),
-        })?;
-        let server_config = ServerConfig::with_crypto(Arc::new(server_config));
+        let server_config = ServerConfig::with_crypto(Arc::new(self.cached_server_config.clone()));
 
         let endpoint = Endpoint::server(server_config, self.listen_addr.parse()?)?;
 

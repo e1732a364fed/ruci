@@ -115,7 +115,10 @@ impl Engine {
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) -> anyhow::Result<()> {
-        let inbounds = sc.get_inbounds(self.file_source.clone())?;
+        use anyhow::Context;
+        let inbounds = sc
+            .get_inbounds(self.file_source.clone())
+            .context("sc.get_inbounds failed")?;
         self.inbounds = inbounds
             .into_iter()
             .map(|v| {
@@ -157,8 +160,8 @@ impl Engine {
         debug!("trying init_lua_static");
 
         let sc = lua::load_static(&lua_text, self.file_source.clone())
-            .context("init_lua_static failed")?;
-        self.init_static(sc)?;
+            .context("lua::load_static failed")?;
+        self.init_static(sc).context("init_lua_static failed")?;
         Ok(())
     }
 

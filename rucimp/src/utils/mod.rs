@@ -39,6 +39,8 @@ impl FileSource {
                 for dir in possible_addrs {
                     let real_file_name = String::from(dir) + file_name;
 
+                    // tracing::trace!("try to read file from {}", real_file_name);
+
                     if std::path::Path::new(&real_file_name).exists() {
                         if let Ok(mut file) = std::fs::File::open(real_file_name) {
                             let mut v = vec![];
@@ -66,7 +68,9 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
     };
 
     let fs = FileSource::default();
-    let r = fs.get_file_content(filename).context("get file failed")?;
+    let r = fs
+        .get_file_content(filename)
+        .context(format!("get file failed: {}", filename))?;
 
     let mut cd = std::env::current_dir().expect("has current directory");
 

@@ -333,7 +333,7 @@ pub async fn fold_from_start(
             _ => {
                 debug!(
                     cid = %in_cid,
-                    "fold_from_start: not a stream generator, .",
+                    "fold_from_start: not a stream generator. running with this single stream.",
                 );
             }
         }

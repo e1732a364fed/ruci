@@ -7,7 +7,13 @@ rustls 0.21 和 0.22 有很大不同, 截至 24.3.21, ruci包的 rustls 使用�
 
 used by quinn and quic mod
  */
-use std::{fs::File, io::BufReader, path::Path, sync::Arc, time::SystemTime};
+use std::{
+    fs::File,
+    io::BufReader,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::SystemTime,
+};
 
 use anyhow::{bail, Result};
 use rustls::{
@@ -23,7 +29,10 @@ pub struct ClientOptions {
     pub cert_path: Option<String>,
 }
 
-pub(crate) fn cc(opt: ClientOptions) -> Result<ClientConfig> {
+pub(crate) fn cc(
+    opt: ClientOptions,
+    read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+) -> Result<ClientConfig> {
     let mut root_store = rustls::RootCertStore::empty();
 
     root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
@@ -35,7 +44,7 @@ pub(crate) fn cc(opt: ClientOptions) -> Result<ClientConfig> {
     }));
 
     if let Some(c) = opt.cert_path {
-        let c = load_certs(&c)?;
+        let c = load_certs(&c, read_fn)?;
         for c in c {
             root_store.add(&c)?;
         }
@@ -64,8 +73,11 @@ pub struct ServerOptions {
     pub key_path: String,
 }
 
-pub fn sc(opt: ServerOptions) -> Result<ServerConfig> {
-    let (c, k) = read_certs_from_file(opt.cert_path.as_str(), opt.key_path.as_str())?;
+pub fn sc(
+    opt: ServerOptions,
+    read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+) -> Result<ServerConfig> {
+    let (c, k) = read_certs_from_file(opt.cert_path.as_str(), opt.key_path.as_str(), read_fn)?;
 
     let mut config = ServerConfig::builder()
         .with_safe_defaults()
@@ -111,8 +123,14 @@ pub fn load_key(path: &Path) -> Result<PrivateKey> {
 }
 
 /// 注：一个文件有多个 cert 的情况一般是 fullchain
-pub fn load_certs(cert_path: &str) -> Result<Vec<rustls::Certificate>> {
-    let mut cert_chain_reader = BufReader::new(File::open(cert_path)?);
+pub fn load_certs(
+    cert_path: &str,
+    read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+) -> Result<Vec<rustls::Certificate>> {
+    let cert_path = PathBuf::from(cert_path);
+    let cert_str = read_fn(cert_path)?;
+
+    let mut cert_chain_reader = BufReader::new(cert_str.as_bytes());
     let certs = rustls_pemfile::certs(&mut cert_chain_reader)?
         .into_iter()
         .map(rustls::Certificate)
@@ -123,8 +141,9 @@ pub fn load_certs(cert_path: &str) -> Result<Vec<rustls::Certificate>> {
 pub fn read_certs_from_file(
     cert_path: &str,
     key_path: &str,
+    read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
 ) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey)> {
-    let certs = load_certs(cert_path)?;
+    let certs = load_certs(cert_path, read_fn)?;
 
     let key = load_key(Path::new(key_path))?;
 

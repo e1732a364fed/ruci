@@ -10,7 +10,7 @@ use crate::api;
 
 #[cfg(feature = "api_server")]
 use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 ///blocking
 #[allow(unused)]
@@ -30,6 +30,8 @@ pub(crate) async fn run(
     let (contents, file_source) = crate::mode::get_file(&mut file_name, args.in_memory).await?;
 
     use anyhow::Context;
+
+    e.file_source = Arc::new(Some(file_source));
 
     if file_name.ends_with(".lua") {
         #[cfg(any(feature = "lua", feature = "lua54"))]

@@ -1,30 +1,23 @@
-Config = {
-  ["outbounds"] = {
-    {
-      ["chain"] = {
-        {
-          ["Stdio"] = {
-          }
-        }
-      },
-      ["tag"] = "dial1"
-    }
+local outbound_stdio = {
+  chain = {
+    { Stdio = {} }
   },
-  ["inbounds"] = {
+  tag = "dial1"
+}
+
+local inbound_stdio_adder = {
+  chain = {
     {
-      ["chain"] = {
-        {
-          ["Stdio"] = {
-            ["ext"] = {
-              ["pre_defined_early_data"] = "abc",
-            },
-          }
-        },
-        {
-          ["Adder"] = 1
-        }
-      },
-      ["tag"] = "listen1"
-    }
-  }
+      Stdio = {
+        ext = { pre_defined_early_data = "abc" }
+      }
+    },
+    { Adder = 1 }
+  },
+  tag = "listen1"
+}
+
+Config = {
+  outbounds = { outbound_stdio },
+  inbounds = { inbound_stdio_adder }
 }
