@@ -1,3 +1,7 @@
+/*!
+Defines the engine to run the chain config.
+ */
+
 #[cfg(feature = "route")]
 use crate::route::{RuleSet, RuleSetOutSelector};
 

@@ -1,3 +1,7 @@
+/*!
+Defines [`SuitEngine`] that runs the suit mode config.
+ */
+
 use std::{io, sync::Arc};
 
 use super::*;

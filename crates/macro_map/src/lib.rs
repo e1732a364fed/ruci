@@ -1,3 +1,7 @@
+/*!
+Provide macros: `map_ext_fields`, `MapExt` and `NoMapExt`.
+*/
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse::Parser, parse_macro_input, DeriveInput};
@@ -20,7 +24,7 @@ pub fn map_ext_fields(_args: TokenStream, input: TokenStream) -> TokenStream {
             }
             .into()
         }
-        _ => panic!("`add_map_common_field` has to be used with structs "),
+        _ => panic!("`map_ext_fields` has to be used with structs "),
     }
 }
 
@@ -50,10 +54,8 @@ fn impl_common_map_ext_macro(ast: &syn::DeriveInput) -> TokenStream {
 
 #[proc_macro_derive(NoMapExt)]
 pub fn ext_macro_derive(input: TokenStream) -> TokenStream {
-    // 基于 input 构建 AST 语法树
     let ast: DeriveInput = syn::parse(input).unwrap();
 
-    // 构建特征实现代码
     impl_map_ext_macro(&ast)
 }
 

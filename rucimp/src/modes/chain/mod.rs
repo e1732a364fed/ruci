@@ -1,7 +1,5 @@
 /*!
-Defines the chain config format.
-
-StaticConfig can use lua or toml as config file format.
+Defines the chain mode, a mode where user defines different parts of the proxy and can regroup them freely.
  */
 
 pub mod config;
