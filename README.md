@@ -101,12 +101,13 @@ Multi-stream generator【多流发生器】(one to many): `function( Option<stre
 
 流发生器是一种不接受流参数, 只接受其它参数的(编程意义下的)函数, 是整个链的起点, 是流的源。
 
-单流发生器是数学意义下的函数，可能是 BindDialer, 文件, 或者 Stdio.
+单流发生器 可能是 BindDialer, 文件, 或者 Stdio.
 
 多流发生器可能是 Listener (不接受流参数的无中生有 (一般实际上原理上是对接硬件上的流,
 如网卡提供的流) ) 或 inner mux (接受一个流, 对其进行分支处理)。
 其在数学意义下可以理解为泛函。
 
+流映射是数学意义下的函数（映射）。
 流映射可以改变流(如Tls), 也可以不改变而只是在内容上做修改(如MathAdder),
 
 也可以完全不做修改而只提供副作用(如 Counter, 或Trojan/Socks5 先做握手然后不改变流) 
@@ -222,5 +223,5 @@ o2node-.->collector
 
 This project is licensed under the MIT License
 
-Any commit by e1732a364fed is also distributed with CC0 1.0 Universal License if the related file has no conflict with MIT License.
+Any commit by e1732a364fed is also distributed with CC0 1.0 Universal License if the related file has no conflict with the MIT License.
 (For example, most readme files and doc files.)
