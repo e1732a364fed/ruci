@@ -198,6 +198,7 @@ pub enum InMapperConfig {
     #[cfg(feature = "tokio-native-tls")]
     NativeTLS(TlsIn),
     H2 {
+        is_grpc: Option<bool>,
         http_config: Option<CommonConfig>,
     },
 
@@ -230,6 +231,8 @@ pub enum OutMapperConfig {
     WebSocket(CommonConfig),
     H2Single,
     H2Mux {
+        is_grpc: Option<bool>,
+
         http_config: Option<CommonConfig>,
     },
 }
@@ -405,8 +408,10 @@ impl ToMapperBox for InMapperConfig {
             }
             InMapperConfig::H2 {
                 http_config: config,
+                is_grpc,
             } => Box::new(crate::map::h2::server::Server {
                 http_config: config.clone(),
+                is_grpc: is_grpc.clone(),
             }),
         }
     }
@@ -482,8 +487,11 @@ impl ToMapperBox for OutMapperConfig {
             OutMapperConfig::H2Single => Box::new(crate::map::h2::client::SingleClient {}),
             OutMapperConfig::H2Mux {
                 http_config: config,
+                is_grpc,
             } => {
-                let m = crate::map::h2::client::MuxClient::new(config.clone());
+                let mut m = crate::map::h2::client::MuxClient::new(config.clone());
+
+                m.is_grpc = *is_grpc;
 
                 Box::new(m)
             }

@@ -14,6 +14,8 @@ use tracing::warn;
 use super::*;
 #[derive(Clone, Debug, NoMapperExt, Default)]
 pub struct Server {
+    pub is_grpc: Option<bool>,
+
     pub http_config: Option<CommonConfig>,
 }
 impl ruci::Name for Server {
@@ -40,6 +42,8 @@ impl Server {
         let (tx, rx) = mpsc::channel(100);
 
         let http_config = self.http_config.clone();
+        let is_grpc = self.is_grpc.unwrap_or_default();
+
         tokio::spawn(async move {
             loop {
                 //debug!(cid = %cid, "h2 server try accept");
@@ -104,11 +108,16 @@ impl Server {
                 //debug!(cid = %cid, "accept h2 got new {}", subid);
                 //assert_eq!(subid, subid2);
 
-                let stream = super::H2Stream::new(recv, send);
+                let stream: net::Conn = if is_grpc {
+                    Box::new(super::grpc::Stream::new(recv, send))
+                } else {
+                    Box::new(super::H2Stream::new(recv, send))
+                };
+
                 let mut ncid = cid.clone();
                 ncid.push_num(subid);
 
-                let m = MapResult::new_c(Box::new(stream)).new_id(ncid).build();
+                let m = MapResult::new_c(stream).new_id(ncid).build();
                 let r = tx.send(m).await;
                 if let Err(e) = r {
                     warn!(cid = %cid, "accept h2 got e3 {}", e);

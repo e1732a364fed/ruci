@@ -45,7 +45,8 @@ impl SingleClient {
         //let cc = cid.clone();
 
         let stream =
-            new_stream_by_send_request(cid, &mut send_request, None, Some(connection)).await?;
+            new_stream_by_send_request(cid, false, &mut send_request, None, Some(connection))
+                .await?;
 
         let m = MapResult::new_c(Box::new(stream))
             .a(a)
@@ -57,10 +58,11 @@ impl SingleClient {
 
 async fn new_stream_by_send_request(
     cid: CID,
+    is_grpc: bool,
     send_request: &mut SendRequest<Bytes>,
     req: Option<Request<()>>,
     connection: Option<Connection<Conn>>,
-) -> anyhow::Result<H2Stream> {
+) -> anyhow::Result<net::Conn> {
     //这是 h2 包规定的奇怪用法
     // todo: add a rx parameter and select it to impl graceful shutdown
 
@@ -78,7 +80,11 @@ async fn new_stream_by_send_request(
 
     let recv_stream = resp.await?.into_body();
 
-    let stream = super::H2Stream::new(recv_stream, send_stream);
+    let stream: net::Conn = if is_grpc {
+        Box::new(super::grpc::Stream::new(recv_stream, send_stream))
+    } else {
+        Box::new(super::H2Stream::new(recv_stream, send_stream))
+    };
 
     Ok(stream)
 }
@@ -108,6 +114,7 @@ impl Mapper for SingleClient {
 #[derive(Clone, Debug, NoMapperExt, Default)]
 pub struct MuxClient {
     pub http_config: Option<CommonConfig>,
+    pub is_grpc: Option<bool>,
 
     req: Option<Request<()>>,
 
@@ -137,6 +144,8 @@ impl MuxClient {
         a: Option<net::Addr>,
         early_data: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
+        let is_grpc = self.is_grpc.unwrap_or_default();
+
         match conn {
             Some(conn) => {
                 //debug!("h2_mux_client got some conn");
@@ -154,16 +163,14 @@ impl MuxClient {
 
                 let stream = new_stream_by_send_request(
                     cid,
+                    is_grpc,
                     &mut send_request,
                     self.req.clone(),
                     Some(connection),
                 )
                 .await?;
 
-                let m = MapResult::new_c(Box::new(stream))
-                    .a(a)
-                    .b(early_data)
-                    .build();
+                let m = MapResult::new_c(stream).a(a).b(early_data).build();
 
                 *self.cache.lock().await = Some(send_request);
 
@@ -181,7 +188,8 @@ impl MuxClient {
                     let cc = cid.clone();
 
                     let rrr = &mut real_r;
-                    let stream = new_stream_by_send_request(cc, rrr, self.req.clone(), None).await;
+                    let stream =
+                        new_stream_by_send_request(cc, is_grpc, rrr, self.req.clone(), None).await;
                     let stream = match stream {
                         Ok(s) => s,
                         Err(e) => {
