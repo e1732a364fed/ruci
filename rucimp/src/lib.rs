@@ -3,6 +3,7 @@
 
 子suit定义了 套装suit, 内部包含了关键的转发逻辑
 */
+pub mod chain;
 pub mod suit;
 
 pub const VERSION: &str = "0.0.0";

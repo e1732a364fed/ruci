@@ -1,4 +1,4 @@
-use futures::{join, FutureExt};
+use futures::FutureExt;
 use log::info;
 use ruci::{
     map::{socks5, tls, MapParams, Mapper},
@@ -16,7 +16,6 @@ use std::{env::set_var, io, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
-    task,
 };
 
 const TARGET_PORT: u16 = 80;
