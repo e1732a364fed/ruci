@@ -24,6 +24,17 @@ tproxy_tcp_listen = {
     }
 }
 
+tproxy_udp_listen = {
+    TproxyUdpListener = {
+        sockopt = {
+            tproxy = true,
+        },
+        ext = {
+            fixed_target_addr = "udp://0.0.0.0:12345"
+        }
+    }
+}
+
 listen_socks5 = {listen, {
     Socks5 = {}
 }}
@@ -38,7 +49,8 @@ tproxy_listen_tcp_chain = {
     tproxy_tcp_listen, {
         TproxyTcpResolver = {
             port = 12345,
-            auto_route_tcp = true,
+            --auto_route_tcp = true, -- only set route for tcp
+            auto_route = true, -- auto_route will set route for both tcp and udp at the appointed port
         }
     }
 }
@@ -183,16 +195,23 @@ config = {
     inbounds = {{
         chain = tproxy_listen_tcp_chain,
         tag = "listen1"
-    }},
+    },
+    {
+        chain = {tproxy_udp_listen},
+        tag = "listen_udp1"
+    }
+    },
     outbounds = {{
-        tag = "dial1",
+        tag = "direct",
         chain = opt_direct_chain
-    }}
+    }},
+
+    tag_route = {{"listen1", "direct"}, {"listen_udp1", "direct"}},
 
     --[[
 这个 config 块是演示 inbound 是 socks5http, outbound 是 direct 的情况
 
-但是用了 透明代理功能. 只能在 linux 上启用.
+但是用了 透明代理功能. 其只能在 linux 上使用.
 --]]
 
 }

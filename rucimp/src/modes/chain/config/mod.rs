@@ -214,6 +214,12 @@ pub enum InMapperConfig {
     },
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
+    TproxyUdpListener {
+        sockopt: crate::net::so2::SockOpt,
+        ext: Ext,
+    },
+
+    #[cfg(all(feature = "sockopt", target_os = "linux"))]
     TproxyTcpResolver(tproxy::Options),
 
     Adder(i8),
@@ -474,6 +480,14 @@ impl ToMapperBox for InMapperConfig {
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
             InMapperConfig::TproxyTcpResolver(opts) => {
                 Box::new(TcpResolver::new(opts.clone()).expect("ok"))
+            }
+
+            #[cfg(all(feature = "sockopt", target_os = "linux"))]
+            InMapperConfig::TproxyUdpListener { sockopt, ext } => {
+                Box::new(crate::map::tproxy::UDPListener {
+                    sopt: sockopt.clone(),
+                    ext_fields: Some(ext.to_ext_fields()),
+                })
             }
         }
     }

@@ -74,31 +74,6 @@ pub fn set_tproxy_socket_opts<T: AsRawFd>(v4: bool, is_udp: bool, socket: &T) ->
     Ok(())
 }
 
-// pub fn tproxy_get_ori_dst_addr<T>(s: &T) -> Result<SocketAddr>
-// where
-//     T: AsRawFd,
-// {
-//     let fd = s.as_raw_fd();
-
-//     unsafe {
-//         let mut target_addr: libc::sockaddr_storage = std::mem::zeroed();
-//         let mut target_addr_len = std::mem::size_of_val(&target_addr) as libc::socklen_t;
-
-//         let ret = libc::getsockname(
-//             fd,
-//             &mut target_addr as *mut _ as *mut _,
-//             &mut target_addr_len,
-//         );
-
-//         if ret != 0 {
-//             Err(Error::last_os_error())
-//         } else {
-//             // Convert sockaddr_storage to SocketAddr
-//             sockaddr_to_std(&target_addr)
-//         }
-//     }
-// }
-
 fn tproxy_get_destination_addr(msg: &libc::msghdr) -> Option<libc::sockaddr_storage> {
     unsafe {
         let mut cmsg: *mut libc::cmsghdr = libc::CMSG_FIRSTHDR(msg);
@@ -136,6 +111,7 @@ fn tproxy_get_destination_addr(msg: &libc::msghdr) -> Option<libc::sockaddr_stor
     None
 }
 
+/// usize, src_addr, dst_addr
 pub fn tproxy_recv_from_with_destination<T: AsRawFd>(
     socket: &T,
     buf: &mut [u8],

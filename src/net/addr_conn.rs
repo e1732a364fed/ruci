@@ -45,7 +45,7 @@ pub struct AddrConn {
 
     pub default_write_to: Option<Addr>,
 
-    cached_name: String,
+    pub cached_name: String,
 }
 impl Name for AddrConn {
     fn name(&self) -> &str {

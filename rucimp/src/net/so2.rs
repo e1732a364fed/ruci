@@ -22,7 +22,7 @@ pub struct SockOpt {
 pub async fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Result<Socket> {
     let a = na
         .get_socket_addr()
-        .context("listen_tcp failed, requires a has socket addr")?;
+        .context("new_socket2 failed, requires a has socket addr")?;
 
     let is_udp = na.network == Network::UDP;
 
@@ -44,7 +44,7 @@ pub async fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyho
     let socket = Socket::new(domain, typ, Some(protocol))?;
 
     if so.tproxy.unwrap_or_default() {
-        debug!("calls set_tproxy_socket_opts");
+        //debug!("calls set_tproxy_socket_opts");
         so_opts::set_tproxy_socket_opts(is_v4, is_udp, &socket)?;
     }
     if let Some(m) = so.so_mark {
@@ -54,7 +54,9 @@ pub async fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyho
         socket.bind_device(Some(d.as_bytes()))?;
     }
     if is_listen {
-        socket.set_nonblocking(true)?;
+        if na.network == Network::TCP {
+            socket.set_nonblocking(true)?;
+        }
 
         // can't set_nonblocking for dial, or we will get
         // Operation now in progress (os error 115) when calling connect
@@ -65,14 +67,15 @@ pub async fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyho
         socket.bind(&a.into())?;
 
         if na.network == Network::TCP {
-            debug!("calls socket.listen");
             socket.listen(128)?;
         }
     } else {
         let zeroa = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
         socket.bind(&zeroa.into()).context("bind failed")?;
 
-        socket.connect(&a.into()).context("connect failed")?;
+        if na.network == Network::TCP {
+            socket.connect(&a.into()).context("connect failed")?;
+        }
     }
 
     Ok(socket)
@@ -90,8 +93,16 @@ pub async fn dial_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpStream>
     Ok(s)
 }
 
+/// just bind to empty addr
 pub async fn dial_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
     let socket = new_socket2(na, so, false).await?;
+    let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
+    Ok(s)
+}
+
+pub async fn listen_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
+    debug!("so2: listen_udp {}", na);
+    let socket = new_socket2(na, so, true).await?;
     let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
     Ok(s)
 }

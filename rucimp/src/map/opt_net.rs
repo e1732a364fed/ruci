@@ -145,7 +145,18 @@ impl Mapper for OptDirect {
                     }
                     return MapResult::builder().c(stream).build();
                 }
-                return MapResult::builder().c(stream).b(params.b).build();
+                match stream {
+                    Stream::Conn(_) => return MapResult::builder().c(stream).b(params.b).build(),
+                    Stream::AddrConn(_) => {
+                        return MapResult::builder()
+                            .c(stream)
+                            .b(params.b)
+                            .a(Some(a))
+                            .build()
+                    }
+                    Stream::Generator(_) => todo!(),
+                    Stream::None => todo!(),
+                }
             }
             Err(e) => return MapResult::from_e(e.context(format!("opt_direct dial {} failed", a))),
         }

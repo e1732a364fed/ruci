@@ -128,7 +128,9 @@ pub async fn wait_close_sig_with_closer(
     Ok(())
 }
 
-pub fn run_command_list(list: Vec<&str>) -> anyhow::Result<()> {
+/// keep run next command if got error
+pub fn sync_run_command_list_no_stop(list: Vec<&str>) -> anyhow::Result<()> {
+    debug!("utils: start run_command_list ");
     for cmd in list {
         let mut strs: Vec<_> = cmd.split(' ').collect();
         if strs.is_empty() {
@@ -138,7 +140,45 @@ pub fn run_command_list(list: Vec<&str>) -> anyhow::Result<()> {
 
         debug!(cmd = strs[0], args = ?args, "running command",);
 
-        Command::new(strs[0]).args(args).spawn()?;
+        let r = Command::new(strs[0]).args(args).output();
+        debug!("result is {:?}", r)
     }
+    debug!("utils: finish run_command_list ");
+
     Ok(())
+}
+
+/// stop run if got error
+pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
+    debug!("utils: start run_command_list ");
+    for cmd in list {
+        let mut strs: Vec<_> = cmd.split(' ').collect();
+        if strs.is_empty() {
+            bail!("got empty command");
+        }
+        let args = strs.split_off(1);
+
+        debug!(cmd = strs[0], args = ?args, "running command",);
+
+        let r = Command::new(strs[0]).args(args).output();
+        debug!("result is {:?}", r);
+        if let Err(e) = r {
+            return Err(e.into());
+        }
+    }
+    debug!("utils: finish run_command_list ");
+
+    Ok(())
+}
+
+pub fn run_command(cmd: &str, args: &str) -> anyhow::Result<()> {
+    debug!(cmd = cmd, args = ?args, "running command",);
+
+    let r = Command::new(cmd).args(args.split(' ')).output()?;
+
+    if r.status.success() {
+        Ok(())
+    } else {
+        bail!("err output: {:?}", r);
+    }
 }
