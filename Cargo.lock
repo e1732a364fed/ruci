@@ -2262,6 +2262,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "webpki-roots",
 ]
 
 [[package]]

@@ -51,6 +51,7 @@ rustls = { version = "0.21" ,optional = true ,features = ["dangerous_configurati
 quinn = {version = "0.10.2",optional = true}
 
 rustls-pemfile = "1.0"
+webpki-roots = "0.22.6"
 
 [dev-dependencies]
 chrono = "0.4.34"

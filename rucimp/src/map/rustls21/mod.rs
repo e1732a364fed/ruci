@@ -26,12 +26,19 @@ pub struct ClientOptions {
 pub(crate) fn cc(opt: ClientOptions) -> anyhow::Result<ClientConfig> {
     let mut root_store = rustls::RootCertStore::empty();
 
+    root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
+        rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+            ta.subject,
+            ta.spki,
+            ta.name_constraints,
+        )
+    }));
+
     if let Some(c) = opt.cert_path {
         let c = load_certs(&c)?;
-        root_store.add(
-            c.first()
-                .ok_or(anyhow::anyhow!("load_certs got empty vec"))?,
-        )?;
+        for c in c {
+            root_store.add(&c)?;
+        }
     }
 
     let mut cc = ClientConfig::builder()
@@ -103,6 +110,7 @@ pub fn load_key(path: &Path) -> anyhow::Result<PrivateKey> {
     }
 }
 
+/// 一个文件有多个 cert 的情况一般是 fullchain
 pub fn load_certs(cert_path: &str) -> anyhow::Result<Vec<rustls::Certificate>> {
     let mut cert_chain_reader = BufReader::new(File::open(cert_path)?);
     let certs = rustls_pemfile::certs(&mut cert_chain_reader)?
