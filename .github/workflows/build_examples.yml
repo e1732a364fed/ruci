@@ -48,14 +48,13 @@ jobs:
     - name: Build
       run: |
         cd rucimp
-        cargo build --release --example chain --example suit  --example suit2 --verbose
+        cargo build --release --example chain --example suit --verbose
     - name: Copy Files 
       if: ${{ runner.os != 'Windows' }}
       run: |
         mkdir dist
         cp target/release/examples/chain dist/
         cp target/release/examples/suit dist/ 
-        cp target/release/examples/suit2 dist/
         cp -r resource dist/
 
     - name: Copy Windows Files 
@@ -64,7 +63,6 @@ jobs:
         mkdir dist
         cp target/release/examples/chain.exe dist/  
         cp target/release/examples/suit.exe dist/ 
-        cp target/release/examples/suit2.exe dist/ 
         cp -r resource dist/
   
     - name: Archive production artifacts

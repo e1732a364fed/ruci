@@ -1,7 +1,7 @@
 use std::{fs::remove_file, path::PathBuf};
 
 use anyhow::{bail, Context, Ok};
-use log::{debug, warn};
+use log::warn;
 use tokio::net::TcpListener;
 
 #[cfg(unix)]
@@ -93,7 +93,7 @@ impl Listener {
             Listener::UNIX((ul, _)) => {
                 let (unix_stream, unix_soa) = ul.accept().await?;
 
-                debug!("unix got {:?}", unix_soa);
+                //debug!("unix got {:?}", unix_soa); //listen unix will get unnamed
                 let a = if unix_soa.is_unnamed() {
                     net::Addr {
                         addr: net::NetAddr::Name("".to_string(), 0),
