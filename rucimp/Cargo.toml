@@ -63,7 +63,7 @@ geoip = ["maxminddb", "route"]
 
 sockopt = ["libc", "socket2"]
 
-native-tls-vendored = ["native-tls/vendored"]
+native-tls-vendored = ["native-tls/vendored","tokio-native-tls/vendored"]
 
 
 [[example]]
