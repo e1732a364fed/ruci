@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: full
+      RUSTFLAGS: -Ctarget-feature=+crt-static
+
     strategy:
       fail-fast: false
       matrix:

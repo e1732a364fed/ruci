@@ -1,5 +1,4 @@
 define compile
-	export RUSTFLAGS="-Ctarget-feature=+crt-static"
 	cargo build --target ${BUILD_TRIPLET} -F steganography -F lua -F file_server -F api_server -F api_client -F utils -F quinn -F use-native-tls -F tun -F smoltcp ${EXTRA} --release
 endef
 
@@ -8,7 +7,6 @@ define default_target
 endef
 
 define compile_cross
-	export RUSTFLAGS="-Ctarget-feature=+crt-static"
 	cargo build --target ${BUILD_TRIPLET} -F steganography -F lua54 -F file_server -F api_server -F api_client -F utils -F quinn -F native-tls-vendored -F tun -F smoltcp ${EXTRA} --release
 endef
 
@@ -25,6 +23,17 @@ define copy_exe
 	cp -r ../../resource dist/
 endef
 
+define copy_default_target
+	mkdir -p dist
+	cd ../../release && cp ruci-cmd ../../../crates/ruci-cmd/dist/
+	cp -r ../../resource dist/
+endef
+
+define copy_exe_default_target
+	mkdir -p dist
+	cd ../../release && cp ruci-cmd.exe ../../../crates/ruci-cmd/dist/
+	cp -r ../../resource dist/
+endef
 
 define xz
 	cd dist && tar -cJf ruci_cmd_$(1)_$(2).tar.xz *
@@ -35,6 +44,11 @@ main:
 	$(call copy)
 	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
 
+default_target:
+	$(call default_target)
+	$(call copy_default_target)
+	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
+
 exe:
 	$(call compile)
 	$(call copy_exe)
@@ -42,7 +56,7 @@ exe:
 
 win_default_target:
 	$(call default_target)
-	$(call copy_exe)
+	$(call copy_exe_default_target)
 	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
 
 vendor:
