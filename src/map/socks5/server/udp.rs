@@ -1,6 +1,7 @@
 use super::*;
 
-pub(super) async fn udp_associate(
+/// 自循环监听
+pub async fn udp_associate(
     cid: CID,
     mut base: Conn,
     client_future_addr: net::Addr,

@@ -473,16 +473,9 @@ impl Server {
             });
         }
         if cmd == CMD_UDPASSOCIATE && self.support_udp {
-            udp::udp_associate(cid, base, ad).await?;
-
-            return Ok(MapResult {
-                b: buf_to_ob(buf),
-                d: Some(map::AnyData::B(Box::new(map::NewConnectionOptData {
-                    new_connection: map::NewConnection::UdpConnection,
-                    data: d,
-                }))), //标记我们 采用了新的udp连接
-                ..Default::default()
-            });
+            let mut mr = udp2::udp_associate(cid, base, ad).await?;
+            mr.d = d;
+            return Ok(mr);
         }
 
         Ok(MapResult {

@@ -23,20 +23,21 @@ use crate::net::{
 #[derive(Clone)]
 pub struct InboundConn {
     base: Arc<UdpSocket>,
+    user_soa: SocketAddr,
 }
 
 impl InboundConn {
-    pub fn new(u: UdpSocket) -> Self {
-        InboundConn::newa(Arc::new(u))
+    pub fn new(u: UdpSocket, user_soa: SocketAddr) -> Self {
+        InboundConn::newa(Arc::new(u), user_soa)
     }
 
-    pub fn newa(u: Arc<UdpSocket>) -> Self {
-        InboundConn { base: u }
+    pub fn newa(u: Arc<UdpSocket>, user_soa: SocketAddr) -> Self {
+        InboundConn { base: u, user_soa }
     }
 }
 
-pub fn new_addr_conn(u: UdpSocket) -> AddrConn {
-    let a = Box::new(InboundConn::new(u));
+pub fn new_addr_conn(u: UdpSocket, user_soa: SocketAddr) -> AddrConn {
+    let a = Box::new(InboundConn::new(u, user_soa));
     let b = a.clone();
     AddrConn::new(a, b)
 }
@@ -104,6 +105,11 @@ impl AsyncReadAddr for InboundConn {
             Poll::Ready(r) => match r {
                 Err(e) => Poll::Ready(Err(e)),
                 Ok(so) => {
+                    if !so.eq(&self.user_soa) {
+                        // 读到不来自user的信息时不报错, 直接舍弃
+                        info!("socks5 udp got msg not from user");
+                        return Poll::Pending;
+                    }
                     let bs = rbuf.filled();
 
                     let r = decode_read(bs);
@@ -175,11 +181,16 @@ pub(super) async fn udp_associate(
 
     let ad = decode_udp_diagram(&mut buf)?;
 
-    let ibc = new_addr_conn(user_udp_socket);
+    let inbound_c = new_addr_conn(
+        user_udp_socket,
+        client_future_addr
+            .get_socket_addr()
+            .expect("should have correct socketAddr"),
+    );
     let mr = MapResult::builder()
         .a(Some(ad))
         .b(Some(buf))
-        .c(Stream::u(ibc));
+        .c(Stream::u(inbound_c));
 
     Ok(mr.build())
 }
