@@ -1,8 +1,10 @@
 use rucimp::{
     modes::chain::engine::Engine,
     utils::{wait_close_sig, wait_close_sig_with_closer},
+    DEFAULT_CONFIG_FILE_NAME,
 };
 use tokio::sync::mpsc;
+use tokio_util::bytes::BytesMut;
 use tracing::info;
 
 #[cfg(feature = "api_server")]
@@ -10,12 +12,12 @@ use crate::api;
 
 #[cfg(feature = "api_server")]
 use std::sync::Arc;
-use std::time::Duration;
+use std::{io::Read, time::Duration};
 
 ///blocking
 #[allow(unused)]
 pub(crate) async fn run(
-    file_name: &str,
+    mut file_name: String,
     args: crate::Args,
     #[cfg(feature = "api_server")] opts: Option<(
         api::server::Server,
@@ -31,8 +33,56 @@ pub(crate) async fn run(
     {
         use anyhow::Context;
 
-        let contents = rucimp::utils::try_get_file_content("local.lua", Some(file_name))
-            .with_context(|| format!("run chain engine try get file {} failed", file_name))?;
+        let get_file_f = || -> anyhow::Result<_> {
+            rucimp::utils::try_get_file_content(DEFAULT_CONFIG_FILE_NAME, Some(&file_name))
+                .with_context(|| format!("run chain engine try get file {} failed", file_name))
+        };
+
+        //获取到文件的 bytes, 或通过下载 或读取文件. 若 in_memory 给出则下载的文件不持久化
+
+        let file_bytes_v = if file_name.starts_with("http://") || file_name.starts_with("https://")
+        {
+            #[cfg(feature = "utils")]
+            {
+                let url: String = file_name.to_string();
+
+                file_name = url.split('/').last().unwrap().to_string();
+
+                let v = match args.in_memory {
+                    true => crate::utils::dl_url(&url, None).await?.unwrap(),
+                    false => {
+                        let _ = crate::utils::dl_url(&url, Some(&file_name)).await?;
+
+                        let mut v = vec![];
+
+                        let mut file = std::fs::File::open(&file_name)?;
+                        file.read_to_end(&mut v)?;
+
+                        v
+                    }
+                };
+                v
+            }
+
+            #[cfg(not(feature = "utils"))]
+            {
+                get_file_f()?
+            }
+        } else {
+            get_file_f()?
+        };
+
+        //zip, tar, lua 三种情况
+
+        let contents = if file_name.ends_with(".zip") {
+            todo!()
+        } else if file_name.ends_with(".tar") {
+            let b = BytesMut::from(file_bytes_v.as_slice());
+            let bs = rucimp::utils::get_file_from_tar(b, DEFAULT_CONFIG_FILE_NAME)?;
+            String::from_utf8_lossy(bs.as_slice()).to_string()
+        } else {
+            String::from_utf8_lossy(file_bytes_v.as_slice()).to_string()
+        };
 
         if args.infinite {
             e.init_lua_infinite_dynamic(contents)?;

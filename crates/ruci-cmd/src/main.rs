@@ -18,6 +18,7 @@ mod mode;
 use std::env::{self, set_var};
 
 use clap::{Parser, Subcommand, ValueEnum};
+use rucimp::DEFAULT_CONFIG_FILE_NAME;
 use tracing::info;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -38,9 +39,18 @@ struct Args {
     #[arg(short, long, value_enum, default_value_t = Mode::C )]
     mode: Mode,
 
-    /// basic config file
-    #[arg(short, long, value_name = "FILE", default_value = "local.lua")]
+    /// basic config file.
+    ///
+    /// If the given string is a url, then the app will try to download the file first.
+    #[arg(short, long, value_name = "FILE", default_value = DEFAULT_CONFIG_FILE_NAME)]
     config: String,
+
+    /// if this arg is given, and the "config" arg is a url, then the app will try to download
+    /// the config file but will not store it in the file system.
+    ///
+    /// This will cause the app to download the config file every time it runs.
+    #[arg(long)]
+    in_memory: bool,
 
     #[arg(short, long)]
     log_level: Option<tracing::Level>,
@@ -291,7 +301,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 /// blocking
 async fn start_engine(
     args: Args,
-    f: String,
+    file_name: String,
     #[cfg(feature = "api_server")] opts: Option<(
         api::server::Server,
         tokio::sync::mpsc::Receiver<()>,
@@ -301,7 +311,7 @@ async fn start_engine(
     match args.mode {
         Mode::C => {
             mode::chain::run(
-                &f,
+                file_name,
                 args,
                 #[cfg(feature = "api_server")]
                 opts,

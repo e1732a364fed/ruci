@@ -18,10 +18,10 @@ debug:
 ```sh
 
 # 指定不生成 log 
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun" -- --log-file ""
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography" -- --log-file ""
 
 # 指定lua配置
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun"  -- --log-file "" -c remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography"  -- --log-file "" -c remote.lua
 
 # powershell
 $Env:RUST_LOG="none,ruci=debug";cargo run --features "lua utils use-native-tls quinn tun" -- --log-file ""

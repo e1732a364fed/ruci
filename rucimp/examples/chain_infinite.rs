@@ -5,14 +5,14 @@
 
 use std::env;
 
-use rucimp::{modes::chain::engine::Engine, utils::*};
+use rucimp::{modes::chain::engine::Engine, utils::*, DEFAULT_CONFIG_FILE_NAME};
 mod shared;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     shared::print_env_version_and_init_log("example: chain_infinite");
 
-    let default_fn = "local.lua".to_string();
+    let default_fn = DEFAULT_CONFIG_FILE_NAME.to_string();
 
     let args: Vec<String> = env::args().collect();
 
@@ -22,7 +22,9 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let contents = try_get_file_content(&default_fn, arg_f)?;
+    let bs = try_get_file_content(&default_fn, arg_f)?;
+
+    let contents = String::from_utf8_lossy(bs.as_slice()).to_string();
 
     let mut e = Engine::new();
 

@@ -1,7 +1,7 @@
 /*!
 Provides some helper functions to read a certain resource file or to wait the shutdown signal.
 */
-use std::{fs, path::PathBuf};
+use std::io::Read;
 
 use anyhow::anyhow;
 use bytes::{Buf, BufMut, BytesMut};
@@ -15,7 +15,7 @@ use crate::COMMON_DIRS;
 /// try the default_file given or the first cmd argument
 ///
 /// and will set current dir to the directory
-pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyhow::Result<String> {
+pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyhow::Result<Vec<u8>> {
     let filename = match arg_file.as_ref() {
         Some(a) => a,
         None => default_file,
@@ -23,11 +23,14 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
 
     let mut last_e: Option<std::io::Error> = None;
     for dir in &COMMON_DIRS {
-        let s = String::from(*dir) + filename;
+        let file_name = String::from(*dir) + filename;
 
-        let r = fs::read_to_string(PathBuf::from(s));
-        match r {
-            Ok(r) => {
+        // let r = fs::read_to_string(PathBuf::from(s));
+
+        let file = std::fs::File::open(file_name);
+
+        match file {
+            Ok(mut file) => {
                 let mut cd = std::env::current_dir().expect("has current directory");
 
                 cd.push(dir);
@@ -37,7 +40,10 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
                     debug!("set current dir to {:?}", std::env::current_dir());
                 }
 
-                return Ok(r);
+                let mut v = vec![];
+                file.read_to_end(&mut v)?;
+
+                return Ok(v);
             }
             Err(e) => last_e = Some(e),
         }

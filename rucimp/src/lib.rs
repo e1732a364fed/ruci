@@ -22,3 +22,5 @@ pub const COMMON_DIRS: [&str; 6] = [
     "../resource/",
     "../../resource/",
 ];
+
+pub const DEFAULT_CONFIG_FILE_NAME: &str = "local.lua";

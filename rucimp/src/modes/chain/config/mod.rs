@@ -626,8 +626,8 @@ impl ToMapBox for InMapConfig {
             } => {
                 let r = crate::utils::try_get_file_content("", Some(file_name));
                 match r {
-                    Ok(lua_text) => Box::new(crate::map::lua::LuaMap {
-                        lua_text,
+                    Ok(lua_bytes) => Box::new(crate::map::lua::LuaMap {
+                        lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
                     }),
@@ -772,8 +772,8 @@ impl ToMapBox for OutMapConfig {
             } => {
                 let r = crate::utils::try_get_file_content("", Some(file_name));
                 match r {
-                    Ok(lua_text) => Box::new(crate::map::lua::LuaMap {
-                        lua_text,
+                    Ok(lua_bytes) => Box::new(crate::map::lua::LuaMap {
+                        lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
                     }),
