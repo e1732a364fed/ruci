@@ -279,7 +279,7 @@ pub async fn serve(
     info!("api server starting {addr}");
 
     let mut app = Router::new().route(
-        "/stop_engine",
+        "/api/engine/stop",
         get(stop_engine).with_state(s.close_engine_tx.clone()),
     );
 
@@ -289,39 +289,45 @@ pub async fn serve(
     }
 
     app = app
-        .route("/status", get(get_status))
+        .route("/api/status", get(get_status))
         .route(
-            "/start_engine",
+            "/api/engine/start",
             post(start_engine).with_state(start_core_opts),
         )
         .route(
-            "/gt/acc",
+            "/api/traffic/connections/alive/count",
             get(get_alive_conn_count).with_state(global_traffic.clone()),
         )
         .route(
-            "/gt/lci",
+            "/api/traffic/connections/last/id",
             get(get_last_conn_id).with_state(global_traffic.clone()),
         )
-        .route("/gt/u", get(get_gt_u).with_state(global_traffic.clone()))
-        .route("/gt/d", get(get_gt_d).with_state(global_traffic.clone()))
         .route(
-            "/all_c",
+            "/api/traffic/upload",
+            get(get_gt_u).with_state(global_traffic.clone()),
+        )
+        .route(
+            "/api/traffic/download",
+            get(get_gt_d).with_state(global_traffic.clone()),
+        )
+        .route(
+            "/api/connections",
             get(get_conn_infos).with_state(s.new_conn_info_map.clone()),
         )
         .route(
-            "/gt/loci",
+            "/api/connections/last/ok",
             get(get_last_ok_cid).with_state(s.new_conn_info_map.clone()),
         )
         .route(
-            "/cr/:cid",
+            "/api/connections/range/:cid",
             get(get_conn_infos_range).with_state(s.new_conn_info_map.clone()),
         )
         .route(
-            "/cc",
+            "/api/connections/count",
             get(get_conn_count).with_state(s.new_conn_info_map.clone()),
         )
         .route(
-            "/c/:cid",
+            "/api/connections/:cid",
             get(get_conn_info).with_state(s.new_conn_info_map.clone()),
         );
 
@@ -329,17 +335,26 @@ pub async fn serve(
     {
         let ism = s.flux_trace.is_monitoring.clone();
 
-        app = app.route("/m", get(is_monitoring_flux).with_state(ism.clone()));
-        app = app.route("/m_on", get(enable_monitor).with_state(ism.clone()));
-        app = app.route("/m_off", get(disable_monitor).with_state(ism.clone()));
+        app = app.route(
+            "/api/monitoring/status",
+            get(is_monitoring_flux).with_state(ism.clone()),
+        );
+        app = app.route(
+            "/api/monitoring/enable",
+            get(enable_monitor).with_state(ism.clone()),
+        );
+        app = app.route(
+            "/api/monitoring/disable",
+            get(disable_monitor).with_state(ism.clone()),
+        );
 
         app = app.route(
-            "/d/:cid",
+            "/api/traffic/download/:cid",
             get(get_flux_for).with_state(s.flux_trace.d_cache.clone()),
         );
 
         app = app.route(
-            "/u/:cid",
+            "/api/traffic/upload/:cid",
             get(get_flux_for).with_state(s.flux_trace.u_cache.clone()),
         );
     }

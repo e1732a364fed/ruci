@@ -1,4 +1,3 @@
-
 ruci-cmd 运行时产生的日志会自动创建并放在 logs 文件夹中, daily rolling
 
 # Run and Compile
@@ -146,69 +145,57 @@ pack是打包为 tar 文件， pack-z 是在打包为 tar.zip 文件。
 
 api:
 
-post /start_engine
-    start_engine
+post /api/engine/start
+    启动 rucimp 引擎
 
-/stop_engine
+/api/engine/stop
+    停止 rucimp 引擎
 
-    stop rucimp engine
+/api/status
+    获取服务器状态
 
-/gt/acc
+/api/traffic/connections/alive/count
+    获取活跃连接数
 
-    all connection count
+/api/traffic/connections/last/id
+    获取最后一个连接 ID
 
-/gt/lci
+/api/traffic/upload
+    获取总上传字节数
 
-    last conn id
+/api/traffic/download
+    获取总下载字节数
 
-/gt/u
+/api/connections/last/ok
+    获取最后一个成功的连接 ID
 
-    total upload bytes
+/api/connections
+    获取所有连接信息
+    (可能返回内容过长，建议使用 connections/count 和 connections/range 代替)
 
-/gt/d
+/api/connections/count
+    获取连接数量
 
-    total download bytes
+/api/connections/range/:cid
+    获取 CID 大于等于指定值的所有连接信息
 
-/loci
+/api/connections/:cid
+    获取指定 CID 的连接信息
 
-    get last ok cid
+/api/monitoring/status
+    获取监控状态 (true/false)
 
-/all_c
+/api/monitoring/enable
+    启用监控
 
-    get all connection's info
-    (might be too long, try use cc and cr instead)
+/api/monitoring/disable
+    禁用监控
 
-/cc
+/api/traffic/download/:cid
+    获取指定 CID 连接的下载流量信息
 
-    connections number
-
-/cr/3
-
-    get infos for all connections whose cid is after cid: 3
-
-/c/1
-
-    get info for connection with cid: 1
-
-/m
-    
-    get monitor state (true/false)
-
-/m_on
-    
-    enable monitor
-
-/m_off
-    
-    disable monitor
-
-/d/1
-    
-    get download flux for connection with cid: 1
-
-/u/1
-    
-    get upload flux for connection with cid: 1
+/api/traffic/upload/:cid
+    获取指定 CID 连接的上传流量信息
 
 
 # 实现细节
