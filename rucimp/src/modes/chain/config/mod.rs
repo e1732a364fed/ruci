@@ -1,11 +1,11 @@
 /*!
- * 链式配置
+ * 定义了静态链式配置 StaticConfig
+ * 静态链是运行前即知晓的链, 因此可以用 Vec 表示
  */
 
 #[cfg(feature = "lua")]
 pub mod lua;
 
-#[cfg(feature = "lua")]
 pub mod dynamic;
 
 use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};

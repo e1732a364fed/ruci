@@ -9,6 +9,10 @@ fn test() {
     str_to_userbox("plaintext:u0\n p2");
 }
 
+/// convert string with certain prefix to ruci::user::UserBox
+///
+/// support plaintext:xxx, trojan:xxx
+///
 pub fn str_to_userbox(str: &str) -> Option<UserBox> {
     let s = String::from(str);
     let v: Vec<&str> = s.splitn(2, ":").collect();
