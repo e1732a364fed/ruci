@@ -33,6 +33,8 @@ use crate::{
     user::{self, UserVec},
 };
 
+use super::OptVecData;
+
 /// Send + Sync to use in async
 ///
 /// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 MIterBox
@@ -50,11 +52,11 @@ pub trait OutSelector: Send + Sync {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: &Vec<Option<AnyData>>,
+        params: &Vec<OptVecData>,
     ) -> MIterBox;
 }
 
-pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<UserVec> {
+pub async fn get_user_from_anydata_vec(adv: &Vec<OptVecData>) -> Option<UserVec> {
     let mut v = UserVec::new();
 
     for anyd in adv
@@ -63,10 +65,22 @@ pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<Use
         .map(|d| d.as_ref().expect("d is some"))
     {
         match anyd {
-            AnyData::User(u) => {
-                v.0.push(user::UserBox(u.clone()));
+            super::VecAnyData::Data(data) => match data {
+                AnyData::User(u) => {
+                    v.0.push(user::UserBox(u.clone()));
+                }
+                _ => {}
+            },
+            super::VecAnyData::Vec(v2) => {
+                for data in v2 {
+                    match data {
+                        AnyData::User(u) => {
+                            v.0.push(user::UserBox(u.clone()));
+                        }
+                        _ => {}
+                    }
+                }
             }
-            _ => {}
         }
     }
     if v.0.is_empty() {
@@ -87,7 +101,7 @@ impl OutSelector for FixedOutSelector {
         &self,
         _addr: &net::Addr,
         _in_chain_tag: &str,
-        _params: &Vec<Option<AnyData>>,
+        _params: &Vec<OptVecData>,
     ) -> MIterBox {
         self.default.clone()
     }
@@ -106,7 +120,7 @@ impl OutSelector for TagOutSelector {
         &self,
         _addr: &net::Addr,
         in_chain_tag: &str,
-        _params: &Vec<Option<AnyData>>,
+        _params: &Vec<OptVecData>,
     ) -> MIterBox {
         let ov = self.outbounds_tag_route_map.get(in_chain_tag);
         match ov {
@@ -163,7 +177,7 @@ impl OutSelector for InboundInfoOutSelector {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: &Vec<Option<AnyData>>,
+        params: &Vec<OptVecData>,
     ) -> MIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {
@@ -289,9 +303,9 @@ mod test {
         let u = PlainText::new("user".to_string(), "pass".to_string());
         let ub: Box<dyn User> = Box::new(u);
 
-        let mut params: Vec<Option<AnyData>> = Vec::new();
+        let mut params: Vec<OptVecData> = Vec::new();
         // params.push(Some(AnyData::B(Box::new(ub))));
-        params.push(Some(AnyData::User(ub)));
+        params.push(Some(VecAnyData::Data(AnyData::User(ub))));
 
         let x = rsos.select(&Addr::default(), "l1", &params).await;
 

@@ -280,7 +280,7 @@ mod test {
     /// test the auto timeout feature in addrconn
     /// it will write a data once per second for 5 times,
     ///
-    /// then it should hung for CP_TIMEOUT of time, then returns.
+    /// then it should hung for CP_UDP_TIMEOUT of time, then returns.
     ///
     #[tokio::test]
     async fn test_addrconn_cp() -> io::Result<()> {

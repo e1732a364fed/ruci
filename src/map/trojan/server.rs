@@ -159,14 +159,18 @@ impl Server {
             })
         }
 
+        let d = ou_to_od(opt_user);
+        let d = d.map(|x| map::VecAnyData::Data(x));
+
         if is_udp {
             let u = udp::from(base);
             let mut mr = MapResult::newu(u).a(Some(ta)).b(Some(buf)).build();
-            mr.d = ou_to_od(opt_user);
+
+            mr.d = d;
             Ok(mr)
         } else {
             let mut mr = MapResult::newc(base).a(Some(ta)).b(Some(buf)).build();
-            mr.d = ou_to_od(opt_user);
+            mr.d = d;
 
             Ok(mr)
         }

@@ -23,7 +23,7 @@ use crate::{
     Name,
 };
 
-use super::{MapperBox, Stream, ToMapper};
+use super::{MapperBox, Stream, ToMapper, VecAnyData};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
@@ -226,14 +226,17 @@ impl Server {
             base.write_all(CONNECT_REPLY_STR.as_bytes()).await?;
         }
 
+        let data = authed_user.map(|up| {
+            let b: Box<dyn User> = Box::new(up);
+            map::AnyData::User(b)
+        });
+        let output_data = data.map(|x| VecAnyData::Data(x));
+
         Ok(MapResult {
             a: Some(ta),
             b: buf_to_ob(buf),
             c: Stream::c(base),
-            d: authed_user.map(|up| {
-                let b: Box<dyn User> = Box::new(up);
-                map::AnyData::User(b)
-            }), //将 该登录的用户信息 作为 额外信息 传回
+            d: output_data, //将 该登录的用户信息 作为 额外信息 传回
             ..Default::default()
         })
     }

@@ -118,9 +118,8 @@ impl Client {
             )
             .await?;
 
-        let mrb = MapResult::builder()
-            .a(a)
-            .d(map::AnyData::B(Box::new(ClientTLSConnDescriber {})));
+        let mrb = MapResult::builder().a(a);
+        // .d(map::AnyData::B(Box::new(ClientTLSConnDescriber {})));
 
         let mut bc = Box::new(new_c);
 

@@ -34,7 +34,7 @@ async fn dial_future(
                     c: Stream::Conn(last_result.c.try_unwrap_tcp().expect("last_result as c")),
                     a: Some(ta.clone()),
                     b: None,
-                    d: None,
+                    d: Vec::new(),
                     shutdown_rx: None,
                 },
             )
@@ -87,7 +87,7 @@ async fn listen_future(
                         c: Stream::Conn(last_result.c.try_unwrap_tcp().expect("last_result as c")),
                         a: None,
                         b: None,
-                        d: None,
+                        d: Vec::new(),
                         shutdown_rx: None,
                     },
                 )

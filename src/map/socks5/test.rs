@@ -196,7 +196,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> anyhow::Result<()> {
                 c: map::Stream::Conn(Box::new(client_tcps)),
                 a: None,
                 b: Some(earlybuf),
-                d: None,
+                d: Vec::new(),
                 shutdown_rx: None,
             },
         )
@@ -264,21 +264,33 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
         let d = r.d.expect("result.d has value");
 
         match d {
-            // crate::map::AnyData::B(mut d) => {
-            //     if let Some(up) = d.downcast_mut::<Box<dyn User>>() {
-            //         assert_eq!(up.identity_str(), "u0");
-            //         assert_eq!(up.auth_str(), "plaintext:u0\np0");
-            //     } else {
-            //         panic!("failed downcasted to UserPass, ")
-            //     }
-            // }
-            crate::map::AnyData::User(up) => {
-                assert_eq!(up.identity_str(), "u0");
-                assert_eq!(up.auth_str(), "plaintext:u0\np0");
-                println!("auth user succeed")
-            }
-            _ => panic!("need AsyncAnyData::B"),
+            map::VecAnyData::Data(d) => match d {
+                map::AnyData::User(up) => {
+                    assert_eq!(up.identity_str(), "u0");
+                    assert_eq!(up.auth_str(), "plaintext:u0\np0");
+                    println!("auth user succeed")
+                }
+                _ => panic!("socks5 should returns a User data"),
+            },
+            map::VecAnyData::Vec(_) => panic!("got vec instead of pure data"),
         }
+
+        // match d {
+        //     // crate::map::AnyData::B(mut d) => {
+        //     //     if let Some(up) = d.downcast_mut::<Box<dyn User>>() {
+        //     //         assert_eq!(up.identity_str(), "u0");
+        //     //         assert_eq!(up.auth_str(), "plaintext:u0\np0");
+        //     //     } else {
+        //     //         panic!("failed downcasted to UserPass, ")
+        //     //     }
+        //     // }
+        //     crate::map::AnyData::User(up) => {
+        //         assert_eq!(up.identity_str(), "u0");
+        //         assert_eq!(up.auth_str(), "plaintext:u0\np0");
+        //         println!("auth user succeed")
+        //     }
+        //     _ => panic!("need AsyncAnyData::B"),
+        // }
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];

@@ -6,7 +6,7 @@ use tokio::sync::{
     oneshot,
 };
 
-use super::MapResult;
+use super::{MapResult, VecAnyData};
 
 /// non-blocking
 pub async fn loop_accept(
@@ -64,14 +64,11 @@ async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::
                 laddr
             );
         }
+        let data = AnyData::RLAddr((raddr, laddr));
+        let output_data = VecAnyData::Data(data);
 
         let r = tx
-            .send(
-                MapResult::builder()
-                    .c(stream)
-                    .d(AnyData::RLAddr((raddr, laddr)))
-                    .build(),
-            )
+            .send(MapResult::builder().c(stream).d(output_data).build())
             .await;
 
         if let Err(e) = r {

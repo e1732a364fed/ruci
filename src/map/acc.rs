@@ -22,7 +22,7 @@ pub struct AccumulateResult {
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
     pub c: Stream,
-    pub d: Vec<OptData>,
+    pub d: Vec<OptVecData>,
     pub e: Option<anyhow::Error>,
 
     /// 代表 迭代完成后，最终的 cid
@@ -88,19 +88,14 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
 
     let mut last_r: MapResult = initial_state;
 
-    let mut calculated_output_vec = Vec::new();
+    let mut calculated_output_vec: Vec<OptVecData> = Vec::new();
 
     let mut tag: String = String::new();
 
     for adder in mappers.by_ref() {
-        let input_data = calculated_output_vec
-            .last()
-            .and_then(|x: &Option<AnyData>| {
-                x.as_ref().and_then(|y| match y {
-                    AnyData::A(a) => Some(AnyData::A(a.clone())),
-                    _ => None,
-                })
-            });
+        // let input_data = calculated_output_vec
+        //     .last()
+        //     .and_then(|x: &OptVecData| x.as_ref().and_then(|y| Some(y.clone())));
 
         if log_enabled!(log::Level::Debug) {
             debug!("acc: {cid} , adder: {}", adder.name())
@@ -116,7 +111,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
                     c: last_r.c,
                     a: last_r.a,
                     b: last_r.b,
-                    d: input_data,
+                    d: calculated_output_vec.clone(),
                     ..Default::default()
                 },
             )

@@ -41,7 +41,7 @@ async fn dial_tls_in_mem() {
                 c: map::Stream::Conn(Box::new(client_tcps)),
                 a: Some(ta),
                 b: None,
-                d: None,
+                d: Vec::new(),
                 shutdown_rx: None,
             },
         )
@@ -77,7 +77,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
                 c: map::Stream::Conn(Box::new(cs)),
                 a: Some(ta),
                 b: None,
-                d: None,
+                d: Vec::new(),
                 shutdown_rx: None,
             },
         )

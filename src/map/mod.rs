@@ -55,25 +55,40 @@ use log::{info, log_enabled, warn};
 use tokio::sync::oneshot;
 use typed_builder::TypedBuilder;
 
-use std::{fmt::Debug, sync::Arc};
+use std::{
+    fmt::Debug,
+    sync::{atomic::AtomicU64, Arc},
+};
 
 use self::addr_conn::AddrConn;
 
 /// 一种用于表示 Mapper 的生成的数据的类型
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AnyData {
-    A(AnyArc),
-    B(AnyBox),
+    //A(AnyArc),
+    //B(AnyBox),
     Bool(bool),
+    CID(CID),
+    String(String),
     U64(u64),
     I64(i64),
     F64(f64),
+    AU64(Arc<AtomicU64>),
+
     Addr(net::Addr),                //store raddr
     RLAddr((net::Addr, net::Addr)), //store raddr and laddr
     User(Box<dyn user::User>),      //store authed user
 }
 
-pub type OptData = Option<AnyData>;
+/// 一个 Mapper 实际生成的数据可能是一个单一的数据，也可能是一个数组
+#[derive(Debug, Clone)]
+pub enum VecAnyData {
+    Data(AnyData),
+    Vec(Vec<AnyData>),
+}
+
+/// Mapper 的 maps 返回的 MapResult 中的实际类型
+pub type OptVecData = Option<VecAnyData>;
 
 /// the parameter for Mapper's maps method
 #[derive(Default, TypedBuilder)]
@@ -90,8 +105,8 @@ pub struct MapParams {
     #[builder(default)]
     pub c: Stream,
 
-    #[builder(default, setter(strip_option))]
-    pub d: Option<AnyData>,
+    #[builder(default)]
+    pub d: Vec<OptVecData>,
 
     /// if Stream is a Generator, shutdown_rx should be provided.
     /// it will stop generating if shutdown_rx got msg.
@@ -115,9 +130,22 @@ impl MapParams {
     pub fn to_result(self) -> MapResult {
         let rb = MapResult::builder().a(self.a).b(self.b).c(self.c);
 
-        match self.d {
-            Some(d) => rb.d(d).build(),
-            None => rb.build(),
+        // match self.d {
+        //     Some(d) => rb.d(d).build(),
+        //     None => rb.build(),
+        // }
+        if self.d.is_empty() {
+            rb.build()
+        } else {
+            let oolast = self.d.last();
+            match oolast {
+                Some(olast) => match olast {
+                    Some(last) => rb.d(last.clone()).build(),
+                    None => rb.build(),
+                },
+                None => rb.build(),
+            }
+            //b.d(self.d.last().clone()).build()
         }
     }
 }
@@ -135,10 +163,8 @@ pub struct MapResult {
     #[builder(default)]
     pub c: Stream,
 
-    ///extra data, 如果d为 AnyData::B, 则只能被外部调用;, 如果
-    /// d为 AnyData::A, 可其可以作为 下一层的 InputData
     #[builder(default, setter(strip_option))]
-    pub d: Option<AnyData>,
+    pub d: Option<VecAnyData>,
 
     #[builder(default, setter(strip_option, into))]
     pub e: Option<anyhow::Error>,

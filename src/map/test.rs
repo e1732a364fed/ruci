@@ -123,28 +123,67 @@ async fn test_counter1() -> anyhow::Result<()> {
     let d = r.d.expect("counter returns an extra data");
 
     match d {
-        crate::map::AnyData::B(mut d) => {
-            if let Some(cd) = d.downcast_mut::<counter::CounterData>() {
-                let mut inital_data = [1u8, 2, 3];
-                r.c.try_unwrap_tcp()?.write(&mut inital_data).await?;
-
-                let v = writevc.lock();
-
-                println!("it     be {:?}", v);
-                assert_eq!(v.len(), inital_data.len());
-
-                println!(
-                    "Successfully downcasted to CounterConn, {}, {}",
-                    cd.ub.load(std::sync::atomic::Ordering::Relaxed),
-                    cd.db.load(std::sync::atomic::Ordering::Relaxed)
-                );
-                Ok(())
+        crate::map::VecAnyData::Data(_) => {
+            panic!("counter should return a vec instead of pure data")
+        }
+        crate::map::VecAnyData::Vec(mut v) => {
+            if v.len() != 2 {
+                panic!("counter should return 2 data, got {}", v.len())
             } else {
-                panic!("failed downcasted to CounterConn, ")
+                let d1 = v.pop().expect("vec has 1 data ");
+                let d2 = v.pop().expect("vec has 2 data ");
+
+                match d1 {
+                    crate::map::AnyData::AU64(db) => match d2 {
+                        crate::map::AnyData::AU64(ub) => {
+                            let mut inital_data = [1u8, 2, 3];
+                            r.c.try_unwrap_tcp()?.write(&mut inital_data).await?;
+
+                            let v = writevc.lock();
+
+                            println!("it     be {:?}", v);
+                            assert_eq!(v.len(), inital_data.len());
+
+                            println!(
+                                "Successfully downcasted to CounterConn, {}, {}",
+                                ub.load(std::sync::atomic::Ordering::Relaxed),
+                                db.load(std::sync::atomic::Ordering::Relaxed)
+                            );
+                            return Ok(());
+                        }
+
+                        _ => panic!("counter got data2 other than AtomicU64"),
+                    },
+
+                    _ => panic!("counter got data1 other than AtomicU64"),
+                }
             }
         }
-        _ => panic!("need AsyncAnyData::B"),
     }
+
+    // match d {
+    //     crate::map::AnyData::B(mut d) => {
+    //         if let Some(cd) = d.downcast_mut::<counter::CounterData>() {
+    //             let mut inital_data = [1u8, 2, 3];
+    //             r.c.try_unwrap_tcp()?.write(&mut inital_data).await?;
+
+    //             let v = writevc.lock();
+
+    //             println!("it     be {:?}", v);
+    //             assert_eq!(v.len(), inital_data.len());
+
+    //             println!(
+    //                 "Successfully downcasted to CounterConn, {}, {}",
+    //                 cd.ub.load(std::sync::atomic::Ordering::Relaxed),
+    //                 cd.db.load(std::sync::atomic::Ordering::Relaxed)
+    //             );
+    //             Ok(())
+    //         } else {
+    //             panic!("failed downcasted to CounterConn, ")
+    //         }
+    //     }
+    //     _ => panic!("need AsyncAnyData::B"),
+    // }
 }
 
 #[test]

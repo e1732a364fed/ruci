@@ -274,7 +274,7 @@ pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: cha
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 
 /// 循环读写直到read错误发生. 不会认为 read错误为错误. 每一次read都会以
-/// READ_UDP_TIMEOUT 为 最长等待时间，一旦读不到，就会退出函数
+/// CP_UDP_TIMEOUT 为 最长等待时间，一旦读不到，就会退出函数
 ///
 /// 读到后，如果写超过了同样的时间，也退出函数
 pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(

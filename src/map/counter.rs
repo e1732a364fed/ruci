@@ -119,7 +119,7 @@ impl Mapper for Counter {
     /// ignores behavior
     ///
     /// ## return value
-    ///  MapResult.d is  Box<CounterData>
+    ///  MapResult.d is  vec![AnyData::AU64(cd.ub.clone()), AnyData::AU64(cd.db.clone())];
     ///
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
@@ -143,11 +143,17 @@ impl Mapper for Counter {
                     data: cd.clone(),
                     base: Box::pin(c),
                 };
+
+                let output_data: Vec<AnyData> =
+                    vec![AnyData::AU64(cd.ub.clone()), AnyData::AU64(cd.db.clone())];
+
+                let od = VecAnyData::Vec(output_data);
+
                 MapResult::builder()
                     .a(params.a)
                     .b(params.b)
                     .c(Stream::c(Box::new(cc)))
-                    .d(AnyData::B(Box::new(cd)))
+                    .d(od)
                     .build()
             }
             Stream::AddrConn(_) => {

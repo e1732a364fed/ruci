@@ -11,7 +11,7 @@ use super::*;
 pub trait DynIterator {
     type Item;
 
-    fn next(&mut self, data: Vec<OptData>) -> Option<Self::Item>;
+    fn next(&mut self, data: Vec<OptVecData>) -> Option<Self::Item>;
 }
 
 pub trait DMIter: DynIterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug {}
