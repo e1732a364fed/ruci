@@ -727,7 +727,7 @@ dependencies = [
 
 [[package]]
 name = "ruci"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "base64",
@@ -753,7 +753,7 @@ dependencies = [
 
 [[package]]
 name = "rucimp"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "bytes",

@@ -1,5 +1,9 @@
 
+rucimp 提供数个示例可执行文件, 若要全功能, 用 rucimple
+
 suit, suit2, chain 分为以不同的代码运行 suit模式和 chain 模式
+
+
 
 # 通用
 

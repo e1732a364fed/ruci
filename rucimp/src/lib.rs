@@ -6,4 +6,4 @@
 pub mod chain;
 pub mod suit;
 
-pub const VERSION: &str = "0.0.0";
+pub const VERSION: &str = "0.0.1";

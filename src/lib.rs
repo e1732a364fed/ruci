@@ -11,7 +11,7 @@ pub mod net;
 pub mod relay;
 pub mod user;
 
-pub const VERSION: &str = "0.0.0";
+pub const VERSION: &str = "0.0.1";
 
 /// many types in ruci have a name.
 /// 约定：使用小写字母+下划线的形式

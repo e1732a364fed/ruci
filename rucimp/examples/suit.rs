@@ -1,7 +1,5 @@
 /*!
- * rucimp 提供数个示例可执行文件, 若要全功能, 用 rucimple
- *
- * 在working dir 或 working dir /resource 文件夹查找 config.toml 文件, 读取它并以suit模式运行。
+ * 在working dir 或 working dir /resource 文件夹查找 local.suit.toml 文件, 读取它并以suit模式运行。
  */
 
 use std::{
@@ -18,7 +16,6 @@ use rucimp::{
     suit::engine::SuitEngine,
 };
 
-/// 使用 config.suit.toml, resource/config.suit.toml, 或 用户提供的参数作为配置文件
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("rucimp~ suit\n");
@@ -46,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let args: Vec<String> = env::args().collect();
 
-    let default_file = "config.suit.toml".to_string();
+    let default_file = "local.suit.toml".to_string();
 
     let filename = if args.len() > 1 {
         &args[1]

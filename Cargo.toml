@@ -1,7 +1,7 @@
 workspace = { members = [ "rucimp" ,"./"]  }
 [package]
 name = "ruci"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2021"
  
 [profile.release]
