@@ -76,13 +76,7 @@ tun 在 server 端使用时, 也必须要运行上面 tproxy 的 ip_forward 命�
 
 ip_forward 不仅用于转发局域网设备流量, 也用于从 本机的 tun 转发到 本机的 网卡
 
-## 名词
 
-在 suit 模式中, 使用 server, client 这样的形式, 而在 chain 模式中, 使用 inbound 和 
-outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不同, 因此叫法不同
-
-在 suit 模式中, server 的行为是 listen, client 的行为是 dial; 而在 chain 模式中, inbound
-和 outbound 行为都叫做 map (映射) 
 
 ### 动态链
 
@@ -469,5 +463,12 @@ ip route add {v} dev {original_dev_name} metric 100
 ## 日志
 
 从0.0.6起，ruci 不再继续开发 suit 模式。
-从0.0.7起，ruci 移除了 suit 模式。
+从0.0.7起，ruci 移除了 suit 模式。同时对 chain 模式 启用 toml配置格式
 
+### 名词
+
+在 suit 模式中, 使用 server, client 这样的形式, 而在 chain 模式中, 使用 inbound 和 
+outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不同, 因此叫法不同
+
+在 suit 模式中, server 的行为是 listen, client 的行为是 dial; 而在 chain 模式中, inbound
+和 outbound 行为都叫做 map (映射) 

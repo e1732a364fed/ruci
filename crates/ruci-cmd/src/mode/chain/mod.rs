@@ -1,6 +1,6 @@
 use anyhow::bail;
 use rucimp::{
-    modes::chain::engine::Engine,
+    modes::chain::{config::StaticConfig, engine::Engine},
     utils::{wait_close_sig, wait_close_sig_with_closer, FileSource},
     DEFAULT_LUA_CONFIG_FILE_NAME,
 };
@@ -129,6 +129,8 @@ pub(crate) async fn run(
             }
         }
     } else if file_name.ends_with(".toml") {
+        let config: StaticConfig = rucimp::toml::from_str(&contents)?;
+        e.init_static(config);
     }
 
     #[cfg(feature = "api_server")]

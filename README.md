@@ -10,7 +10,7 @@ ruci pronounced lucy.
 
 ## Intro
 
-A network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+)
+A network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+) using Lua/toml as config format.
 
 用户 入门 ruci 可阅读 [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
 
@@ -132,7 +132,6 @@ Multi-stream generator【多流发生器】(one to many): `function( Option<stre
 
 发挥你的想象力吧. 
 
-而作为suit配置格式实际上也是运行在链式结构中的
 能够定义动态的链式结构 (如跳转, 以及通过跳转实现的 循环)的链式配置文件要采用脚本语言格式.  这里使用 Lua。
 
 只会返回 有限个Map可能 的动态链 是一种 有限状态机. 静态链是一种特化的有限状态机, 其状态转换函数是 `fn(i)->++i`。
@@ -191,9 +190,9 @@ o2node-.->collector
 ### rucimp
 
 - [x] chain配置格式 (动态链须为lua格式)
-- [x] static chain (静态链)
+- [x] static chain (静态链, 可为 lua/toml 格式)
 - [x] dynamic chain (finite, infinite) (动态链)(有限动态链, 完全动态链)
-- [x] rucimp/examples: suit , chain, etc.
+- [x] rucimp/examples:   chain, etc.
 - [x] rule_route 规则路由
 - [x] tproxy (with auto_route)
 - [x] native-tls

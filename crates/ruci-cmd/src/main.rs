@@ -37,13 +37,13 @@ struct Args {
     #[arg(short, long, value_enum, default_value_t = Mode::C )]
     mode: Mode,
 
-    /// basic config file.
+    /// Basic config file. Can be of lua or toml format.
     ///
     /// If the given string is a url, then the app will try to download the file first.
     #[arg(short, long, value_name = "FILE", default_value = DEFAULT_LUA_CONFIG_FILE_NAME)]
     config: String,
 
-    /// if this arg is given, and the "config" arg is a url, then the app will try to download
+    /// If this arg is given, and the "config" arg is a url, then the app will try to download
     /// the config file but will not store it in the file system.
     ///
     /// This will cause the app to download the config file every time it runs.
@@ -53,7 +53,7 @@ struct Args {
     #[arg(short, long)]
     log_level: Option<tracing::Level>,
 
-    /// specify the log file prefix name.
+    /// Specify the log file prefix name.
     ///
     /// if empty string is given, no log file will be generated;
     ///
@@ -61,7 +61,7 @@ struct Args {
     #[arg(long)]
     log_file: Option<String>,
 
-    /// specify the directory where log files would be in
+    /// Specify the directory where log files would be in
     ///
     /// if empty string is given, log file will be generated in default folder
     ///
@@ -69,13 +69,13 @@ struct Args {
     #[arg(long)]
     log_dir: Option<String>,
 
-    /// use infinite dynamic chain that is written in the lua config file (the "Infinite"
+    /// Use infinite dynamic chain that is written in the lua config file (the "Infinite"
     /// global variable must exist)
     #[cfg(any(feature = "lua", feature = "lua54"))]
     #[arg(long)]
     infinite: bool,
 
-    /// enable flux trace (might slow down performance)
+    /// Enable flux trace (might slow down performance)
     #[cfg(feature = "trace")]
     #[arg(long)]
     trace: bool,
@@ -84,7 +84,7 @@ struct Args {
     #[arg(short, long, value_enum)]
     api_server: Vec<api::server::Command>,
 
-    /// default is "127.0.0.1:40681"
+    /// Default is "127.0.0.1:40681"
     #[cfg(feature = "api_server")]
     #[arg(long)]
     api_addr: Option<String>,
@@ -95,21 +95,21 @@ struct Args {
 
 #[derive(Subcommand, Clone)]
 enum SubCommands {
-    /// api client
+    /// Api client
     #[cfg(feature = "api_client")]
     ApiClient {
         #[command(subcommand)]
         command: Option<api::client::Commands>,
     },
 
-    /// utils
+    /// Utilities
     #[cfg(feature = "utils")]
     Utils {
         #[command(subcommand)]
         command: Option<utils::Commands>,
     },
 
-    /// configure system route table
+    /// Configure system route table
     Route,
 }
 
