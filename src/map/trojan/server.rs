@@ -98,7 +98,7 @@ impl Server {
 
         let opt_user = self.um.auth_user_by_authstr(&hash_str).await;
 
-        if let None = opt_user {
+        if opt_user.is_none() {
             return Ok(MapResult::buf_err_str(buf, "hash not match"));
         }
         let crlf = buf.get_u16();

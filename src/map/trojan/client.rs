@@ -19,7 +19,7 @@ pub struct Client {
 
 impl Client {
     pub fn new(plain_text_password: &str) -> Self {
-        let u = User::new(&plain_text_password);
+        let u = User::new(plain_text_password);
         Client { u }
     }
 
@@ -44,7 +44,7 @@ impl Client {
         if let Some(b) = first_payload {
             buf.extend_from_slice(&b);
         }
-        base.write(&buf).await?;
+        base.write_all(&buf).await?;
 
         Ok(MapResult::c(base))
     }

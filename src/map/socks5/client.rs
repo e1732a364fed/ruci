@@ -33,7 +33,7 @@ impl Client {
         };
         buf.extend_from_slice(&[VERSION5, 1, adopted_method][..]);
 
-        base.write(&buf[..]).await?;
+        base.write_all(&buf[..]).await?;
         buf.resize(BUFLEN, 0);
         let mut n = base.read(&mut buf).await?;
 
@@ -68,7 +68,7 @@ impl Client {
         buf.clear();
         buf.extend_from_slice(&[VERSION5, CMD_CONNECT, 0][..]);
         net::helpers::addr_to_socks5_bytes(&a, &mut buf);
-        base.write(&buf).await?;
+        base.write_all(&buf).await?;
 
         buf.resize(BUFLEN, 0);
         n = base.read(&mut buf).await?;

@@ -11,7 +11,7 @@ use super::server::ServerOptions;
 
 pub fn load_ser_config(options: &ServerOptions) -> io::Result<ServerConfig> {
     let certs = load_certs(&options.cert)?;
-    debug_assert!(certs.len() > 0);
+    debug_assert!(!certs.is_empty());
     let key = load_keys(&options.key)?;
 
     //todo: we don't use client authentication yet

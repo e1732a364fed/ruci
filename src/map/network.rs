@@ -70,10 +70,8 @@ impl TcpDialer {
         let r = TcpStream::connect(a.get_socket_addr().unwrap()).await;
 
         match r {
-            Ok(c) => {
-                return MapResult::c(Box::new(c));
-            }
-            Err(e) => return MapResult::from_err(e),
+            Ok(c) => MapResult::c(Box::new(c)),
+            Err(e) => MapResult::from_err(e),
         }
     }
 }
@@ -203,7 +201,7 @@ impl TcpStreamGenerator {
                         }
                     }
                 });
-                return Ok(rx);
+                Ok(rx)
             }
             Err(e) => Err(e),
         }

@@ -69,7 +69,7 @@ pub fn decode_udp_diagram(buf: &mut BytesMut) -> io::Result<net::Addr> {
     }
     let _frag = buf.get_u8();
 
-    Ok(net::helpers::socks5_bytes_to_addr(buf)?)
+    net::helpers::socks5_bytes_to_addr(buf)
 }
 
 //todo: 支持 fragment
@@ -77,5 +77,6 @@ pub fn encode_udp_diagram(ad: net::Addr, buf: &mut BytesMut) -> io::Result<()> {
     buf.put_u16(0);
     buf.put_u8(0);
 
-    Ok(net::helpers::addr_to_socks5_bytes(&ad, buf))
+    net::helpers::addr_to_socks5_bytes(&ad, buf);
+    Ok(())
 }

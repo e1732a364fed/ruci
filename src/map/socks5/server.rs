@@ -145,10 +145,10 @@ impl Server {
         let nm = buf[1];
         let nmp2 = 2 + nm as usize;
 
-        if nm == 0 || n < nmp2 as usize {
+        if nm == 0 || n < nmp2 {
             buf[0] = VERSION5;
             buf[1] = AUTH_NO_ACCEPTABLE;
-            base.write(&buf[..2]).await?;
+            base.write_all(&buf[..2]).await?;
 
             let e3 = Error::other(format!(
                 "{}, socks5: nmethods==0||n < 2+nmethods: {}, n={}",
@@ -181,7 +181,7 @@ impl Server {
                     }
                     buf[0] = VERSION5;
                     buf[1] = AUTH_NONE;
-                    base.write(&buf[..2]).await?;
+                    base.write_all(&buf[..2]).await?;
                     authed = true;
                     break;
                 }
@@ -199,7 +199,7 @@ impl Server {
                     }
                     buf[0] = VERSION5;
                     buf[1] = AUTH_PASSWORD;
-                    base.write(&buf[..2]).await?;
+                    base.write_all(&buf[..2]).await?;
 
                     let auth_bs: &[u8];
 
@@ -288,7 +288,7 @@ impl Server {
                         authed = true;
                         opt_e = None;
 
-                        base.write(&[USERPASS_SUBNEGOTIATION_VERSION, SUCCESS])
+                        base.write_all(&[USERPASS_SUBNEGOTIATION_VERSION, SUCCESS])
                             .await?;
 
                         the_user = Some(thisup);
@@ -441,9 +441,8 @@ impl Server {
         //要尝试将其转成ip
         if is_name {
             use std::str::FromStr;
-            match IpAddr::from_str(name.as_ref().unwrap()) {
-                Ok(tip) => ip = Some(tip),
-                _ => {}
+            if let Ok(tip) = IpAddr::from_str(name.as_ref().unwrap()) {
+                ip = Some(tip)
             }
         }
         let ad = Addr::from("tcp", name, ip, port).map_err(|e| io::Error::other(e.to_string()))?;
@@ -453,9 +452,9 @@ impl Server {
 
             return Ok(MapResult {
                 a: Some(ad),
-                b: if buf.len() > 0 { Some(buf) } else { None },
+                b: if buf.is_empty() { None } else { Some(buf) },
                 c: map::Stream::TCP(base),
-                d: the_user.map_or(None, |up| Some(map::AnyData::B(Box::new(up)))), //将 该登录的用户信息 作为 额外信息 传回
+                d: the_user.map(|up| map::AnyData::B(Box::new(up))), //将 该登录的用户信息 作为 额外信息 传回
                 e: None,
                 new_id: None,
             });
@@ -465,7 +464,7 @@ impl Server {
 
             return Ok(MapResult {
                 a: None,
-                b: if buf.len() > 0 { Some(buf) } else { None },
+                b: if buf.is_empty() { None } else { Some(buf) },
                 c: net::Stream::None,
                 d: Some(map::AnyData::B(Box::new(map::NewConnectionOptData {
                     new_connection: map::NewConnection::UdpConnection,
@@ -476,14 +475,14 @@ impl Server {
             });
         }
 
-        return Ok(MapResult {
+        Ok(MapResult {
             a: None,
-            b: if buf.len() > 0 { Some(buf) } else { None },
+            b: if buf.is_empty() { None } else { Some(buf) },
             c: map::Stream::TCP(base),
             d: None,
             e: Some(Error::other(format!("socks5: not supported cmd, {}", cmd))),
             new_id: None,
-        });
+        })
     }
 }
 impl Name for Server {

@@ -22,7 +22,7 @@ pub(super) async fn udp_associate(
         (port >> 8) as u8, // BND.PORT(2字节)
         port as u8,
     ];
-    base.write(&reply).await?;
+    base.write_all(&reply).await?;
 
     /*
         socks5 udp relay doesn't use ruci::net::addr_conn relay procedure

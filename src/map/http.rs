@@ -223,14 +223,14 @@ impl Server {
         };
 
         if is_connect {
-            base.write(CONNECT_REPLY_STR.as_bytes()).await?;
+            base.write_all(CONNECT_REPLY_STR.as_bytes()).await?;
         }
 
         Ok(MapResult {
             a: Some(ta),
-            b: if buf.len() > 0 { Some(buf) } else { None },
+            b: if buf.is_empty() { None } else { Some(buf) },
             c: map::Stream::TCP(base),
-            d: authed_user.map_or(None, |up| Some(map::AnyData::B(Box::new(up)))), //将 该登录的用户信息 作为 额外信息 传回
+            d: authed_user.map(|up| map::AnyData::B(Box::new(up))), //将 该登录的用户信息 作为 额外信息 传回
             e: None,
             new_id: None,
         })

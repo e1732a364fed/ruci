@@ -158,7 +158,7 @@ impl MapResult {
     pub fn abc(a: net::Addr, b: BytesMut, c: net::Conn) -> Self {
         MapResult {
             a: Some(a),
-            b: if b.len() > 0 { Some(b) } else { None },
+            b: if b.is_empty() { None } else { Some(b) },
             c: Stream::TCP(c),
             d: None,
             e: None,
@@ -169,7 +169,7 @@ impl MapResult {
     pub fn udp_abc(a: net::Addr, b: BytesMut, c: AddrConn) -> Self {
         MapResult {
             a: Some(a),
-            b: if b.len() > 0 { Some(b) } else { None },
+            b: if b.is_empty() { None } else { Some(b) },
             c: Stream::UDP(c),
             d: None,
             e: None,
@@ -410,68 +410,60 @@ where
 
     let mut calculated_output_vec = Vec::new();
 
-    loop {
-        match mappers.next() {
-            Some(adder) => {
-                let input_data = InputData {
-                    calculated_data: match calculated_output_vec.last() {
-                        Some(x) => match x {
-                            Some(y) => match y {
-                                AnyData::A(a) => {
-                                    let na = a.clone();
-                                    Some(AnyData::A(na))
-                                }
-                                _ => None,
-                            },
-                            None => None,
-                        },
-                        None => None,
+    while let Some(adder) = mappers.next() {
+        let input_data = InputData {
+            calculated_data: match calculated_output_vec.last() {
+                Some(x) => match x {
+                    Some(y) => match y {
+                        AnyData::A(a) => {
+                            let na = a.clone();
+                            Some(AnyData::A(na))
+                        }
+                        _ => None,
                     },
-                    hyperparameter: None,
-                };
-                let input_data = if input_data.calculated_data.is_none()
-                    && input_data.calculated_data.is_none()
-                {
-                    None
-                } else {
-                    Some(input_data)
-                };
-                last_r = adder
-                    .maps(
-                        match last_r.new_id {
-                            Some(id) => id,
-                            None => cid.clone(),
-                        },
-                        behavior,
-                        MapParams {
-                            c: last_r.c,
-                            a: last_r.a,
-                            b: last_r.b,
-                            d: input_data,
-                            shutdown_rx: None,
-                        },
-                    )
-                    .await;
+                    None => None,
+                },
+                None => None,
+            },
+            hyperparameter: None,
+        };
+        let input_data =
+            if input_data.calculated_data.is_none() && input_data.calculated_data.is_none() {
+                None
+            } else {
+                Some(input_data)
+            };
+        last_r = adder
+            .maps(
+                match last_r.new_id {
+                    Some(id) => id,
+                    None => cid.clone(),
+                },
+                behavior,
+                MapParams {
+                    c: last_r.c,
+                    a: last_r.a,
+                    b: last_r.b,
+                    d: input_data,
+                    shutdown_rx: None,
+                },
+            )
+            .await;
 
-                calculated_output_vec.push(last_r.d);
+        calculated_output_vec.push(last_r.d);
 
-                if let Stream::None = last_r.c {
-                    break;
-                }
-                if last_r.e.is_some() {
-                    break;
-                }
-                if let Stream::Generator(_) = last_r.c {
-                    break;
-                }
-            }
-            None => {
-                break;
-            }
+        if let Stream::None = last_r.c {
+            break;
+        }
+        if last_r.e.is_some() {
+            break;
+        }
+        if let Stream::Generator(_) = last_r.c {
+            break;
         }
     }
 
-    return AccumulateResult {
+    AccumulateResult {
         a: last_r.a,
         b: last_r.b,
         c: last_r.c,
@@ -483,7 +475,7 @@ where
             Some(cid)
         },
         left_mappers_iter: mappers,
-    };
+    }
 }
 
 /// blocking.
