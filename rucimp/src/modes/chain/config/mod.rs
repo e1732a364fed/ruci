@@ -1,6 +1,8 @@
 /*!
  * 定义了静态链式配置 StaticConfig
- * 静态链是运行前即知晓的链, 因此可以用 Vec 表示
+ * 静态链是Mapper组成是运行前即知晓且依次按排列顺序执行的链, 因此可以用 Vec 表示
+ *
+ * 有限动态链的Mapper组成也可用 StaticConfig 定义, 但其状态转移函数在dynamic模块中定义
  */
 
 #[cfg(feature = "lua")]

@@ -9,7 +9,7 @@
  * 我将这种链叫做 "Partial Dynamic Chain", 把完全动态的链叫做 "Complete
  * Dynamic Chain"
  *
- * Partial 是有界的 (Bounded) (即有限状态机 FSM),  Complete 是无界的 (Unbounded),
+ * Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是无限的,
  * (即无限状态机)
  *
  * 部分动态链比完全动态链更实用
@@ -97,17 +97,21 @@ pub trait UuidInfiniteNextInMapperGenerator {
     ) -> Option<UUIDMapperBox>;
 }
 
-/// 有界部分动态链, 即有限状态机
+/// 有界部分动态链, 即米利型有限状态机, Mealy machine
 #[derive(Debug, Clone)]
 pub struct Finite {
+    /// finite set
+    ///
     /// 每一个 MapperBox 都是静态的, 在 Vec中有固定的序号.
     /// 根据 selector 返回的序号 决定下一个调用哪一个.
     /// selector 返回 None 表示  链终止
     ///
     pub mb_vec: Vec<Arc<MapperBox>>,
 
+    /// transition function
     pub selector: Box<dyn NextSelector>,
 
+    /// current state
     pub current_index: i64,
 
     pub history: Vec<usize>,

@@ -56,7 +56,10 @@ use typed_builder::TypedBuilder;
 
 use std::{
     fmt::Debug,
-    sync::{atomic::AtomicU64, Arc},
+    sync::{
+        atomic::{AtomicI64, AtomicU64},
+        Arc,
+    },
 };
 
 use self::addr_conn::AddrConn;
@@ -74,8 +77,25 @@ pub enum AnyData {
     I64(i64),
     F64(f64),
     AU64(Arc<AtomicU64>),
+    AI64(Arc<AtomicI64>),
     Addr(net::Addr),           //store raddr
     User(Box<dyn user::User>), //store authed user
+}
+impl AnyData {
+    pub fn get_type_str(&self) -> &'static str {
+        match self {
+            AnyData::Bool(_) => "bool",
+            AnyData::CID(_) => "cid",
+            AnyData::String(_) => "str",
+            AnyData::U64(_) => "u",
+            AnyData::I64(_) => "i",
+            AnyData::F64(_) => "f",
+            AnyData::AU64(_) => "au",
+            AnyData::AI64(_) => "ai",
+            AnyData::Addr(_) => "a",
+            AnyData::User(_) => "user",
+        }
+    }
 }
 
 /// 一个 Mapper 实际生成的数据可能是一个单一的数据，也可能是一个数组

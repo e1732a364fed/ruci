@@ -219,6 +219,8 @@ pub struct AnyDataLuaWrapper(ruci::map::AnyData);
 
 impl UserData for AnyDataLuaWrapper {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("get_type", |_, this, ()| Ok(this.0.get_type_str()));
+
         methods.add_method("get_string", |_, this, ()| match &this.0 {
             AnyData::String(s) => Ok(s.to_owned()),
             _ => Err(LuaError::DeserializeError("can't get string".to_string())),
