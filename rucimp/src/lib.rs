@@ -10,7 +10,7 @@ pub const VERSION: &str = "0.0.0";
 use std::{io, sync::Arc};
 
 use futures::{future::select_all, Future};
-use log::debug;
+use log::{debug, info};
 use ruci::{map::*, net::TransmissionInfo};
 use suit::config::LDConfig;
 use suit::*;
@@ -192,12 +192,16 @@ where
 
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
     pub async fn stop(&self) {
+        info!("stop called");
         let mut running = self.running.lock().await;
         let opt = running.take();
 
         if let Some(v) = opt {
+            let mut i = 0;
             v.into_iter().for_each(|shutdown_tx| {
+                debug!("sending close signal to listener {}", i);
                 let _ = shutdown_tx.send(());
+                i += 1;
             });
         }
 
@@ -205,5 +209,6 @@ where
         for s in ss {
             s.stop();
         }
+        info!("stopped");
     }
 }
