@@ -178,10 +178,11 @@ async fn udp() -> anyhow::Result<()> {
 
     helpers::addr_to_socks5_bytes(&so12345, &mut buf);
 
-    buf.put_u16(buf.len() as u16);
+    let data = b"abc";
+    buf.put_u16(data.len() as u16);
     buf.put_u16(CRLF);
 
-    buf.extend_from_slice(b"abc");
+    buf.extend_from_slice(data);
 
     println!("try send2, {}", ula);
     nu.write(&buf).await?;
