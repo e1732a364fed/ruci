@@ -2,7 +2,7 @@
 
 一般情况下，每个 配置文件里都要写一个 Config 块, 程序 读取解析这个 Config 后就运行。
 
-让我们创建一个 local.lua 文件，内容如下:
+让我们创建一个 `local.lua` 文件，内容如下:
 
 ```lua
 
@@ -14,6 +14,7 @@ Config = {
 ```
 
 inbounds 是指 入站, 即 在这里设置 本地监听 的端口
+
 outbounds 是指 出站, 即 在这里设置 远程服务器 的地址
 
 因为可能有多个 入站和出站，所以 inbounds 和 outbounds 都是 列表，

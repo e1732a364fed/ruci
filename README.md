@@ -12,7 +12,9 @@ ruci pronounced lucy.
 
 A network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+)
 
-用户 入门 ruci 可阅读 [SUMMARY.md](doc/book/src/SUMMARY.md)
+用户 入门 ruci 可阅读 [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
+
+（book源文件在[SUMMARY.md](doc/book/src/SUMMARY.md))
 
 Developer 入门 ruci 可阅读 [Introduction_zh.md](doc/Introduction_zh.md)
 
