@@ -15,6 +15,7 @@ use crate::{
     map::{self, MapResult, MapperBox, ProxyBehavior, ToMapperBox, CID},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
+    utils::io_error,
     Name,
 };
 use anyhow::{Context, Ok};
@@ -197,8 +198,7 @@ impl Server {
                     dealt_pass = true;
 
                     if !server_has_user {
-                        opt_e = Some(Error::other(
-                            format!("socks5: configured with no password at all but got auth method AuthPassword")
+                        opt_e = Some(io_error("socks5: configured with no password at all but got auth method AuthPassword"
                         ));
                         continue;
                     }
@@ -236,7 +236,7 @@ impl Server {
 
                     if auth_bs.len() < 5 || auth_bs[0] != USERPASS_SUBNEGOTIATION_VERSION || ul == 0
                     {
-                        opt_e = Some(Error::other(format!("socks5: parse auth request failed",)));
+                        opt_e = Some(io_error("socks5: parse auth request failed"));
 
                         continue;
                     }

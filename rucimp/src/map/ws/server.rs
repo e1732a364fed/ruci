@@ -23,6 +23,11 @@ impl ruci::Name for Server {
     }
 }
 
+use lazy_static::lazy_static;
+lazy_static! {
+    pub static ref EMPTY_HV: HeaderValue = HeaderValue::from_static("");
+}
+
 impl Server {
     async fn handshake(
         &self,
@@ -39,11 +44,10 @@ impl Server {
             use http::Response;
 
             if let Some(c) = &self.config {
-                let empty_hv = HeaderValue::from_static("");
                 let given_host = r
                     .headers()
                     .get("Host")
-                    .unwrap_or(&empty_hv)
+                    .unwrap_or(&EMPTY_HV)
                     .to_str()
                     .expect("ok");
 

@@ -1868,6 +1868,7 @@ dependencies = [
  "ipnet",
  "iprange",
  "itertools 0.12.1",
+ "lazy_static",
  "libc",
  "macro_mapper",
  "maxminddb",

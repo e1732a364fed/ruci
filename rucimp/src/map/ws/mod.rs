@@ -80,16 +80,16 @@ impl<T: ConnTrait> AsyncWrite for WsStreamToConnWrapper<T> {
         let message = if let Some(ref mut b) = self.w_buf.take() {
             b.extend_from_slice(buf);
 
-            ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(|e| io_error(e))?;
+            ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(io_error)?;
             Message::Binary((&**b).into())
         } else {
-            ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(|e| io_error(e))?;
+            ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(io_error)?;
             Message::Binary(buf.into())
         };
 
         Pin::new(&mut self.ws)
             .start_send(message)
-            .map_err(|e| io_error(e))?;
+            .map_err(io_error)?;
         Poll::Ready(Ok(buf.len()))
     }
 
@@ -98,14 +98,14 @@ impl<T: ConnTrait> AsyncWrite for WsStreamToConnWrapper<T> {
         cx: &mut core::task::Context,
     ) -> Poll<Result<(), io::Error>> {
         let inner = Pin::new(&mut self.ws);
-        inner.poll_flush(cx).map_err(|e| io_error(e))
+        inner.poll_flush(cx).map_err(io_error)
     }
 
     fn poll_shutdown(
         mut self: Pin<&mut Self>,
         cx: &mut core::task::Context,
     ) -> Poll<Result<(), io::Error>> {
-        ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(|e| io_error(e))?;
+        ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(io_error)?;
         let message = Message::Close(None);
         let _ = Pin::new(&mut self.ws).start_send(message);
 

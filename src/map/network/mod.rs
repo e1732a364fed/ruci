@@ -148,18 +148,12 @@ impl Mapper for Dialer {
                         if let Some(configured_dial_a) = &self.configured_target_addr() {
                             return Dialer::dial_addr(configured_dial_a, params.a, params.b).await;
                         }
-                        return MapResult::err_str(&format!(
-                            "Dialer can't dial without an address",
-                        ));
+                        return MapResult::err_str("Dialer can't dial without an address");
                     }
                 }
             }
 
-            _ => {
-                return MapResult::err_str(&format!(
-                    "Dialer can't dial when a stream already exists"
-                ))
-            }
+            _ => return MapResult::err_str("Dialer can't dial when a stream already exists"),
         }
     }
 }
