@@ -22,7 +22,6 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, info, warn};
 
 use crate::net::so2::SockOpt;
-use crate::utils::{run_command, sync_run_command_list_no_stop, sync_run_command_list_stop};
 
 /// TproxyResolver 从 系统发来的 tproxy 相关的 连接
 /// 解析出实际 target_addr

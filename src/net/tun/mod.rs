@@ -1,3 +1,5 @@
+pub mod route;
+
 use anyhow::Context;
 use tracing::debug;
 
@@ -15,7 +17,7 @@ impl Name for AsyncDevice {
 
 pub async fn create_bind<A1, A2>(
     tun_name: Option<String>,
-    dial_addr: A1,
+    bind_addr: A1,
     netmask: A2,
 ) -> anyhow::Result<Conn>
 where
@@ -28,7 +30,7 @@ where
 
     config
         .tun_name(tun_name.as_ref().map(String::as_str).unwrap_or("utun321"))
-        .address(dial_addr)
+        .address(bind_addr)
         .netmask(netmask)
         .up();
 
