@@ -26,14 +26,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust
-        run: |
-          rustup set profile minimal
-          rustup toolchain install stable
-          rustup default stable
-          rustup override set stable
-          rustup target add --toolchain stable ${{ matrix.target }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
 
       - name: Install gcc
         run: |
