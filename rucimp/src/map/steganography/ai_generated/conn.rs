@@ -1,7 +1,9 @@
 use super::{AIGeneratedMap, AIResult, ReadSequence, WriteSequence};
 use anyhow::Result;
+use bytes::BytesMut;
 use futures::future::BoxFuture;
 use futures_lite::FutureExt;
+use ruci::net::Addr;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{ready, Context, Poll};
@@ -51,11 +53,20 @@ pub struct AIConn {
     pub state: ConnState,
     read_waker: Option<std::task::Waker>,  // 存储读操作的 waker
     write_waker: Option<std::task::Waker>, // 存储写操作的 waker
-    handshake_completed: bool,             // 新增字段
+    handshake_completed: bool,
+
+    // 若为客户端握手，则传入；若为服务端握手，则由AI生成后，由调用者取出
+    pub target_addr: Option<Addr>,
+    pub first_buf: Option<BytesMut>,
 }
 
 impl AIConn {
-    pub fn new(inner: ruci::net::Conn, ai_map: AIGeneratedMap) -> Self {
+    pub fn new(
+        inner: ruci::net::Conn,
+        ai_map: AIGeneratedMap,
+        first_buf: Option<BytesMut>,
+        target_addr: Option<Addr>,
+    ) -> Self {
         Self {
             inner,
             ai_map,
@@ -63,58 +74,65 @@ impl AIConn {
             read_waker: None,
             write_waker: None,
             handshake_completed: false,
+            target_addr,
+            first_buf,
         }
+    }
+
+    fn is_server(&self) -> bool {
+        self.ai_map.config.is_server
+    }
+
+    fn is_handshake(&self, is_write: bool) -> bool {
+        // 只有服务端的第一个读操作是握手包
+        // 只有客户端的第一个写操作是握手包
+
+        !self.handshake_completed && self.is_server() == !is_write
     }
 
     /// 开始一个写序列
     ///
     /// Will change self.state to ConnState::ProcessingAI
-    fn initiate_ai_write_processing(&mut self, first_data: Vec<u8>) -> Result<()> {
+    fn initiate_ai_write_processing(&mut self, data: Vec<u8>) -> Result<()> {
         let ai_map = self.ai_map.clone();
-        // 只有客户端的第一个写操作是握手包
-        let is_handshake = !self.handshake_completed && !self.ai_map.config.is_server;
+        let is_handshake = self.is_handshake(true);
+        let target_addr = self.target_addr.take();
         let future = Box::pin(async move {
             ai_map
-                .generate_sequence_with_ai(&first_data, None, None, is_handshake, false)
+                .generate_sequence_with_ai(&data, target_addr, is_handshake, false)
                 .await
         });
         self.state = ConnState::ProcessingAI {
             future: Arc::new(Mutex::new(future)),
             is_write: true,
         };
-        if is_handshake {
-            self.handshake_completed = true;
-        }
+
         Ok(())
     }
 
     /// 处理读取到的数据，可能开始新的读序列
     ///
-    /// will call self.ai_map.process_with_ai
-    ///
-    /// will change self.state to ConnState::ProcessingAI
+    /// It creates a future to call self.ai_map.process_with_ai
+    /// and change self.state to ConnState::ProcessingAI
     fn initiate_ai_read_processing(&mut self, data: Vec<u8>) -> Result<()> {
         let ai_map = self.ai_map.clone();
-        // 只有服务端的第一个读操作是握手包
-        let is_handshake = !self.handshake_completed && self.ai_map.config.is_server;
+        let is_handshake = self.is_handshake(false);
         let future = Box::pin(async move {
             ai_map
-                .generate_sequence_with_ai(&data, None, None, is_handshake, true)
+                .generate_sequence_with_ai(&data, None, is_handshake, true)
                 .await
         });
         self.state = ConnState::ProcessingAI {
             future: Arc::new(Mutex::new(future)),
             is_write: false,
         };
-        if is_handshake {
-            self.handshake_completed = true;
-        }
+
         Ok(())
     }
 
     // 当一个操作完成时，唤醒另一个被阻塞的操作
-    fn wake_pending_operation(&mut self, completed_write: bool) {
-        if completed_write {
+    fn wake_pending_operation(&mut self, is_write: bool) {
+        if is_write {
             // 写操作完成，唤醒等待的读操作
             if let Some(waker) = self.read_waker.take() {
                 waker.wake();
@@ -140,34 +158,48 @@ impl AsyncRead for AIConn {
             debug!("AIConn::poll_read state: {:?}", this.state);
             match &mut this.state {
                 ConnState::Ready => {
-                    // 准备一个临时缓冲区
-                    let mut temp_vec = vec![0u8; buf.remaining()];
-                    let mut temp_buf = tokio::io::ReadBuf::new(&mut temp_vec);
+                    let buf = {
+                        if let Some(first_buf) = this.first_buf.take() {
+                            first_buf
+                        } else {
+                            // 准备一个临时缓冲区
+                            let mut temp_vec = BytesMut::zeroed(buf.remaining());
+                            let mut temp_buf = tokio::io::ReadBuf::new(&mut temp_vec);
 
-                    // 从内部连接读取数据
-                    let result = ready!(Pin::new(&mut this.inner).poll_read(cx, &mut temp_buf));
-                    match result {
-                        Ok(()) => {
-                            let filled_len = temp_buf.filled().len();
-                            debug!("AIConn::poll_read read {} bytes from inner", filled_len);
-                            if filled_len > 0 {
-                                temp_vec.truncate(filled_len);
-                                if let Err(e) = this.initiate_ai_read_processing(temp_vec) {
-                                    debug!("AIConn::poll_read handle_read_data error: {}", e);
-                                    return Poll::Ready(Err(std::io::Error::new(
-                                        std::io::ErrorKind::Other,
-                                        e.to_string(),
-                                    )));
+                            let result =
+                                ready!(Pin::new(&mut this.inner).poll_read(cx, &mut temp_buf));
+                            match result {
+                                Ok(()) => {
+                                    let filled_len = temp_buf.filled().len();
+
+                                    if filled_len > 0 {
+                                        debug!(
+                                            "AIConn::poll_read read {} bytes from inner",
+                                            filled_len
+                                        );
+
+                                        temp_vec.truncate(filled_len);
+                                        temp_vec
+                                    } else {
+                                        return Poll::Ready(Ok(())); // 0 bytes read means EOF
+                                    }
                                 }
-                                continue;
+                                Err(e) => {
+                                    debug!("AIConn::poll_read inner read error: {}", e);
+                                    return Poll::Ready(Err(e));
+                                }
                             }
-                            return Poll::Ready(Ok(()));
                         }
-                        Err(e) => {
-                            debug!("AIConn::poll_read inner read error: {}", e);
-                            return Poll::Ready(Err(e));
-                        }
+                    };
+
+                    if let Err(e) = this.initiate_ai_read_processing(buf.to_vec()) {
+                        debug!("AIConn::poll_read handle_read_data error: {}", e);
+                        return Poll::Ready(Err(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            e.to_string(),
+                        )));
                     }
+                    continue;
                 }
                 ConnState::ProcessingAI {
                     ref future,
@@ -185,8 +217,19 @@ impl AsyncRead for AIConn {
                     drop(future);
 
                     match ready!(poll_result) {
-                        Ok(AIResult::Read { sequence, .. }) => {
+                        Ok(AIResult::Read { sequence, addr }) => {
                             debug!("AIConn::poll_read AI processing completed with read sequence");
+
+                            let is_handshake = this.is_handshake(false);
+                            if is_handshake {
+                                this.handshake_completed = true;
+
+                                if this.ai_map.config.is_server {
+                                    // 服务端在握手时会收到客户端的目标地址
+                                    this.target_addr = addr;
+                                }
+                            }
+
                             this.state = ConnState::Reading(sequence);
                             continue;
                         }
@@ -379,6 +422,12 @@ impl AsyncWrite for AIConn {
                             debug!(
                                 "AIConn::poll_write AI processing completed with write sequence"
                             );
+
+                            let is_handshake = this.is_handshake(true);
+                            if is_handshake {
+                                this.handshake_completed = true;
+                            }
+
                             this.state = ConnState::Writing(sequence);
                             continue;
                         }

@@ -38,7 +38,7 @@ async fn test_wiremock_get() -> Result<(), Box<dyn std::error::Error>> {
     let body = response.text().await?;
     assert_eq!(body, "Hello, world!");
 
-    println!("Test passed!");
+    debug!("Test passed!");
     Ok(())
 }
 
@@ -306,20 +306,11 @@ async fn test_basic_write_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map);
+    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map, None, None);
 
     // 在另一个任务中处理服务端
     let server_handle = tokio::spawn(async move {
         server_handle_write(server_tcp).await?;
-
-        // 保持连接打开，等待客户端完成所有操作
-        // loop {
-        //     match server_tcp.read(&mut buf).await {
-        //         Ok(0) => break,    // 连接正常关闭
-        //         Ok(_) => continue, // 继续读取
-        //         Err(_) => break,   // 发生错误时退出
-        //     }
-        // }
 
         Ok::<_, anyhow::Error>(())
     });
@@ -372,7 +363,7 @@ async fn test_basic_read_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map);
+    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map, None, None);
 
     // 在另一个任务中处理服务端
     let server_handle = tokio::spawn(async move { server_handle_read(server_tcp).await });
@@ -416,7 +407,7 @@ async fn test_multiple_read_write_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map);
+    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map, None, None);
 
     // 在另一个任务中处理服务端
     let server_handle = tokio::spawn(async move {

@@ -5,10 +5,11 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use bytes::BytesMut;
 use reqwest;
 use ruci::{
     map::*,
-    net::{self, Stream, CID},
+    net::{self,  CID},
     Name,
 };
 use serde::{Deserialize, Serialize};
@@ -17,22 +18,23 @@ use serde_json::json;
 mod conn;
 
 #[cfg(test)]
-mod tests;
+mod test;
 use conn::AIConn;
+use tokio::io::AsyncReadExt;
 use tracing::debug;
 
 /// 写序列状态
 #[derive(Debug)]
-pub struct WriteStep {
+pub(crate) struct WriteStep {
     pub is_write: bool, // true: 执行 w* 操作, false: 执行 r* 操作
     pub index: usize,   // 对应 write_packets 或 read_lengths 的索引
 }
 
 #[derive(Debug)]
-pub struct WriteSequence {
+pub(crate) struct WriteSequence {
     pub write_packets: Vec<Vec<u8>>, // 改为 Vec
     pub read_lengths: Vec<usize>,    // 改为 Vec
-    pub current_step: WriteStep,
+    pub(crate) current_step: WriteStep,
 }
 
 /// 读序列状态
@@ -44,9 +46,9 @@ pub struct ReadStep {
 
 #[derive(Debug)]
 pub struct ReadSequence {
-    pub write_packets: Vec<Vec<u8>>, // 改为 Vec
-    pub read_lengths: Vec<usize>,    // 已经是 Vec
-    pub read_packets: Vec<Vec<u8>>,  // 保持不变
+    pub write_packets: Vec<Vec<u8>>,
+    pub read_lengths: Vec<usize>,
+    pub read_packets: Vec<Vec<u8>>,
     pub current_step: ReadStep,
 }
 
@@ -74,7 +76,7 @@ impl WriteSequence {
 
 /// AI处理结果
 #[derive(Debug)]
-pub enum AIResult {
+pub(crate) enum AIResult {
     Write(WriteSequence),
     Read {
         sequence: ReadSequence,
@@ -187,14 +189,14 @@ impl AIGeneratedMap {
     async fn generate_sequence_with_ai(
         &self,
         data: &[u8],
-        target_addr: Option<&net::Addr>,
-        early_data: Option<&[u8]>,
+        target_addr: Option<net::Addr>,
+        // early_data: Option<&[u8]>,
         is_handshake: bool,
         is_read: bool,
     ) -> Result<AIResult> {
         let data_base64 = BASE64.encode(data);
         let target_addr_str = target_addr.map(|addr| addr.to_string());
-        let early_data_base64 = early_data.map(|data| BASE64.encode(data));
+        // let early_data_base64 = early_data.map(|data| BASE64.encode(data));
 
         // 构建system提示
         let role = if self.config.is_server {
@@ -232,16 +234,13 @@ impl AIGeneratedMap {
         };
 
         // 构建用户提示
-        let user_prompt = match (self.config.is_server, target_addr_str, early_data_base64) {
-            (false, Some(addr), Some(early)) => format!(
-                "This is {} data. Please process the following information:\nTarget address: {}\nEarly data: {}\nMain data: {}",
-                operation_type, addr, early, data_base64
-            ),
-            (false, Some(addr), None) => format!(
+        let user_prompt = match (self.config.is_server, target_addr_str) {
+        
+            (false, Some(addr)) => format!(
                 "This is {} data. Please process the following information:\nTarget address: {}\nMain data: {}",
                 operation_type, addr, data_base64
             ),
-            (true, _, _) => format!(
+            (true, _) => format!(
                 "This is {} data. Please extract the target address and actual data from the following data:\n{}",
                 operation_type, data_base64
             ),
@@ -529,18 +528,33 @@ impl Map for AIGeneratedMap {
     async fn maps(&self, _cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match behavior {
             ProxyBehavior::ENCODE => {
-                // 创建新的连接，包装原始连接
-                let conn = AIConn::new(params.c.try_unwrap_tcp().unwrap(), self.clone());
-                MapResult::builder().c(Stream::Conn(Box::new(conn))).build()
+                let   conn =
+                    AIConn::new(params.c.try_unwrap_tcp().unwrap(), self.clone(), params.b, params.a);
+                MapResult::new_c(Box::new(conn)).build()
             }
             ProxyBehavior::DECODE => {
-                // 服务端：直接创建连接
-                if params.b.is_some() {
-                    let conn = AIConn::new(params.c.try_unwrap_tcp().unwrap(), self.clone());
-                    MapResult::builder().c(Stream::Conn(Box::new(conn))).build()
-                } else {
-                    MapResult::builder().c(params.c).build()
+                let mut conn =
+                    AIConn::new(params.c.try_unwrap_tcp().unwrap(), self.clone(), params.b, params.a);
+
+                let mut buf = BytesMut::zeroed(2048); //todo: change this
+                let r = conn.read_buf(&mut buf).await;
+                match r {
+                    Ok(n) => {
+                        debug!("ag1: server read handshake success, {n}");
+                        let ta = conn.target_addr.take();
+
+                        MapResult::new_c(Box::new(conn)).b(Some(buf)).a(ta).build()
+                    }
+                    Err(e) => {
+                        MapResult::from_e(anyhow::anyhow!("ag1: server read handshake failed, {e}"))
+                    }
                 }
+
+                // if params.b.is_some() {
+
+                // } else {
+                //     MapResult::builder().c(params.c).build()
+                // }
             }
             ProxyBehavior::UNSPECIFIED => {
                 MapResult::from_e(anyhow::anyhow!("Unspecified behavior is not supported"))
