@@ -13,35 +13,30 @@ use std::{
 use tokio::sync::Mutex;
 use tokio::{io::ReadBuf, net::UdpSocket};
 
-pub struct Conn {
-    //固定用同一个 udpsocket 发送，到不同的远程地址也是如此
-    pub base: Arc<UdpSocket>,
-}
+//固定用同一个 udpsocket 发送，到不同的远程地址也是如此
+pub struct Conn(Arc<UdpSocket>);
 
 impl Conn {
     pub fn new(u: UdpSocket) -> Self {
-        let a = Arc::new(u);
-        Conn { base: a }
+        Conn(Arc::new(u))
     }
 
     pub fn duplicate(&self) -> Conn {
-        let b = self.base.clone();
-        Conn { base: b }
+        Conn(self.0.clone())
     }
 }
 
-/// calls duplicated inside
 pub fn new(u: UdpSocket) -> AddrConn {
     let a = Arc::new(u);
     let b = a.clone();
-    AddrConn(Box::new(Conn { base: a }), Box::new(Conn { base: b }))
+    AddrConn(Box::new(Conn(a)), Box::new(Conn(b)))
 }
 
 /// wrap u with Arc, and return 2 copys.
 pub fn duplicate(u: UdpSocket) -> (Conn, Conn) {
     let a = Arc::new(u);
     let b = a.clone();
-    (Conn { base: a }, Conn { base: b })
+    (Conn(a), Conn(b))
 }
 
 impl AsyncWriteAddr for Conn {
@@ -53,7 +48,7 @@ impl AsyncWriteAddr for Conn {
     ) -> Poll<io::Result<usize>> {
         let sor = addr.get_socket_addr_or_resolve();
         match sor {
-            Ok(so) => self.base.poll_send_to(cx, buf, so),
+            Ok(so) => self.0.poll_send_to(cx, buf, so),
             Err(e) => Poll::Ready(Err(e)),
         }
     }
@@ -74,7 +69,7 @@ impl AsyncReadAddr for Conn {
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
         let mut rbuf = ReadBuf::new(buf);
-        let r = self.base.poll_recv_from(cx, &mut rbuf);
+        let r = self.0.poll_recv_from(cx, &mut rbuf);
         match r {
             Poll::Ready(r) => match r {
                 Ok(so) => Poll::Ready(Ok((
