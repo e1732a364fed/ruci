@@ -37,5 +37,10 @@ async fn main() -> anyhow::Result<()> {
 
     js.shutdown().await;
 
+    // js.abort_all();
+    // while let Some(res) = js.join_next().await {
+    //     debug!("{:?}", res)
+    // }
+
     Ok(())
 }

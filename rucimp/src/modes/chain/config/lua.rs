@@ -51,8 +51,8 @@ pub fn load_finite_dynamic(
     let lua = Lua::new();
     let (sc, sh) = load_finite_dynamic_helper(&lua, lua_text)?;
 
-    let (a, b, c) = get_dmiter_from_static_config_and_helper(sc.clone(), sh);
-    Ok((sc, a, b, c))
+    let (ibs, fb, obm) = get_dmiter_from_static_config_and_helper(sc.clone(), sh);
+    Ok((sc, ibs, fb, obm))
 }
 
 fn load_finite_dynamic_helper(
