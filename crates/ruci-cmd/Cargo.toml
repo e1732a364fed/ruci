@@ -16,7 +16,6 @@ jni = "0.21"
 ruci = { path = "../.." }
 rucimp = { path = "../../rucimp" }
 data-source.workspace = true
-
 tracing.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
@@ -26,13 +25,11 @@ futures.workspace = true
 tokio-util.workspace = true
 parking_lot.workspace = true
 serde_path_to_error.workspace = true
-
 tar = { workspace = true, optional = true }
-
 axum = { workspace = true, optional = true }
 utoipa = { workspace = true, optional = true }
-
 reqwest = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 
 
 serde-transcode = "1.1"
@@ -43,8 +40,6 @@ tracing-appender = "0.2"
 
 clap = { version = "4.5", features = ["derive"] }
 bytesize = "2"
-
-chrono = { version = "0.4", optional = true }
 
 rcgen = { version = "0.13", optional = true }
 qrcode = { version = "0.14", optional = true, default-features = false }

@@ -6,6 +6,8 @@ license = "MIT OR Apache-2.0"
 
 
 [dependencies]
+ruci = { path = "../.." }
+
 tracing.workspace = true
 rand.workspace = true
 serde.workspace = true
@@ -16,7 +18,6 @@ futures.workspace = true
 async-trait.workspace = true
 openport.workspace = true
 
-ruci = { path = "../.." }
 
 rustls-pemfile = "1.0"
 

@@ -65,6 +65,7 @@ chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1.0"
 serde_path_to_error = "0.1"
 openport = { version = "0.1.1", features = ["rand"] }
+base64 = "0.22"
 
 
 [dependencies]
@@ -86,19 +87,16 @@ parking_lot.workspace = true
 smallvec.workspace = true
 dyn-clone.workspace = true
 openport.workspace = true
+base64.workspace = true
 
 
 typetag = "0.2"
 typed-builder = "0.20"
 bitflags = "2"
 url = "2"              #for http proxy
-base64 = "0.22"
 sha2 = "0.10"          #for trojan
 
-
 hickory-resolver = { version = "0.24", features = ["serde-config"] }
-
-
 tun = { version = "0.7", features = ["async"] }
 
 [features]
