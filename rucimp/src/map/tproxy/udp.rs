@@ -319,10 +319,6 @@ impl Drop for Listener {
 }
 
 /// init a AddrConn from a UdpSocket
-///
-/// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
-/// 以及用 send 而不是 send_to
-///
 fn new_addr_conn(r: Receiver<DataIndex>, src: Addr, dst: Addr, conn_map: ConnMap) -> AddrConn {
     let r = Reader {
         dst: dst.clone(),
@@ -332,7 +328,6 @@ fn new_addr_conn(r: Receiver<DataIndex>, src: Addr, dst: Addr, conn_map: ConnMap
     };
     let w = Writer { src, dst, conn_map };
     AddrConn::new(Box::new(r), Box::new(w))
-    // ac.cached_name = String::from("tproxy_udp");
 }
 
 pub struct Writer {

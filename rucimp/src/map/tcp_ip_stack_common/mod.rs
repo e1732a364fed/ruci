@@ -24,7 +24,7 @@ use tracing::debug;
 use tracing::warn;
 use udp::{UdpRead, UdpWrite};
 
-pub trait Generator: Send + Sync {
+pub trait Builder: Send + Sync {
     type AsyncConn: ruci::net::AsyncConn + 'static;
     type StackStream: Stream<Item = std::io::Result<Vec<u8>>>
         + Sink<Vec<u8>, Error = std::io::Error>
@@ -33,7 +33,7 @@ pub trait Generator: Send + Sync {
 
     type TcpConnStream: Stream<Item = (Self::AsyncConn, SocketAddr, SocketAddr)> + Unpin + Send;
 
-    fn gen(
+    fn build(
         &self,
     ) -> (
         Self::StackStream,
@@ -45,7 +45,7 @@ pub trait Generator: Send + Sync {
 pub async fn maps<AsyncConn, TcpConnStream, StackStream>(
     cid: CID,
     params: MapParams,
-    gen: &dyn Generator<
+    builder: &dyn Builder<
         AsyncConn = AsyncConn,
         TcpConnStream = TcpConnStream,
         StackStream = StackStream,
@@ -70,7 +70,7 @@ where
     // if let ruci::net::Stream::RW(rw) = params.c {
     // if let ruci::net::Stream::Frame(f) = params.c {
     if let ruci::net::Stream::Conn(conn) = params.c {
-        let (stack, mut tcp_listener, udp_socket) = gen.gen();
+        let (stack, mut tcp_listener, udp_socket) = builder.build();
         let (mut stack_sink, mut stack_stream) = stack.split();
 
         let (mut r, mut w) = split(conn);

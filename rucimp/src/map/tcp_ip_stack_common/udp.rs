@@ -69,7 +69,7 @@ pub async fn loop_accept_udp(
                 r
             }
             Err(_) => {
-                warn!("stack loop_accept_udp tproxy_recv_from_with_destination got none");
+                warn!("stack loop_accept_udp read got none");
                 return;
             }
         };
@@ -242,10 +242,6 @@ struct ConnInfo {
 type ConnMap = Arc<DashMap<(SocketAddr, SocketAddr), ConnInfo>>;
 
 /// init a AddrConn from a UdpSocket
-///
-/// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
-/// 以及用 send 而不是 send_to
-///
 fn new_addr_conn(
     w: Sender<(Vec<u8>, SocketAddr, SocketAddr)>,
     r: Receiver<Vec<u8>>,
@@ -277,7 +273,7 @@ pub struct Writer {
 }
 impl Display for Writer {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "tproxy_udp_w")
+        write!(f, "stack_udp_w")
     }
 }
 
@@ -316,7 +312,7 @@ pub struct Reader {
 }
 impl Display for Reader {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "tproxy_udp_r")
+        write!(f, "stack_udp_r")
     }
 }
 
@@ -364,14 +360,13 @@ impl AsyncReadAddr for Reader {
                     let r = self.rx.poll_recv(cx);
                     match ready!(r) {
                         Some(b) => {
-                            //debug!("tproxy_udp r read got {}", b.len());
                             self.last_buf = Some(b);
                             self.state = ReadState::Buf;
                         }
                         None => {
                             return Poll::Ready(Err(io::Error::new(
                                 io::ErrorKind::ConnectionAborted,
-                                "tproxy_udp read got rx closed",
+                                "stack_udp read got rx closed",
                             )))
                         }
                     }

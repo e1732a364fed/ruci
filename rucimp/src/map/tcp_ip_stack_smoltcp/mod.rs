@@ -15,7 +15,7 @@ use ruci::{
 };
 
 use super::tcp_ip_stack_common::udp::{UdpRead, UdpWrite};
-use super::tcp_ip_stack_common::Generator;
+use super::tcp_ip_stack_common::Builder;
 
 mod udp {
     use std::net::SocketAddr;
@@ -50,12 +50,12 @@ impl Display for Stack {
     }
 }
 
-impl Generator for Stack {
+impl Builder for Stack {
     type AsyncConn = netstack_smoltcp::TcpStream;
     type TcpConnStream = netstack_smoltcp::TcpListener;
     type StackStream = netstack_smoltcp::Stack;
 
-    fn gen(
+    fn build(
         &self,
     ) -> (
         Self::StackStream,
