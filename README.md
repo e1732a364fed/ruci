@@ -71,13 +71,14 @@ TDD. See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md)
 
 A proxy must have both an inbound and an outbound.
 
-If the app only has an inbound, then it's just a regular server.
+If the app only has an inbound, then it's just a regular web server.
+If the app only has an outbound, then it's just a regular web browser.
 
 On client side, having both an inbound and an outbound is called regular proxy;
 It's outbound is connected to the server's inbound.
 
 On server side, having both an inbound and an outbound is called "reverse proxy".
-
+It's outbound is connected to another server's inbound.
 
 ## Chain Structure Explained
 
@@ -85,12 +86,12 @@ Ruci abstracts proxy, regards any protocols as consisting of one or more Map 【
 
 Pseudo code: 
 
-stream generator 【单流发生器】:  `function(args)->stream`
+stream generator 【单流发生器】(zero to one):  `function(args)->stream`
 
-injective function 【单射】(which is the normal stream Map): 
+injection 【单射】(one to one function, which is the normal stream Map): 
  `function(stream1, args...)-> (Option<stream2>, useful_data...) `
 
-multi-stream generator【多流发生器】: `function( Option<stream> ,args...)->[channel->stream]`
+multi-stream generator【多流发生器】(one to many): `function( Option<stream> ,args...)->[channel->stream]`
 
 流由流发生器产生. 
 
@@ -101,7 +102,7 @@ multi-stream generator【多流发生器】: `function( Option<stream> ,args...)
 多流发生器可能是 Listener (不接受流参数的无中生有 (一般实际上原理上是对接硬件上的流,
 如网卡提供的流) ) 或 inner mux (接受一个流, 对其进行分支处理)
 
-流映射可以改变流(如Tls), 也可以不改变而只是在内容上做修改(如Adder),
+流映射可以改变流(如Tls), 也可以不改变而只是在内容上做修改(如MathAdder),
 
 也可以完全不做修改而只提供副作用(如 Counter, 或Trojan/Socks5 先做握手然后不改变流) 
 (Maps like this are normally called "middleware")
