@@ -31,7 +31,6 @@ pub mod http_filter;
 pub mod http_proxy;
 pub mod math;
 pub mod network;
-pub mod recorder;
 pub mod socks5;
 pub mod socks5http;
 pub mod stdio;

@@ -37,7 +37,7 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::ws;
+use crate::map::{recorder, ws};
 
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 use crate::map::tproxy::{self, TcpResolver};
@@ -276,10 +276,10 @@ impl ToMapBox for StdioConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapConfig {
-    Echo,                         //单流消耗器
-    Stdio(StdioConfig),           //单流发生器
-    Fileio(FileConfig),           //单流发生器
-    BindDialer(BindDialerConfig), //单流发生器
+    Echo,                              //单流消耗器
+    Stdio(StdioConfig),                //单流发生器
+    Fileio(FileConfig),                //单流发生器
+    BindDialer(Box<BindDialerConfig>), //单流发生器 (Box: #[warn(clippy::large_enum_variant)])
     Listener {
         listen_addr: String,
         ext: Option<Ext>,
@@ -332,11 +332,11 @@ pub enum InMapConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapConfig {
-    Blackhole,                    //单流消耗器
-    Direct(DirectConfig),         //单流发生器
-    Stdio(StdioConfig),           //单流发生器
-    Fileio(FileConfig),           //单流发生器
-    BindDialer(BindDialerConfig), //单流发生器
+    Blackhole,                         //单流消耗器
+    Direct(DirectConfig),              //单流发生器
+    Stdio(StdioConfig),                //单流发生器
+    Fileio(FileConfig),                //单流发生器
+    BindDialer(Box<BindDialerConfig>), //单流发生器
     Adder(i8),
     Counter,
     Recorder,

@@ -220,9 +220,9 @@ impl BindDialer {
                                             *mg = AutoRouteState::InUp(opt_dns_list);
                                         }
                                         Err(e) => {
-                                            return MapResult::from_e(e.context(format!(
-                                                "BindDialer in auto_route failed"
-                                            )))
+                                            return MapResult::from_e(
+                                                e.context("BindDialer in auto_route failed"),
+                                            )
                                         }
                                     }
                                 }
@@ -240,9 +240,9 @@ impl BindDialer {
                                             *mg = AutoRouteState::OutUp;
                                         }
                                         Err(e) => {
-                                            return MapResult::from_e(e.context(format!(
-                                                "BindDialer out auto_route failed"
-                                            )))
+                                            return MapResult::from_e(
+                                                e.context("BindDialer out auto_route failed"),
+                                            )
                                         }
                                     }
                                 }

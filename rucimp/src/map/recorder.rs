@@ -6,16 +6,17 @@ format: [`RecordData`]， [`RecordData`]
 Write to a file record_{}.log when the connection's writer got closed.
 */
 
-use super::*;
 use std::task::Context;
 use std::time;
 use std::{io, pin::Pin, task::Poll};
 
-use crate::map;
-use crate::{net::*, Name};
-use addr_conn::{AsyncReadAddr, AsyncWriteAddr};
+use addr_conn::AddrConn;
 use async_trait::async_trait;
 use chrono::DateTime;
+use ruci::map::{self, *};
+use ruci::net::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
+use ruci::{net::*, Name};
+use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use macro_map::{map_ext_fields, MapExt};
@@ -68,10 +69,13 @@ pub struct RecordData {
     pub behavior: ProxyBehavior,
 
     #[serde(skip)]
-    pub global_data: Option<GlobalData>,
+    pub file_prefix: Option<String>,
 
     #[serde(skip)]
-    pub file_prefix: Option<String>,
+    pub serialize_format: Option<String>,
+
+    #[serde(skip)]
+    pub global_data: Option<GlobalData>,
 
     pub serializable_global_data: Option<SerializableGlobalData>,
 
@@ -102,7 +106,7 @@ impl Default for PayloadData {
 }
 
 impl RecordData {
-    fn save(&self) {
+    fn save_json(&self) {
         let mut name = if let Some(g) = &self.serializable_global_data {
             format!("record_{}_{}.log", g.run_instance_id, self.cid)
         } else {
@@ -162,7 +166,7 @@ impl Recorder {
 }
 /// takes ownership of base Conn
 struct RecorderConn {
-    base: Pin<net::Conn>,
+    base: Pin<ruci::net::Conn>,
     record: Recorder,
 }
 
@@ -188,7 +192,7 @@ impl AsyncRead for RecorderConn {
                         "recorder read got err, Saving to file; err: {e}",
                     );
 
-                    self.record.data.save();
+                    self.record.data.save_json();
                 }
             }
         }
@@ -226,7 +230,7 @@ impl AsyncWrite for RecorderConn {
             "recorder got shutdown, Saving to file...",
         );
 
-        self.record.data.save();
+        self.record.data.save_json();
         self.base.as_mut().poll_shutdown(cx)
     }
 }
@@ -236,7 +240,7 @@ struct RecordAddrConnR {
     record: Recorder,
 }
 
-impl crate::Name for RecordAddrConnR {
+impl ruci::Name for RecordAddrConnR {
     fn name(&self) -> &str {
         "recorder_ac_r"
     }
@@ -247,7 +251,7 @@ struct RecordAddrConnW {
     record: Recorder,
 }
 
-impl crate::Name for RecordAddrConnW {
+impl ruci::Name for RecordAddrConnW {
     fn name(&self) -> &str {
         "recorder_ac_w"
     }
@@ -297,7 +301,7 @@ impl AsyncWriteAddr for RecordAddrConnW {
             cid = %self.record.data.cid,
             "recorder ac got shutdown, Saving to file..."
         );
-        self.record.data.save();
+        self.record.data.save_json();
 
         self.base.as_mut().poll_close_addr(cx)
     }
@@ -387,7 +391,9 @@ mod test {
 
     use std::time;
 
-    use crate::map::{recorder::SerializableGlobalData, GlobalData};
+    use ruci::map::GlobalData;
+
+    use crate::map::recorder::SerializableGlobalData;
 
     #[test]
     fn time() {
