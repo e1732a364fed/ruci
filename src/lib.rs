@@ -21,7 +21,7 @@ pub mod net;
 pub mod relay;
 pub mod user;
 
-pub const VERSION: &str = "0.0.1";
+pub const VERSION: &str = "0.0.2";
 
 /// many types in ruci have a name.
 /// use lower case letters + underline

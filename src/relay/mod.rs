@@ -41,6 +41,24 @@ pub struct ConnInfo {
     pub out_trace: Vec<String>,
 }
 
+impl std::fmt::Display for ConnInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}, {} -> {}, ta: {}\n",
+            self.cid, self.in_tag, self.out_tag, self.target_addr
+        )?;
+        #[cfg(feature = "trace")]
+        {
+            write!(
+                f,
+                "in_trace: {:?}\n , out_trace: {:?}\n",
+                self.in_trace, self.out_trace
+            )
+        }
+    }
+}
+
 #[async_trait]
 pub trait InfoRecorder: Send + Sync {
     async fn record(&mut self, state: ConnInfo);

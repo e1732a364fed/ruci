@@ -4,7 +4,7 @@
 
 use futures::executor::block_on;
 use log::debug;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use map::Stream;
 
 use crate::map::{self, MapResult};
@@ -31,7 +31,8 @@ impl ToMapper for Config {
     }
 }
 
-#[derive(Debug, Clone, NoMapperExt)]
+#[mapper_ext_fields]
+#[derive(Debug, Clone, MapperExt)]
 pub struct Server {
     pub http_s: http::Server,
     pub socks5_s: socks5::server::Server,
@@ -76,6 +77,7 @@ impl Server {
                 um: oum,
                 support_udp: true, //默认打开udp 支持
             },
+            ext_fields: None,
         }
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "rucimp"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 
 [dependencies]
@@ -35,6 +35,8 @@ socket2 ={ version = "0.5.6", optional = true }
 
 macro_mapper ={ path = "../crates/macro_mapper" }
 
+[dev-dependencies]
+chrono = "0.4.34"
 
 [features]
 default = ["lua", "route","geoip"]
@@ -47,6 +49,7 @@ geoip = ["maxminddb", "route"]
 tun = ["ruci/tun"]
 sockopt = ["libc", "socket2"]
 
+trace = ["ruci/trace"]
 
 [[example]]
 name = "chain"

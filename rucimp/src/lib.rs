@@ -15,6 +15,6 @@ pub mod example_common;
 #[cfg(feature = "route")]
 pub mod route;
 
-pub const VERSION: &str = "0.0.1";
+pub const VERSION: &str = "0.0.2";
 
 pub const COMMON_DIRS: [&'static str; 4] = ["./", "ruci_config/", "resource/", "../resource/"];
