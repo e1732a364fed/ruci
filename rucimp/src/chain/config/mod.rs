@@ -97,6 +97,7 @@ pub enum InMapperConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapperConfig {
     Direct,
+    Blackhole,
     Stdio(String),
     Dialer(Dialer),
     Adder(i8),
@@ -224,6 +225,8 @@ impl ToMapper for OutMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
             OutMapperConfig::Stdio(s) => ruci::map::stdio::Stdio::from(s),
+            OutMapperConfig::Blackhole => Box::new(ruci::map::network::BlackHole::default()),
+
             OutMapperConfig::Direct => Box::new(ruci::map::network::Direct::default()),
             OutMapperConfig::Dialer(d) => match d {
                 Dialer::TcpDialer(td_str) => {

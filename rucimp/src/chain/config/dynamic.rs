@@ -10,6 +10,8 @@ impl Iterator for DynamicConfig {
     }
 }
 
+#[allow(unused)]
+#[cfg(test)]
 mod test1 {
     use std::io;
     use std::net::SocketAddr;

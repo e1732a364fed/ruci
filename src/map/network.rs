@@ -1,5 +1,5 @@
 use log::{debug, info, log_enabled};
-use macro_mapper::{common_mapper_field, CommonMapperExt};
+use macro_mapper::{common_mapper_field, CommonMapperExt, DefaultMapperExt};
 use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
@@ -278,5 +278,22 @@ impl Mapper for TcpStreamGenerator {
             Ok(rx) => MapResult::gs(rx, CID::default()),
             Err(e) => MapResult::from_err(e),
         }
+    }
+}
+
+#[derive(DefaultMapperExt, Debug, Default, Clone)]
+pub struct BlackHole {}
+
+impl Name for BlackHole {
+    fn name(&self) -> &str {
+        "blackhole"
+    }
+}
+
+#[async_trait]
+impl Mapper for BlackHole {
+    /// always consume the stream, ignore all params.
+    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, _params: MapParams) -> MapResult {
+        return MapResult::default();
     }
 }

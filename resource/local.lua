@@ -100,3 +100,22 @@ config = {
 }
 
 --]]
+
+
+--[[
+
+
+config = {
+
+-- stdin + 1 -> blackhole
+
+    inbounds = { 
+        {chain = in_stdio_adder_chain, tag = "listen1"} ,
+    },
+
+    --expected warn: dial out client stream got consumed
+
+    outbounds = { { tag="dial1", chain = { "Blackhole" } } }
+}
+
+--]]

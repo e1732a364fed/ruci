@@ -42,7 +42,7 @@ rucimple 是最终的全功能的可执行文件，利用rucimp中的实现构�
 
 因为 ruci 和 rucimp 是库项目，所以根目录没有 Cargo.lock。rucimple 项目在另外的github 仓库中保管
 
-ruci根项目只提供 TLS, Socks5,Http, Socks5Http, Trojan 这几种经典、简单的 流映射函数, 以及一些辅助的 流映射函数（如 Counter, MathAdder 等）, 以及一些流发生器 (listen tcp, dial tcp, stdio 等)，其它第三方协议要在 rucimp 或第三方包中实现
+ruci根项目只提供 一些 经典、简单的 流映射函数, 以及一些辅助的 流映射函数（如 Counter, MathAdder 等）, 以及一些流发生器 (listen tcp, dial tcp, stdio 等)，其它第三方协议要在 rucimp 或第三方包中实现
 
 ## 配置模式
 
@@ -164,9 +164,9 @@ o2node-.->collector
 - [x] 代理功能 (rucimp/examples/suit, suit2 或 chain )
 - [x] 日志 (env_logger)
 - [x] 流量记录 (两种实现，分别用于记录原始流量与实际流量)
-- [x] Direct, TcpListener, TcpDialer, Stdio
+- [x] Direct,Blackhole, TcpListener, TcpDialer, Stdio
 - [x] tls,socks5,http proxy, socks5http, trojan
-- [x] adder (按字节加法器), counter (层流量计)
+- [x] Adder (按字节加法器), Counter (层流量计)
 - [ ] unix domain socket
 - [ ] 路由
 - [ ] 回落
