@@ -261,19 +261,19 @@ impl AsyncWrite for MockTcpStream {
 
 /// useful for testing
 #[derive(Debug)]
-pub struct MockTcpStream2 {
-    pub read_data: &'static mut Vec<u8>,
-    pub write_data: &'static mut Vec<u8>,
+pub struct MockTcpStream2<'a> {
+    pub read_data: &'a mut Vec<u8>,
+    pub write_data: &'a mut Vec<u8>,
     pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
 }
-impl crate::Name for MockTcpStream2 {
+impl<'a> crate::Name for MockTcpStream2<'a> {
     fn name(&self) -> &str {
         "mock_tcpstream2"
     }
 }
 
-impl Unpin for MockTcpStream2 {}
-impl AsyncRead for MockTcpStream2 {
+impl<'a> Unpin for MockTcpStream2<'a> {}
+impl<'a> AsyncRead for MockTcpStream2<'a> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         _: &mut Context,
@@ -292,7 +292,7 @@ impl AsyncRead for MockTcpStream2 {
     }
 }
 
-impl AsyncWrite for MockTcpStream2 {
+impl<'a> AsyncWrite for MockTcpStream2<'a> {
     fn poll_write(
         mut self: Pin<&mut Self>,
         _: &mut Context,
