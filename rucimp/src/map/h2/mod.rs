@@ -1,3 +1,9 @@
+/*!
+Defines Mappers for h2 and grpc
+
+目前的设定: grpc client 默认使用 0rtt; 非 grpc 的 h2 不使用0rtt
+*/
+
 pub mod client;
 pub mod grpc;
 pub mod server;

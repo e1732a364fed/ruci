@@ -1,3 +1,5 @@
+pub mod zero_rtt;
+
 use std::{
     cmp::min,
     io::{self, Error, ErrorKind},
@@ -17,13 +19,12 @@ pub fn build_grpc_request_from(c: &CommonConfig) -> Request<()> {
     let mut request = Request::builder()
         .method(c.method.as_deref().unwrap_or("POST"))
         .header(CONTENT_TYPE, GRPC_CONTENT_TYPE)
-        .header("user-agent", USER_AGENT)
-        .header("Te", "trailers");
+        .header("user-agent", USER_AGENT);
 
     if c.authority.is_empty() {
         request = request.uri(&c.path)
     } else {
-        request = request.header("Host", c.authority.as_str()).uri(
+        request = request.uri(
             Uri::builder()
                 .scheme(c.scheme.as_deref().unwrap_or("https"))
                 .authority(c.authority.as_str())
@@ -40,6 +41,7 @@ pub fn build_grpc_request_from(c: &CommonConfig) -> Request<()> {
             }
         }
     }
+    request = request.version(Version::HTTP_2);
     request.body(()).unwrap()
 }
 
@@ -77,7 +79,7 @@ fn put_uvarint(buf: &mut [u8], mut x: usize) -> usize {
 use crate::net::http::HttpMatchError;
 use futures::ready;
 use h2::{RecvStream, SendStream};
-use http::{Request, Uri};
+use http::{Request, Uri, Version};
 use ruci::{net::http::CommonConfig, utils::io_error};
 use thiserror::Error;
 use tokio::{

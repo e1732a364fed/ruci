@@ -166,7 +166,7 @@ config = {
 
 --]=]
 
----[=[
+--[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_ws_trojan_chain } },
@@ -178,7 +178,7 @@ config = {
 
 --]=]
 
---[=[
+---[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },

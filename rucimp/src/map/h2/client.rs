@@ -127,22 +127,22 @@ async fn new_stream_by_send_request(
         None => send_request.send_request(Request::builder().body(()).unwrap(), false)?,
     };
 
-    let recv_stream = resp.await?.into_body();
-
-    let stream: net::Conn = if is_grpc {
-        Box::new(super::grpc::Stream::new(
-            recv_stream,
+    let stream = if is_grpc {
+        Box::new(super::grpc::zero_rtt::Stream::new(
+            resp,
             send_stream,
             if is_mux { None } else { Some(tx) },
         ))
     } else {
-        Box::new(super::H2Stream::new(
+        let recv_stream = resp.await?.into_body();
+
+        let stream: net::Conn = Box::new(super::H2Stream::new(
             recv_stream,
             send_stream,
             if is_mux { None } else { Some(tx) },
-        ))
+        ));
+        stream
     };
-
     Ok(stream)
 }
 
