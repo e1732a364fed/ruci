@@ -294,7 +294,7 @@ fn get_config_str() -> String {
     let ps = net::gen_random_higher_port().to_string();
     let toml_str = toml_str.replace("12345", &ps);
 
-    return toml_str;
+    toml_str
 }
 
 fn get_config() -> Config {
@@ -308,20 +308,16 @@ fn get_nl_config(listener_num: u8) -> Config {
 
         ws += &toml_str;
     }
-    let c: Config = toml::from_str(&ws).unwrap();
-    //println!("{:#?}", c);
-
-    c
+    toml::from_str(&ws).unwrap()
 }
 
-async fn get_socks5_inadder(lsuit: &SuitStruct) -> socks5::server::Server {
-    let a = socks5::server::Server::new(
+async fn get_socks5_mapper(lsuit: &SuitStruct) -> socks5::server::Server {
+    socks5::server::Server::new(
         rucimp::suit::config::adapter::get_socks5_server_option_from_ldconfig(
             lsuit.get_config().unwrap().clone(),
         ),
     )
-    .await;
-    a
+    .await
 }
 
 /// 基本测试. 百度在遇到非http请求后会主动断开连接，其对于长挂起请求最多60秒后断开连接。
@@ -338,7 +334,7 @@ async fn socks5_direct_and_request() -> std::io::Result<()> {
     let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    let a = get_socks5_inadder(&lsuit).await;
+    let a = get_socks5_mapper(&lsuit).await;
     lsuit.push_mapper(Box::new(a));
 
     //println!("{:?}", lsuit);
@@ -402,7 +398,7 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
     let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    let a = get_socks5_inadder(&lsuit).await;
+    let a = get_socks5_mapper(&lsuit).await;
     lsuit.push_mapper(Box::new(a));
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
@@ -455,7 +451,7 @@ async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()>
     let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    let a = get_socks5_inadder(&lsuit).await;
+    let a = get_socks5_mapper(&lsuit).await;
     lsuit.push_mapper(Box::new(a));
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
@@ -512,7 +508,7 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
     let a = ruci::map::counter::Counter;
     lsuit.push_mapper(Box::new(a));
 
-    let a = get_socks5_inadder(&lsuit).await;
+    let a = get_socks5_mapper(&lsuit).await;
     lsuit.push_mapper(Box::new(a));
 
     let wn = lsuit.whole_name.clone();
@@ -564,7 +560,7 @@ async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
     let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    let a = get_socks5_inadder(&lsuit).await;
+    let a = get_socks5_mapper(&lsuit).await;
     lsuit.push_mapper(Box::new(a));
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
@@ -623,7 +619,7 @@ async fn socks5_direct_longwait_write_and_request() {
     let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    let a = get_socks5_inadder(&lsuit).await;
+    let a = get_socks5_mapper(&lsuit).await;
     lsuit.push_mapper(Box::new(a));
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
@@ -819,7 +815,7 @@ async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
     let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    let a = get_socks5_inadder(&lsuit).await;
+    let a = get_socks5_mapper(&lsuit).await;
     lsuit.push_mapper(Box::new(a));
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
