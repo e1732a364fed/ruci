@@ -23,7 +23,9 @@ tls = {
     -- NativeTLS = {
     TLS = {
         cert = "test.crt",
-        key = "test.key"
+        key = "test.key",
+        alpn = {"h2","http",}
+
     }
 }
 

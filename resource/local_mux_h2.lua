@@ -7,7 +7,9 @@ dial = {
 tlsout = {
     TLS = {
         host = "www.1234.com",
-        insecure = true
+        insecure = true,
+        alpn = {"h2"}
+
     }
 }
 trojan_out = {
