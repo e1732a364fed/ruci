@@ -50,7 +50,7 @@ impl Engine {
         }
     }
 
-    pub fn init(&mut self, sc: StaticConfig) {
+    pub fn init_static(&mut self, sc: StaticConfig) {
         let inbounds = sc.get_inbounds();
         self.inbounds = inbounds
             .into_iter()

@@ -27,9 +27,9 @@ pub(crate) async fn run(
         .context(format!("run chain engine try get file {} failed", f))?;
 
     let mut se = rucimp::modes::chain::engine::Engine::default();
-    let sc = lua::load(&contents).expect("has valid lua codes in the file content");
+    let sc = lua::load_static(&contents).expect("has valid lua codes in the file content");
 
-    se.init(sc);
+    se.init_static(sc);
 
     let mut se = Box::new(se);
 

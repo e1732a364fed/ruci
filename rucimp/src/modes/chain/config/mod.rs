@@ -18,10 +18,7 @@ use ruci::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    route::{config::RuleSetConfig, RuleSet},
-    COMMON_DIRS,
-};
+use crate::route::{config::RuleSetConfig, RuleSet};
 
 /// 静态配置中有初始化后即确定的listen/dial数量和行为
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
@@ -140,7 +137,7 @@ impl StaticConfig {
             if let Some(mut rs_v) = result {
                 use crate::route::maxmind;
 
-                let r = maxmind::open_mmdb("Country.mmdb", &COMMON_DIRS);
+                let r = maxmind::open_mmdb("Country.mmdb", &crate::COMMON_DIRS);
                 match r {
                     Ok(m) => {
                         let am = Some(Arc::new(m));

@@ -34,9 +34,9 @@ async fn main() -> anyhow::Result<()> {
     let contents = try_get_filecontent(&default_fn, arg_f)?;
 
     let mut se = Engine::default();
-    let sc = lua::load(&contents).expect("has valid lua codes in the file content");
+    let sc = lua::load_static(&contents).expect("has valid lua codes in the file content");
 
-    se.init(sc);
+    se.init_static(sc);
 
     let conn_info_record_file = OpenOptions::new()
         .append(true)
