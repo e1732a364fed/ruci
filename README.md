@@ -12,7 +12,7 @@ ruci pronounced lucy.
 
 A network proxy framework uses rust(Rust 2021 edition 1.75+)
 
-See [notes.md](doc/notes.md) for more notes 
+See [notes.md](doc/notes.md) for more notes.
 
 文档所限, 肯定有东西没有涉及到, 可提交issue提问或加入讨论. 
 欢迎加入我们. 注意低调. 
