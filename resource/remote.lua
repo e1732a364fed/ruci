@@ -76,6 +76,16 @@ in_h2_trojans_chain = {tcp, tls, {
     }
 }, trojan_in}
 
+in_quic_chain = {
+    {
+        Quic = {
+            key_path = "test.key",
+            cert_path = "test.crt",
+            listen_addr = "127.0.0.1:10801",
+        }
+    }, trojan_in
+}
+
 dial = {
     Dialer = "tcp://0.0.0.0:10801"
 }
@@ -92,12 +102,13 @@ direct_out_chain = {"Direct"}
 
 config = {
     inbounds = { 
-    --  {chain = trojan_chain, tag = "listen1"} ,
-    --  {  chain = ws_trojans_chain,  tag = "listen1"  } 
-    { chain = in_h2_trojans_chain, tag = "listen1" } 
-    -- {chain = socks5http_chain, tag = "listen1"} ,
-    -- {chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
-    -- {chain = { { Dialer =  "udp://127.0.0.1:20800" } , "Echo" }, tag = "udp_echo"} ,
+    --  { chain = trojan_chain, tag = "listen1"} ,
+    --  { chain = ws_trojans_chain,  tag = "listen1"  } 
+    -- { chain = in_h2_trojans_chain, tag = "listen1" } 
+    { chain = in_quic_chain, tag = "listen1" } 
+    -- { chain = socks5http_chain, tag = "listen1"} ,
+    -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
+    -- { chain = { { Dialer =  "udp://127.0.0.1:20800" } , "Echo" }, tag = "udp_echo"} ,
     },
 
     outbounds = {{

@@ -1,6 +1,8 @@
+use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
+use anyhow::Context;
 use async_trait::async_trait;
 use ruci::map::*;
 use ruci::net::CID;
@@ -14,16 +16,16 @@ use tracing::{debug, warn};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
-    pub tls_key: String,
-    pub tls_cert: String,
+    pub key_path: String,
+    pub cert_path: String,
     pub listen_addr: String,
 }
 
 #[mapper_ext_fields]
 #[derive(Debug, Clone, MapperExt)]
 pub struct Server {
-    tls_key: String,
-    tls_cert: String,
+    tls_key_path: String,
+    tls_cert_path: String,
     listen_addr: String,
 
     a_next_cid: Arc<AtomicU32>,
@@ -38,8 +40,8 @@ impl Name for Server {
 impl Server {
     pub fn new(c: Config) -> Self {
         Self {
-            tls_key: c.tls_key,
-            tls_cert: c.tls_cert,
+            tls_key_path: c.key_path,
+            tls_cert_path: c.cert_path,
             listen_addr: c.listen_addr,
             a_next_cid: Arc::new(AtomicU32::new(1)),
             ext_fields: Some(MapperExtFields::default()),
@@ -47,9 +49,13 @@ impl Server {
     }
     async fn handshake(&self, cid: CID) -> anyhow::Result<map::MapResult> {
         let mut server = s2n_quic::Server::builder()
-            .with_tls((self.tls_key.as_str(), self.tls_cert.as_str()))?
+            .with_tls((
+                Path::new(self.tls_cert_path.as_str()),
+                Path::new(self.tls_key_path.as_str()),
+            ))?
             .with_io(self.listen_addr.as_str())?
-            .start()?;
+            .start()
+            .context("quic init server failed")?;
 
         let (tx, rx) = mpsc::channel(100); //todo adjust this
 
@@ -64,8 +70,9 @@ impl Server {
                 let tx = tx.clone();
 
                 tokio::spawn(async move {
+                    let s_count: AtomicU32 = AtomicU32::new(1);
+
                     while let Ok(Some(stream)) = connection.accept_bidirectional_stream().await {
-                        let s_count: AtomicU32 = AtomicU32::new(1);
                         let mut new_cid = cc.clone();
                         new_cid.push_num(s_count.fetch_add(1, Ordering::Relaxed));
 
@@ -76,7 +83,7 @@ impl Server {
                         let m = MapResult::new_c(stream).new_id(new_cid).build();
                         let r = tx.send(m).await;
                         if let Err(e) = r {
-                            warn!(cid = %cc, "accept h2 tx got error: {}", e);
+                            warn!(cid = %cc, "quic send tx got error: {}", e);
                             break;
                         }
                     }

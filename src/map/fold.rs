@@ -370,7 +370,12 @@ pub async fn in_iter_fold_forever(params: InIterFoldForeverParams) {
                 break;
             }
         };
-        let new_cid = cid.clone_push(o_gtr.clone());
+
+        let new_cid = if let Some(c) = &new_stream_info.new_id {
+            c.clone()
+        } else {
+            cid.clone_push(o_gtr.clone())
+        };
 
         if tracing::enabled!(Level::INFO) {
             if let Some(d) = &new_stream_info.d {

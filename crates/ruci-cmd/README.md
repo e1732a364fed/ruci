@@ -24,9 +24,9 @@ debug:
 ```
 RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls  -- --log-file ""
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F use-native-tls  -- --log-file "" -c remote.lua
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls  -- --log-file "" -c remote.lua
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F use-native-tls  -- --log-file "" -c local_mux2_h2.lua --infinite
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls  -- --log-file "" -c local_mux2_h2.lua --infinite
 
 RUST_LOG=debug cargo run -F lua -F api_server -F api_client -F utils -F trace -- -a run --trace
 
@@ -119,5 +119,6 @@ api:
 
 # 实现细节
 
-发送http请求用reqwest, 接收用 axum
-用了 TinyUFO
+utils, api_client: 发送http请求用reqwest
+
+api_server: 用了 axum, TinyUFO

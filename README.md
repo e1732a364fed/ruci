@@ -75,7 +75,8 @@ ruci对代理的原理加以更高的抽象化, 认为任何协议都可被认�
 
 单流发生器(stream generator):  `function(args)->stream`
 
-单射(normal stream mapper):  `function(stream1, args...)-> (Option<stream2>, useful_data...) `
+单射( injective function, which is the normal stream mapper): 
+ `function(stream1, args...)-> (Option<stream2>, useful_data...) `
 
 多流发生器(multi-stream generator): `function( Option<stream> ,args...)->[channel->stream]`
 

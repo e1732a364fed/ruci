@@ -81,6 +81,17 @@ h2_single_out = {
     }
 }
 
+quic_out_chain = {
+    {
+        Quic = {
+            cert_path = "test.crt", -- need cert of the server
+            server_addr = "127.0.0.1:10801",
+            server_name = "www.mytest.com", -- 我们提供的 test.crt中的 CN(CommonName) 为 www.mytest.com
+        }
+    },
+    trojan_out
+}
+
 dial_h2_trojan_chain = {dial, tlsout, h2_single_out, trojan_out}
 
 stdio_socks5_chain = {{
@@ -178,16 +189,29 @@ config = {
 
 --]=]
 
----[=[
+--[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },
 
     -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+h2+trojan 的情况 
-    -- (非多路复用. mux的情况见 local_mux_h2.lua)
+    -- (非多路复用. mux的情况见 local_mux_h2.lua 和 local_mux2_h2.lua)
 }
 
 --]=]
+
+
+---[=[
+    config = {
+        inbounds = { {chain = listen_socks5http, tag = "listen1"} },
+        outbounds = { { tag="dial1", chain = quic_out_chain } },
+    
+        -- 演示 inbound 是 socks5http, outbound 是 quic 的情况 
+    }
+    
+--]=]
+
+
 
 --[=[
 config = {

@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -16,7 +17,7 @@ use tracing::debug;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
-    pub cert_string: String,
+    pub cert_path: String,
 
     pub server_addr: String,
     pub server_name: String,
@@ -41,7 +42,7 @@ impl Name for Client {
 impl Client {
     pub fn new(c: Config) -> anyhow::Result<Self> {
         let client = s2n_quic::Client::builder()
-            .with_tls(c.cert_string.as_str())?
+            .with_tls(Path::new(c.cert_path.as_str()))?
             .with_io("0.0.0.0:0")?
             .start()?;
 

@@ -69,7 +69,7 @@ impl Server {
                         // 如果客户端发来的请求uri不带正确的 authority, h2
                         // 会在debug 中报 malformed headers: malformed authority
                         // 并对 accept 返回 None
-                        warn!(cid = %cid, "accept h2 got None, will break");
+                        warn!(cid = %cid, "h2 accept got None, will break");
                         break;
                     }
                 };
@@ -77,7 +77,7 @@ impl Server {
                     Ok(r) => r,
                     Err(e) => {
                         // 这里不能 continue, 一定要 break, 否则在有错误时会无限循环
-                        warn!(cid = %cid, "accept h2 got error, will break: {}", e);
+                        warn!(cid = %cid, "h2 accept got error, will break: {}", e);
                         break;
                     }
                 };
@@ -167,7 +167,7 @@ impl Server {
                 let m = MapResult::new_c(stream).new_id(ncid).build();
                 let r = tx.send(m).await;
                 if let Err(e) = r {
-                    warn!(cid = %cid, "accept h2 tx got error: {}", e);
+                    warn!(cid = %cid, "h2 send tx got error: {}", e);
                     break;
                 }
             }
