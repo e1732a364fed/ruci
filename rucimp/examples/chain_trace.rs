@@ -86,8 +86,6 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    let se = Box::new(se);
-
     let mut js = se.run().await?;
 
     tokio::spawn(async move {

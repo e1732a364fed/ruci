@@ -28,8 +28,6 @@ async fn main() -> anyhow::Result<()> {
 
     se.init_lua_infinite_dynamic(contents)?;
 
-    let se = Box::new(se);
-
     let mut js = se.run().await?;
 
     wait_close_sig().await?;

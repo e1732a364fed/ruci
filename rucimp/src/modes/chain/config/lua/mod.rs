@@ -158,21 +158,21 @@ fn get_iobounds_by_config_and_selector_map(
 }
 
 /// used by load_infinite,
-pub type GMAP = HashMap<String, LuaNextGenerator>;
+pub type GMap = HashMap<String, LuaNextGenerator>;
 
 const INFINITE_CONFIG_FIELD: &str = "infinite";
 
 /// get (inbounds generator map, outbounds generator map).
 ///
 /// read INFINITE_CONFIG_FIELD  global variable
-pub fn load_infinite_io(text: &str) -> anyhow::Result<(GMAP, GMAP)> {
+pub fn load_infinite_io(text: &str) -> anyhow::Result<(GMap, GMap)> {
     let i = get_infinite_gmap_from(text, ProxyBehavior::DECODE)?;
     let o = get_infinite_gmap_from(text, ProxyBehavior::ENCODE)?;
     Ok((i, o))
 }
 
-fn get_infinite_gmap_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMAP> {
-    let mut gmap: GMAP = HashMap::new();
+fn get_infinite_gmap_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMap> {
+    let mut gmap: GMap = HashMap::new();
 
     let lua = Lua::new();
     lua.load(text).eval()?;
