@@ -1,5 +1,5 @@
 /*!
-Implements a [`Map`] for reading and writing files.
+Implements a [`Map`] that use two files as the stream source, one for read, one for write.
 
 */
 use crate::map;
@@ -105,7 +105,7 @@ impl AsyncWrite for FileIOConn {
     }
 }
 
-/// use an existing file as the stream source.
+/// use an existing file i_name as the stream read source.
 ///
 /// ## Read:
 ///

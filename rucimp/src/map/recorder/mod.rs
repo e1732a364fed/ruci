@@ -18,6 +18,9 @@ use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt;
 use tracing::debug;
 
+pub const UPLOAD_DIRECTION: i8 = 1;
+pub const DOWNLOAD_DIRECTION: i8 = -1;
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum OutputFileExtension {
     #[default]
@@ -185,7 +188,7 @@ pub struct SimplifiedRecordData {
     pub cid: String,
 
     pub label: Option<String>,
-    pub data: Vec<(i8, Vec<u8>)>, // 1:upload, -1: download
+    pub data: Vec<(i8, Vec<u8>)>, // 使用 UPLOAD_DIRECTION 和 DOWNLOAD_DIRECTION
 }
 
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
@@ -264,116 +267,29 @@ impl Default for PayloadInfo {
     }
 }
 
-impl From<PayloadInfo> for har::v1_2::Entries {
-    fn from(val: PayloadInfo) -> Self {
-        match val {
-            PayloadInfo::Tcp(t, d, l) => {
-                let mut e = har::v1_2::Entries {
-                    time: t as f64,
-                    ..Default::default()
-                };
-
-                if d == 1 {
-                    e.request = har::v1_2::Request {
-                        body_size: l as i64,
-                        ..Default::default()
-                    };
-                } else {
-                    e.response = har::v1_2::Response {
-                        body_size: l as i64,
-                        ..Default::default()
-                    };
-                }
-
-                e
-            }
-            PayloadInfo::Udp(t, a, d, l) => {
-                let mut e = har::v1_2::Entries {
-                    time: t as f64,
-                    ..Default::default()
-                };
-
-                if d == 1 {
-                    e.request = har::v1_2::Request {
-                        body_size: l as i64,
-                        url: a.to_string(),
-                        ..Default::default()
-                    };
-                } else {
-                    e.response = har::v1_2::Response {
-                        body_size: l as i64,
-                        redirect_url: Some(a.to_string()),
-                        ..Default::default()
-                    };
-                }
-
-                e
-            }
-        }
-    }
-}
-
-impl From<InfoData> for har::Har {
-    fn from(val: InfoData) -> Self {
-        let entries = val
-            .payload
-            .into_iter()
-            .map(|p| p.into())
-            .collect::<Vec<_>>();
-
-        har::Har {
-            log: har::Spec::V1_2(har::v1_2::Log {
-                creator: har::v1_2::Creator {
-                    name: "ruci".to_string(),
-                    version: crate::VERSION.to_string(),
-                    comment: None,
-                },
-
-                entries,
-                ..Default::default()
-            }),
-        }
-    }
-}
-
-impl From<SimplifiedRecordData> for har::Har {
-    fn from(val: SimplifiedRecordData) -> Self {
-        let entries = val
-            .data
-            .into_iter()
-            .map(|(direction, data)| PayloadInfo::Tcp(0, direction, data.len()))
-            .collect::<Vec<_>>();
-
-        let entries = entries.into_iter().map(|p| p.into()).collect::<Vec<_>>();
-
-        har::Har {
-            log: har::Spec::V1_2(har::v1_2::Log {
-                entries,
-                ..Default::default()
-            }),
-        }
-    }
-}
-
 impl InfoRecorder {
     pub fn record_u(&mut self, data: &[u8]) {
         let d = self.since(self.start);
-        self.data.payload.push(PayloadInfo::Tcp(d, 1, data.len()));
+        self.data
+            .payload
+            .push(PayloadInfo::Tcp(d, UPLOAD_DIRECTION, data.len()));
     }
 
     pub fn record_d(&mut self, data: &[u8]) {
         let d = self.since(self.start);
-        self.data.payload.push(PayloadInfo::Tcp(d, -1, data.len()));
+        self.data
+            .payload
+            .push(PayloadInfo::Tcp(d, DOWNLOAD_DIRECTION, data.len()));
     }
 }
 
 impl SimplifiedRecorder {
     pub fn record_u(&mut self, data: &[u8]) {
-        self.data.data.push((1, data.to_vec()));
+        self.data.data.push((UPLOAD_DIRECTION, data.to_vec()));
     }
 
     pub fn record_d(&mut self, data: &[u8]) {
-        self.data.data.push((-1, data.to_vec()));
+        self.data.data.push((DOWNLOAD_DIRECTION, data.to_vec()));
     }
 }
 
@@ -697,5 +613,95 @@ impl Data for har::Har {
 
     fn format(&self) -> OutputFormat {
         OutputFormat::Har
+    }
+}
+impl From<PayloadInfo> for har::v1_2::Entries {
+    fn from(val: PayloadInfo) -> Self {
+        match val {
+            PayloadInfo::Tcp(t, d, l) => {
+                let mut e = har::v1_2::Entries {
+                    time: t as f64,
+                    ..Default::default()
+                };
+
+                if d == 1 {
+                    e.request = har::v1_2::Request {
+                        body_size: l as i64,
+                        ..Default::default()
+                    };
+                } else {
+                    e.response = har::v1_2::Response {
+                        body_size: l as i64,
+                        ..Default::default()
+                    };
+                }
+
+                e
+            }
+            PayloadInfo::Udp(t, a, d, l) => {
+                let mut e = har::v1_2::Entries {
+                    time: t as f64,
+                    ..Default::default()
+                };
+
+                if d == 1 {
+                    e.request = har::v1_2::Request {
+                        body_size: l as i64,
+                        url: a.to_string(),
+                        ..Default::default()
+                    };
+                } else {
+                    e.response = har::v1_2::Response {
+                        body_size: l as i64,
+                        redirect_url: Some(a.to_string()),
+                        ..Default::default()
+                    };
+                }
+
+                e
+            }
+        }
+    }
+}
+
+impl From<InfoData> for har::Har {
+    fn from(val: InfoData) -> Self {
+        let entries = val
+            .payload
+            .into_iter()
+            .map(|p| p.into())
+            .collect::<Vec<_>>();
+
+        har::Har {
+            log: har::Spec::V1_2(har::v1_2::Log {
+                creator: har::v1_2::Creator {
+                    name: "ruci".to_string(),
+                    version: crate::VERSION.to_string(),
+                    comment: None,
+                },
+
+                entries,
+                ..Default::default()
+            }),
+        }
+    }
+}
+
+impl From<SimplifiedRecordData> for har::Har {
+    fn from(val: SimplifiedRecordData) -> Self {
+        let entries = val
+            .data
+            .into_iter()
+            .map(|(direction, data)| PayloadInfo::Tcp(0, direction, data.len()))
+            .collect::<Vec<_>>();
+
+        let entries = entries.into_iter().map(|p| p.into()).collect::<Vec<_>>();
+
+        har::Har {
+            log: har::Spec::V1_2(har::v1_2::Log {
+                entries,
+                ..Default::default()
+            }),
+        }
     }
 }
