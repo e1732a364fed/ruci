@@ -47,8 +47,6 @@ ruci-cmd 是最终的全功能的可执行文件, 包含一些系统路由的配
 
 lua格式可参考 [用例](resource/local.lua)  和 [lua配置功能](doc/lua.md) 
 
-两种配置模式目前可由不同的示例程序运行, 如下. 
-
 ## 编译/执行方式
 
 ### ruci-cmd
@@ -179,8 +177,8 @@ o2node-.->collector
 - [x] native-tls
 - [x] http_filter, websocket(including early data)
 - [x] h2, grpc
+- [x] quic
 - [ ] tcp/ip netstack (lwip/smoltcp)
-- [ ] quic
 - [ ] ss?, vmess?
 
 ### ruci-cmd
