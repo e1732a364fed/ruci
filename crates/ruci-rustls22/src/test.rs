@@ -1,8 +1,8 @@
 use std::{env::set_var, fs, path::PathBuf, sync::Arc, time::Duration};
 
-use client::TlsClientOptions;
 use futures::{join, FutureExt};
 use parking_lot::Mutex;
+use ruci::map::tls_config::ClientOptions;
 use ruci::{
     map::{Map, MapParams, ProxyBehavior},
     net::{self, gen_random_higher_port, helpers::mock::MockTcpStream, CID},
@@ -13,8 +13,6 @@ use tokio::{
     task,
 };
 use tracing::{debug, info};
-
-use super::*;
 
 #[should_panic]
 #[tokio::test]
@@ -29,7 +27,7 @@ pub async fn dial_tls_in_mem() {
         write_target: Some(write_v),
     };
 
-    let a = crate::client::Client::new(TlsClientOptions {
+    let a = crate::client::Client::new(ClientOptions {
         host: Some("www.baidu.com".to_string()),
         insecure: true,
         ..Default::default()
@@ -68,7 +66,7 @@ pub async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Res
         .await
         .unwrap();
 
-    let a = crate::client::Client::new(TlsClientOptions {
+    let a = crate::client::Client::new(ClientOptions {
         host: Some("www.baidu.com".to_string()),
         insecure: true,
         ..Default::default()

@@ -430,7 +430,7 @@ pub enum OutMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(ruci_rustls22::client::TlsClientOptions),
+    TLS(ruci::map::tls_config::ClientOptions),
 
     #[cfg(feature = "sockopt")]
     OptDirect {
@@ -445,7 +445,7 @@ pub enum OutMapConfig {
     OptDialer(crate::map::opt_net::OptDialerOption),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(ruci_rustls22::client::TlsClientOptions),
+    NativeTLS(ruci::map::tls_config::ClientOptions),
 
     Http,
     Socks5(Socks5Out),
@@ -799,7 +799,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
             OutMapConfig::Counter => Ok(Box::<counter::Counter>::default()),
             OutMapConfig::Recorder(c) => Ok(c.into()),
 
-            OutMapConfig::TLS(c) => Ok(c.into()),
+            OutMapConfig::TLS(c) => Ok(Box::new(ruci_rustls22::client::Client::new(c))),
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             OutMapConfig::NativeTLS(c) => Ok(Box::new(crate::map::native_tls::Client {

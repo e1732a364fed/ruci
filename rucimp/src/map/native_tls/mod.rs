@@ -114,7 +114,7 @@ impl map::Map for Server {
 #[map_ext_fields]
 #[derive(Clone, Debug, MapExt)]
 pub struct Client {
-    pub config: ruci_rustls22::client::TlsClientOptions,
+    pub config: ruci::map::tls_config::ClientOptions,
 }
 
 impl Display for Client {

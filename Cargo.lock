@@ -610,9 +610,9 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "clash_rules"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f76f040927acff791f4fbf1a929ec2e8bea3abc7f5cabf2a06245dda2c5fa811"
+checksum = "2065db1844457d88c7839c71bf95800a69cf156fa55008a4fef3c89c524861dd"
 dependencies = [
  "aho-corasick",
  "ipnet",
@@ -2047,6 +2047,7 @@ version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad8935b44e7c13394a179a438e0cebba0fe08fe01b54f152e29a93b5cf993fd4"
 dependencies = [
+ "cc",
  "pkg-config",
  "vcpkg",
 ]

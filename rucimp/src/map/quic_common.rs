@@ -19,5 +19,5 @@ pub struct ClientConfig {
 
     pub cert_path: Option<String>,
     pub alpn: Option<Vec<String>>,
-    pub is_insecure: Option<bool>,
+    pub insecure: Option<bool>,
 }

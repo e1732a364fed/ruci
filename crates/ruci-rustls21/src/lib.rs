@@ -7,6 +7,8 @@ rustls 0.21 和 0.22 有很大不同, 截至 24.3.21, ruci包的 rustls 使用�
 
 used by quinn and quic mod
  */
+pub use rustls::ServerConfig;
+
 use std::{
     io::BufReader,
     path::{Path, PathBuf},
@@ -14,19 +16,13 @@ use std::{
     time::SystemTime,
 };
 
+use ruci::map::tls_config::*;
+
 use anyhow::{bail, Result};
 use file_source::FileSource;
-pub use rustls::ServerConfig;
 use rustls::{client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerName};
 use rustls_pemfile::{read_one, Item};
 use tracing::debug;
-
-#[derive(Debug, Default)]
-pub struct ClientOptions {
-    pub is_insecure: bool,
-    pub alpn: Option<Vec<String>>,
-    pub cert_path: Option<String>,
-}
 
 pub fn cc(opt: ClientOptions, file_source: &FileSource) -> Result<ClientConfig> {
     let mut root_store = rustls::RootCertStore::empty();
@@ -51,7 +47,7 @@ pub fn cc(opt: ClientOptions, file_source: &FileSource) -> Result<ClientConfig> 
         .with_root_certificates(root_store)
         .with_no_client_auth();
 
-    if opt.is_insecure {
+    if opt.insecure {
         cc.dangerous()
             .set_certificate_verifier(Arc::new(SuperDanVer {}));
     }
@@ -59,14 +55,6 @@ pub fn cc(opt: ClientOptions, file_source: &FileSource) -> Result<ClientConfig> 
         cc.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
     }
     Ok(cc)
-}
-
-#[derive(Debug, Default)]
-pub struct ServerOptions {
-    pub alpn: Option<Vec<String>>,
-
-    pub cert_path: String,
-    pub key_path: String,
 }
 
 pub fn sc(opt: ServerOptions, file_source: &FileSource) -> Result<ServerConfig> {

@@ -504,16 +504,16 @@ Quic= {
     server_name="www.mytest.com",
     cert_path="",--optional
     alpn = { "h2", "h3"}, --要明确指定 alpn
-    is_insecure=true,--optional
+    insecure=true,--optional
 }
 ```
 
 须给出 server_name (域名),
- 且 若 is_insecure 为 false, 须为 证书中所写的 CN 或 Subject Alternative Name;
+ 且 若 insecure 为 false, 须为 证书中所写的 CN 或 Subject Alternative Name;
 ruci 提供的 test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 localhost,
 
 
-cert_path：可给出 服务端的 证书, 这样就算 is_insecure = false 也通过验证
+cert_path：可给出 服务端的 证书, 这样就算 insecure = false 也通过验证
 证书须为 真证书, 或真fullchain 证书, 或自签的根证书
 
 ## spe1: Steganography Protocol Exmaple1

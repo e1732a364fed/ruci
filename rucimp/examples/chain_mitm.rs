@@ -37,10 +37,11 @@ async fn main() -> anyhow::Result<()> {
                     dial_addr: Some("127.0.0.1:10801".to_string()),
                     ..Default::default()
                 })),
-                OutMapConfig::TLS(ruci_rustls22::client::TlsClientOptions {
+                OutMapConfig::TLS(ruci::map::tls_config::ClientOptions {
                     host: Some("www.google.com".to_string()),
                     insecure: true,
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
+                    ..Default::default()
                 }),
                 OutMapConfig::Trojan(ruci::map::trojan::client::Config {
                     password: Some("mypassword".to_string()),
@@ -78,7 +79,7 @@ async fn run_engine_server_end() -> anyhow::Result<()> {
                     leak_target_addr: Some(true),
                     ..Default::default()
                 }),
-                OutMapConfig::TLS(ruci_rustls22::client::TlsClientOptions {
+                OutMapConfig::TLS(ruci::map::tls_config::ClientOptions {
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
                     ..Default::default()
                 }),

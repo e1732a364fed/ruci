@@ -829,7 +829,7 @@ async fn random_bytes_request_no_auth_tcp_handshake_in_mem() -> anyhow::Result<(
     use rand::rngs::SmallRng;
     use rand::{Rng, SeedableRng};
     let mut rng = SmallRng::from_os_rng();
-    let mut random_bytes: Vec<u8> = (0..80).map(|_| rng.gen::<u8>()).collect();
+    let mut random_bytes: Vec<u8> = (0..80).map(|_| rng.random::<u8>()).collect();
     random_bytes[0] = VERSION5;
     let client_tcps = MockTcpStream {
         read_data: random_bytes,
@@ -885,7 +885,7 @@ async fn random_bytes_request_auth_userpass_tcp_handshake_in_mem() -> anyhow::Re
     use rand::rngs::SmallRng;
     use rand::{Rng, SeedableRng};
     let mut rng = SmallRng::from_os_rng();
-    let mut random_bytes: Vec<u8> = (0..80).map(|_| rng.gen::<u8>()).collect();
+    let mut random_bytes: Vec<u8> = (0..80).map(|_| rng.random::<u8>()).collect();
     random_bytes[0] = VERSION5;
     let client_tcps = MockTcpStream {
         read_data: random_bytes,

@@ -1,5 +1,5 @@
-use file_source::FileSource;
 use anyhow::Context;
+use file_source::FileSource;
 use quinn::Endpoint;
 
 use std::fmt::Display;
@@ -39,10 +39,11 @@ impl Client {
     pub fn new(c: quic_common::ClientConfig, file_source: &FileSource) -> anyhow::Result<Self> {
         let cc = {
             let cc = rustls21::cc(
-                rustls21::ClientOptions {
-                    is_insecure: c.is_insecure.unwrap_or_default(),
+                ruci::map::tls_config::ClientOptions {
+                    insecure: c.insecure.unwrap_or_default(),
                     alpn: c.alpn,
                     cert_path: c.cert_path.clone(),
+                    ..Default::default()
                 },
                 file_source,
             )

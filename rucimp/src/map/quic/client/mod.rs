@@ -35,7 +35,7 @@ impl Client {
     pub fn new(c: crate::map::quic_common::ClientConfig) -> anyhow::Result<Self> {
         let tls = {
             let cc = rustls21::cc(rustls21::ClientOptions {
-                is_insecure: c.is_insecure.unwrap_or_default(),
+                insecure: c.insecure.unwrap_or_default(),
                 alpn: c.alpn,
                 cert_path: c.cert_path.clone(),
             })?;
