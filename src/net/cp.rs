@@ -181,8 +181,7 @@ where
 }
 
 //todo : improve this
-#[allow(unused)]
-async fn cp_rw_with_updater<'a, R, W>(
+pub async fn cp_rw_with_updater<'a, R, W>(
     cid: &CID,
     reader: &'a mut R,
     writer: &'a mut W,

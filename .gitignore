@@ -1,8 +1,9 @@
 dist/
 target/
 ruci_config/
-*.mmdb
 .DS_Store
 .vscode/
 testfile.txt
 *.log
+*.mmdb
+wintun.*

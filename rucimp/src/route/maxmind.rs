@@ -21,9 +21,6 @@ use anyhow::anyhow;
 use log::{debug, warn};
 use maxminddb::geoip2;
 
-// pub const MMDB_DOWNLOAD_LINK: &str =
-//     "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb";
-
 /// try read file  in possible_addrs
 pub fn get_ip_iso(ip: IpAddr, filename: &str, possible_addrs: &[&str]) -> String {
     let reader = open_mmdb(filename, possible_addrs).expect(&format!("has {}", filename));
