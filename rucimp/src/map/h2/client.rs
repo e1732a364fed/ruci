@@ -75,12 +75,68 @@ impl Mapper for SingleClient {
             let r = self.handshake(cid, conn, params.a, params.b).await;
             match r {
                 anyhow::Result::Ok(r) => r,
-                Err(e) => MapResult::from_e(e.context("h2_server handshake failed")),
+                Err(e) => MapResult::from_e(e.context("h2_single_client handshake failed")),
             }
         } else {
-            MapResult::err_str("h2_server only support tcplike stream")
+            MapResult::err_str("h2_single_client only support tcplike stream")
         }
     }
 }
 
-//pub struct MainClientConn {}
+#[derive(Clone, Debug, NoMapperExt, Default)]
+pub struct MainClient {}
+impl ruci::Name for MainClient {
+    fn name(&self) -> &str {
+        "h2_main_client"
+    }
+}
+
+impl MainClient {
+    async fn handshake(
+        &self,
+        cid: net::CID,
+        mut conn: net::Conn,
+        a: Option<net::Addr>,
+        early_data: Option<BytesMut>,
+    ) -> anyhow::Result<map::MapResult> {
+        let r = h2::client::handshake(conn).await;
+        let r = match r {
+            Ok(r) => r,
+            Err(e) => {
+                let e = anyhow::anyhow!("accept h2 got e {}", e);
+                return Ok(MapResult::from_e(e));
+            }
+        };
+        let (mut send_request, connection) = r;
+
+        let cc = cid.clone();
+        //这是一个 h2 包规定的奇怪用法
+        tokio::spawn(async move {
+            connection.await.expect("connection failed");
+            debug!(cid = %cc, "h2 await end");
+        });
+
+        unimplemented!()
+    }
+}
+
+#[async_trait]
+impl Mapper for MainClient {
+    async fn maps(
+        &self,
+        cid: net::CID,
+        _behavior: ProxyBehavior,
+        params: map::MapParams,
+    ) -> map::MapResult {
+        let conn = params.c;
+        if let net::Stream::Conn(conn) = conn {
+            let r = self.handshake(cid, conn, params.a, params.b).await;
+            match r {
+                anyhow::Result::Ok(r) => r,
+                Err(e) => MapResult::from_e(e.context("h2_main_client handshake failed")),
+            }
+        } else {
+            MapResult::err_str("h2_main_client only support tcplike stream")
+        }
+    }
+}
