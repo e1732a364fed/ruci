@@ -48,4 +48,4 @@ jobs:
         run: cd ${{ matrix.crate }} && cargo hack check --clean-per-run --feature-powerset $COMMON_FLAGS
 
       - name: Test  ${{ matrix.crate }} Every feature tag
-        run: cd ${{ matrix.crate }} && cargo hack test --clean-per-run --each-feature --no-dev-deps
+        run: cd ${{ matrix.crate }} && cargo hack test --clean-per-run --each-feature
