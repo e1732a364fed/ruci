@@ -20,7 +20,6 @@ use macro_map::{map_ext_fields, MapExt};
 use ruci::map::*;
 use ruci::net::helpers::EarlyDataWrapper;
 use ruci::net::CID;
-// use ruci::Name;
 use ruci::{map, net::MTU};
 use std::fmt::Display;
 use std::sync::Arc;

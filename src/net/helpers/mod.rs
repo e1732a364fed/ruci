@@ -17,8 +17,6 @@ use std::{
     task::{ready, Poll},
 };
 
-// use crate::Name;
-
 use super::*;
 use bytes::{Buf, BufMut, BytesMut};
 use tokio::{io::ReadBuf, sync::mpsc};
@@ -234,12 +232,6 @@ impl EarlyDataWrapper {
     }
 }
 
-// impl Name for EarlyDataWrapper {
-//     fn name(&self) -> &'static str {
-//         "earlydata_wrapper_conn"
-//     }
-// }
-
 impl AsyncRead for EarlyDataWrapper {
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -312,12 +304,6 @@ impl PrintWrapper {
         }
     }
 }
-
-// impl Name for PrintWrapper {
-//     fn name(&self) -> &'static str {
-//         "print_wrapper_conn"
-//     }
-// }
 
 impl AsyncRead for PrintWrapper {
     fn poll_read(

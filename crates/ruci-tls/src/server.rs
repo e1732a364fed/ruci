@@ -53,12 +53,6 @@ impl std::fmt::Debug for Server {
     }
 }
 
-// impl<IO> ruci::Name for tokio_rustls::server::TlsStream<IO> {
-//     fn name(&self) -> &str {
-//         "tokio_rustls_server_stream"
-//     }
-// }
-
 impl Server {
     pub fn new(c: ServerPEMOptions) -> Self {
         let config = load::load_ser_config_from_pem(&c, None).expect("tls server config valid");

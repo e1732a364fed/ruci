@@ -58,11 +58,11 @@ use tokio::sync::mpsc;
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Tee {}
 
-// impl Name for Tee {
-//     fn name(&self) -> &'static str {
-//         "tee"
-//     }
-// }
+impl Display for Tee {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tee")
+    }
+}
 
 #[async_trait]
 impl Map for Tee {

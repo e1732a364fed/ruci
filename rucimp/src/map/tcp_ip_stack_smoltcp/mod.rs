@@ -12,7 +12,6 @@ use std::time::Duration;
 use async_trait::async_trait;
 use ruci::map::{self, *};
 use ruci::net::*;
-// use ruci::Name;
 
 use macro_map::*;
 use smoltcp::iface::PollIngressSingleResult;

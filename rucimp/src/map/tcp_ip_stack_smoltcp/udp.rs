@@ -4,6 +4,7 @@ Defines a [`new`] function to create an AddrConn that consists of channel based 
 
 use std::{
     cmp::min,
+    fmt::{Display, Formatter},
     io,
     net::{SocketAddr, SocketAddrV4, SocketAddrV6},
     pin::Pin,
@@ -32,17 +33,17 @@ pub struct R {
     rx: Receiver<(IpEndpoint, BytesMut)>,
 }
 
-// impl ruci::Name for R {
-//     fn name(&self) -> &str {
-//         "smoltcp_udp(r)"
-//     }
-// }
+impl Display for R {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "smoltcp_udp(r)")
+    }
+}
 
-// impl ruci::Name for W {
-//     fn name(&self) -> &str {
-//         "smoltcp_udp(w)"
-//     }
-// }
+impl Display for W {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "smoltcp_udp(w)")
+    }
+}
 
 /// used by [`super::SmoltcpDevice`]
 pub fn new(

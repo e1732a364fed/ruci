@@ -55,12 +55,6 @@ pub struct WsStreamToConnWrapper<T: AsyncConn> {
     w_buf: Option<BytesMut>,
 }
 
-// impl<T: AsyncConn> ruci::Name for WsStreamToConnWrapper<T> {
-//     fn name(&self) -> &str {
-//         "websocket_conn"
-//     }
-// }
-
 impl<T: AsyncConn> AsyncRead for WsStreamToConnWrapper<T> {
     fn poll_read(
         mut self: Pin<&mut Self>,

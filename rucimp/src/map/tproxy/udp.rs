@@ -1,5 +1,6 @@
 use std::{
     cmp::min,
+    fmt::{Display, Formatter},
     io,
     os::fd::AsRawFd,
     pin::Pin,
@@ -340,11 +341,11 @@ pub struct Writer {
     dst: Addr,
     conn_map: ConnMap,
 }
-// impl Name for Writer {
-//     fn name(&self) -> &str {
-//         "tproxy_udp_w"
-//     }
-// }
+impl Display for Writer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tproxy_udp_w")
+    }
+}
 
 impl AsyncWriteAddr for Writer {
     fn poll_write_addr(
@@ -378,11 +379,11 @@ pub struct Reader {
     last_buf: Option<DataIndex>,
     state: ReadState,
 }
-// impl ruci::Name for Reader {
-//     fn name(&self) -> &str {
-//         "tproxy_udp_w"
-//     }
-// }
+impl Display for Reader {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tproxy_udp_r")
+    }
+}
 
 enum ReadState {
     Buf,

@@ -4,7 +4,6 @@ Defines a structure [`AddrConn`], and facilities around it.
 It provides several functions for copying data bewteen [`AddrReadTrait`] and [`AddrWriteTrait`], like
 [`cp_addr`], and a [fn@`cp`] function for copying data between [`AddrConn`] (which consists of [`AddrReadTrait`] and [`AddrWriteTrait`])
  */
-// use crate::Name;
 
 use super::*;
 
@@ -63,11 +62,11 @@ pub struct AddrConn {
     pub default_write_to: Option<Addr>,
     // pub cached_name: String,
 }
-// impl Name for AddrConn {
-//     fn name(&self) -> &str {
-//         &self.cached_name
-//     }
-// }
+impl Display for AddrConn {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AddrConn")
+    }
+}
 impl Debug for AddrConn {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AddrConn")
@@ -608,11 +607,11 @@ mod test {
     struct MyType {
         counter: u32,
     }
-    // impl crate::Name for MyType {
-    //     fn name(&self) -> &str {
-    //         "my_type"
-    //     }
-    // }
+    impl Display for MyType {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "my_type")
+        }
+    }
 
     impl AsyncReadAddr for MyType {
         fn poll_read_addr(

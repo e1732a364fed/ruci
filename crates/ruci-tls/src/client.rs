@@ -37,12 +37,6 @@ impl Display for Client {
     }
 }
 
-// impl<IO> ruci::Name for tokio_rustls::client::TlsStream<IO> {
-//     fn name(&self) -> &str {
-//         "tokio_rustls_client_stream"
-//     }
-// }
-
 fn default_cc() -> ClientConfig {
     ClientConfig::builder()
         .with_root_certificates(default_rcs())

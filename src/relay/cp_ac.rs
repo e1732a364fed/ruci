@@ -42,8 +42,6 @@ pub struct CpAddrConnArgs {
 /// non-blocking
 ///
 pub async fn cp_ac(args: CpAddrConnArgs) {
-    // use crate::Name;
-
     let cid = args.cid;
     let in_conn = args.in_conn;
     let mut out_conn = args.out_conn;
@@ -112,7 +110,6 @@ pub async fn cp_ac_and_c(args: CpAddrConnAndConnArgs) -> anyhow::Result<u64> {
     let mut c = args.c;
     let ed_from_ac = args.ed_from_ac;
     let gtr = args.gtr;
-    // use crate::Name;
     info!(cid = %cid,   "cp_addr_conn_and_conn start",);
 
     if let Some(ed) = args.ed {

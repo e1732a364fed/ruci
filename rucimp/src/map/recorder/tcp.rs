@@ -1,6 +1,5 @@
 use std::{io, pin::Pin, task::Poll};
 
-// use ruci::Name;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use tracing::info;
@@ -12,12 +11,6 @@ pub(super) struct RecorderConn {
     pub(super) base: Pin<ruci::net::Conn>,
     pub(super) record: Recorder,
 }
-
-// impl Name for RecorderConn {
-//     fn name(&self) -> &str {
-//         "recorder"
-//     }
-// }
 
 impl AsyncRead for RecorderConn {
     fn poll_read(

@@ -6,6 +6,7 @@ use std::{
 };
 
 use bytes::{Buf, BufMut, BytesMut};
+use fmt::Display;
 use tokio::io::{AsyncWrite, ReadHalf, WriteHalf};
 use tracing::debug;
 
@@ -61,11 +62,11 @@ impl Reader {
     }
 }
 
-// impl crate::Name for Reader {
-//     fn name(&self) -> &str {
-//         "trojan_udp(r)"
-//     }
-// }
+impl Display for Reader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "trojan_udp(r)")
+    }
+}
 
 impl AsyncReadAddr for Reader {
     fn poll_read_addr(
@@ -103,11 +104,11 @@ pub struct Writer {
 
     pub last_buf: Option<BytesMut>,
 }
-// impl crate::Name for Writer {
-//     fn name(&self) -> &str {
-//         "trojan_udp(w)"
-//     }
-// }
+impl Display for Writer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "trojan_udp(w)")
+    }
+}
 impl Writer {
     pub fn new(base: WriteHalf<net::Conn>) -> Self {
         Self {

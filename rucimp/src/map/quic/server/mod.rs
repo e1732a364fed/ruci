@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -6,7 +7,6 @@ use anyhow::Context;
 use async_trait::async_trait;
 use ruci::map::*;
 use ruci::net::CID;
-// use ruci::Name;
 use ruci::{map, net::Stream};
 
 use macro_map::*;
@@ -26,11 +26,11 @@ pub struct Server {
     a_next_cid: Arc<AtomicU32>,
 }
 
-// impl Name for Server {
-//     fn name(&self) -> &'static str {
-//         "quic_server"
-//     }
-// }
+impl Display for Server {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "quic_server")
+    }
+}
 
 impl Server {
     pub fn new(c: ServerConfig) -> Self {

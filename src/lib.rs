@@ -17,21 +17,3 @@ pub mod user;
 pub mod utils;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-// many types in ruci have a name.
-// /// use lower case letters + underline
-// pub trait Name {
-//     fn name(&self) -> &str;
-// }
-
-// impl<T: Name + ?Sized> Name for Box<T> {
-//     fn name(&self) -> &str {
-//         (**self).name()
-//     }
-// }
-
-// impl<T: Name + ?Sized> Name for &mut T {
-//     fn name(&self) -> &str {
-//         (**self).name()
-//     }
-// }

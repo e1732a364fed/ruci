@@ -36,11 +36,11 @@ pub struct Conn {
     u: Arc<UdpSocket>,
     peer_addr: Option<Addr>,
 }
-// impl crate::Name for Conn {
-//     fn name(&self) -> &str {
-//         "udp"
-//     }
-// }
+impl Display for Conn {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "udp")
+    }
+}
 
 impl Conn {
     /// init a Conn from a UdpSocket
@@ -227,11 +227,6 @@ mod test {
         pub write_data: Vec<u8>,
         pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
     }
-    // impl crate::Name for MockStream {
-    //     fn name(&self) -> &str {
-    //         "mock_stream"
-    //     }
-    // }
 
     impl AsyncWriteAddr for MockStream {
         fn poll_write_addr(

@@ -26,11 +26,11 @@ pub struct FileIOConn {
     last_read: Option<tokio::time::Instant>,
 }
 
-// impl Name for FileIOConn {
-//     fn name(&self) -> &'static str {
-//         "fileio_conn"
-//     }
-// }
+impl Display for FileIOConn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "fileio_conn")
+    }
+}
 impl FileIOConn {
     fn real_read(
         mut self: Pin<&mut Self>,

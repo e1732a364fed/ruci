@@ -9,7 +9,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use ruci::map::*;
 use ruci::net::{helpers, CID};
-// use ruci::Name;
 use ruci::{map, net::Stream};
 
 use macro_map::*;

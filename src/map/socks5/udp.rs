@@ -1,5 +1,6 @@
 use std::{
     cmp::min,
+    fmt::Display,
     io,
     net::SocketAddr,
     pin::Pin,
@@ -24,11 +25,11 @@ pub struct Conn {
     base: Arc<UdpSocket>,
     peer_soa: SocketAddr,
 }
-// impl Name for Conn {
-//     fn name(&self) -> &str {
-//         "socks5_udp"
-//     }
-// }
+impl Display for Conn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "socks5_udp")
+    }
+}
 
 impl Conn {
     pub fn new(u: UdpSocket, peer_soa: SocketAddr) -> Self {

@@ -9,6 +9,7 @@ Counter 使用 原子的动态数据，方便实时查询
 
 use super::*;
 use std::{
+    fmt::{Display, Formatter},
     io,
     pin::Pin,
     sync::{
@@ -32,11 +33,11 @@ pub struct CounterConn {
     base: Pin<net::Conn>,
 }
 
-// impl Name for CounterConn {
-//     fn name(&self) -> &str {
-//         "counter"
-//     }
-// }
+impl Display for CounterConn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "counter")
+    }
+}
 
 #[derive(Clone)]
 pub struct CounterData {
@@ -182,22 +183,22 @@ struct CounterAddrConnR {
     pub data: CounterData,
 }
 
-// impl crate::Name for CounterAddrConnR {
-//     fn name(&self) -> &str {
-//         "counter_ac_r"
-//     }
-// }
+impl Display for CounterAddrConnR {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "counter_ac_r")
+    }
+}
 
 struct CounterAddrConnW {
     base: Pin<Box<dyn addr_conn::AddrWriteTrait>>,
     pub data: CounterData,
 }
 
-// impl crate::Name for CounterAddrConnW {
-//     fn name(&self) -> &str {
-//         "counter_ac_w"
-//     }
-// }
+impl Display for CounterAddrConnW {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "counter_ac_w")
+    }
+}
 
 impl AsyncReadAddr for CounterAddrConnR {
     fn poll_read_addr(

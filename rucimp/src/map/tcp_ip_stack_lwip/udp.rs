@@ -2,6 +2,7 @@
 代码修改自 tproxy 包中的对应 udp 代码
 */
 
+use std::fmt::{Display, Formatter};
 use std::{
     cmp::min,
     io,
@@ -268,11 +269,11 @@ pub struct Writer {
     dst: std::net::SocketAddr,
     conn_map: ConnMap,
 }
-// impl Name for Writer {
-//     fn name(&self) -> &str {
-//         "tproxy_udp_w"
-//     }
-// }
+impl Display for Writer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tproxy_udp_w")
+    }
+}
 
 impl AsyncWriteAddr for Writer {
     fn poll_write_addr(
@@ -307,11 +308,11 @@ pub struct Reader {
     last_buf: Option<Vec<u8>>,
     state: ReadState,
 }
-// impl ruci::Name for Reader {
-//     fn name(&self) -> &str {
-//         "tproxy_udp_r"
-//     }
-// }
+impl Display for Reader {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tproxy_udp_r")
+    }
+}
 
 enum ReadState {
     Buf,

@@ -22,7 +22,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use rainbow::NetworkSteganographyProcessor;
-use ruci::{map::*, net::CID, Name};
+use ruci::{map::*, net::CID};
 
 pub mod conn;
 
@@ -65,9 +65,9 @@ impl GeneralMap {
     }
 }
 
-impl Name for GeneralMap {
-    fn name(&self) -> &str {
-        self.cached_name.as_str()
+impl Display for GeneralMap {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.cached_name)
     }
 }
 

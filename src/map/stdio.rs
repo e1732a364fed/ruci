@@ -33,11 +33,11 @@ pub struct Conn {
 
     write_mode: WriteMode,
 }
-// impl Name for Conn {
-//     fn name(&self) -> &'static str {
-//         "stdio_conn"
-//     }
-// }
+impl Display for Conn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "stdio_conn")
+    }
+}
 
 impl AsyncRead for Conn {
     fn poll_read(

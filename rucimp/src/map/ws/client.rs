@@ -159,12 +159,6 @@ struct EarlyConn {
     left_first_w_data: Option<BytesMut>,
 }
 
-// impl ruci::Name for EarlyConn {
-//     fn name(&self) -> &str {
-//         "websocket_ed_conn"
-//     }
-// }
-
 impl AsyncRead for EarlyConn {
     fn poll_read(
         mut self: Pin<&mut Self>,

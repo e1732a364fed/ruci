@@ -1,6 +1,7 @@
 use std::{
     cmp::min,
     collections::{hash_map::Entry, HashMap},
+    fmt::{Display, Formatter},
     io,
     net::SocketAddr,
     pin::Pin,
@@ -185,11 +186,11 @@ struct Writer {
     src: SocketAddr,
     conn_map: Arc<Mutex<HashMap<SocketAddr, Sender<BytesMut>>>>,
 }
-// impl crate::Name for Writer {
-//     fn name(&self) -> &str {
-//         "udp_fixed_w"
-//     }
-// }
+impl Display for Writer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "udp_fixed_w")
+    }
+}
 impl AsyncWriteAddr for Writer {
     fn poll_write_addr(
         self: Pin<&mut Self>,
@@ -233,11 +234,11 @@ struct Reader {
     last_buf: Option<BytesMut>,
     state: ReadState,
 }
-// impl crate::Name for Reader {
-//     fn name(&self) -> &str {
-//         "udp_fixed_r"
-//     }
-// }
+impl Display for Reader {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "udp_fixed_r")
+    }
+}
 
 enum ReadState {
     Buf,

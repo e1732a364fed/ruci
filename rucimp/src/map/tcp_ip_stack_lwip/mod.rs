@@ -8,6 +8,7 @@
 mod udp;
 
 use std::{
+    fmt::Display,
     net::SocketAddr,
     sync::{
         atomic::{AtomicBool, AtomicU32},
@@ -37,11 +38,11 @@ use udp::loop_accept_udp;
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Stack {}
 
-// impl Name for Stack {
-//     fn name(&self) -> &'static str {
-//         "lwip_stack"
-//     }
-// }
+impl Display for Stack {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "lwip_stack")
+    }
+}
 
 #[async_trait]
 impl Map for Stack {
