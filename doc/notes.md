@@ -52,7 +52,7 @@ Protocol names we support, most preferred first. If empty we don't do ALPN at al
 client:
 Which ALPN protocols we include in our client hello. If empty, no ALPN extension is sent
 
-如果任意一方的alpn 都没给出, 则连接都通过；如果两方 alph 都给出, 则只有匹配了才通过
+如果任意一方的alpn 没给出, 则连接都通过；如果两方 alph 都给出, 则只有匹配了才通过
 
 native-tls 的 server 不支持手动设置 alpn
 

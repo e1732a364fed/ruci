@@ -19,13 +19,14 @@ See [notes.md](doc/notes.md) for more notes
 
 一个好的解决问题的模式: 有暂时不懂的问题可以先进群问, 确定问题后再发 issue
 
-开发级讨论群:     https://t.me/+6yL4ggeyKY0yNjIx
-用户级channel:    https://t.me/+r5hKQKYyeuowMTcx
+Developer chat:    https://t.me/+6yL4ggeyKY0yNjIx
+User channel:       https://t.me/+r5hKQKYyeuowMTcx
 
-项目还在开发中, 功能会陆续添加
+The project is work in progress, 功能会陆续添加
 
 
 ## Structure
+
 The project is divided to three main parts:
 
 ruci is the base framewark, defines some concepts like【映射】(Mapper), 动态Mapper迭代器 DMIter; 
@@ -38,7 +39,7 @@ ruci-cmd 是最终的全功能的可执行文件, 包含一些系统路由的配
 
 具体名词解释请看下文. 
 
-## 配置模式
+## Configuration Mode
 
 由下文可知, ruci现在支持两种配置格式, 
 
@@ -47,7 +48,7 @@ ruci-cmd 是最终的全功能的可执行文件, 包含一些系统路由的配
 
 lua格式可参考 [用例](resource/local.lua)  和 [lua配置功能](doc/lua.md) 
 
-## 编译/执行方式
+## Compile/Run
 
 ### ruci-cmd
 
@@ -190,13 +191,13 @@ o2node-.->collector
 - [x] utils
 - [ ] system auto route
 
-#### 项目的实际目的？
+#### Real Purpose of This Project?
 
 我们要了解协议的细节, 以进行数据处理、转换到统一格式和“标注”.
 
 详见 [终极目标]( doc/GOAL_zh.md)
 
 
-# 开源协议
+# License
 
 This project is licensed under the MIT License
