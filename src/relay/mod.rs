@@ -8,6 +8,8 @@ pub mod cp_udp;
 pub mod record;
 pub mod route;
 
+pub use record::*;
+
 use std::sync::Arc;
 
 use bytes::BytesMut;
@@ -18,7 +20,6 @@ use crate::net::{self, Addr, Stream, CID};
 
 use self::acc::{AccumulateParams, MIterBox};
 use self::route::OutSelector;
-use record::*;
 
 use anyhow::anyhow;
 use std::time::Duration;
@@ -35,7 +36,7 @@ pub async fn handle_in_stream(
     out_selector: Arc<Box<dyn OutSelector>>,
     ti: Option<Arc<net::GlobalTrafficRecorder>>,
 
-    recorder: OptNewInfoSender,
+    newc_recorder: OptNewInfoSender,
 ) -> anyhow::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
@@ -67,7 +68,7 @@ pub async fn handle_in_stream(
         }
     };
 
-    handle_in_accumulate_result(listen_result, out_selector, ti, recorder).await
+    handle_in_accumulate_result(listen_result, out_selector, ti, newc_recorder).await
 }
 
 /// block until out handshake is over
@@ -78,7 +79,7 @@ pub async fn handle_in_accumulate_result(
 
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
 
-    recorder: OptNewInfoSender,
+    newc_recorder: OptNewInfoSender,
 ) -> anyhow::Result<()> {
     let cid = listen_result.id;
     let target_addr = match listen_result.a.take() {
@@ -179,7 +180,7 @@ pub async fn handle_in_accumulate_result(
         }
     }
 
-    if let Some(r) = recorder {
+    if let Some(r) = newc_recorder {
         let cid = cid.clone();
 
         r.send(NewConnInfo {

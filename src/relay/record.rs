@@ -2,8 +2,13 @@ use super::*;
 
 pub type OptNewInfoSender = Option<tokio::sync::mpsc::Sender<NewConnInfo>>;
 
-/// (ub,db)
-pub type OptUpdateInfoSender = Option<tokio::sync::mpsc::Sender<(u64, u64)>>;
+/// upload bytes increment for CID
+pub type UpdateUBSender = tokio::sync::mpsc::Sender<(CID, u64)>;
+
+/// download bytes increment for CID
+pub type UpdateDBSender = tokio::sync::mpsc::Sender<(CID, u64)>;
+
+pub type OptUpdater = Option<(UpdateUBSender, UpdateDBSender)>;
 
 #[derive(Clone, Debug)]
 pub struct NewConnInfo {

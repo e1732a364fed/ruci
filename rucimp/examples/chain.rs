@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, Utc};
 use log::warn;
-use ruci::relay::record::*;
+use ruci::relay::*;
 use rucimp::{
     example_common::*,
     modes::chain::{config::lua, engine::Engine},
