@@ -3,7 +3,6 @@ use std::{fmt::Display, time::Duration};
 use super::*;
 use log::warn;
 use ruci::{
-    map,
     net::{Stream, CID},
     relay::{cp_stream, READ_HANDSHAKE_TIMEOUT},
 };
@@ -245,7 +244,7 @@ pub async fn handle_conn<'a>(
     let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            map::accumulate(
+            acc::accumulate(
                 cidc,
                 ProxyBehavior::DECODE,
                 MapResult::c(in_conn),
@@ -314,7 +313,7 @@ pub async fn handle_conn<'a>(
         let cidc = cid.clone();
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                map::accumulate(
+                acc::accumulate(
                     cidc,
                     ProxyBehavior::ENCODE,
                     MapResult {

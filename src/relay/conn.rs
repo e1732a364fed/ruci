@@ -7,7 +7,6 @@ use std::io;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::map;
 use crate::map::*;
 use crate::net;
 
@@ -30,7 +29,7 @@ pub async fn handle_conn_clonable(
     let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            map::accumulate(
+            acc::accumulate(
                 cidc,
                 ProxyBehavior::DECODE,
                 MapResult::c(in_conn),
@@ -54,7 +53,7 @@ pub async fn handle_conn_clonable(
 
 /// block until out handshake is over
 pub async fn handle_in_accumulate_result(
-    mut listen_result: AccumulateResult,
+    mut listen_result: acc::AccumulateResult,
 
     out_selector: &'static dyn OutSelector,
 
@@ -101,7 +100,7 @@ pub async fn handle_in_accumulate_result(
     let cidc = cid.clone();
     let dial_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            map::accumulate(
+            acc::accumulate(
                 cidc,
                 ProxyBehavior::ENCODE,
                 MapResult {

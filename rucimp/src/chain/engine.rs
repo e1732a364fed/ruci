@@ -118,7 +118,7 @@ impl StaticEngine {
 
             let oti = self.ti.clone();
             let t1 = async {
-                accumulate_from_start(atx, rx, inmappers.clone(), Some(oti)).await;
+                acc::accumulate_from_start(atx, rx, inmappers.clone(), Some(oti)).await;
                 Ok(())
             };
 
@@ -134,7 +134,7 @@ impl StaticEngine {
     }
 
     async fn loop_a(
-        mut arx: Receiver<AccumulateResult>,
+        mut arx: Receiver<acc::AccumulateResult>,
         out_selector: &'static dyn OutSelector,
         ti: Arc<TransmissionInfo>,
     ) -> io::Result<()> {
