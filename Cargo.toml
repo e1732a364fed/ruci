@@ -10,7 +10,6 @@ categories = ["network-programming"]
 [profile.release]
 lto = "fat"
 codegen-units = 1
-panic = "abort"
 debug = false
 strip = true
 debug-assertions = false

@@ -277,6 +277,10 @@ quinn: 全没问题
 
 而且 s2n-quic 在 windows 无法编译通过
 
+## 编译参数
+
+`panic = "abort"` 不能在 windows release 版中正常运行
+
 
 ## 其它
 
