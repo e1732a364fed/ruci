@@ -2,7 +2,7 @@
 
 - [X] Ruci : 如此：
 - [X] Rucimp: 如此实现~
-- [ ] Rip: 如此简单！
+- [ ] ruci-cmd: 如此简单！
 
 项目命名采用了谐音。同时Ru指代rust, ruci 与 如此谐音.
 rucimp = ruci + imp,
@@ -13,7 +13,7 @@ ruci可读作"如C"或 lucy。
 本项目是 [verysimple](https://github.com/e1732a364fed/v2ray_simple) 项目的继承者，
 是一个网络代理项目，采用rust(Rust 2021 edition 1.75+)
 
-rucimple 对代理架构 做了比verysimple 中更高级的抽象，因此功能更强大. 
+ruci 对代理架构 做了比verysimple 中更高级的抽象，因此功能更强大. 
 verysimple可以说是一个初级项目，而ruci最终将成为一个中级项目.
 
 文档所限，肯定有东西没有涉及到，可提交issue提问或加入讨论。
@@ -32,7 +32,7 @@ ruci 是基础框架, 其中定义一些trait 和基本结构与方法，实现�
 
 rucimp 中提供若干流映射函数, 定义多种配置文件格式, 并提供一些 example 程序
 
-rip 是最终的全功能的可执行文件，包含一些系统路由的配置功能。其在另外的github 仓库中保管
+ruci-cmd 是最终的全功能的可执行文件，包含一些系统路由的配置功能。其在另外的github 仓库中保管
 
 具体名词解释请看下文。
 

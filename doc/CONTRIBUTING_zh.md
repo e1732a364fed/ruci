@@ -27,10 +27,10 @@ only use Box::leak if have to.
 
 ## 子项目
 
-ruci(定义) - rucimp（实现） - rucimple（可执行文件）
+ruci(定义) - rucimp（实现） - ruci-cmd（可执行文件）
 
 分三个子项目的好处之一是可以有三个不同的版本号。
-比如，对于 同一个版本的 rucimp, 可以在其上不断更新可执行文件 rucimple 的版本。
+比如，对于 同一个版本的 rucimp, 可以在其上不断更新可执行文件 ruci-cmd 的版本。
 这样版本号能更好地反映哪里产生的修改。
 
 
