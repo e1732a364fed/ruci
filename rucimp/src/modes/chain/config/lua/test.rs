@@ -446,3 +446,65 @@ infinite = {
     println!("{:?}", gm);
     Ok(())
 }
+
+#[test]
+fn test_userdata() -> anyhow::Result<()> {
+    use mlua::{MetaMethod, UserData, UserDataMethods};
+    #[derive(Copy, Clone, Debug)]
+    struct Vec2(f32, f32);
+
+    // We can implement `FromLua` trait for our `Vec2` to return a copy
+    impl<'lua> FromLua<'lua> for Vec2 {
+        fn from_lua(value: Value<'lua>, _: &'lua Lua) -> LuaResult<Self> {
+            match value {
+                Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    impl UserData for Vec2 {
+        fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+            methods.add_method("magnitude", |_, vec, ()| {
+                let mag_squared = vec.0 * vec.0 + vec.1 * vec.1;
+                Ok(mag_squared.sqrt())
+            });
+
+            methods.add_meta_function(MetaMethod::Add, |_, (vec1, vec2): (Vec2, Vec2)| {
+                Ok(Vec2(vec1.0 + vec2.0, vec1.1 + vec2.1))
+            });
+        }
+    }
+
+    let mut lua = Lua::new();
+    let mut globals = lua.globals();
+    let vec2_constructor = lua.create_function(|_, (x, y): (f32, f32)| Ok(Vec2(x, y)))?;
+    globals.set("new_vec2", vec2_constructor)?;
+
+    assert!(
+        (lua.load("(new_vec2(1, 2) + new_vec2(2, 2)):magnitude()")
+            .eval::<f32>()?
+            - 5.0)
+            .abs()
+            < f32::EPSILON
+    );
+
+    let v = lua
+        .load(mlua::chunk! {
+            new_vec2(1, 3)
+        })
+        .eval::<LuaValue>()
+        .expect("cannot create Vec2");
+
+    match v {
+        LuaValue::UserData(ud) => {
+            assert!(ud.is::<Vec2>());
+
+            let v = ud.take::<Vec2>().expect("can take");
+            println!("{:?}", v);
+        }
+        _ => panic!("value type not right"),
+    };
+
+    Ok(())
+}
