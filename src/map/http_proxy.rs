@@ -365,7 +365,7 @@ mod test {
         let ser = Server::default();
         let c = Client::default();
 
-        let listen_port = net::gen_random_higher_port_with_seed(4);
+        let listen_port = openport::pick_random_unused_port().unwrap();
         let listen_host_str = "127.0.0.1";
 
         let jh = tokio::spawn(async move {

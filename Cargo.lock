@@ -2535,6 +2535,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
+name = "openport"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "365c699f76305b3e62588961a288be10f0819ef1391f25870a69b35a213577cc"
+dependencies = [
+ "rand 0.8.5",
+]
+
+[[package]]
 name = "openssl"
 version = "0.10.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3219,6 +3228,7 @@ dependencies = [
  "hickory-resolver",
  "lazy_static",
  "macro_map",
+ "openport",
  "parking_lot",
  "pin-project-lite",
  "rand 0.9.0",
@@ -3313,6 +3323,7 @@ dependencies = [
  "futures",
  "http",
  "macro_map",
+ "openport",
  "parking_lot",
  "rand 0.9.0",
  "rcgen",

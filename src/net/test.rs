@@ -5,8 +5,6 @@ use std::str::FromStr;
 use bytes::Buf;
 use bytes::BytesMut;
 
-use crate::net::gen_random_higher_port_with_seed;
-
 use super::*;
 
 const TEST_DOMAIN: &str = "www.baidu.com";

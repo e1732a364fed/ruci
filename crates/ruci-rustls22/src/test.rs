@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use ruci::map::tls_config::ClientOptions;
 use ruci::{
     map::{Map, MapParams, ProxyBehavior},
-    net::{self, gen_random_higher_port_with_seed, helpers::mock::MockTcpStream, CID},
+    net::{self, helpers::mock::MockTcpStream, CID},
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -158,7 +158,7 @@ pub async fn tls_local_loopback() -> anyhow::Result<()> {
     let _ = env_logger::try_init();
 
     let listen_ip = "127.0.0.1";
-    let p = gen_random_higher_port_with_seed(0);
+    let p = openport::pick_random_unused_port().unwrap();
 
     let lf = listen_future(listen_ip, p).fuse();
     let df = dial_future(listen_ip, p).fuse();

@@ -64,26 +64,28 @@ toml = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1.0"
 serde_path_to_error = "0.1"
+openport = { version = "0.1.1", features = ["rand"] }
 
 
 [dependencies]
 macro_map = { path = "crates/macro_map" }
-tracing = { workspace = true }
-rand = { workspace = true }
-serde = { workspace = true }
-anyhow = { workspace = true }
-tokio = { workspace = true }
-user_trait = { workspace = true }
-bytes = { workspace = true }
-futures = { workspace = true }
-futures-util = { workspace = true }
-async-trait = { workspace = true }
-tokio-util = { workspace = true }
-pin-project-lite = { workspace = true }
-scopeguard = { workspace = true }
-parking_lot = { workspace = true }
-smallvec = { workspace = true }
-dyn-clone = { workspace = true }
+tracing.workspace = true
+rand.workspace = true
+serde.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+user_trait.workspace = true
+bytes.workspace = true
+futures.workspace = true
+futures-util.workspace = true
+async-trait.workspace = true
+tokio-util.workspace = true
+pin-project-lite.workspace = true
+scopeguard.workspace = true
+parking_lot.workspace = true
+smallvec.workspace = true
+dyn-clone.workspace = true
+openport.workspace = true
 
 
 typetag = "0.2"

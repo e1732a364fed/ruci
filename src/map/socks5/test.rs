@@ -219,7 +219,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
-    let ps = net::gen_random_higher_port_with_seed(0);
+    let ps = openport::pick_random_unused_port().unwrap();
 
     let a = new_3user_socks5_inadder();
     let listen_host = "127.0.0.1".to_string();
@@ -351,7 +351,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::Result<()> {
-    let ps = net::gen_random_higher_port_with_seed(1);
+    let ps = openport::pick_random_unused_port().unwrap();
 
     let a = new_3user_socks5_inadder();
 
@@ -461,7 +461,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
 
 #[tokio::test]
 async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::Result<()> {
-    let ps = net::gen_random_higher_port_with_seed(2);
+    let ps = openport::pick_random_unused_port().unwrap();
 
     let a = new_3user_socks5_inadder();
 
