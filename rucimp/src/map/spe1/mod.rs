@@ -40,6 +40,7 @@ use ruci::{
     net::CID,
 };
 use tokio::io::{AsyncRead, AsyncWrite};
+use tracing::warn;
 // use tracing::trace;
 
 pub type QA = (String, String);
@@ -553,7 +554,7 @@ impl Conn {
 
         let pr = ruci::net::http::parse_h1_request(data, false);
         match pr.parse_result {
-            Err(_) => todo!(),
+            Err(e) => return Poll::Ready(Err(io::Error::other(format!("{e:?}")))),
 
             Ok(_) => {
                 match pr
@@ -561,12 +562,16 @@ impl Conn {
                     .iter()
                     .find(|h| h.head.contains("Content-Length"))
                 {
-                    None => todo!(),
+                    None => {
+                        return Poll::Ready(Err(io::Error::other(
+                            "Content-Length not found in header",
+                        )))
+                    }
 
                     Some(h) => {
                         let clr: Result<usize, _> = h.value.parse();
                         match clr {
-                            Err(_) => todo!(),
+                            Err(e) => return Poll::Ready(Err(io::Error::other(format!("{e:?}")))),
 
                             Ok(content_len) => {
                                 let si = pr.body_start_index;
@@ -882,6 +887,11 @@ impl Conn {
         //trace!( cid=%self.cid,"spe1client read finish ");
 
         match Self::server_response_to_2_parts(&real_string) {
+            None => {
+                warn!("server_response_to_2_parts failed");
+                Poll::Ready(Ok(()))
+            }
+
             Some(answers_questions) => {
                 //舍弃 part1, 只使用 part2
 
@@ -904,7 +914,6 @@ impl Conn {
                     }
                 }
             }
-            None => todo!(),
         }
     }
 }

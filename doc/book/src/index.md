@@ -9,8 +9,12 @@
 
 而手册专注于帮助 通过 release 下载程序包的 用户 快速学会使用ruci.
 
-[命令行参数 与 程序运行](./app/cmd.md)
+链接：
 
-[lua配置](./lua/lua.md)
+[命令行参数 与 程序运行](app/cmd.md)
 
-本手册基于 ruci v0.0.6 制作
+[lua配置](lua/lua.md)
+
+[toml配置](toml/index.md)
+
+本手册基于 ruci v0.0.7 制作
