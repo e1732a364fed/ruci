@@ -292,10 +292,17 @@ impl AsyncWriteAddr for UdpW {
 
         let k = (laddr, raddr.clone());
         let x = self.established_map.get(&k);
+        //debug!("self.established_map {}", self.established_map.len());
+
         match x {
             Some(us) => {
                 let r = us.send(buf);
 
+                // prevent too many open files
+                if self.established_map.len() > 100 {
+                    debug!("self.established_map.clear()");
+                    self.established_map.clear()
+                }
                 Poll::Ready(r)
             }
             None => {
@@ -303,6 +310,11 @@ impl AsyncWriteAddr for UdpW {
 
                 let r = us.send(buf);
 
+                if self.established_map.len() > 100 {
+                    debug!("self.established_map.clear()");
+
+                    self.established_map.clear()
+                }
                 self.established_map.insert(k, us);
 
                 Poll::Ready(r)

@@ -6,7 +6,6 @@ use std::collections::{BTreeSet, HashMap};
 use std::fmt::Debug;
 
 use dyn_clone::DynClone;
-use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
@@ -163,18 +162,18 @@ impl UserTrait for PlainText {
 }
 
 /// store User, impl AsyncUserAuthenticator
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UsersMap<T: UserTrait + Clone> {
-    m: Mutex<InnerUsersMapStruct<T>>,
+    m: InnerUsersMapStruct<T>,
 }
 
-impl<T: UserTrait + Clone> Clone for UsersMap<T> {
-    fn clone(&self) -> Self {
-        Self {
-            m: Mutex::new(self.m.lock().clone()),
-        }
-    }
-}
+// impl<T: UserTrait + Clone> Clone for UsersMap<T> {
+//     fn clone(&self) -> Self {
+//         Self {
+//             m: Mutex::new(self.m.clone()),
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone)]
 struct InnerUsersMapStruct<T: UserTrait + Clone> {
@@ -200,30 +199,31 @@ impl<T: UserTrait + Clone> Default for UsersMap<T> {
 impl<T: UserTrait + Clone> UsersMap<T> {
     pub fn new() -> Self {
         UsersMap {
-            m: Mutex::new(InnerUsersMapStruct::new()),
+            m: InnerUsersMapStruct::new(),
+            //m: Mutex::new(InnerUsersMapStruct::new()),
         }
     }
 
     pub fn add_user(&mut self, u: T) {
         let uc = u.clone();
-        let mut inner = self.m.lock();
+        let inner = &mut self.m;
         inner.id_map.insert(u.identity_str(), u);
         inner.a_map.insert(uc.auth_str(), uc);
     }
 
     pub fn len(&self) -> usize {
-        self.m.lock().id_map.len()
+        self.m.id_map.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.m.lock().id_map.is_empty()
+        self.m.id_map.is_empty()
     }
 }
 
 //#[async_trait]
 impl<T: UserTrait + Clone> AsyncUserAuthenticator<T> for UsersMap<T> {
     fn auth_user_by_authstr(&self, authstr: &str) -> Option<T> {
-        let inner = self.m.lock();
+        let inner = &self.m;
         let s = authstr.to_string();
         inner.a_map.get(&s).cloned()
     }
