@@ -2,6 +2,9 @@ use std::net::IpAddr;
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
 
+use bytes::Buf;
+use bytes::BytesMut;
+
 use crate::net::gen_random_higher_port;
 
 use super::*;
@@ -85,4 +88,12 @@ fn addr_to_name_ip_netmask() {
     let r = a.to_name_ip_netmask();
     println!("{:?}", r);
     assert!(r.is_ok());
+}
+
+#[test]
+fn test_buf() {
+    let mut buf = BytesMut::zeroed(100);
+    let cap = buf.capacity();
+    buf.advance(2);
+    assert_eq!(buf.capacity(), cap - 2)
 }

@@ -18,16 +18,27 @@ use tracing::info;
 
 //todo: improve code
 
-pub async fn cp_udp_tcp(
-    cid: CID,
-    mut ac: net::addr_conn::AddrConn,
-    mut c: net::Conn,
-    ed_from_ac: bool,
-    ed: Option<BytesMut>,
-    first_target: Option<net::Addr>,
-    gtr: Option<Arc<net::GlobalTrafficRecorder>>,
-    no_timeout: bool,
-) -> io::Result<u64> {
+pub struct CpUdpTcpArgs {
+    pub cid: CID,
+    pub ac: net::addr_conn::AddrConn,
+    pub c: net::Conn,
+    pub ed_from_ac: bool,
+    pub ed: Option<BytesMut>,
+    pub first_target: Option<net::Addr>,
+    pub gtr: Option<Arc<net::GlobalTrafficRecorder>>,
+    pub no_timeout: bool,
+}
+
+pub async fn cp_udp_tcp(args: CpUdpTcpArgs) -> io::Result<u64> {
+    let cid = args.cid;
+    let mut ac = args.ac;
+    let mut c = args.c;
+    let ed_from_ac = args.ed_from_ac;
+    let ed = args.ed;
+    let first_target = args.first_target;
+    let gtr = args.gtr;
+    let no_timeout = args.no_timeout;
+
     info!(cid = %cid, "relay udp to tcp start",);
 
     let tic = gtr.clone();

@@ -1,4 +1,4 @@
-use crate::{utils::io_error, Name};
+use crate::Name;
 
 use super::*;
 
@@ -321,102 +321,27 @@ where
 pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: change this
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 
-// todo improve the codes below
-
-enum ReadOnceState {
-    ToRead,
-    ToWrite,
-    ToFlush,
-}
-
-pub struct ReadOnceFuture<'a, R1: AddrReadTrait, W1: AddrWriteTrait> {
-    r1: &'a mut R1,
-    w1: &'a mut W1,
-    buf: &'a mut [u8],
-
-    m: usize,
-    n: usize,
-    ad: Addr,
-    state: ReadOnceState,
-}
-
-impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> ReadOnceFuture<'a, R1, W1> {
-    fn new(r1: &'a mut R1, w1: &'a mut W1, buf: &'a mut [u8]) -> Self {
-        Self {
-            r1,
-            w1,
-            buf,
-            m: 0,
-            n: 0,
-            ad: Addr::default(),
-            state: ReadOnceState::ToRead,
+async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
+    r1: &mut R1,
+    w1: &mut W1,
+    buf: &mut [u8],
+) -> io::Result<usize> {
+    let r = r1.read(buf).await;
+    match r {
+        Ok((u, a)) => {
+            let r = w1.write(&buf[..u], &a).await;
+            match r {
+                Ok(u) => {
+                    let r = w1.flush().await;
+                    match r {
+                        Ok(_) => Ok(u),
+                        Err(e) => Err(e),
+                    }
+                }
+                Err(e) => Err(e),
+            }
         }
-    }
-    fn poll_r(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<usize>> {
-        loop {
-            match self.state {
-                ReadOnceState::ToRead => {
-                    let r = Pin::new(&mut *self.r1).poll_read_addr(cx, self.buf);
-                    match r {
-                        Poll::Pending => return Poll::Pending,
-
-                        Poll::Ready(r) => match r {
-                            Ok((m, ad)) => {
-                                if m > 0 {
-                                    self.m = m;
-                                    self.ad = ad;
-
-                                    self.state = ReadOnceState::ToWrite;
-                                    continue;
-                                } else {
-                                    return Poll::Ready(Err(io_error(format!("read <=0 {m}"))));
-                                }
-                            }
-                            Err(e) => return Poll::Ready(Err(e)),
-                        },
-                    }
-                }
-                ReadOnceState::ToWrite => {
-                    let m = self.m;
-                    let r = Pin::new(&mut *self.w1).poll_write_addr(cx, &self.buf[..m], &self.ad);
-                    match r {
-                        Poll::Pending => return Poll::Pending,
-
-                        Poll::Ready(r) => match r {
-                            Ok(n) => {
-                                if n < m {
-                                    debug!("read_once n<m {n} {m}")
-                                }
-                                self.n = n;
-                                self.state = ReadOnceState::ToFlush;
-                            }
-                            Err(e) => return Poll::Ready(Err(e)),
-                        },
-                    }
-                }
-                ReadOnceState::ToFlush => {
-                    let r = Pin::new(&mut *self.w1).poll_flush_addr(cx);
-                    match r {
-                        Poll::Ready(r) => match r {
-                            Ok(_) => {
-                                self.state = ReadOnceState::ToRead;
-                                return Poll::Ready(Ok(self.n));
-                            }
-                            Err(e) => return Poll::Ready(Err(e)),
-                        },
-                        Poll::Pending => return Poll::Pending,
-                    }
-                }
-            } // match state
-        } // loop
-    }
-}
-
-impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> futures::Future for ReadOnceFuture<'a, R1, W1> {
-    type Output = io::Result<usize>;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        self.poll_r(cx)
+        Err(e) => Err(e),
     }
 }
 
@@ -433,11 +358,14 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     is_d: bool,
     opt: Option<Arc<GlobalTrafficRecorder>>,
 ) -> Result<u64, Error> {
+    // 实测 用一个loop + 小 buf 的实现 比用 两个 spawn + mpsc 快很多. 后者非常卡顿几乎不可用
+    // buf size 的选择也很重要, 太大太小都卡
+
     let mut whole_write = 0;
     let mut buf = Box::new([0u8; 1400]);
 
     loop {
-        let rf = ReadOnceFuture::new(&mut r1, &mut w1, buf.as_mut());
+        let rf = read_once(&mut r1, &mut w1, buf.as_mut());
 
         tokio::select! {
             r = rf =>{
@@ -465,11 +393,8 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
                 break;
             }
         }
-        tokio::task::yield_now().await;
+        tokio::task::yield_now().await; //necessary, or it is likely to cause stuck issue
     } //loop
-
-    // 实测 用一个loop + 小 buf 的实现 比用 两个 spawn + mpsc 快很多. 后者非常卡顿几乎不可用
-    // buf size 的选择也很重要, 太大太小都卡
 
     let l = whole_write as u64;
     if let Some(a) = opt {
@@ -494,42 +419,13 @@ pub async fn cp(
     shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
     shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<u64, Error> {
-    cp_between(
-        cid,
-        c1.cached_name.clone(),
-        c2.cached_name.clone(),
-        c1.r,
-        c1.w,
-        c2.r,
-        c2.w,
-        opt,
-        no_timeout,
-        shutdown_rx1,
-        shutdown_rx2,
-    )
-    .await
-}
+    let name1 = c1.cached_name.clone();
+    let name2 = c2.cached_name.clone();
+    let r1 = c1.r;
+    let w1 = c1.w;
+    let r2 = c2.r;
+    let w2 = c2.w;
 
-#[inline]
-pub async fn cp_between<
-    R1: AddrReadTrait + 'static,
-    R2: AddrReadTrait + 'static,
-    W1: AddrWriteTrait + 'static,
-    W2: AddrWriteTrait + 'static,
->(
-    cid: CID,
-    name1: String,
-    name2: String,
-    r1: R1,
-    w1: W1,
-
-    r2: R2,
-    w2: W2,
-    opt: Option<Arc<GlobalTrafficRecorder>>,
-    no_timeout: bool,
-    shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
-    shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
-) -> Result<u64, Error> {
     let (tx1, rx1) = broadcast::channel(10);
     let (tx2, rx2) = broadcast::channel(10);
 
@@ -537,15 +433,15 @@ pub async fn cp_between<
     let tx2c = tx1.clone();
 
     let (_tmpx0, tmp_rx0) = oneshot::channel();
-    let shutdown_rx1 = if shutdown_rx1.is_some() {
-        shutdown_rx1.unwrap()
+    let shutdown_rx1 = if let Some(x) = shutdown_rx1 {
+        x
     } else {
         tmp_rx0
     };
 
     let (_tmpx, tmp_rx) = oneshot::channel();
-    let shutdown_rx2 = if shutdown_rx2.is_some() {
-        shutdown_rx2.unwrap()
+    let shutdown_rx2 = if let Some(x) = shutdown_rx2 {
+        x
     } else {
         tmp_rx
     };
@@ -566,15 +462,10 @@ pub async fn cp_between<
             let _ = tx1c.send(());
             let _ = tx2.send(());
 
-            let r = match r{
-                Ok(r) => match r {
-                    Ok(d) => d,
-                    Err(_) => 0,
-                },
+            match r{
+                Ok(r) => r.unwrap_or(0),
                 Err(_) => 0,
-            };
-
-            r
+            }
         }
         r = cp2 =>{
             if tracing::enabled!(tracing::Level::DEBUG)  {
@@ -583,15 +474,10 @@ pub async fn cp_between<
             let _ = tx1c.send(());
             let _ = tx2c.send(());
 
-            let r = match r{
-                Ok(r) => match r {
-                    Ok(d) => d,
-                    Err(_) => 0,
-                },
+            match r{
+                Ok(r) => r.unwrap_or(0),
                 Err(_) => 0,
-            };
-
-            r
+            }
         }
          _ = shutdown_rx1 =>{
             debug!("addrconn cp_between got shutdown1 signal");

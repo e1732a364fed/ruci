@@ -262,25 +262,24 @@ pub async fn handle_in_fold_result(
         .await?;
     }
 
-    cp_stream(
+    cp_stream(CpStreamArgs {
         cid,
-        listen_result.c,
-        dial_result.c,
-        dial_result.b,
-        dial_result.a,
+        s1: listen_result.c,
+        s2: dial_result.c,
+        ed: dial_result.b,
+        first_target: dial_result.a,
         tr,
-        dial_result.no_timeout,
-        listen_result.shutdown_rx,
-        dial_result.shutdown_rx,
+        no_timeout: dial_result.no_timeout,
+        shutdown_rx1: listen_result.shutdown_rx,
+        shutdown_rx2: dial_result.shutdown_rx,
         #[cfg(feature = "trace")]
         updater,
-    );
+    });
 
     Ok(())
 }
 
-/// non-blocking,
-pub fn cp_stream(
+pub struct CpStreamArgs {
     cid: CID,
     s1: Stream,
     s2: Stream,
@@ -291,8 +290,22 @@ pub fn cp_stream(
     shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
     shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 
-    #[cfg(feature = "trace")] updater: net::OptUpdater,
-) {
+    #[cfg(feature = "trace")]
+    updater: net::OptUpdater,
+}
+
+/// non-blocking,
+pub fn cp_stream(args: CpStreamArgs) {
+    let cid = args.cid;
+    let s1 = args.s1;
+    let s2 = args.s2;
+    let ed = args.ed;
+    let first_target = args.first_target;
+    let tr = args.tr;
+    let shutdown_rx1 = args.shutdown_rx1;
+    let shutdown_rx2 = args.shutdown_rx2;
+    let no_timeout = args.no_timeout;
+
     //todo: add trace for udp
     match (s1, s2) {
         (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(
@@ -302,44 +315,44 @@ pub fn cp_stream(
             ed,
             tr,
             #[cfg(feature = "trace")]
-            updater,
+            args.updater,
         ),
         (Stream::Conn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(
+            tokio::spawn(cp_udp::cp_udp_tcp(cp_udp::CpUdpTcpArgs {
                 cid,
-                o,
-                i,
-                false,
+                ac: o,
+                c: i,
+                ed_from_ac: false,
                 ed,
                 first_target,
-                tr,
+                gtr: tr,
                 no_timeout,
-            ));
+            }));
         }
         (Stream::AddrConn(i), Stream::Conn(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(
+            tokio::spawn(cp_udp::cp_udp_tcp(cp_udp::CpUdpTcpArgs {
                 cid,
-                i,
-                o,
-                true,
+                ac: i,
+                c: o,
+                ed_from_ac: true,
                 ed,
                 first_target,
-                tr,
+                gtr: tr,
                 no_timeout,
-            ));
+            }));
         }
         (Stream::AddrConn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp(
+            tokio::spawn(cp_udp(CpUdpArgs {
                 cid,
-                i,
-                o,
+                in_conn: i,
+                out_conn: o,
                 ed,
                 first_target,
                 tr,
                 no_timeout,
                 shutdown_rx1,
                 shutdown_rx2,
-            ));
+            }));
         }
         (s1, s2) => {
             warn!( s1 = %s1, s2 = %s2,"can't cp stream when one of them is not (Conn or AddrConn)");
@@ -347,18 +360,30 @@ pub fn cp_stream(
     }
 }
 
-pub async fn cp_udp(
+pub struct CpUdpArgs {
     cid: CID,
     in_conn: net::addr_conn::AddrConn,
-    mut out_conn: net::addr_conn::AddrConn,
+    out_conn: net::addr_conn::AddrConn,
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
     no_timeout: bool,
     shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
     shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
-) {
+}
+
+pub async fn cp_udp(args: CpUdpArgs) {
     use crate::Name;
+
+    let cid = args.cid;
+    let in_conn = args.in_conn;
+    let mut out_conn = args.out_conn;
+    let ed = args.ed;
+    let first_target = args.first_target;
+    let tr = args.tr;
+    let no_timeout = args.no_timeout;
+    let shutdown_rx1 = args.shutdown_rx1;
+    let shutdown_rx2 = args.shutdown_rx2;
 
     info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "relay udp start",);
 

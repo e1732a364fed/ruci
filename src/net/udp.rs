@@ -10,7 +10,6 @@ use std::{
     task::{Context, Poll},
 };
 use tokio::{io::ReadBuf, net::UdpSocket};
-
 /// Implements AddrConn trait
 ///
 /// 固定用同一个 udp socket 发送, 到不同的远程地址也是如此
@@ -90,9 +89,8 @@ impl AsyncWriteAddr for Conn {
             let sor = addr.get_socket_addr_or_resolve();
             match sor {
                 Ok(so) => {
-                    let r = self.u.poll_send_to(cx, buf, so);
+                    self.u.poll_send_to(cx, buf, so)
                     //debug!("udp poll_send_to got {:?}", r);
-                    r
                 }
                 Err(e) => Poll::Ready(Err(io::Error::other(e))),
             }
@@ -156,7 +154,9 @@ impl AsyncReadAddr for Conn {
 #[cfg(test)]
 #[allow(unused)]
 mod test {
+    use futures::pin_mut;
     use futures::select;
+    use futures::FutureExt;
     use futures_util::join;
     use parking_lot::Mutex;
     use tokio::sync::oneshot;

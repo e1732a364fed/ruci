@@ -34,7 +34,7 @@ impl Reader {
         Self {
             base: Box::pin(r),
             buf: BytesMut::zeroed(MAX_DATAGRAM_SIZE),
-            state: ReadState::ReadBase,
+            state: ReadState::Base,
             left_data_len: 0,
             old_ad: Addr::default(),
         }
@@ -48,9 +48,9 @@ impl crate::Name for Reader {
 }
 
 enum ReadState {
-    ReadBase,
-    ReadBuf,
-    ReadLeftBuf,
+    Base,
+    Buf,
+    LeftBuf,
 }
 impl Reader {
     fn poll_r(&mut self, cx: &mut Context<'_>) -> (Poll<io::Result<()>>, usize) {
@@ -77,8 +77,8 @@ impl AsyncReadAddr for Reader {
 
         loop {
             match self.state {
-                ReadState::ReadBase => {
-                    debug!("trojan read base");
+                ReadState::Base => {
+                    //debug!("trojan read base");
 
                     let re = self.poll_r(cx);
 
@@ -92,7 +92,7 @@ impl AsyncReadAddr for Reader {
                         Poll::Ready(r) => match r {
                             Ok(_) => {
                                 let data_len = re.1;
-                                debug!("trojan read base got {}", data_len);
+                                //debug!("trojan read base got {}", data_len);
 
                                 if data_len == 0 {
                                     return Poll::Ready(Err(io::Error::new(
@@ -103,9 +103,9 @@ impl AsyncReadAddr for Reader {
                                     self.buf.truncate(data_len);
 
                                     if self.left_data_len > 0 {
-                                        self.state = ReadState::ReadLeftBuf;
+                                        self.state = ReadState::LeftBuf;
                                     } else {
-                                        self.state = ReadState::ReadBuf;
+                                        self.state = ReadState::Buf;
                                     }
                                 }
                             }
@@ -115,16 +115,16 @@ impl AsyncReadAddr for Reader {
                         },
                     }
                 }
-                ReadState::ReadBuf => {
-                    let mut buffer = &mut self.buf;
-                    debug!("trojan read buf {}", buffer.len());
+                ReadState::Buf => {
+                    let buffer = &mut self.buf;
+                    //debug!("trojan read buf {}", buffer.len());
 
-                    let addr_r = helpers::socks5_bytes_to_addr(&mut buffer);
+                    let addr_r = helpers::socks5_bytes_to_addr(buffer);
                     match addr_r {
                         Ok(mut ad) => {
                             if buffer.len() < 2 {
                                 buffer.clear();
-                                self.state = ReadState::ReadBase;
+                                self.state = ReadState::Base;
                                 return Poll::Ready(Err(io::Error::other(
                                     "buf len short of data length part",
                                 )));
@@ -139,13 +139,13 @@ impl AsyncReadAddr for Reader {
                                 );
 
                                 buffer.clear();
-                                self.state = ReadState::ReadBase;
+                                self.state = ReadState::Base;
                                 return Poll::Ready(Err(io::Error::other(msg)));
                             }
                             let crlf = buffer.get_u16();
                             if crlf != CRLF {
                                 buffer.clear();
-                                self.state = ReadState::ReadBase;
+                                self.state = ReadState::Base;
                                 return Poll::Ready(Err(io::Error::other(format!(
                                     "no crlf! {}",
                                     crlf
@@ -174,15 +174,15 @@ impl AsyncReadAddr for Reader {
 
                             if (buf_len < rbuf_len) && (buf_len < data_len) {
                                 self.left_data_len = data_len - rbuf_len;
-                                self.state = ReadState::ReadBase;
+                                self.state = ReadState::Base;
                             } else if (rbuf_len < buf_len) && (rbuf_len < data_len) {
                                 self.left_data_len = data_len - rbuf_len;
                                 self.old_ad = ad.clone();
-                                self.state = ReadState::ReadLeftBuf;
+                                self.state = ReadState::LeftBuf;
                             } else if (data_len < buf_len) && (data_len < rbuf_len) {
-                                self.state = ReadState::ReadBuf;
+                                self.state = ReadState::Buf;
                             } else {
-                                self.state = ReadState::ReadBase;
+                                self.state = ReadState::Base;
                                 self.left_data_len = 0;
                             }
 
@@ -190,13 +190,13 @@ impl AsyncReadAddr for Reader {
                         }
                         Err(e) => {
                             buffer.clear();
-                            self.state = ReadState::ReadBase;
+                            self.state = ReadState::Base;
 
                             return Poll::Ready(Err(io::Error::other(e)));
                         }
                     }
                 }
-                ReadState::ReadLeftBuf => {
+                ReadState::LeftBuf => {
                     debug!("trojan read left buf {}", self.left_data_len);
                     let ldl = self.left_data_len;
 
@@ -210,14 +210,14 @@ impl AsyncReadAddr for Reader {
                     buffer.copy_to_slice(&mut r_buf[..to_read_len]);
 
                     if (buf_len < rbuf_len) && (buf_len < ldl) {
-                        self.state = ReadState::ReadBase;
+                        self.state = ReadState::Base;
                     } else if (rbuf_len < buf_len) && (rbuf_len < ldl) {
                         self.left_data_len = ldl - rbuf_len;
-                        self.state = ReadState::ReadLeftBuf;
+                        self.state = ReadState::LeftBuf;
                     } else if (ldl < buf_len) && (ldl < rbuf_len) {
-                        self.state = ReadState::ReadBuf;
+                        self.state = ReadState::Buf;
                     } else {
-                        self.state = ReadState::ReadBase;
+                        self.state = ReadState::Base;
                         self.left_data_len = 0;
                     }
 
@@ -284,32 +284,26 @@ impl AsyncWriteAddr for Writer {
         self.last_buf = Some(buf2);
 
         match r {
-            Poll::Pending => {
-                return Poll::Pending;
-            }
+            Poll::Pending => Poll::Pending,
 
             Poll::Ready(r) => match r {
-                Ok(n) => {
-                    if n == actual_l {
-                        return Poll::Ready(Ok(data_l));
-                    } else {
-                        if n > actual_l {
-                            return Poll::Ready(Err(io_error(format!(
-                                "trojan udp write got impossible n > actual_l, {} {}",
-                                n, actual_l
-                            ))));
-                        } else {
-                            let diff = actual_l - n;
-                            debug!(
-                                "trojan writer write got short write {} {} {}",
-                                actual_l, n, diff
-                            );
+                Ok(n) => match n.cmp(&actual_l) {
+                    std::cmp::Ordering::Less => {
+                        let diff = actual_l - n;
+                        debug!(
+                            "trojan writer write got short write {} {} {}",
+                            actual_l, n, diff
+                        );
 
-                            return Poll::Ready(Ok(data_l - diff));
-                        }
+                        Poll::Ready(Ok(data_l - diff))
                     }
-                }
-                Err(e) => return Poll::Ready(Err(e)),
+                    std::cmp::Ordering::Equal => Poll::Ready(Ok(data_l)),
+                    std::cmp::Ordering::Greater => Poll::Ready(Err(io_error(format!(
+                        "trojan udp write got impossible n > actual_l, {} {}",
+                        n, actual_l
+                    )))),
+                },
+                Err(e) => Poll::Ready(Err(e)),
             },
         }
     }

@@ -1,10 +1,9 @@
 /*!
 */
 
+use super::*;
 use bytes::BytesMut;
 use tokio::io::AsyncReadExt;
-
-use super::*;
 
 ///   bytes increment for CID
 pub type UpdateSender = tokio::sync::mpsc::Sender<(CID, u64)>;
@@ -41,6 +40,8 @@ pub async fn cp_with_updater<C1: AsyncConn, C2: AsyncConn>(
 
     updater: OptUpdater,
 ) -> Result<(u64, u64), Error> {
+    use futures::FutureExt;
+
     match updater {
         Some(updater) => {
             let (mut c1_read, mut c1_write) = tokio::io::split(c1);
@@ -66,7 +67,7 @@ where
     A: futures::future::Future<Output = Result<u64, Error>>,
     B: futures::future::Future<Output = Result<u64, Error>>,
 {
-    pin_mut!(c1_to_c2, c2_to_c1);
+    futures_util::pin_mut!(c1_to_c2, c2_to_c1);
 
     // 一个方向停止后, 关闭连接, 如果 opt 不为空, 则等待另一个方向关闭, 以获取另一方向的流量信息.
 
