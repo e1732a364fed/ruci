@@ -81,10 +81,9 @@ impl StaticConfig {
     pub fn get_default_and_outbounds_map(&self) -> (MIterBox, HashMap<String, MIterBox>) {
         let obs = self.get_outbounds();
 
-        let first_o = obs.first().expect("has a outbound").clone();
-        let static_first_o: Vec<_> = first_o.into_iter().map(|o| Arc::new(o)).collect();
+        //let first_o = obs.first().expect("has a outbound").clone();
+        let mut first_o: Option<MIterBox> = None; //= first_o.into_iter().map(|o| Arc::new(o)).collect();
 
-        let static_default_oiter = Box::new(static_first_o.into_iter());
         let omap = obs
             .into_iter()
             .map(|outbound| {
@@ -97,12 +96,16 @@ impl StaticConfig {
                 let ts = tag.to_string();
                 let outbound: Vec<_> = outbound.into_iter().map(|o| Arc::new(o)).collect();
 
-                let static_outbound_iter: MIterBox = Box::new(outbound.into_iter());
+                let outbound_iter: MIterBox = Box::new(outbound.into_iter());
 
-                (ts, static_outbound_iter)
+                if let None = first_o {
+                    first_o = Some(outbound_iter.clone());
+                }
+
+                (ts, outbound_iter)
             })
             .collect();
-        (static_default_oiter, omap)
+        (first_o.expect("has a outbound"), omap)
     }
 
     /// panic if the given tag isn't presented in outbounds

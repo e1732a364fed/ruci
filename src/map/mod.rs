@@ -393,8 +393,7 @@ pub trait MapperExt: Mapper {
 }
 
 //令 Mapper 实现 Send + Sync, 否则异步/多线程报错
-pub trait MapperSync: MapperExt + Send + Sync + DynClone {}
-impl<T: MapperExt + Send + Sync + DynClone> MapperSync for T {}
-dyn_clone::clone_trait_object!(MapperSync);
+pub trait MapperSync: MapperExt + Send + Sync {}
+impl<T: MapperExt + Send + Sync> MapperSync for T {}
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
