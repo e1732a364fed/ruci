@@ -1,6 +1,5 @@
--- local inspect = require("inspect")
+-- 演示了 用完全动态链实现 h2 mux outbound 的配置
 
--- my_cid_record = {}
 dial = {
     Dialer = "tcp://0.0.0.0:10801"
 }
@@ -54,7 +53,6 @@ infinite = {
                 end
 
                 if dial_mapper == nil then
-                    --print("lua creating dial_mapper")
                     dial_mapper = create_out_mapper_func(dial)
                 end
                 return 0, dial_mapper:clone()

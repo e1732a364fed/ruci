@@ -35,18 +35,17 @@ impl SingleClient {
         early_data: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
         let r = h2::client::handshake(conn).await;
-        let r = match r {
+        let (mut send_request, connection) = match r {
             Ok(r) => r,
             Err(e) => {
                 let e = anyhow::anyhow!("accept h2 got e {}", e);
                 return Ok(MapResult::from_e(e));
             }
         };
-        let (mut send_request, connection) = r;
 
-        let cc = cid.clone();
+        //let cc = cid.clone();
 
-        let stream = new_stream_by_send_request(cc, &mut send_request, Some(connection)).await?;
+        let stream = new_stream_by_send_request(cid, &mut send_request, Some(connection)).await?;
 
         let m = MapResult::new_c(Box::new(stream))
             .a(a)
@@ -103,6 +102,7 @@ impl Mapper for SingleClient {
     }
 }
 
+/// MuxClient 使用 h2 的多路复用特性
 #[derive(Clone, Debug, NoMapperExt, Default)]
 pub struct MuxClient {
     cache: Arc<Mutex<Option<SendRequest<Bytes>>>>,
@@ -123,7 +123,7 @@ impl MuxClient {
     ) -> anyhow::Result<map::MapResult> {
         match conn {
             Some(conn) => {
-                debug!("h2_mux_client got some conn");
+                //debug!("h2_mux_client got some conn");
                 let r = h2::client::handshake(conn).await;
                 let r = match r {
                     Ok(r) => r,
@@ -149,18 +149,17 @@ impl MuxClient {
                 Ok(m)
             }
             None => {
-                debug!(cid = %cid , "h2_mux_client got no conn");
+                //debug!(cid = %cid , "h2_mux_client got no conn");
 
-                let mut r = self.cache.lock().await;
+                let mut sr = self.cache.lock().await;
 
-                let rm = if r.is_some() {
-                    let mut rm: Option<MapResult> = None;
-                    let mut rr = r.take().unwrap();
-                    debug!(cid = %cid , "h2_mux_client try to get new sub conn");
+                let mr = if sr.is_some() {
+                    let mut real_r = sr.take().unwrap();
+                    //debug!(cid = %cid , "h2_mux_client try to get new sub conn");
 
                     let cc = cid.clone();
 
-                    let rrr = &mut rr;
+                    let rrr = &mut real_r;
                     let stream = new_stream_by_send_request(cc, rrr, None).await;
                     let stream = match stream {
                         Ok(s) => s,
@@ -169,20 +168,19 @@ impl MuxClient {
                             return Err(e);
                         }
                     };
-                    *r = Some(rr);
-                    debug!(cid = %cid , "h2_mux_client got new sub conn");
+                    *sr = Some(real_r);
+                    //debug!(cid = %cid , "h2_mux_client got new sub conn");
 
                     let m = MapResult::new_c(Box::new(stream))
                         .a(a)
                         .b(early_data)
                         .build();
 
-                    rm = Some(m);
-                    rm
+                    Some(m)
                 } else {
                     None
                 };
-                rm.ok_or(anyhow!("h2 not established yet"))
+                mr.ok_or(anyhow!("h2 not established yet"))
             }
         }
     }
@@ -202,17 +200,17 @@ impl Mapper for MuxClient {
                 let r = self.handshake(cid, Some(conn), params.a, params.b).await;
                 match r {
                     anyhow::Result::Ok(r) => r,
-                    Err(e) => MapResult::from_e(e.context("h2_main_client handshake failed")),
+                    Err(e) => MapResult::from_e(e.context("h2_mux_client handshake failed")),
                 }
             }
             net::Stream::None => {
                 let r = self.handshake(cid, None, params.a, params.b).await;
                 match r {
                     anyhow::Result::Ok(r) => r,
-                    Err(e) => MapResult::from_e(e.context("h2_main_client handshake failed")),
+                    Err(e) => MapResult::from_e(e.context("h2_mux_client handshake failed")),
                 }
             }
-            _ => MapResult::err_str("h2_main_client only support tcplike stream or None stream"),
+            _ => MapResult::err_str("h2_mux_client only support tcplike stream or None stream"),
         }
     }
 }
