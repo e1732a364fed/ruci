@@ -15,7 +15,7 @@ pub mod cmd_common;
 #[cfg(feature = "route")]
 pub mod route;
 
-pub const VERSION: &str = "0.0.2";
+pub const VERSION: &str = "0.0.3";
 
 pub const COMMON_DIRS: [&str; 5] = [
     "./",
