@@ -3,7 +3,7 @@ use futures::Future;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 use ruci::{
-    map::{acc2::MIterBox, *},
+    map::{acc::MIterBox, *},
     net::TransmissionInfo,
     relay::{conn::handle_in_accumulate_result, route::*},
 };
@@ -125,7 +125,7 @@ impl Engine {
 
             let (atx, arx) = mpsc::channel(100); //todo: change this
 
-            let t1 = acc2::accumulate_from_start(atx, rx, miter.clone(), Some(self.ti.clone()));
+            let t1 = acc::accumulate_from_start(atx, rx, miter.clone(), Some(self.ti.clone()));
 
             let t2 = Engine::loop_a(arx, out_selector.clone(), self.ti.clone());
 
@@ -139,7 +139,7 @@ impl Engine {
     }
 
     async fn loop_a(
-        mut arx: Receiver<acc2::AccumulateResult>,
+        mut arx: Receiver<acc::AccumulateResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
         ti: Arc<TransmissionInfo>,
     ) -> anyhow::Result<()> {

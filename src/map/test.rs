@@ -1,4 +1,4 @@
-use crate::map::acc2::MIterBox;
+use crate::map::acc::MIterBox;
 use crate::map::math::{AddDirection, Adder};
 use crate::map::{MapParams, Mapper, CID};
 use crate::net::helpers::MockTcpStream;

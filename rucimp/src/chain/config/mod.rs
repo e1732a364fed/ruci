@@ -11,7 +11,7 @@ pub mod dynamic;
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use ruci::{
-    map::{acc2::MIterBox, *},
+    map::{acc::MIterBox, *},
     net,
 };
 use serde::{Deserialize, Serialize};

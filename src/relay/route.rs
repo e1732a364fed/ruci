@@ -28,7 +28,7 @@ use std::{
 use async_trait::async_trait;
 
 use crate::{
-    map::{acc2::MIterBox, AnyData},
+    map::{acc::MIterBox, AnyData},
     net,
     user::{self, bget_user_from_anydata, get_user_from_anydata, UserVec},
 };
