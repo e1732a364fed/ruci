@@ -29,7 +29,7 @@ impl Conn {
 pub fn new(u: UdpSocket) -> AddrConn {
     let a = Arc::new(u);
     let b = a.clone();
-    AddrConn(Box::new(Conn(a)), Box::new(Conn(b)))
+    AddrConn::new(Box::new(Conn(a)), Box::new(Conn(b)))
 }
 
 /// wrap u with Arc, then return 2 copys.

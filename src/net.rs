@@ -589,7 +589,7 @@ impl Stream {
         } else if let Stream::UDP(mut c) = self {
             use crate::net::addr_conn::AsyncWriteAddrExt;
 
-            c.1.shutdown().await?
+            c.w.shutdown().await?
         }
         Ok(())
     }

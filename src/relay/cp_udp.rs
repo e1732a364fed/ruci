@@ -47,7 +47,7 @@ pub async fn cp_udp_tcp(
                 return r.map(|x| x as u64);
             }
         } else {
-            let r = ac.1.write(&ed, &Addr::default()).await;
+            let r = ac.w.write(&ed, &Addr::default()).await;
             if r.is_err() {
                 return r.map(|x| x as u64);
             }
@@ -56,8 +56,8 @@ pub async fn cp_udp_tcp(
 
     let (mut r, mut w) = tokio::io::split(c);
     let (c1_to_c2, c2_to_c1) = (
-        cp_conn_to_addr(&mut r, ac.1).fuse(),
-        cp_addr_to_conn(ac.0, &mut w).fuse(),
+        cp_conn_to_addr(&mut r, ac.w).fuse(),
+        cp_addr_to_conn(ac.r, &mut w).fuse(),
     );
     pin_mut!(c1_to_c2, c2_to_c1);
 

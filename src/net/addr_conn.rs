@@ -37,10 +37,18 @@ pub trait AsyncWriteAddr {
     fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>>;
 }
 
-pub struct AddrConn(pub Box<dyn AddrReadTrait>, pub Box<dyn AddrWriteTrait>);
+pub struct AddrConn {
+    pub r: Box<dyn AddrReadTrait>,
+    pub w: Box<dyn AddrWriteTrait>,
+}
 impl Name for AddrConn {
     fn name(&self) -> &str {
         "addr_conn"
+    }
+}
+impl AddrConn {
+    pub fn new(r: Box<dyn AddrReadTrait>, w: Box<dyn AddrWriteTrait>) -> Self {
+        AddrConn { r, w }
     }
 }
 
@@ -324,7 +332,7 @@ pub async fn cp(
     c2: AddrConn,
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
-    cp_between(cid, c1.0, c1.1, c2.0, c2.1, opt).await
+    cp_between(cid, c1.r, c1.w, c2.r, c2.w, opt).await
 }
 
 pub async fn cp_between<

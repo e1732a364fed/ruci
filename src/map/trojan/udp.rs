@@ -117,7 +117,7 @@ pub fn split_conn_to_trojan_udp_rw(c: net::Conn) -> net::addr_conn::AddrConn {
     let ar = Reader { base: Box::pin(r) };
     let aw = Writer { base: Box::pin(w) };
 
-    net::addr_conn::AddrConn(Box::new(ar), Box::new(aw))
+    net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw))
 }
 
 #[cfg(test)]
