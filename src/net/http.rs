@@ -74,7 +74,7 @@ pub struct RawHeader {
 ///```
 pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     let mut request = ParsedHttpRequest::default();
-    request.fail_reason = FailReason::TooShort;
+    request.fail_reason = FailReason::None;
 
     if bs.len() < 16 {
         return request;

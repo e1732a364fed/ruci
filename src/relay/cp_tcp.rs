@@ -7,7 +7,7 @@
 use crate::net::CID;
 use crate::net::{self, TransmissionInfo};
 use log::Level::Debug;
-use log::{debug, info, log_enabled, warn};
+use log::{debug, log_enabled, warn};
 use scopeguard::defer;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -22,7 +22,7 @@ pub async fn cp_conn(
     pre_read_data: Option<bytes::BytesMut>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
-    info!("{}, relay start", cid);
+    debug!("{cid}, relay start");
 
     match (pre_read_data, ti) {
         (None, None) => task::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
@@ -34,7 +34,7 @@ pub async fn cp_conn(
 
 async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
     let _ = net::cp(in_conn, out_conn, &cid, None).await;
-    info!("{}, relay end", cid);
+    debug!("{}, relay end", cid);
 }
 
 async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TransmissionInfo>) {
@@ -42,7 +42,7 @@ async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<Tra
 
     defer! {
         ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-        info!("{}, relay end", cid);
+        debug!("{}, relay end", cid);
     }
 
     let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;
@@ -75,7 +75,7 @@ async fn no_ti_ed(
 
     let _ = net::cp(in_conn, out_conn, &cid, None).await;
 
-    info!("{}, relay end", cid);
+    debug!("{}, relay end", cid);
 }
 
 async fn ti_ed(
@@ -110,7 +110,7 @@ async fn ti_ed(
 
     defer! {
         ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-        info!("{}, relay end", cid);
+        debug!("{}, relay end", cid);
     }
 
     let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;

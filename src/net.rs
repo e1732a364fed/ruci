@@ -281,6 +281,25 @@ impl Addr {
         Addr::from(network, host, ip, port)
     }
 
+    //127.0.0.1:80 or www.b.com:80
+    pub fn from_addr_str(network: &'static str, s: &str) -> io::Result<Self> {
+        let ns: Vec<_> = s.split(":").collect();
+        if ns.len() != 2 {
+            return Err(io::Error::other(
+                "Addr::from_addr_str, split colon got len!=2",
+            ));
+        }
+        let port = ns[1]
+            .parse::<u16>()
+            .map_err(|e| io::Error::other(format!("{}", e)))?;
+
+        let x = ns[0].parse::<IpAddr>();
+        match x {
+            Ok(ip) => Addr::from(network, None, Some(ip), port),
+            Err(_) => Addr::from(network, Some(ns[0].to_string()), None, port),
+        }
+    }
+
     /// will set network to Tcp
     pub fn from_ipname(ipn: IPName, port: u16) -> Self {
         match ipn {
@@ -417,25 +436,6 @@ impl Addr {
                 .parse::<u16>()
                 .map_err(|e| io::Error::other(format!("{}", e)))?,
         )
-    }
-
-    //127.0.0.1:80 or www.b.com:80
-    pub fn from_addr_str(network: &'static str, s: &str) -> io::Result<Self> {
-        let ns: Vec<_> = s.split(":").collect();
-        if ns.len() != 2 {
-            return Err(io::Error::other(
-                "Addr::from_addr_str, split colon got len!=2",
-            ));
-        }
-        let port = ns[1]
-            .parse::<u16>()
-            .map_err(|e| io::Error::other(format!("{}", e)))?;
-
-        let x = ns[0].parse::<IpAddr>();
-        match x {
-            Ok(ip) => Addr::from(network, None, Some(ip), port),
-            Err(_) => Addr::from(network, Some(ns[0].to_string()), None, port),
-        }
     }
 }
 

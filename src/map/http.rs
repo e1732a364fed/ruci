@@ -3,7 +3,8 @@ use std::io::{self, Error};
 
 use base64::prelude::*;
 use bytes::BytesMut;
-use log::log_enabled;
+use futures::executor::block_on;
+use log::{debug, log_enabled};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
@@ -16,6 +17,8 @@ use crate::{
     user::{UserPass, UsersMap},
     Name,
 };
+
+use super::{MapperBox, ToMapper};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
@@ -33,14 +36,45 @@ impl Name for Server {
     }
 }
 
-pub enum AuthFailReason {
-    None,
-    One,
-    Two,
-    Three,
+#[derive(Default, Clone)]
+pub struct Config {
+    pub only_support_connect: bool,
+    pub user_whitespace_pass: Option<String>,
+    pub user_passes: Option<Vec<UserPass>>,
+}
+
+impl ToMapper for Config {
+    fn to_mapper(&self) -> MapperBox {
+        let a = block_on(Server::new(self.clone()));
+        Box::new(a)
+    }
 }
 
 impl Server {
+    pub async fn new(option: Config) -> Self {
+        let mut um = UsersMap::new();
+
+        if let Some(user_whitespace_pass) = option.user_whitespace_pass {
+            let u = UserPass::from(user_whitespace_pass);
+            if u.strict_valid() {
+                um.add_user(u).await;
+            }
+        }
+
+        let mut cu = option.user_passes.clone();
+        if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
+            while let Some(u) = a.pop() {
+                let uup = user::UserPass::new(u.user, u.pass);
+                um.add_user(uup).await;
+            }
+        }
+
+        Server {
+            only_connect: option.only_support_connect,
+            um: if um.len().await > 0 { Some(um) } else { None },
+        }
+    }
+
     pub async fn handshake(
         &self,
         cid: CID,
@@ -178,7 +212,7 @@ impl Server {
             }
         }
 
-        let ta = net::Addr::from_ip_addr_str("tcp", &addr_str);
+        let ta = net::Addr::from_addr_str("tcp", &addr_str);
         let ta = match ta {
             Ok(a) => a,
             Err(e) => {
@@ -189,6 +223,8 @@ impl Server {
                 return Err(e1);
             }
         };
+
+        debug!("{cid},here, {}", ta);
         if is_connect {
             base.write(CONNECT_REPLY_STR.as_bytes()).await?;
         }

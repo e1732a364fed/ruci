@@ -8,7 +8,7 @@ pub mod lua;
 use std::path::PathBuf;
 
 use ruci::{
-    map::{socks5, tls, trojan, MapperSync, ToMapper},
+    map::{http, socks5, tls, trojan, MapperSync, ToMapper},
     net,
 };
 use serde::{Deserialize, Serialize};
@@ -77,7 +77,8 @@ pub enum InMapperConfig {
     Adder(i8),
     Counter,
     TLS(TlsIn),
-    Socks5(Socks5In),
+    Http(UserPass),
+    Socks5(UserPass),
     Trojan(TrojanIn),
 }
 
@@ -117,7 +118,7 @@ pub struct TlsOut {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Socks5In {
+pub struct UserPass {
     userpass: Option<String>,
     more: Option<Vec<String>>,
 }
@@ -152,6 +153,19 @@ impl ToMapper for InMapperConfig {
                 key: PathBuf::from(c.key.clone()),
             }
             .to_mapper(),
+            InMapperConfig::Http(c) => {
+                let mut so = http::Config::default();
+                so.user_whitespace_pass = c.userpass.clone();
+                so.user_passes = c.more.as_ref().map_or(None, |up_v| {
+                    Some(
+                        up_v.iter()
+                            .map(|up| ruci::user::UserPass::from(up.to_string()))
+                            .collect::<Vec<_>>(),
+                    )
+                });
+
+                so.to_mapper()
+            }
             InMapperConfig::Socks5(c) => {
                 let mut so = socks5::server::Config::default();
                 so.user_whitespace_pass = c.userpass.clone();
@@ -227,7 +241,7 @@ mod test {
                 chain: vec![
                     InMapperConfig::Listener(Listener::TcpListener("0.0.0.0:1080".to_string())),
                     InMapperConfig::Counter,
-                    InMapperConfig::Socks5(Socks5In {
+                    InMapperConfig::Socks5(UserPass {
                         userpass: None,
                         more: None,
                     }),

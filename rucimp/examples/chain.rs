@@ -54,9 +54,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let contents = r_contents.expect("no config.chain.lua");
 
-    // println!("{}", contents);
     let mut se = StaticEngine::default();
     let sc = lua::load(&contents).unwrap();
+
+    //println!("{:?}", sc);
+
     se.init(sc);
 
     let se = Box::new(se);
