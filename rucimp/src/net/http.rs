@@ -65,7 +65,7 @@ pub fn match_request_http_header<'a, T: 'a + std::fmt::Debug>(
     //debug!("checking  {r:?}");
 
     if c.authority != given_host {
-        if given_host == "" {
+        if given_host.is_empty() {
             let hh = r
                 .headers()
                 .get("host")

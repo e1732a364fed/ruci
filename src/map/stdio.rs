@@ -55,7 +55,7 @@ impl fmt::Display for HexSlice<'_> {
         for byte in self.0 {
             write!(f, "{:02X}", byte)?;
         }
-        write!(f, "\n")?;
+        writeln!(f)?;
         Ok(())
     }
 }

@@ -1,3 +1,4 @@
+#[allow(unused)]
 pub mod route;
 
 use anyhow::Context;
@@ -46,8 +47,6 @@ where
         dial_addr = ?config,
         "tun: create_bind succeed"
     );
-
-    // let dev = crate::net::helpers::PrintWrapper::from(Box::new(dev));
 
     Ok(Box::new(dev))
 }

@@ -27,6 +27,7 @@ pub struct OutAutoRouteParams {
 const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
 const DEFAULT_ORIGINAL_DEV_NAME: &str = "enp0s1";
 
+#[allow(unused)]
 pub fn out_auto_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
     {
@@ -60,6 +61,7 @@ iptables -t nat -I POSTROUTING -o {original_dev_name} -j MASQUERADE"#,
     Ok(())
 }
 
+#[allow(unused)]
 pub fn out_down_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
     {

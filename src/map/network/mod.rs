@@ -6,7 +6,6 @@ pub mod accept;
 pub mod echo;
 
 use macro_map::*;
-use parking_lot::Mutex;
 use tokio::sync::mpsc::Receiver;
 use tracing::debug;
 use tracing::info;
@@ -105,6 +104,7 @@ impl Map for Direct {
     }
 }
 
+#[cfg(feature = "tun")]
 #[derive(Clone, Debug, Default)]
 enum AutoRouteState {
     #[default]
@@ -127,7 +127,8 @@ pub struct BindDialer {
     #[cfg(feature = "tun")]
     pub out_auto_route: Option<tun::route::OutAutoRouteParams>,
 
-    auto_route_state: Arc<Mutex<AutoRouteState>>,
+    #[cfg(feature = "tun")]
+    auto_route_state: Arc<parking_lot::Mutex<AutoRouteState>>,
 }
 
 impl Name for BindDialer {
@@ -190,8 +191,8 @@ impl BindDialer {
 
         match r {
             Ok(c) => {
+                #[cfg(feature = "tun")]
                 if let Some(a) = &bind_a {
-                    #[cfg(feature = "tun")]
                     if let Network::IP = a.network {
                         if let Some(c) = &self.in_auto_route {
                             let mut mg = self.auto_route_state.lock();

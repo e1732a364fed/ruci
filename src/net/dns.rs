@@ -32,9 +32,10 @@ pub fn get_sys_dns() -> Vec<String> {
         }
     }
 
-    return vec![];
+    vec![]
 }
 
+#[allow(unused)]
 pub fn set_sys_dns(list: Vec<&str>) -> std::io::Result<()> {
     #[cfg(target_os = "linux")]
     {
