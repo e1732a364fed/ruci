@@ -19,7 +19,7 @@ use crate::net::CID;
 use crate::user::{self, AsyncUserAuthenticator};
 use crate::{
     net::{self, http::FailReason, Conn},
-    user::{UserPass, UsersMap},
+    user::{PlainText, UsersMap},
     Name,
 };
 
@@ -31,7 +31,7 @@ pub const PROXY_AUTH_HEADER_STR: &str = "Proxy-Authorization ";
 
 #[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Server {
-    pub um: Option<UsersMap<UserPass>>,
+    pub um: Option<UsersMap<PlainText>>,
     pub only_connect: bool,
 }
 
@@ -45,7 +45,7 @@ impl Name for Server {
 pub struct Config {
     pub only_support_connect: bool,
     pub user_whitespace_pass: Option<String>,
-    pub user_passes: Option<Vec<UserPass>>,
+    pub user_passes: Option<Vec<PlainText>>,
 }
 
 impl ToMapper for Config {
@@ -60,7 +60,7 @@ impl Server {
         let mut um = UsersMap::new();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
-            let u = UserPass::from(user_whitespace_pass);
+            let u = PlainText::from(user_whitespace_pass);
             if u.strict_valid() {
                 um.add_user(u).await;
             }
@@ -69,7 +69,7 @@ impl Server {
         let mut cu = option.user_passes.clone();
         if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
             while let Some(u) = a.pop() {
-                let uup = user::UserPass::new(u.user, u.pass);
+                let uup = user::PlainText::new(u.user, u.pass);
                 um.add_user(uup).await;
             }
         }
@@ -118,7 +118,7 @@ impl Server {
                 return Ok(MapResult::ebc(e1, buf, base));
             }
         }
-        let mut authed_user: Option<UserPass> = None;
+        let mut authed_user: Option<PlainText> = None;
         if self.um.is_some() {
             let mut ok = false;
             for rh in r.headers.iter() {
@@ -152,7 +152,7 @@ impl Server {
                         }
                     };
 
-                    let u = user::UserPass::new(
+                    let u = user::PlainText::new(
                         String::from_utf8_lossy(&bs[..colon_index]).to_string(),
                         String::from_utf8_lossy(&bs[colon_index + 1..n]).to_string(),
                     );

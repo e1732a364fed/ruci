@@ -12,7 +12,7 @@ use crate::net::CID;
 use crate::user::{self};
 use crate::{
     net::{self, Conn},
-    user::{UserPass, UsersMap},
+    user::{PlainText, UsersMap},
     Name,
 };
 
@@ -21,7 +21,7 @@ use super::{http, socks5, MapperBox, ToMapper};
 #[derive(Default, Clone)]
 pub struct Config {
     pub user_whitespace_pass: Option<String>,
-    pub user_passes: Option<Vec<UserPass>>,
+    pub user_passes: Option<Vec<PlainText>>,
 }
 
 impl ToMapper for Config {
@@ -48,7 +48,7 @@ impl Server {
         let mut um = UsersMap::new();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
-            let u = UserPass::from(user_whitespace_pass);
+            let u = PlainText::from(user_whitespace_pass);
             if u.strict_valid() {
                 um.add_user(u).await;
             }
@@ -57,12 +57,12 @@ impl Server {
         let mut opt_userpasses = option.user_passes.clone();
         if let Some(vu) = opt_userpasses.as_mut().filter(|vu| !vu.is_empty()) {
             while let Some(u) = vu.pop() {
-                let uup = user::UserPass::new(u.user, u.pass);
+                let uup = user::PlainText::new(u.user, u.pass);
                 um.add_user(uup).await;
             }
         }
 
-        let mut oum: Option<UsersMap<UserPass>> = None;
+        let mut oum: Option<UsersMap<PlainText>> = None;
         if um.len().await > 0 {
             oum = Some(um);
         }

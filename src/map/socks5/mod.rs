@@ -18,7 +18,7 @@ mod test;
 use crate::{
     map,
     net::{self},
-    user::UserPass,
+    user::PlainText,
 };
 use bytes::{Buf, BufMut, BytesMut};
 use std::io::{self};

@@ -1,28 +1,59 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 use async_trait::async_trait;
+use dyn_clone::DynClone;
 use std::hash::Hash;
 use std::sync::Mutex;
 /// 用于用户鉴权
-pub trait UserTrait {
-    fn identity_str(&self) -> String; //每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name
+pub trait UserTrait: Send + Sync {
+    /// 每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name. 用于在非敏感环境显示该用户
+    fn identity_str(&self) -> String;
 
     fn identity_bytes(&self) -> &[u8]; //与str类似; 对于程序来说,bytes更方便处理; 可以与str相同, 也可以不同.
 
-    fn auth_str(&self) -> String; //AuthStr 可以识别出该用户 并验证该User的真实性。相当于 user name + password
+    /// auth_str 可以识别出该用户 并验证该User的真实性。相当于 user name + password.
+    /// 约定，每一种不同的 UserTrait 实现都要在 auth_str 前部加上 {type}: 这种形式, 如"plaintext:u0 p0" ,
+    /// 以用于对不同的 实现 得到的 auth_str 加以区分. 也即 auth_str 须可用于 UserBox 的 Hash
+    fn auth_str(&self) -> String;
 
-    fn auth_bytes(&self) -> &[u8]; //与 AuthStr 类似; 对于程序来说,bytes更方便处理; 可以与str相同, 也可以不同.
+    fn auth_bytes(&self) -> &[u8]; //与 auth_str 类似; 对于程序来说,bytes更方便处理; 可以与 auth_str 相同, 也可以不同.
 }
 
-pub trait User: UserTrait + Clone {}
-impl<T: UserTrait + Clone> User for T {}
+pub trait User: UserTrait + DynClone {}
+impl<T: UserTrait + DynClone> User for T {}
+dyn_clone::clone_trait_object!(User);
 
-pub struct UserVec(Vec<Box<dyn UserTrait>>);
+pub struct UserBox(Box<dyn User>);
+impl Debug for UserBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("UserBox")
+            .field(&self.0.identity_str())
+            .finish()
+    }
+}
+
+impl Hash for UserBox {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.auth_str().hash(state);
+    }
+}
+
+impl PartialEq for UserBox {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.auth_str() == other.0.auth_str()
+    }
+}
+
+impl Eq for UserBox {}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct UserVec(Vec<UserBox>);
 
 impl Hash for UserVec {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.iter().for_each(|b| {
-            b.identity_bytes().hash(state);
+            b.hash(state);
         })
     }
 }
@@ -35,26 +66,26 @@ pub trait AsyncUserAuthenticator<T: User> {
 
 /// 简单以字符串存储用户名和密码, 实现User
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct UserPass {
+pub struct PlainText {
     pub user: String,
     pub pass: String,
 
     astr: String,
 }
 
-impl UserPass {
+impl PlainText {
     pub fn new(user: String, pass: String) -> Self {
-        let astr = format!("{}\n{}", user, pass);
-        UserPass { user, pass, astr }
+        let astr = format!("plaintext:{}\n{}", user, pass);
+        PlainText { user, pass, astr }
     }
 
     ///按whitespace 分割userpass后进行new
     pub fn from(userpass: String) -> Self {
         let ss: Vec<&str> = userpass.splitn(2, char::is_whitespace).collect();
         if ss.len() < 2 {
-            UserPass::new(userpass, "".into())
+            PlainText::new(userpass, "".into())
         } else {
-            UserPass::new(ss[0].into(), ss[1].into())
+            PlainText::new(ss[0].into(), ss[1].into())
         }
     }
 
@@ -74,7 +105,7 @@ impl UserPass {
     }
 }
 
-impl UserTrait for UserPass {
+impl UserTrait for PlainText {
     fn identity_str(&self) -> String {
         self.user.clone()
     }
@@ -94,11 +125,11 @@ impl UserTrait for UserPass {
 
 /// 存储User, 实现 AsyncUserAuthenticator
 #[derive(Debug)]
-pub struct UsersMap<T: User> {
+pub struct UsersMap<T: UserTrait + Clone> {
     m: Mutex<InnerUsersmapStruct<T>>,
 }
 
-impl<T: User> Clone for UsersMap<T> {
+impl<T: UserTrait + Clone> Clone for UsersMap<T> {
     fn clone(&self) -> Self {
         Self {
             m: Mutex::new(self.m.lock().unwrap().clone()),
@@ -107,12 +138,12 @@ impl<T: User> Clone for UsersMap<T> {
 }
 
 #[derive(Debug, Clone)]
-struct InnerUsersmapStruct<T: User> {
+struct InnerUsersmapStruct<T: UserTrait + Clone> {
     idmap: HashMap<String, T>, // id map
     amap: HashMap<String, T>,  //auth map
 }
 
-impl<T: User> InnerUsersmapStruct<T> {
+impl<T: UserTrait + Clone> InnerUsersmapStruct<T> {
     fn new() -> Self {
         InnerUsersmapStruct {
             idmap: HashMap::new(),
@@ -121,13 +152,13 @@ impl<T: User> InnerUsersmapStruct<T> {
     }
 }
 
-impl<T: User> Default for UsersMap<T> {
+impl<T: UserTrait + Clone> Default for UsersMap<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: User> UsersMap<T> {
+impl<T: UserTrait + Clone> UsersMap<T> {
     pub fn new() -> Self {
         UsersMap {
             m: Mutex::new(InnerUsersmapStruct::new()),
@@ -151,7 +182,7 @@ impl<T: User> UsersMap<T> {
 }
 
 #[async_trait]
-impl<T: User + Send> AsyncUserAuthenticator<T> for UsersMap<T> {
+impl<T: UserTrait + Clone> AsyncUserAuthenticator<T> for UsersMap<T> {
     async fn auth_user_by_authstr(&self, authstr: &str) -> Option<T> {
         let inner = self.m.lock().unwrap();
         let s = authstr.to_string();
@@ -164,7 +195,7 @@ mod test {
     use futures::executor::block_on;
     use std::{collections::HashMap, io};
 
-    use super::UserPass;
+    use super::PlainText;
     use crate::user::{AsyncUserAuthenticator, UsersMap};
 
     #[test]
@@ -182,11 +213,11 @@ mod test {
 
     #[tokio::test]
     async fn test_users_map() -> std::io::Result<()> {
-        let up = UserPass::new("u".into(), "p".into());
+        let up = PlainText::new("u".into(), "p".into());
         //println!("up: {:?}", up);
-        let up2 = UserPass::new("u2".into(), "p2".into());
+        let up2 = PlainText::new("u2".into(), "p2".into());
 
-        let mut um: UsersMap<UserPass> = UsersMap::new();
+        let mut um: UsersMap<PlainText> = UsersMap::new();
         block_on(um.add_user(up));
         block_on(um.add_user(up2));
         //println!("um: {:?}", um);

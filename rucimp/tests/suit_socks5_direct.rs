@@ -18,7 +18,7 @@ use futures::{pin_mut, select, FutureExt};
 use log::{info, warn};
 use ruci::map::socks5;
 use ruci::map::socks5::*;
-use ruci::{map::Mapper, net, user::UserPass};
+use ruci::{map::Mapper, net, user::PlainText};
 use rucimp::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
@@ -150,7 +150,7 @@ async fn f_dial_future_out_adder(
     }
 
     let a = socks5::client::Client {
-        up: Some(UserPass::from("u0 p0".to_string())),
+        up: Some(PlainText::from("u0 p0".to_string())),
         use_earlydata: false,
     };
     let newconn = a

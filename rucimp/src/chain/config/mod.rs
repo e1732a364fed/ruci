@@ -209,7 +209,7 @@ impl ToMapper for InMapperConfig {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
-                            .map(|up| ruci::user::UserPass::from(up.to_string()))
+                            .map(|up| ruci::user::PlainText::from(up.to_string()))
                             .collect::<Vec<_>>()
                     }),
                     ..Default::default()
@@ -222,7 +222,7 @@ impl ToMapper for InMapperConfig {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
-                            .map(|up| ruci::user::UserPass::from(up.to_string()))
+                            .map(|up| ruci::user::PlainText::from(up.to_string()))
                             .collect::<Vec<_>>()
                     }),
                     ..Default::default()
@@ -235,7 +235,7 @@ impl ToMapper for InMapperConfig {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
-                            .map(|up| ruci::user::UserPass::from(up.to_string()))
+                            .map(|up| ruci::user::PlainText::from(up.to_string()))
                             .collect::<Vec<_>>()
                     }),
                 };
@@ -283,7 +283,7 @@ impl ToMapper for OutMapperConfig {
                     up: if u.is_empty() {
                         None
                     } else {
-                        Some(ruci::user::UserPass::from(u))
+                        Some(ruci::user::PlainText::from(u))
                     },
                     use_earlydata: c.early_data.unwrap_or_default(),
                 };

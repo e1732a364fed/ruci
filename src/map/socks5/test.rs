@@ -21,7 +21,7 @@ use crate::map::ProxyBehavior;
 use crate::map::CID;
 use crate::net;
 use crate::user::AsyncUserAuthenticator;
-use crate::user::UserPass;
+use crate::user::PlainText;
 use futures::executor::block_on;
 use futures::join;
 
@@ -44,7 +44,7 @@ async fn new_3user_socks5_inadder() -> Server {
     Server::new(Config {
         support_udp: false,
         user_whitespace_pass: Some("u0 p0".to_string()),
-        user_passes: Some(vec![UserPass::new("u1".to_string(), "p1".to_string())]),
+        user_passes: Some(vec![PlainText::new("u1".to_string(), "p1".to_string())]),
     })
     .await
 }
@@ -287,7 +287,7 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
 
         match d {
             crate::map::AnyData::B(mut d) => {
-                if let Some(up) = d.downcast_mut::<UserPass>() {
+                if let Some(up) = d.downcast_mut::<PlainText>() {
                     assert_eq!(up.user, "u0");
                     assert_eq!(up.pass, "p0");
                 } else {

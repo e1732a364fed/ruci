@@ -5,7 +5,7 @@ use super::*;
 use crate::{
     map::{self, MapResult, MapperBox, ProxyBehavior, ToMapper, CID},
     net::{self, Addr, Conn},
-    user::{self, AsyncUserAuthenticator, UserPass, UsersMap},
+    user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
     Name,
 };
 use bytes::{Buf, BytesMut};
@@ -28,7 +28,7 @@ use tokio::{
 pub struct Config {
     pub support_udp: bool,
     pub user_whitespace_pass: Option<String>,
-    pub user_passes: Option<Vec<UserPass>>,
+    pub user_passes: Option<Vec<PlainText>>,
 }
 
 impl ToMapper for Config {
@@ -44,7 +44,7 @@ impl ToMapper for Config {
 /// 支持 AuthNone和 AuthUserPass
 #[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Server {
-    pub um: Option<UsersMap<UserPass>>,
+    pub um: Option<UsersMap<PlainText>>,
     pub support_udp: bool,
 }
 
@@ -53,7 +53,7 @@ impl Server {
         let mut um = UsersMap::new();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {
-            let u = UserPass::from(user_whitespace_pass);
+            let u = PlainText::from(user_whitespace_pass);
             if u.strict_valid() {
                 um.add_user(u).await;
             }
@@ -71,7 +71,7 @@ impl Server {
         let mut cu = option.user_passes.clone();
         if let Some(a) = cu.as_mut().filter(|a| !a.is_empty()) {
             while let Some(u) = a.pop() {
-                let uup = user::UserPass::new(u.user, u.pass);
+                let uup = user::PlainText::new(u.user, u.pass);
                 um.add_user(uup).await;
             }
         }
@@ -166,7 +166,7 @@ impl Server {
 
         let mut remainn = n - nmp2;
 
-        let mut the_user: Option<UserPass> = None;
+        let mut the_user: Option<PlainText> = None;
 
         for i in 2..nmp2 {
             let m = buf[i];
@@ -259,7 +259,7 @@ impl Server {
 
                     let pbytes = &auth_bs[2 + ul + 1..auth_bs_len];
 
-                    let thisup = UserPass::new(
+                    let thisup = PlainText::new(
                         String::from_utf8_lossy(ubytes).to_string(),
                         String::from_utf8_lossy(pbytes).to_string(),
                     );

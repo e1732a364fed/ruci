@@ -4,7 +4,7 @@ use log::info;
 use ruci::{
     map::{socks5, tls, MapParams, Mapper},
     net,
-    user::UserPass,
+    user::PlainText,
 };
 use rucimp::suit::config::{
     adapter::{load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig},
@@ -74,7 +74,7 @@ async fn f_dial_future_tls_out_adder(
         .try_unwrap_tcp()?;
 
     let a = socks5::client::Client {
-        up: Some(UserPass::from("u0 p0".to_string())),
+        up: Some(PlainText::from("u0 p0".to_string())),
         use_earlydata: false,
     };
     let mut newconn = a

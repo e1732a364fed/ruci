@@ -8,7 +8,7 @@ use crate::{map::MapResult, net};
 
 #[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Client {
-    pub up: Option<UserPass>, //todo: make sure len <= 255
+    pub up: Option<PlainText>, //todo: make sure len <= 255
 
     pub use_earlydata: bool, //todo: implement this.
 }

@@ -72,13 +72,17 @@ pub fn sha224_hexstring_lower_case(pass: &str) -> String {
 pub struct User {
     pub plain_text_pass: String, //store the original password
     pub hex: String,             //len = 56
+
+    astr: String,
 }
 
 impl User {
     pub fn new(plain_text: &str) -> Self {
+        let hex = sha224_hexstring_lower_case(plain_text);
         User {
             plain_text_pass: plain_text.to_string(),
-            hex: sha224_hexstring_lower_case(plain_text),
+            hex: hex.clone(),
+            astr: format!("trojan:{}", hex),
         }
     }
 }
@@ -93,7 +97,7 @@ impl crate::user::UserTrait for User {
     }
 
     fn auth_str(&self) -> String {
-        self.hex.clone()
+        self.astr.clone()
     }
 
     fn auth_bytes(&self) -> &[u8] {

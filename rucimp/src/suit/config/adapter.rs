@@ -93,7 +93,7 @@ pub fn load_out_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mapp
                 up: if u.is_empty() {
                     None
                 } else {
-                    Some(ruci::user::UserPass::from(u))
+                    Some(ruci::user::PlainText::from(u))
                 },
                 use_earlydata: c.early_data.unwrap_or_default(),
             };
@@ -117,7 +117,7 @@ pub fn get_socks5_server_option_from_ldconfig(c: LDConfig) -> socks5::server::Co
     };
     let ruci_userpass = c.users.map(|up_v| {
         up_v.iter()
-            .map(|up| ruci::user::UserPass::new(up.user.clone(), up.pass.clone()))
+            .map(|up| ruci::user::PlainText::new(up.user.clone(), up.pass.clone()))
             .collect::<Vec<_>>()
     });
     so.user_passes = ruci_userpass;
@@ -136,7 +136,7 @@ pub fn get_http_server_option_from_ldconfig(c: LDConfig) -> http::Config {
     };
     let ruci_userpass = c.users.map(|up_v| {
         up_v.iter()
-            .map(|up| ruci::user::UserPass::new(up.user.clone(), up.pass.clone()))
+            .map(|up| ruci::user::PlainText::new(up.user.clone(), up.pass.clone()))
             .collect::<Vec<_>>()
     });
     so.user_passes = ruci_userpass;
@@ -150,7 +150,7 @@ pub fn get_socks5http_server_option_from_ldconfig(c: LDConfig) -> socks5http::Co
     };
     let ruci_userpass = c.users.map(|up_v| {
         up_v.iter()
-            .map(|up| ruci::user::UserPass::new(up.user.clone(), up.pass.clone()))
+            .map(|up| ruci::user::PlainText::new(up.user.clone(), up.pass.clone()))
             .collect::<Vec<_>>()
     });
     so.user_passes = ruci_userpass;
