@@ -1,10 +1,11 @@
 /*!
-Defines a Map that uses lua code as its maps method.
+Defines a Map that uses Lua code as its mapping method.
 
-In order to let lua take full use of rust code, we have to wrap everything for lua.
+This module implements custom protocols in Lua. For Lua configuration code,
+see rucimp/src/modes/chain/config/lua.
 
-注意，此模块写的是 lua自定义协议。若要看 lua配置代码, 见 rucimp/src/modes/chain/config/lua
- */
+The module wraps Rust functionality to make it accessible from Lua code.
+*/
 
 use std::future::Future;
 use std::io;
@@ -37,6 +38,11 @@ use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::io::ReadBuf;
 
+/// Creates a load_file function in the Lua environment that can access files from the given FileSource
+///
+/// # Arguments
+/// * `lua` - The Lua instance to add the function to
+/// * `file_source` - The FileSource to load files from
 pub fn create_load_file_func(lua: &Lua, file_source: &crate::utils::FileSource) {
     let raw_ptr = file_source as *const crate::utils::FileSource as *const std::os::raw::c_void;
 

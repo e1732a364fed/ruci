@@ -1,7 +1,9 @@
 /*!
-Defines some `mode`s and some extension maps and related facilities for ruci.
+Defines proxy modes and extension maps for the ruci framework.
 
+This crate provides concrete implementations of the abstractions defined in ruci.
 */
+
 pub mod map;
 pub mod modes;
 pub mod net;
@@ -14,6 +16,7 @@ pub mod route;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Common directories to search for configuration files
 pub const COMMON_DIRS: [&str; 6] = [
     "./",
     "ruci_config/",
@@ -23,4 +26,5 @@ pub const COMMON_DIRS: [&str; 6] = [
     "../../resource/",
 ];
 
+/// Default name for Lua configuration files
 pub const DEFAULT_LUA_CONFIG_FILE_NAME: &str = "local.lua";
