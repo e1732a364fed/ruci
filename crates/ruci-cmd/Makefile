@@ -1,5 +1,5 @@
 define compile
-	cargo build --target ${BUILD_TRIPLET} -F lua -F api_server -F api_client -F utils -F quinn -F use-native-tls --release 
+	cargo build --target ${BUILD_TRIPLET} -F lua -F api_server -F api_client -F utils -F quinn -F use-native-tls ${EXTRA} --release 
 endef
 
 define compile_cross

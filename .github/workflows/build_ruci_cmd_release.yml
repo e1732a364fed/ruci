@@ -47,10 +47,8 @@ jobs:
     - name: Build ${{ matrix.target }}
       if: ${{ matrix.target != 'x86_64-pc-windows-gnu' }}
       run: |
-        compile_features="-f api_server -f api_client -f utils -f tproxy -f quinn -f use-native-tls -f lua"
-
         cd crates/ruci-cmd
-        ./build_cross.sh -v ${{ inputs.tag || github.ref_name }} -t ${{ matrix.target }} $compile_features
+        make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }} EXTRA="-F tproxy"
 
     - name: Build exe
       if: ${{ matrix.target == 'x86_64-pc-windows-gnu' }}
