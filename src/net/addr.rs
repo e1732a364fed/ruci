@@ -505,7 +505,7 @@ impl Addr {
                 debug!("Addr binding IP {}", ip);
                 let (tun_name, dial_addr, netmask) = ip
                     .to_name_ip_netmask()
-                    .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
+                    .context("Addr::bind_dial tun, to_name_ip_netmask failed")?;
                 let c = tun::create_bind(tun_name, dial_addr, netmask)
                     .await
                     .context("bind_dial failed for tun")?;

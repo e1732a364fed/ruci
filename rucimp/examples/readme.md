@@ -14,21 +14,21 @@ chain_infinite 演示 完全动态链, 其与 chain 的运行方式一样, 不�
 # in folder rucimp, run:
 
 # chain mode
-RUST_LOG=none,ruci=debug cargo run -F lua -F quinn --example chain
-RUST_LOG=none,ruci=debug cargo run -F lua -F quinn --example chain -- remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain -- remote.lua
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F quinn --example chain_infinite -- local_mux_h2.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain_infinite -- local_mux_h2.lua
 
 # linux
-RUST_LOG=none,ruci=debug cargo run -F lua -F quinn -F sockopt --example chain
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun sockopt" --example chain
 
 # suit mode
 cargo run --example suit -- local.suit.toml
 cargo run --example suit -- remote.suit.toml
 ```
 
-(h2 的代码实现所使用的 h2包 会在debug 下打印大量日志输出, 影响观察, 故使用 RUST_LOG=none,ruci=debug 过滤掉非
-ruci 的 日志)
+( (h2 的代码实现所依赖的 h2包)、 quic 包、 rustls 等包 都会在debug 下打印大量日志输出, 影响观察, 
+故使用 RUST_LOG=none,ruci=debug 过滤掉非ruci 的 日志)
 
 ## route
 to use rule_route,

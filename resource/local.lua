@@ -442,7 +442,7 @@ config = {
 
 --]]
 
----[=[
+--[=[
 
 config = {
     inbounds = {
@@ -561,7 +561,7 @@ config = {
 
 --]=]
 
---[=[
+---[=[
 config = {
 
     inbounds = { 

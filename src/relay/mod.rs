@@ -5,13 +5,11 @@ relay 包定义了一种转发逻辑, 但是它不是强制性的, 可用于参�
 */
 mod cp_ac_conn;
 mod cp_conn;
-
-pub use cp_ac_conn::*;
-pub use cp_conn::*;
-
 pub mod record;
 pub mod route;
 
+pub use cp_ac_conn::*;
+pub use cp_conn::*;
 pub use record::*;
 
 use std::sync::Arc;
@@ -311,8 +309,8 @@ pub struct CpStreamArgs {
 /// non-blocking,
 pub async fn cp_stream(args: CpStreamArgs) {
     let cid = args.cid;
-    let s1 = args.in_stream;
-    let s2 = args.out_stream;
+    let in_s = args.in_stream;
+    let out_s = args.out_stream;
     let ed = args.ed;
     let first_target = args.first_target;
     let tr = args.tr;
@@ -322,7 +320,7 @@ pub async fn cp_stream(args: CpStreamArgs) {
 
     //todo 原计划是 add trace for udp, 但因为 trace 功能用得少, 就先搁置.
 
-    match (s1, s2) {
+    match (in_s, out_s) {
         (Stream::Conn(i), Stream::Conn(o)) => cp_conn::cp_conn(
             cid,
             i,
@@ -376,8 +374,8 @@ pub async fn cp_stream(args: CpStreamArgs) {
             })
             .await;
         }
-        (s1, s2) => {
-            warn!( s1 = %s1, s2 = %s2,"can't cp stream when one of them is not (Conn or AddrConn)");
+        (in_s, out_s) => {
+            warn!( in_s = %in_s, out_s = %out_s,"can't cp stream when one of them is not (Conn or AddrConn)");
         }
     }
 }

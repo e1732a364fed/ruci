@@ -103,6 +103,7 @@ multi-stream generator【多流发生器】: `function( Option<stream> ,args...)
 流映射可以改变流(如Tls), 也可以不改变而只是在内容上做修改(如Adder),
 
 也可以完全不做修改而只提供副作用(如 Counter, 或Trojan/Socks5 先做握手然后不改变流) 
+(Maps like this are normally called "middleware")
 
 也可以消耗掉流(如 Echo (持有对流的所有权, 自己建立relay loop); Blackhole; 
 再如 relay 转发过程 将 in 和 out 调转对接, 同时消耗in 和 out 两个流), 

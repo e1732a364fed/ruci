@@ -8,29 +8,29 @@
 run with api server:
 
 ```sh
-cargo run -F lua -F api_server -F api_client -F utils -F use-native-tls --release -- -a run
+cargo run --features "lua api_server api_client utils use-native-tls" --release -- -a run
 
 ```
 
 debug:
 ```sh
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn -- --log-file ""
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun" -- --log-file ""
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn  -- --log-file "" -c remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun"  -- --log-file "" -c remote.lua
 
 #powershell
-$Env:RUST_LOG="none,ruci=debug";cargo run -F lua -F utils -F use-native-tls -F quinn -- --log-file ""
+$Env:RUST_LOG="none,ruci=debug";cargo run --features "lua utils use-native-tls quinn tun" -- --log-file ""
 
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn  -- --log-file "" -c local_mux2_h2.lua --infinite
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun"  -- --log-file "" -c local_mux2_h2.lua --infinite
 
-RUST_LOG=debug cargo run -F lua -F api_server -F api_client -F utils -F trace -- -a run --trace
+RUST_LOG=debug cargo run --features "api_server api_client trace lua utils use-native-tls quinn tun" -- -a run --trace
 
-# with tproxy:
+# with tproxy(linux):
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn -F tproxy -- --log-file ""
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun tproxy" -- --log-file ""
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn -F tproxy -- --log-file "" -c remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun tproxy" -- --log-file "" -c remote.lua
 
 ```
 
@@ -45,7 +45,7 @@ make BUILD_VERSION=my_version BUILD_TRIPLET=aarch64-apple-darwin
 
 # features
 
-features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn
+features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn, tun
 default enables none.
 
 api_server, trace 这两个feature都会少许降低 performance. 

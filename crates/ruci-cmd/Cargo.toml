@@ -35,6 +35,7 @@ rcgen = {version = "0.12.1",optional = true}
 lua = ["rucimp/lua"]
 
 lua54 = ["rucimp/lua54"]
+tun = ["rucimp/tun"]
 
 quic = ["rucimp/quic"]
 quinn = ["rucimp/quinn"]
