@@ -20,8 +20,10 @@
  * 连接都要初始化一遍配置（如加载tls证书等），将是非常低效的
  *
  */
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
+use async_trait::async_trait;
+use dyn_clone::DynClone;
 use ruci::map::{acc::DynIterator, MapperBox};
 
 use uuid::Uuid;
@@ -50,27 +52,28 @@ pub trait IndexNextInMapperGenerator {
     ) -> Option<IndexMapperBox>;
 }
 
-impl DynIterator for IndexUnbounded {
-    fn next_with_data(
-        &mut self,
-        data: Option<Vec<ruci::map::OptVecData>>,
-    ) -> Option<Arc<MapperBox>> {
-        let cl = self.cache.len();
-        let oi = self.selector.next_in_mapper(self.current_index, cl, data);
-        match oi {
-            Some(ib) => {
-                let i = ib.0;
-                self.current_index = i;
-                self.history.push(i);
-                if i == cl {
-                    self.cache.push(ib.1.clone());
-                }
-                Some(ib.1)
-            }
-            None => None,
-        }
-    }
-}
+// #[async_trait]
+// impl DynIterator for IndexUnbounded {
+//     async fn next_with_data(
+//         &mut self,
+//         data: Option<Vec<ruci::map::OptVecData>>,
+//     ) -> Option<Arc<MapperBox>> {
+//         let cl = self.cache.len();
+//         let oi = self.selector.next_in_mapper(self.current_index, cl, data);
+//         match oi {
+//             Some(ib) => {
+//                 let i = ib.0;
+//                 self.current_index = i;
+//                 self.history.push(i);
+//                 if i == cl {
+//                     self.cache.push(ib.1.clone());
+//                 }
+//                 Some(ib.1)
+//             }
+//             None => None,
+//         }
+//     }
+// }
 
 /// Complete Dynamic Chain using uuid
 pub struct UuidUnbounded {
@@ -95,6 +98,7 @@ pub trait UuidInfiniteNextInMapperGenerator {
 }
 
 /// 有界部分动态链
+#[derive(Debug, Clone)]
 pub struct Bounded {
     /// 每一个 MapperBox 都是静态的, 在 Vec中有固定的序号.
     /// 第一个会被第一个调用, 之后根据 selector 返回的序
@@ -110,20 +114,23 @@ pub struct Bounded {
     pub history: Vec<usize>,
 }
 
-pub trait NextSelector {
-    fn next_index(
+#[async_trait]
+pub trait NextSelector: Debug + DynClone + Send + Sync {
+    async fn next_index(
         &self,
         this_index: usize,
         data: Option<Vec<ruci::map::OptVecData>>,
     ) -> Option<usize>;
 }
+dyn_clone::clone_trait_object!(NextSelector);
 
+#[async_trait]
 impl DynIterator for Bounded {
-    fn next_with_data(
+    async fn next_with_data(
         &mut self,
         data: Option<Vec<ruci::map::OptVecData>>,
     ) -> Option<Arc<MapperBox>> {
-        let oi = self.selector.next_index(self.current_index, data);
+        let oi = self.selector.next_index(self.current_index, data).await;
         match oi {
             Some(i) => {
                 self.current_index = i;

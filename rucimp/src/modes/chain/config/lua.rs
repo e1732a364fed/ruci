@@ -1,6 +1,7 @@
 use self::dynamic::NextSelector;
 
 use super::*;
+use async_trait::async_trait;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Result, Value};
 
@@ -18,37 +19,66 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
     Ok(c)
 }
 
-/// load config, inbound next selector, and outbound next selector
-pub fn load_bounded_dynamic<'a>(
-    lua: &'a Lua,
-    lua_text: &'a str,
-) -> Result<(StaticConfig, LuaNextSelector<'a>, LuaNextSelector<'a>)> {
+const BOUNDED_DYNAMIC_INBOUND_SELECTOR_NAME: &str = "dyn_inbound_next_selector";
+const BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME: &str = "dyn_outbound_next_selector";
+
+/// test if the lua text is ok for bounded dynamic
+pub fn try_load_bounded_dynamic(lua_text: &str) -> Result<()> {
+    let lua = Lua::new();
     lua.load(lua_text).eval()?;
 
     let lg = lua.globals();
 
-    let clt: LuaTable = lg.get("config")?;
+    let _s1: LuaFunction = lg.get(BOUNDED_DYNAMIC_INBOUND_SELECTOR_NAME)?;
+    let _s2: LuaFunction = lg.get(BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME)?;
 
-    let c: StaticConfig = lua.from_value(Value::Table(clt))?;
-
-    lua.load(lua_text).eval()?;
-
-    let s1: LuaFunction = lg.get("dyn_inbound_next_selector")?;
-    let s2: LuaFunction = lg.get("dyn_outbound_next_selector")?;
-
-    Ok((c, LuaNextSelector(s1), LuaNextSelector(s2)))
+    Ok(())
 }
 
-pub struct LuaNextSelector<'a>(LuaFunction<'a>);
-impl<'a> NextSelector for LuaNextSelector<'a> {
-    fn next_index(
+pub fn load_bounded_dynamic(lua_text: &str) -> Result<(LuaNextSelector, LuaNextSelector)> {
+    let lua = Lua::new();
+    lua.load(lua_text).eval()?;
+
+    let lua2 = Lua::new();
+    lua2.load(lua_text).eval()?;
+
+    Ok((
+        LuaNextSelector {
+            lua: Arc::new(tokio::sync::Mutex::new(lua)),
+            func_name: String::from(BOUNDED_DYNAMIC_INBOUND_SELECTOR_NAME),
+        },
+        LuaNextSelector {
+            lua: Arc::new(tokio::sync::Mutex::new(lua2)),
+            func_name: String::from(BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME),
+        },
+    ))
+}
+
+#[derive(Debug, Clone)]
+pub struct LuaNextSelector {
+    lua: Arc<tokio::sync::Mutex<Lua>>,
+    func_name: String,
+}
+
+#[async_trait]
+impl NextSelector for LuaNextSelector {
+    async fn next_index(
         &self,
         this_index: usize,
         data: Option<Vec<ruci::map::OptVecData>>,
     ) -> Option<usize> {
         let w = OptVecOptVecDataLuaWrapper(data);
+        let lua = self.lua.lock().await;
 
-        match self.0.call::<_, usize>((this_index, w)) {
+        let f: LuaFunction = match lua.globals().get(self.func_name.as_str()) {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("{}", e);
+                return None;
+            }
+        };
+
+        match f.call::<_, usize>((this_index, w)) {
             Ok(rst) => Some(rst),
             Err(err) => {
                 warn!("{}", err);
@@ -58,12 +88,36 @@ impl<'a> NextSelector for LuaNextSelector<'a> {
     }
 }
 
+// #[derive(Debug, Clone)]
+// pub struct LuaNextSelector<'a>(LuaFunction<'a>);
+
+// unsafe impl<'a> Send for LuaNextSelector<'a> {}
+// unsafe impl<'a> Sync for LuaNextSelector<'a> {}
+
+// impl<'a> NextSelector for LuaNextSelector<'a> {
+//     fn next_index(
+//         &self,
+//         this_index: usize,
+//         data: Option<Vec<ruci::map::OptVecData>>,
+//     ) -> Option<usize> {
+//         let w = OptVecOptVecDataLuaWrapper(data);
+
+//         match self.0.call::<_, usize>((this_index, w)) {
+//             Ok(rst) => Some(rst),
+//             Err(err) => {
+//                 warn!("{}", err);
+//                 None
+//             }
+//         }
+//     }
+// }
+
 /*
-////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
          rust -> lua UserData 的包装
 
-////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 */
 
 use mlua::{UserData, UserDataMethods};
@@ -157,11 +211,11 @@ impl UserData for OptVecOptVecDataLuaWrapper {
 }
 
 /*
-////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
         end of rust -> lua UserData 的包装
 
-////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 */
 
 #[allow(unused)]

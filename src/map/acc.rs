@@ -26,11 +26,12 @@ pub type MIterBox = Box<dyn MIter>;
 ///
 /// if you want to count it, you might use get_miter to try to get MIterBox first
 ///
+#[async_trait]
 pub trait DynIterator {
-    fn next_with_data(&mut self, data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>>;
+    async fn next_with_data(&mut self, data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>>;
 
-    fn next(&mut self) -> Option<Arc<MapperBox>> {
-        self.next_with_data(None)
+    async fn next(&mut self) -> Option<Arc<MapperBox>> {
+        self.next_with_data(None).await
     }
 
     fn get_miter(&self) -> Option<MIterBox> {
@@ -52,12 +53,13 @@ pub type DMIterBox = Box<dyn DMIter>;
 #[derive(Debug, Clone)]
 pub struct DynMIterWrapper(pub MIterBox);
 
+#[async_trait]
 impl DynIterator for DynMIterWrapper {
-    fn next_with_data(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>> {
+    async fn next_with_data(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
-    fn next(&mut self) -> Option<Arc<MapperBox>> {
+    async fn next(&mut self) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
@@ -76,12 +78,13 @@ impl DynIterator for DynMIterWrapper {
 #[derive(Debug, Clone)]
 pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapperBox>>);
 
+#[async_trait]
 impl DynIterator for DynVecIterWrapper {
-    fn next_with_data(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>> {
+    async fn next_with_data(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
-    fn next(&mut self) -> Option<Arc<MapperBox>> {
+    async fn next(&mut self) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
@@ -170,9 +173,11 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
 
     loop {
         let adder = if mappers.requires_no_data() {
-            mappers.next()
+            mappers.next().await
         } else {
-            mappers.next_with_data(Some(calculated_output_vec.clone()))
+            mappers
+                .next_with_data(Some(calculated_output_vec.clone()))
+                .await
         };
 
         let adder = match adder {
@@ -254,7 +259,10 @@ pub async fn accumulate_from_start(
     mut inmappers: DMIterBox,
     oti: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
-    let first = inmappers.next_with_data(None).expect("first inmapper");
+    let first = inmappers
+        .next_with_data(None)
+        .await
+        .expect("first inmapper");
     let first_r = first
         .maps(
             CID::default(),
