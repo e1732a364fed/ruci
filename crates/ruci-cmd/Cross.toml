@@ -1,5 +1,0 @@
-[target.'cfg(not(any(target_arch = "x86", target_arch = "x86_64")))']
-pre-build = [
-    "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
-]
