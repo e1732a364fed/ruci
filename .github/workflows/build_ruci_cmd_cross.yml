@@ -35,23 +35,15 @@ jobs:
           rustup override set stable
           rustup target add --toolchain stable ${{ matrix.target }}
 
-      - name: Install cross
-        run: cargo install cross
-      
-      # - name: Install Openssl
-      #   run: |
-      #     cd crates/ruci-cmd
-      #     sudo docker build -f Dockerfile_aarch64 -t openssl:aarch64 .
-      #     sudo docker build -f Dockerfile_android -t openssl:android .
+      - name: Install gcc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross
 
       - name: Build ${{ matrix.target }}
         run: |
-
-          compile_target=${{ matrix.target }}
-          #compile_features=" -f api_server -f api_client -f utils -f native-tls-vendored"
-
           cd crates/ruci-cmd
-          ./build_cross.sh -v ${{ inputs.tag || github.ref_name }} -t ${{ matrix.target }} -f api_server -f api_client -f utils -f native-tls-vendored
+          make vendor BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
 
       - name: Upload Github Assets
         uses: softprops/action-gh-release@v1

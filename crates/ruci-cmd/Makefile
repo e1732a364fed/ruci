@@ -2,6 +2,11 @@ define compile
 	cargo build --target ${BUILD_TRIPLET} -F api_server -F api_client -F utils -F use-native-tls --release 
 endef
 
+define compile_vendor
+	cargo build --target ${BUILD_TRIPLET} -F api_server -F api_client -F utils -F native-tls-vendored --release 
+endef
+
+
 define copy
 	mkdir -p dist
 	cd ../../target/${BUILD_TRIPLET}/release && cp ruci-cmd ../../../crates/ruci-cmd/dist/
@@ -27,6 +32,11 @@ main:
 exe:
 	$(call compile)
 	$(call copy_exe)
+	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
+
+vendor:
+	$(call compile_vendor)
+	$(call copy)
 	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
 
 cp:
