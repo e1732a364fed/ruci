@@ -17,21 +17,21 @@ use mlua::{Lua, LuaSerdeExt, Value};
 const CONFIG_KEY: &str = "Config";
 
 /// Loads chain::config::StaticConfig from a lua file that contains a "Config" global variable.
-/// If file_source is provided, a Load_file function will be registered to allow lua code to access related files.
+/// If data_source is provided, a Load_file function will be registered to allow lua code to access related files.
 ///
 /// # Arguments
 /// * `lua_text` - The lua configuration file content
-/// * `file_source` - Optional file source for loading additional files
+/// * `data_source` - Optional file source for loading additional files
 ///
 /// # Returns
 /// * `mlua::Result<StaticConfig>` - The parsed static chain configuration
 pub fn load_static(
     lua_text: &str,
-    file_source: Arc<file_source::FileSource>,
+    data_source: Arc<data_source::DataSource>,
 ) -> anyhow::Result<StaticConfig> {
     let lua = Lua::new();
     use anyhow::Context;
-    crate::map::lua::create_load_file_func(&lua, file_source.as_ref());
+    crate::map::lua::create_load_file_func(&lua, data_source.as_ref());
 
     lua.load(lua_text)
         .exec()

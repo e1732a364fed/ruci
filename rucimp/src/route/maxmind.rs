@@ -14,10 +14,11 @@
 <https://github.com/Loyalsoldier/geoip>
  */
 use clash_rules::maxminddb;
-use std::net::IpAddr;
+use data_source::SyncFolderSource;
+use std::{net::IpAddr, path::Path};
 
 /// try read file  in possible_addrs
-pub fn get_ip_iso(ip: IpAddr, filename: &str, source: &file_source::FileSource) -> String {
+pub fn get_ip_iso(ip: IpAddr, filename: &str, source: &data_source::DataSource) -> String {
     let reader = open_mmdb(filename, source).unwrap_or_else(|_| panic!("has {}", filename));
 
     clash_rules::get_ip_iso_by_reader(ip, &reader).to_string()
@@ -25,9 +26,9 @@ pub fn get_ip_iso(ip: IpAddr, filename: &str, source: &file_source::FileSource) 
 
 pub fn open_mmdb(
     file_name: &str,
-    source: &file_source::FileSource,
+    source: &data_source::DataSource,
 ) -> anyhow::Result<maxminddb::Reader<Vec<u8>>> {
-    let (v, _) = source.get_file_content(file_name)?;
+    let (v, _) = source.get_file_content(Path::new(file_name))?;
 
     let r = maxminddb::Reader::from_source(v);
     match r {
@@ -72,7 +73,7 @@ mod test {
             .with(fmt::layer().with_writer(std::io::stderr))
             .try_init();
 
-        let fs = file_source::FileSource::StdReadFile;
+        let fs = data_source::DataSource::StdReadFile;
 
         let s = get_ip_iso("127.0.0.1".parse().unwrap(), "Country.mmdb", &fs);
         println!("{s}");

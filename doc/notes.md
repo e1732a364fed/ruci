@@ -518,6 +518,10 @@ https://docs.rs/futures/latest/futures/index.html
 }
 ```
 
+### 其它 rust-analyzer 配置
+
+"rust-analyzer.check.command": "clippy",
+
 ## 日志
 
 从0.0.6起，ruci 不再继续开发 suit 模式。

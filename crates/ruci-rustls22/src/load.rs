@@ -96,7 +96,7 @@ pub fn load_ser_config_from_pem(
 //     options: &TlsServerOptions,
 //     opt_authority: Option<&http::uri::Authority>,
 // ) -> anyhow::Result<ServerConfig> {
-//     let pem_opts = ServerPEMOptions::from(options, &crate::utils::FileSource::StdReadFile)?;
+//     let pem_opts = ServerPEMOptions::from(options, &crate::utils::DataSource::StdReadFile)?;
 //     load_ser_config_from_pem(&pem_opts, opt_authority)
 // }
 

@@ -6,7 +6,7 @@ use crate::route::{
     clash::ClashRuleOutSelector,
     geosite_gfw::{GeositeGfwConfig, GeositeGfwOutSelector},
 };
-use file_source::FileSource;
+use data_source::DataSource;
 
 use super::config::StaticConfig;
 use anyhow;
@@ -47,10 +47,10 @@ pub struct Engine {
     #[cfg(feature = "trace")]
     pub conn_info_updater: net::OptUpdater,
 
-    /// 配置文件中有一些地方是指定文件名的，而 Engine 会从 file_source 中找到指定文件
+    /// 配置文件中有一些地方是指定文件名的，而 Engine 会从 data_source 中找到指定文件
     ///
     /// 这一项需要手动配置
-    pub file_source: Arc<FileSource>,
+    pub data_source: Arc<DataSource>,
 
     inbounds: Vec<DMIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
@@ -86,13 +86,13 @@ impl Engine {
     pub fn set_default_file_source(&mut self) {
         self.set_file_source(crate::utils::default_file_source())
     }
-    pub fn set_file_source(&mut self, fs: FileSource) {
-        self.file_source = Arc::new(fs)
+    pub fn set_file_source(&mut self, fs: DataSource) {
+        self.data_source = Arc::new(fs)
     }
 
     /// 清空配置. reset 后 可以 接着调用 init_*
     ///
-    /// 不会清空 file_source
+    /// 不会清空 data_source
     pub async fn reset(&mut self) {
         debug!("Engine reset called");
         let running = self.running.lock();
@@ -113,14 +113,14 @@ impl Engine {
         self.tag_routes = sc.get_tag_route();
         self.fallback_routes = sc.get_fallback_route();
 
-        self.clash_rules = sc.get_clash_route(self.file_source.clone());
+        self.clash_rules = sc.get_clash_route(self.data_source.clone());
         self.geosite_gfw = sc.smart;
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) -> anyhow::Result<()> {
         use anyhow::Context;
         let inbounds = sc
-            .get_inbounds(self.file_source.clone())
+            .get_inbounds(self.data_source.clone())
             .context("sc.get_inbounds failed")?;
         self.inbounds = inbounds
             .into_iter()
@@ -132,7 +132,7 @@ impl Engine {
             })
             .collect();
 
-        let (d, m) = sc.get_default_and_outbounds_map(self.file_source.clone())?;
+        let (d, m) = sc.get_default_and_outbounds_map(self.data_source.clone())?;
         self.default_outbound = Some(d);
         self.outbounds = Arc::new(m);
         self.load_routes_from(sc);
@@ -162,7 +162,7 @@ impl Engine {
         use anyhow::Context;
         debug!("trying init_lua_static");
 
-        let sc = lua::load_static(&lua_text, self.file_source.clone())
+        let sc = lua::load_static(&lua_text, self.data_source.clone())
             .context("lua::load_static failed")?;
         self.init_static(sc).context("init_lua_static failed")?;
         Ok(())
@@ -177,7 +177,7 @@ impl Engine {
 
     //     use crate::modes::chain::config::lua;
     //     let (sc, ibs, default_o, ods) =
-    //         lua::finite::load_finite_dynamic(&lua_text, self.file_source.clone())
+    //         lua::finite::load_finite_dynamic(&lua_text, self.data_source.clone())
     //             .context("Engine::init_lua_finite_dynamic: lua::load_finite_dynamic failed")?;
     //     self.inbounds = ibs;
     //     self.default_outbound = Some(default_o);
@@ -193,7 +193,7 @@ impl Engine {
 
         info!("initializing lua infinite dynamic");
 
-        let g_maps = lua::infinite::load_infinite_io(&lua_text, self.file_source.clone())?;
+        let g_maps = lua::infinite::load_infinite_io(&lua_text, self.data_source.clone())?;
 
         let gi = g_maps.0;
         let go = g_maps.1;
@@ -450,7 +450,7 @@ impl Engine {
         let f = move |e: &mut Engine| {
             let mut fs = crate::utils::default_file_source();
             fs.insert_current_working_dir()?;
-            e.file_source = Arc::new(fs);
+            e.data_source = Arc::new(fs);
 
             e.init_static(sc)
         };

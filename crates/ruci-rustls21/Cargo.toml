@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 ruci = { path = "../.." }
-file-source = { path = "../file-source" }
+data-source = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 rustls-pemfile = { version = "1.0" }

@@ -8,7 +8,6 @@ ruci = { path = ".." }
 macro_map = { path = "../crates/macro_map" }
 ruci-rustls22 = { path = "../crates/ruci-rustls22" }
 ruci-rustls21 = { path = "../crates/ruci-rustls21", optional = true }
-file-source = { path = "../crates/file-source" }
 user_trait = { workspace = true }
 tracing = { workspace = true }
 bytes = { workspace = true }
@@ -24,6 +23,9 @@ parking_lot = { workspace = true }
 dyn-clone = { workspace = true }
 futures-lite = { workspace = true }
 pin-project = { workspace = true }
+
+data-source = { workspace = true }
+
 
 chrono = { version = "0.4", features = ["serde"] }
 

@@ -2,18 +2,18 @@
 Provides some helper functions to read a certain resource file or to wait the shutdown signal.
 */
 
-use std::io;
+use std::{io, path::Path};
 
 use anyhow::Context;
 use tokio::signal;
 use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
-use file_source::FileSource;
+use data_source::{DataSource, SyncFolderSource};
 
 /// [`crate::COMMON_DIRS`]
-pub fn default_file_source() -> FileSource {
-    FileSource::Folders(COMMON_DIRS.iter().map(|str| str.to_string()).collect())
+pub fn default_file_source() -> DataSource {
+    DataSource::Folders(COMMON_DIRS.iter().map(|str| str.to_string()).collect())
 }
 
 /// try folders in COMMON_DIRS
@@ -28,7 +28,7 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
     };
     let fs = default_file_source();
     let r = fs
-        .get_file_content(filename)
+        .get_file_content(Path::new(filename))
         .context(format!("get file failed: {}", filename))?;
 
     let mut cd = std::env::current_dir().expect("has current directory");
@@ -242,7 +242,7 @@ pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
 /// helper function
 pub fn init_tls_server_pem_option(
     opts: &ruci_rustls22::server::TlsServerOptions,
-    fs: &FileSource,
+    fs: &DataSource,
 ) -> std::io::Result<ruci_rustls22::server::ServerPEMOptions> {
     Ok(ruci_rustls22::server::ServerPEMOptions {
         cert: fs.read_to_string(opts.cert.clone())?,

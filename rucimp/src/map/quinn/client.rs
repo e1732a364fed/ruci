@@ -1,5 +1,5 @@
 use anyhow::Context;
-use file_source::FileSource;
+use data_source::DataSource;
 use quinn::Endpoint;
 
 use std::fmt::Display;
@@ -36,7 +36,7 @@ impl Display for Client {
 }
 
 impl Client {
-    pub fn new(c: quic_common::ClientConfig, file_source: &FileSource) -> anyhow::Result<Self> {
+    pub fn new(c: quic_common::ClientConfig, data_source: &DataSource) -> anyhow::Result<Self> {
         let cc = {
             let cc = rustls21::cc(
                 ruci::map::tls_config::ClientOptions {
@@ -45,7 +45,7 @@ impl Client {
                     cert_path: c.cert_path.clone(),
                     ..Default::default()
                 },
-                file_source,
+                data_source,
             )
             .context("load rustls21 client config failed")?;
 

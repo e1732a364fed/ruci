@@ -1,8 +1,10 @@
 /*! mode 模块对应 rucimp 中的 mode 模块。
 */
 
+use std::path::Path;
+
 use anyhow::bail;
-use file_source::FileSource;
+use data_source::{DataSource, SyncFolderSource};
 use rucimp::DEFAULT_LUA_CONFIG_FILE_NAME;
 use tracing::debug;
 
@@ -12,19 +14,19 @@ pub mod chain;
 pub async fn get_config_file(
     file_name: &mut String,
     in_memory: bool,
-) -> anyhow::Result<(String, FileSource)> {
+) -> anyhow::Result<(String, DataSource)> {
     use anyhow::Context;
 
-    let mut file_source = rucimp::utils::default_file_source();
-    file_source
+    let mut data_source = rucimp::utils::default_file_source();
+    data_source
         .insert_current_working_dir()
         .context("insert_current_working_dir failed")?;
 
     let get_file_f = || -> anyhow::Result<_> {
-        let mut r = file_source.get_file_content(&file_name);
+        let mut r = data_source.get_file_content(Path::new(&file_name));
 
         if r.is_err() {
-            r = file_source.get_file_content(DEFAULT_LUA_CONFIG_FILE_NAME);
+            r = data_source.get_file_content(Path::new(DEFAULT_LUA_CONFIG_FILE_NAME));
         }
 
         Ok(r?)
@@ -66,7 +68,7 @@ pub async fn get_config_file(
         };
 
     // zip, tar, lua/toml 三种情况. zip 要解压
-    // 之后若为 tar, 则会将 Engine 的 FileSource 设为 该tar, 后续 Engine 访问文件都会只在该tar 中寻找
+    // 之后若为 tar, 则会将 Engine 的 DataSource 设为 该tar, 后续 Engine 访问文件都会只在该tar 中寻找
 
     if file_name.to_lowercase().ends_with(".zip") {
         let real_fn = file_name.strip_suffix(".zip").unwrap_or(file_name);
@@ -94,23 +96,23 @@ pub async fn get_config_file(
             debug!("md5 match")
         }
 
-        use file_source::get_file_from_tar;
+        use data_source::get_file_from_tar_in_memory;
 
         //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua或 local.json
         let mut real_file_bytes_r =
-            get_file_from_tar(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
+            get_file_from_tar_in_memory(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
 
         // if real_file_bytes_r.is_err() {
         //     real_file_bytes_r = get_file_from_tar("local.toml", &tar_file_bytes_v);
         // }
 
         if real_file_bytes_r.is_err() {
-            real_file_bytes_r = get_file_from_tar("local.json", &tar_file_bytes_v);
+            real_file_bytes_r = get_file_from_tar_in_memory("local.json", &tar_file_bytes_v);
         }
 
-        let real_file_bytes = real_file_bytes_r.context("get_file_from_tar failed")?;
+        let (real_file_bytes, _) = real_file_bytes_r.context("get_file_from_tar failed")?;
 
-        file_source = FileSource::Tar(tar_file_bytes_v);
+        data_source = DataSource::TarInMemory(tar_file_bytes_v);
         file_bytes_v = real_file_bytes;
 
         let real_fn = file_name.strip_suffix(".tar").unwrap_or(file_name);
@@ -119,7 +121,7 @@ pub async fn get_config_file(
 
     let contents = String::from_utf8_lossy(file_bytes_v.as_slice()).to_string();
 
-    Ok((contents, file_source))
+    Ok((contents, data_source))
 }
 #[cfg(test)]
 mod test {

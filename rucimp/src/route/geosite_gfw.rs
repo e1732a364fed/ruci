@@ -79,7 +79,7 @@ pub async fn check_api(
 
     let request_data = CheckRequest {
         domain,
-        socks5_proxy: config.proxy.as_ref().map(|x| x.as_str()),
+        socks5_proxy: config.proxy.as_deref(),
         only_proxy: config.only_proxy,
     };
 

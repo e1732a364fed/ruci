@@ -1,5 +1,5 @@
 use anyhow::Context;
-use file_source::FileSource;
+use data_source::DataSource;
 use quinn::{Endpoint, ServerConfig};
 
 use std::fmt::Display;
@@ -38,14 +38,14 @@ impl Display for Server {
 }
 
 impl Server {
-    pub fn new(c: quic_common::ServerConfig, file_source: &FileSource) -> anyhow::Result<Self> {
+    pub fn new(c: quic_common::ServerConfig, data_source: &DataSource) -> anyhow::Result<Self> {
         let tls_server_config = rustls21::sc(
             ruci::map::tls_config::ServerOptions {
                 alpn: c.alpn.clone(),
                 cert_path: c.cert_path.clone(),
                 key_path: c.key_path.clone(),
             },
-            file_source,
+            data_source,
         )
         .context("rustls21::sc failed")?;
 

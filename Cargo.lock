@@ -216,6 +216,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "astral-tokio-tar"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65152cbda42e8ab5ecff69e8811e8333d69188c7d5c41e3eedb8d127e3f23b27"
+dependencies = [
+ "filetime",
+ "futures-core",
+ "libc",
+ "portable-atomic",
+ "rustc-hash 2.1.0",
+ "tokio",
+ "tokio-stream",
+ "xattr",
+]
+
+[[package]]
 name = "async-channel"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -235,9 +251,9 @@ checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 
 [[package]]
 name = "async-trait"
-version = "0.1.85"
+version = "0.1.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f934833b4b7233644e5848f235df3f57ed8c80f1528a26c3dfa13d2147fa056"
+checksum = "644dd749086bf3771a2fbc5f256fdb982d53f011c7d5d560304eafeecebce79d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -868,6 +884,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 
 [[package]]
+name = "data-source"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8033babfd9954eda3847d215b0e4e6689dafc56a9ded30b4572b841a1d7060a8"
+dependencies = [
+ "astral-tokio-tar",
+ "async-trait",
+ "futures",
+ "log 0.4.25",
+ "reqwest",
+ "tar",
+ "thiserror 2.0.11",
+ "tokio",
+]
+
+[[package]]
 name = "deadpool"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1122,14 +1154,6 @@ dependencies = [
  "cfg-if",
  "rustix",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "file-source"
-version = "0.1.0"
-dependencies = [
- "tar",
- "tracing",
 ]
 
 [[package]]
@@ -2647,6 +2671,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "portable-atomic"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "280dc24453071f1b63954171985a0b0d30058d287960968b9b2aca264c8d4ee6"
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2971,6 +3001,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "encoding_rs",
+ "futures-channel",
  "futures-core",
  "futures-util",
  "h2",
@@ -3101,7 +3132,7 @@ dependencies = [
  "bytesize",
  "chrono",
  "clap",
- "file-source",
+ "data-source",
  "futures",
  "parking_lot",
  "qrcode",
@@ -3126,7 +3157,7 @@ name = "ruci-rustls21"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "file-source",
+ "data-source",
  "ruci",
  "rustls 0.21.12",
  "rustls-pemfile 1.0.4",
@@ -3173,8 +3204,8 @@ dependencies = [
  "clash_rules",
  "criterion",
  "dashmap",
+ "data-source",
  "dyn-clone",
- "file-source",
  "futures",
  "futures-lite",
  "geosite-rs",
@@ -4032,6 +4063,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f6d0975eaace0cf0fcadee4e4aaa5da15b5c079146f2cffb67c113be122bf37"
 dependencies = [
  "rustls 0.23.22",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eca58d7bba4a75707817a2c44174253f9236b2d5fbd055602e9d5c07c139a047"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
  "tokio",
 ]
 

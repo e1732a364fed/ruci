@@ -173,7 +173,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             mut input_file,
             output_format,
         } => {
-            let (contents, file_source) = mode::get_config_file(&mut input_file, false)
+            let (contents, data_source) = mode::get_config_file(&mut input_file, false)
                 .await
                 .context(format!("failed to read file: {}", input_file))?;
 
@@ -185,7 +185,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
                 .to_lowercase();
 
             let output =
-                convert_static_config(&contents, &input_format, &output_format, file_source)?;
+                convert_static_config(&contents, &input_format, &output_format, data_source)?;
 
             let mut output_file = format!(
                 "{}.{}",
@@ -346,7 +346,7 @@ pub fn convert_static_config(
     input_file_content: &str,
     input_format: &str,
     output_format: &str,
-    file_source: file_source::FileSource,
+    data_source: data_source::DataSource,
 ) -> anyhow::Result<String> {
     use rucimp::modes::chain::config::StaticConfig;
 
@@ -356,7 +356,7 @@ pub fn convert_static_config(
         {
             let config: StaticConfig = rucimp::modes::chain::config::lua::load_static(
                 input_file_content,
-                Arc::new(file_source),
+                Arc::new(data_source),
             )
             .context("init_lua_static failed")?;
             return match output_format.to_lowercase().as_str() {

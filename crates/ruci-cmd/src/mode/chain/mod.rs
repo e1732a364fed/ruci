@@ -25,13 +25,13 @@ pub(crate) async fn run(
 
     let mut e = rucimp::modes::chain::engine::Engine::new();
 
-    let (contents, file_source) = crate::mode::get_config_file(&mut file_name, args.in_memory)
+    let (contents, data_source) = crate::mode::get_config_file(&mut file_name, args.in_memory)
         .await
         .context("get_config_file failed")?;
 
     use anyhow::Context;
 
-    e.file_source = Arc::new(file_source);
+    e.data_source = Arc::new(data_source);
 
     if file_name.ends_with(".lua") {
         #[cfg(any(feature = "lua", feature = "lua54"))]

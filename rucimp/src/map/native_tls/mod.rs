@@ -20,9 +20,9 @@ use macro_map::*;
 use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
 use tracing::debug;
 
-use file_source::FileSource;
+use data_source::DataSource;
 
-pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &FileSource) -> anyhow::Result<Identity> {
+pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &DataSource) -> anyhow::Result<Identity> {
     let cert_file = fs.read_to_string(cert_path)?;
 
     let key_file = fs.read_to_string(key_path)?;
@@ -35,7 +35,7 @@ pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &FileSource) -> anyhow::R
 impl Server {
     pub fn from(
         sc: &ruci_rustls22::server::TlsServerOptions,
-        fs: &FileSource,
+        fs: &DataSource,
     ) -> anyhow::Result<Server> {
         let id = load(sc.cert.clone(), sc.key.clone(), fs).context("load cert or key failed")?;
 

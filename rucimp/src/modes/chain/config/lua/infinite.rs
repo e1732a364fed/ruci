@@ -4,7 +4,7 @@ use crate::map::lua::{create_load_file_func, MapWrapper};
 Defines functions to load infinite(complete) dynamic chain configs from a lua file.
 */
 use super::*;
-use file_source::FileSource;
+use data_source::DataSource;
 use parking_lot::Mutex;
 use ruci::map::fold::OVOD;
 use ruci::net::CID;
@@ -48,23 +48,23 @@ pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
 /// read INFINITE_CONFIG_FIELD  global variable
 pub fn load_infinite_io(
     lua_text: &str,
-    file_source: Arc<FileSource>,
+    data_source: Arc<DataSource>,
 ) -> anyhow::Result<(GMap, GMap)> {
-    let i = get_g_map_from(lua_text, ProxyBehavior::DECODE, file_source.clone())?;
-    let o = get_g_map_from(lua_text, ProxyBehavior::ENCODE, file_source)?;
+    let i = get_g_map_from(lua_text, ProxyBehavior::DECODE, data_source.clone())?;
+    let o = get_g_map_from(lua_text, ProxyBehavior::ENCODE, data_source)?;
     Ok((i, o))
 }
 
 fn get_g_map_from(
     lua_text: &str,
     behavior: ProxyBehavior,
-    file_source: Arc<FileSource>,
+    data_source: Arc<DataSource>,
 ) -> anyhow::Result<GMap> {
     let mut g_map: GMap = HashMap::new();
 
     let lua = Lua::new();
 
-    create_load_file_func(&lua, file_source.as_ref());
+    create_load_file_func(&lua, data_source.as_ref());
 
     lua.load(lua_text).exec().context("eval lua failed")?;
 

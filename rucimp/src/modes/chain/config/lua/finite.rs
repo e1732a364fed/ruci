@@ -32,11 +32,11 @@ pub type LoadFiniteDynamicResult = (
 
 pub fn load_finite_dynamic(
     lua_text: &str,
-    file_source: Arc<FileSource>,
+    data_source: Arc<DataSource>,
 ) -> mlua::Result<LoadFiniteDynamicResult> {
-    let (sc, sm) = load_finite_config_and_selector_map(lua_text, file_source.clone())?;
+    let (sc, sm) = load_finite_config_and_selector_map(lua_text, data_source.clone())?;
 
-    let (ibs, fb, obm) = get_io_bounds_by_config_and_selector_map(sc.clone(), sm, file_source);
+    let (ibs, fb, obm) = get_io_bounds_by_config_and_selector_map(sc.clone(), sm, data_source);
     Ok((sc, ibs, fb, obm))
 }
 
@@ -44,11 +44,11 @@ pub fn load_finite_dynamic(
 /// by tag of each chain
 fn load_finite_config_and_selector_map(
     lua_text: &str,
-    file_source: Arc<FileSource>,
+    data_source: Arc<DataSource>,
 ) -> mlua::Result<(StaticConfig, HashMap<String, LuaNextSelector>)> {
     let lua = Lua::new();
 
-    if let Some(v) = file_source.as_ref() {
+    if let Some(v) = data_source.as_ref() {
         create_load_file_func(&lua, v);
     }
 
@@ -94,9 +94,9 @@ fn load_finite_config_and_selector_map(
 fn get_io_bounds_by_config_and_selector_map(
     c: StaticConfig,
     mut selector_map: HashMap<String, LuaNextSelector>,
-    file_source: Arc<FileSource>,
+    data_source: Arc<DataSource>,
 ) -> (Vec<DMIterBox>, DMIterBox, Arc<HashMap<String, DMIterBox>>) {
-    let ibs = c.get_inbounds(file_source.clone());
+    let ibs = c.get_inbounds(data_source.clone());
     let v: Vec<DMIterBox> = ibs
         .into_iter()
         .map(|vec| {
@@ -117,7 +117,7 @@ fn get_io_bounds_by_config_and_selector_map(
         })
         .collect();
 
-    let obs = c.get_outbounds(file_source.clone());
+    let obs = c.get_outbounds(data_source.clone());
 
     let mut first_o: Option<DMIterBox> = None;
 

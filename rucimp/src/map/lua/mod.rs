@@ -11,6 +11,7 @@ use std::fmt::Display;
 use std::future::Future;
 use std::io;
 use std::os::raw::c_void;
+use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::ready;
@@ -20,6 +21,7 @@ use std::task::Poll;
 use async_trait::async_trait;
 use bytes::BufMut;
 use bytes::BytesMut;
+use data_source::SyncFolderSource;
 use macro_map::{map_ext_fields, MapExt};
 use mlua::prelude::*;
 use mlua::BString;
@@ -38,13 +40,13 @@ use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::io::ReadBuf;
 
-/// Creates a load_file function in the Lua environment that can access files from the given FileSource
+/// Creates a load_file function in the Lua environment that can access files from the given DataSource
 ///
 /// # Arguments
 /// * `lua` - The Lua instance to add the function to
-/// * `file_source` - The FileSource to load files from
-pub fn create_load_file_func(lua: &Lua, file_source: &file_source::FileSource) {
-    let raw_ptr = file_source as *const file_source::FileSource as *const std::os::raw::c_void;
+/// * `data_source` - The DataSource to load files from
+pub fn create_load_file_func(lua: &Lua, data_source: &data_source::DataSource) {
+    let raw_ptr = data_source as *const data_source::DataSource as *const std::os::raw::c_void;
 
     let pointer_n = raw_ptr as usize;
 
@@ -52,12 +54,12 @@ pub fn create_load_file_func(lua: &Lua, file_source: &file_source::FileSource) {
         .create_function(move |lua, s: mlua::BString| {
             let file_name = std::str::from_utf8(s.as_slice()).unwrap();
 
-            let file_source = unsafe {
-                &*((pointer_n as *const std::os::raw::c_void) as *const file_source::FileSource)
+            let data_source = unsafe {
+                &*((pointer_n as *const std::os::raw::c_void) as *const data_source::DataSource)
             };
 
-            let r = file_source
-                .get_file_content(file_name)
+            let r = data_source
+                .get_file_content(Path::new(file_name))
                 .map_err(mlua::Error::external)?;
 
             lua.create_string(&r.0)
@@ -462,7 +464,7 @@ pub struct LuaMap {
     pub lua_text: String,        //整个 lua文件的内容
     pub handshake_f_key: String, //lua文件中 对应的 map 函数的 函数名
 
-    pub file_source: Arc<file_source::FileSource>,
+    pub data_source: Arc<data_source::DataSource>,
 }
 
 impl Display for LuaMap {
@@ -524,7 +526,7 @@ impl LuaMap {
             .unwrap();
         lua.globals().set("Warn_print", f).unwrap();
 
-        create_load_file_func(&lua, self.file_source.as_ref());
+        create_load_file_func(&lua, self.data_source.as_ref());
 
         let _: () = lua
             .load(&self.lua_text)

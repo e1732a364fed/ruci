@@ -18,7 +18,7 @@ pub mod lua;
 
 pub mod dynamic;
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, path::Path, sync::Arc, time::Duration};
 
 // #[cfg(feature = "s2n-quic")]
 // use crate::map::quic;
@@ -41,7 +41,7 @@ use crate::{
     map::{recorder, ws},
     utils::init_tls_server_pem_option,
 };
-use file_source::FileSource;
+use data_source::{DataSource, SyncFolderSource};
 
 #[cfg(all(feature = "lwip", unix))]
 use crate::map::tcp_ip_stack_lwip;
@@ -73,7 +73,7 @@ pub struct StaticConfig {
 
 impl StaticConfig {
     /// convert config chain to map chain
-    pub fn get_inbounds(&self, file_source: Arc<FileSource>) -> anyhow::Result<Vec<Vec<MapBox>>> {
+    pub fn get_inbounds(&self, data_source: Arc<DataSource>) -> anyhow::Result<Vec<Vec<MapBox>>> {
         use anyhow::Context;
         use itertools::Itertools;
 
@@ -85,9 +85,9 @@ impl StaticConfig {
                     .chain
                     .iter()
                     .map(|map_config| {
-                        let config_with_fs = InMapConfigWithFileSource {
+                        let config_with_fs = InMapConfigWithDataSource {
                             config: map_config.clone(),
-                            file_source: file_source.clone(),
+                            data_source: data_source.clone(),
                         };
 
                         let map: anyhow::Result<MapBox> = config_with_fs
@@ -115,7 +115,7 @@ impl StaticConfig {
     }
 
     /// convert config chain to map chain
-    pub fn get_outbounds(&self, file_source: Arc<FileSource>) -> anyhow::Result<Vec<Vec<MapBox>>> {
+    pub fn get_outbounds(&self, data_source: Arc<DataSource>) -> anyhow::Result<Vec<Vec<MapBox>>> {
         use itertools::Itertools;
         self.outbounds
             .iter()
@@ -124,9 +124,9 @@ impl StaticConfig {
                     .chain
                     .iter()
                     .map(|map_config| {
-                        let config_with_fs = OutMapConfigWithFileSource {
+                        let config_with_fs = OutMapConfigWithDataSource {
                             config: map_config.clone(),
-                            file_source: file_source.clone(),
+                            data_source: data_source.clone(),
                         };
 
                         let map: anyhow::Result<MapBox> = config_with_fs.try_into();
@@ -152,9 +152,9 @@ impl StaticConfig {
     /// (out_tag, outbound)
     pub fn get_default_and_outbounds_map(
         &self,
-        file_source: Arc<FileSource>,
+        data_source: Arc<DataSource>,
     ) -> anyhow::Result<(DMIterBox, HashMap<String, DMIterBox>)> {
-        let obs = self.get_outbounds(file_source)?;
+        let obs = self.get_outbounds(data_source)?;
 
         let mut first_o: Option<DMIterBox> = None;
 
@@ -199,18 +199,18 @@ impl StaticConfig {
     /// clash route 会把 geosite 的数据也加进去
     pub fn get_clash_route(
         &self,
-        file_source: Arc<FileSource>,
+        data_source: Arc<DataSource>,
     ) -> Option<Arc<clash_rules::ClashRuleMatcher>> {
         self.clash_rules
             .clone()
             .and_then(|file_name| {
-                let (d, _) = file_source.get_file_content(file_name).ok()?;
+                let (d, _) = data_source.get_file_content(Path::new(&file_name)).ok()?;
                 let cs = String::from_utf8_lossy(&d);
                 let mut method_rules_map =
                     clash_rules::parse_rules(&clash_rules::load_rules_from_str(cs.as_ref()).ok()?);
 
                 if let Some(f) = &self.geosite {
-                    let (d, _) = file_source.get_file_content(f).ok()?;
+                    let (d, _) = data_source.get_file_content(Path::new(f)).ok()?;
                     let l = geosite_rs::decode_geosite(&d).ok()?;
                     let gtm =
                         clash_rules::extract_geosite_country_code_target_map(&mut method_rules_map);
@@ -222,16 +222,16 @@ impl StaticConfig {
                 }
                 let r = clash_rules::ClashRuleMatcher::from_hashmap(method_rules_map);
 
-                r.ok().map(|c| Arc::new(c))
+                r.ok().map(Arc::new)
             })
             .or_else(|| {
                 self.geosite.as_ref().and_then(|f| {
-                    let (d, _) = file_source.get_file_content(f).ok()?;
+                    let (d, _) = data_source.get_file_content(Path::new(f)).ok()?;
                     let l = geosite_rs::decode_geosite(&d).ok()?;
                     let m = geosite_rs::geosite_to_hashmap(&l, HashMap::new());
                     let r = clash_rules::ClashRuleMatcher::from_hashmap(m);
 
-                    r.ok().map(|c| Arc::new(c))
+                    r.ok().map(Arc::new)
                 })
             })
     }
@@ -552,28 +552,28 @@ pub struct TrojanPassSet {
     pub more: Option<Vec<String>>,
 }
 
-pub struct InMapConfigWithFileSource {
+pub struct InMapConfigWithDataSource {
     pub config: InMapConfig,
-    pub file_source: Arc<FileSource>,
+    pub data_source: Arc<DataSource>,
 }
 
 impl TryFrom<InMapConfig> for MapBox {
     type Error = anyhow::Error;
 
     fn try_from(config: InMapConfig) -> Result<Self, Self::Error> {
-        let ic = InMapConfigWithFileSource {
+        let ic = InMapConfigWithDataSource {
             config,
-            file_source: Arc::new(FileSource::StdReadFile),
+            data_source: Arc::new(DataSource::StdReadFile),
         };
         ic.try_into()
     }
 }
 
-impl TryFrom<InMapConfigWithFileSource> for MapBox {
+impl TryFrom<InMapConfigWithDataSource> for MapBox {
     type Error = anyhow::Error;
 
-    fn try_from(value: InMapConfigWithFileSource) -> Result<Self, Self::Error> {
-        let file_source = value.file_source;
+    fn try_from(value: InMapConfigWithDataSource) -> Result<Self, Self::Error> {
+        let data_source = value.data_source;
 
         match value.config {
             InMapConfig::Echo => Ok(Echo::boxed()),
@@ -604,14 +604,14 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::Recorder(c) => Ok(c.into()),
 
             InMapConfig::TLS(sc) => {
-                let sc = crate::utils::init_tls_server_pem_option(&sc, file_source.as_ref())?;
+                let sc = crate::utils::init_tls_server_pem_option(&sc, data_source.as_ref())?;
 
                 Ok(sc.into())
             }
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             InMapConfig::NativeTLS(c) => Ok(Box::new(
-                crate::map::native_tls::Server::from(&c, file_source.as_ref())
+                crate::map::native_tls::Server::from(&c, data_source.as_ref())
                     .expect("native_tls server config valid"),
             )),
 
@@ -675,7 +675,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             #[cfg(feature = "quinn")]
             InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(
                 c,
-                &file_source,
+                &data_source,
             )?)),
 
             #[cfg(feature = "sockopt")]
@@ -719,13 +719,13 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 file_name,
                 handshake_function,
             } => {
-                let lua_text = file_source.read_to_string(&file_name)?;
+                let lua_text = data_source.read_to_string(&file_name)?;
 
                 Ok(Box::new(crate::map::lua::LuaMap {
                     lua_text,
                     handshake_f_key: handshake_function.to_string(),
                     ext_fields: Some(MapExtFields::default()),
-                    file_source,
+                    data_source,
                 }))
             }
             #[cfg(all(feature = "lwip", unix))]
@@ -733,7 +733,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {
-                let sc = init_tls_server_pem_option(&c, &file_source)?;
+                let sc = init_tls_server_pem_option(&c, &data_source)?;
 
                 Ok(Box::new(ruci_rustls22::mitm::MITM {
                     sc,
@@ -742,7 +742,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             }
             #[cfg(feature = "steganography")]
             InMapConfig::Embedder { file_name } => {
-                let (fcontent, _) = file_source.get_file_content(&file_name)?;
+                let (fcontent, _) = data_source.get_file_content(Path::new(&file_name))?;
 
                 let embedder =
                     crate::map::steganography::embed::Embedder::new(fcontent, file_name)?;
@@ -752,31 +752,31 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
         }
     }
 }
-pub struct OutMapConfigWithFileSource {
+pub struct OutMapConfigWithDataSource {
     pub config: OutMapConfig,
-    pub file_source: Arc<FileSource>,
+    pub data_source: Arc<DataSource>,
 }
 
 impl TryFrom<OutMapConfig> for MapBox {
     type Error = anyhow::Error;
 
     fn try_from(config: OutMapConfig) -> Result<Self, Self::Error> {
-        let ic = OutMapConfigWithFileSource {
+        let ic = OutMapConfigWithDataSource {
             config,
-            file_source: Arc::new(FileSource::StdReadFile),
+            data_source: Arc::new(DataSource::StdReadFile),
         };
         ic.try_into()
     }
 }
 
-impl TryFrom<OutMapConfigWithFileSource> for MapBox {
+impl TryFrom<OutMapConfigWithDataSource> for MapBox {
     type Error = anyhow::Error;
 
     #[allow(unused)]
-    fn try_from(value: OutMapConfigWithFileSource) -> Result<Self, Self::Error> {
+    fn try_from(value: OutMapConfigWithDataSource) -> Result<Self, Self::Error> {
         use anyhow::Context;
 
-        let file_source = value.file_source;
+        let data_source = value.data_source;
 
         match value.config {
             OutMapConfig::Stdio(sc) => sc.try_into(),
@@ -859,7 +859,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
             // )),
             #[cfg(feature = "quinn")]
             OutMapConfig::Quic(c) => Ok(Box::new(
-                crate::map::quinn::client::Client::new(c, &file_source)
+                crate::map::quinn::client::Client::new(c, &data_source)
                     .context("load quic client config failed")?,
             )),
 
@@ -899,12 +899,12 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                     lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                     handshake_f_key: handshake_function.to_string(),
                     ext_fields: Some(MapExtFields::default()),
-                    file_source: file_source.clone(),
+                    data_source: data_source.clone(),
                 }))
             }
             #[cfg(feature = "steganography")]
             OutMapConfig::Embedder { file_name } => {
-                let (fcontent, _) = file_source.get_file_content(&file_name)?;
+                let (fcontent, _) = data_source.get_file_content(Path::new(&file_name))?;
 
                 let embedder =
                     crate::map::steganography::embed::Embedder::new(fcontent, file_name)?;
