@@ -1875,6 +1875,7 @@ dependencies = [
  "macro_mapper",
  "maxminddb",
  "mlua",
+ "native-tls",
  "parking_lot",
  "regex",
  "ruci",

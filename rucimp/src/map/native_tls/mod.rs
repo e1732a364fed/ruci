@@ -111,6 +111,7 @@ impl map::Mapper for Server {
 pub struct Client {
     pub domain: String,
     pub in_secure: bool,
+    pub alpn: Option<Vec<String>>,
 }
 
 impl Name for Client {
@@ -130,15 +131,27 @@ impl map::Mapper for Client {
         let conn = params.c;
         if let ruci::net::Stream::Conn(conn) = conn {
             let connector = if self.in_secure {
+                let mut b = tokio_native_tls::native_tls::TlsConnector::builder();
+
+                if let Some(a) = &self.alpn {
+                    let a: Vec<_> = a.iter().map(|s| s.as_str()).collect();
+                    b.request_alpns(&a);
+                }
+
                 TlsConnector::from(
-                    tokio_native_tls::native_tls::TlsConnector::builder()
-                        .danger_accept_invalid_certs(true)
+                    b.danger_accept_invalid_certs(true)
                         .danger_accept_invalid_hostnames(true)
                         .build()
                         .unwrap(),
                 )
             } else {
-                TlsConnector::from(tokio_native_tls::native_tls::TlsConnector::new().unwrap())
+                let mut b = tokio_native_tls::native_tls::TlsConnector::builder();
+                if let Some(a) = &self.alpn {
+                    let a: Vec<_> = a.iter().map(|s| s.as_str()).collect();
+                    b.request_alpns(&a);
+                }
+
+                TlsConnector::from(b.build().unwrap())
             };
 
             let r = connector.connect(&self.domain, conn).await;

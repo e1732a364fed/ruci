@@ -464,6 +464,7 @@ impl ToMapperBox for OutMapperConfig {
             OutMapperConfig::NativeTLS(c) => Box::new(crate::map::native_tls::Client {
                 domain: c.host.clone(),
                 in_secure: c.insecure.unwrap_or_default(),
+                alpn: c.alpn.clone(),
                 ext_fields: Some(MapperExtFields::default()),
             }),
 
