@@ -7,6 +7,7 @@ use ruci::net::CID;
 use ruci::utils::{buf_to_ob, ob_to_buf};
 use std::future::Future;
 use std::io;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::task::{ready, Poll};
 use std::{fmt::Display, pin::Pin};
@@ -103,6 +104,20 @@ impl Map for Embedder {
             }
         }
 
+        let (ready_tx, ready_rx) = tokio::sync::watch::channel(false);
+
+        let shut_atom = Arc::new(AtomicBool::new(false));
+
+        let conn = EmbedConn {
+            write_tx,
+            read_rx,
+            read_state: Default::default(),
+            write_state: Default::default(),
+            write_info_rx,
+            ready_tx,
+            shutdown_atom: shut_atom.clone(),
+        };
+
         tokio::spawn(async move {
             let (mut r, mut w) = tokio::io::split(c);
 
@@ -112,19 +127,13 @@ impl Map for Embedder {
                 &mut w,
                 &mut write_rx,
                 write_info_tx,
+                ready_rx,
                 read_tx,
                 invert,
+                shut_atom,
             )
             .await
         });
-
-        let conn = EmbedConn {
-            write_tx,
-            read_rx,
-            read_state: Default::default(),
-            write_state: Default::default(),
-            write_info_rx,
-        };
 
         map_result.c = ruci::net::Stream::Conn(Box::new(conn));
 
@@ -148,14 +157,17 @@ pub struct EmbedConn {
 
     write_tx: Sender<BytesMut>,
     read_rx: Receiver<BytesMut>,
+
+    ready_tx: tokio::sync::watch::Sender<bool>,
+
+    shutdown_atom: Arc<AtomicBool>,
 }
 
 #[derive(Default)]
 enum WriteState {
     #[default]
     Ready,
-    // ContinueWrite(BytesMut),
-    WriteTxPending(usize, OptDialF), //written_len
+    WriteTxPending(usize, WriteTxFuture), //written_len
 }
 
 #[derive(Default)]
@@ -165,7 +177,7 @@ enum ReadState {
     ContinueCopyBuf(BytesMut),
     ContinueRemote(usize, Option<BytesMut>),
 }
-type OptDialF = Pin<
+type WriteTxFuture = Pin<
     Box<
         dyn std::future::Future<Output = Result<(), mpsc::error::SendError<BytesMut>>>
             + Send
@@ -187,6 +199,8 @@ impl AsyncRead for EmbedConn {
     ) -> Poll<io::Result<()>> {
         loop {
             if let ReadState::ContinueCopyBuf(b) = &mut self.read_state {
+                debug!("poll_read ContinueCopyBuf");
+
                 let to_put = rbuf.remaining().min(b.len());
                 rbuf.put_slice(&b[..to_put]);
                 b.advance(to_put);
@@ -203,6 +217,9 @@ impl AsyncRead for EmbedConn {
                 Some(mut buf) => match &mut self.read_state {
                     ReadState::Ready => {
                         let cl = buf.get_u16() as usize;
+
+                        debug!("poll_read Ready, cl {cl}");
+
                         if cl <= buf.len() {
                             buf.resize(cl, 0);
 
@@ -225,11 +242,22 @@ impl AsyncRead for EmbedConn {
 
                         last_buf.extend_from_slice(&buf[..need.min(buf.len())]);
 
+                        debug!(
+                            "poll_read ContinueRemote, cl={cl}, last_buf.len {}, need: {}",
+                            last_buf.len(),
+                            need
+                        );
+
                         if last_buf.len() < cl {
+                            debug!("poll_read ContinueRemote continue");
                             *olast_buf = Some(last_buf);
                             continue;
                         } else {
                             assert_eq!(last_buf.len(), cl);
+                            debug!(
+                                "poll_read ContinueRemote return, {}",
+                                last_buf.escape_ascii()
+                            );
 
                             let to_put = rbuf.remaining().min(cl);
                             rbuf.put_slice(&last_buf[..to_put]);
@@ -258,35 +286,55 @@ impl AsyncWrite for EmbedConn {
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
         if let WriteState::WriteTxPending(written_len, f) = &mut self.write_state {
+            debug!("poll_write WriteTxPending");
+
             let r = f.as_mut().poll(cx);
             match r {
                 Poll::Ready(_) => {
+                    debug!("poll_write write_tx ok, {written_len}");
+
                     return Poll::Ready(Ok(*written_len));
                 }
                 Poll::Pending => {
+                    debug!("poll_write write_tx pending, {written_len}");
+
                     return Poll::Pending;
                 }
             }
         }
+        let r = self.ready_tx.send(true);
+        if let Err(e) = r {
+            return Poll::Ready(Err(io::Error::other(format!("self.ready_tx.send {e}"))));
+        }
 
         let r = self.write_info_rx.poll_recv(cx);
+
         match ready!(r) {
             None => return Poll::Ready(Err(io::Error::other("write_info_rx got None"))),
 
             Some(length) => {
+                let r2 = self.ready_tx.send(false);
+                if let Err(e) = r2 {
+                    return Poll::Ready(Err(io::Error::other(format!("self.ready_tx.send {e}"))));
+                }
+
                 match &mut self.write_state {
                     WriteState::Ready => {
                         let mut bs_to_send = BytesMut::with_capacity(length);
                         bs_to_send.put_u8(WRTIE_IS_REAL);
                         assert!(buf.len() < MAX_PACKET_LEN);
-                        bs_to_send.put_u16(buf.len() as u16);
+
+                        debug!("poll_write Ready {}", buf.len());
 
                         let written_len;
 
                         let left_space = length - 3;
+
+                        bs_to_send.put_u16(buf.len().min(left_space) as u16);
+
                         if buf.len() <= left_space {
                             bs_to_send.put_slice(buf);
-                            bs_to_send.resize(length, 0);
+                            bs_to_send.resize(length, 1);
 
                             written_len = buf.len();
                         } else {
@@ -304,18 +352,18 @@ impl AsyncWrite for EmbedConn {
                         let r = f.as_mut().poll(cx);
                         match r {
                             Poll::Ready(_) => {
+                                debug!("poll_write write_tx ok, {written_len}");
                                 return Poll::Ready(Ok(written_len));
                             }
                             Poll::Pending => {
+                                debug!("poll_write write_tx pending, {written_len}");
+
                                 self.write_state = WriteState::WriteTxPending(written_len, f);
                                 return Poll::Pending;
                             }
                         }
                     }
-                    // WriteState::ContinueWrite(bytes) => {
-                    //     //
-                    //     todo!()
-                    // }
+
                     _ => panic!("should not happen"),
                 }
             }
@@ -333,6 +381,9 @@ impl AsyncWrite for EmbedConn {
         self: Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
     ) -> Poll<Result<(), io::Error>> {
+        debug!("poll_shutdown");
+        self.shutdown_atom
+            .store(true, std::sync::atomic::Ordering::Relaxed);
         Poll::Ready(Ok(()))
     }
 }
@@ -347,8 +398,10 @@ pub async fn play_file<R, W>(
     writer: &mut W,
     write_rx: &mut Receiver<BytesMut>,
     write_info_tx: Sender<usize>,
+    mut write_info_ready_rx: tokio::sync::watch::Receiver<bool>,
     read_tx: Sender<BytesMut>,
     invert: bool,
+    shutdown_atom: Arc<AtomicBool>,
     // shutdown_rx: tokio::sync::oneshot::Receiver<()>, //todo: allow shutdown
 ) where
     R: AsyncRead + Unpin + ?Sized,
@@ -358,6 +411,11 @@ pub async fn play_file<R, W>(
 
     let mut lst_rbuf = BytesMut::new();
     loop {
+        if shutdown_atom.load(std::sync::atomic::Ordering::Relaxed) {
+            debug!("play_file got shutdown_atom");
+            break;
+        }
+
         let cur_info = file.get(index).unwrap();
         let length = cur_info.length;
 
@@ -368,22 +426,67 @@ pub async fn play_file<R, W>(
         };
         match direction {
             WRITE_DIRECTION => {
-                let r = write_info_tx.send(length).await;
-                if r.is_err() {
-                    break;
-                }
-                let r = write_once(writer, length, write_rx).await;
-                if r.is_err() {
-                    break;
+                let ready = write_info_ready_rx.has_changed();
+
+                write_info_ready_rx.mark_unchanged();
+
+                let ready = match ready {
+                    Ok(r) => r,
+                    Err(e) => {
+                        debug!("write_info_ready_rx got e {e}");
+                        break;
+                    }
+                };
+                if ready {
+                    debug!("write_once, send write_info_tx, ready");
+
+                    let permit = write_info_tx.try_reserve();
+
+                    match permit {
+                        Ok(permit) => {
+                            permit.send(length);
+
+                            let r = write_once(writer, length, write_rx).await;
+
+                            match r {
+                                Ok(_) => debug!("write_once got ok"),
+                                Err(_) => break,
+                            }
+                        }
+                        Err(e) => {
+                            debug!("write_once,  write_info_tx got ERR {e}, will keep calling");
+
+                            let r = write_once(writer, length, write_rx).await;
+
+                            match r {
+                                Ok(_) => debug!("write_once got ok"),
+                                Err(_) => break,
+                            }
+                        }
+                    }
+                } else {
+                    debug!("write_once, send write_info_tx, not ready");
+
+                    let r = write_once(writer, length, write_rx).await;
+
+                    match r {
+                        Ok(_) => debug!("write_once got ok"),
+                        Err(_) => break,
+                    }
                 }
             }
             READ_DIRECTION => {
                 let r = read_once(reader, length, lst_rbuf).await;
-                match r {
-                    Ok(mut result_buf) => {
-                        assert!(result_buf.len() >= length);
 
-                        let mut cur_read_packet = if result_buf.len() > length {
+                match r {
+                    Err(_) => break,
+
+                    Ok(mut result_buf) => {
+                        let rlen = result_buf.len();
+
+                        assert!(rlen >= length);
+
+                        let mut cur_read_packet = if rlen > length {
                             let real = result_buf.split_to(length);
 
                             lst_rbuf = result_buf;
@@ -396,8 +499,12 @@ pub async fn play_file<R, W>(
                         let b = cur_read_packet.get_u8();
 
                         match b {
-                            WRTIE_IS_STEGO => {}
+                            WRTIE_IS_STEGO => {
+                                debug!("read_once got stego, {:?}", rlen);
+                            }
                             WRTIE_IS_REAL => {
+                                debug!("read_once got real, {:?}", rlen);
+
                                 // 此时已知是 数据包了，但是还不确定是 首包还是续包，因此交给rx端处理
                                 let r = read_tx.send(cur_read_packet).await;
                                 if let Err(e) = r {
@@ -408,7 +515,6 @@ pub async fn play_file<R, W>(
                             _ => panic!("can't happen"),
                         }
                     }
-                    Err(_) => break,
                 }
             }
             _ => panic!("can't happen"),
@@ -447,6 +553,7 @@ where
                     info!("read_once got EOF");
                     return Err(std::io::Error::other("EOF"));
                 }
+                buf.resize(n, 0);
                 let whole_read_len = read_start_index + n;
 
                 if whole_read_len >= length {
@@ -479,11 +586,15 @@ where
         _ = timer=>{
             let mut v = vec![WRTIE_IS_STEGO];
             v.resize(length, 0);
+
+            debug!("write_once, writing fake {length}");
            return writer.write_all(&v).await;
         }
         op = write_rx.recv() =>{
             match op{
                 Some(v) => {
+
+                    debug!("write_once, writing new, {}",v.escape_ascii());
 
                     let r = writer.write_all(&v).await;
                     match r {
@@ -496,7 +607,7 @@ where
                 },
                 None => {
                     debug!("mpsc_transmit write got none, will shutdown");
-                   let _ =  writer.write(&[]).await;
+                    let _ =  writer.write(&[]).await;
                     let _ = writer.shutdown().await;
                     return Ok(())
                 },
@@ -506,97 +617,3 @@ where
 
     }
 }
-
-// pub enum WritePacket {
-//     Stego(usize),
-//     Real(Vec<u8>),
-// }
-/*
-fn transmit(
-    c: ruci::net::Conn,
-    capacity: usize,
-) -> (
-    Sender<WritePacket>, //写入时可选两种数据.  注意，这里的real 数据是已经加好包头的，故不用再在这里处理
-    Receiver<Vec<u8>>, //接收所有数据（因为有可能是粘包等情况，因此不能直接丢掉）
-) {
-    let (read_tx, read_rx) = channel::<Vec<u8>>(capacity);
-    let (write_tx, mut write_rx) = channel::<WritePacket>(capacity);
-
-    let (mut r, mut w) = tokio::io::split(c);
-    use tokio::io::AsyncWriteExt;
-
-    tokio::spawn(async move {
-        let mut zbuf = BytesMut::zeroed(1024 * 8);
-        zbuf[0] = WRTIE_IS_STEGO;
-
-        loop {
-            tokio::select! {
-                o_wbuf = write_rx.recv() =>{
-                    match o_wbuf {
-                        Some(v) => {
-                            let v = match &v{
-                                WritePacket::Real(vec) => vec,
-
-                                WritePacket::Stego(n) => {
-                                    if *n > zbuf.len(){
-                                       zbuf.resize(*n,0)
-                                    }
-
-                                    &zbuf[..*n]
-
-                                },
-                            };
-                            let r = w.write_all(&v).await;
-                            match r {
-                                Ok(_) => continue,
-                                Err(e) => {
-                                    info!("mpsc_transmit, write got e: {e}");
-                                    break;
-                                },
-                            }
-                        },
-                        None => {
-                            debug!("mpsc_transmit write got none, will shutdown");
-                           let _ =  w.write(&[]).await;
-                            let _ = w.shutdown().await;
-                        },
-                    }
-                }
-            }
-        }
-    });
-
-    use tokio::io::AsyncReadExt;
-    tokio::spawn(async move {
-        let mut buf = BytesMut::zeroed(1024 * 8); // 这里假设 buf 足够大
-
-        loop {
-            tokio::select! {
-                read_result = r.read(&mut buf)=>{
-                    match read_result {
-                        Ok(n) => {
-
-                            let v = buf[..n].to_vec();
-                           let r =  read_tx.send(v).await;
-
-                           if let Err(e) = r{
-                                info!("mpsc_transmit, read send got e: {e}");
-                                break;
-                           }
-
-                        },
-                        Err(e) => {
-                            info!("mpsc_transmit, read got e: {e}");
-                            break;
-                        },
-                    }
-
-                }
-            }
-        }
-    });
-
-    (write_tx, read_rx)
-}
-
- */
