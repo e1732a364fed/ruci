@@ -1,3 +1,4 @@
+#[cfg(feature = "route")]
 use crate::route::{RuleSet, RuleSetOutSelector};
 
 use super::config::StaticConfig;
@@ -39,6 +40,8 @@ pub struct Engine {
     outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
     default_outbound: Option<DMIterBox>,        // init 后一定有值
     tag_routes: Option<HashMap<String, String>>,
+
+    #[cfg(feature = "route")]
     rule_sets: Option<Vec<RuleSet>>,
 }
 
@@ -280,23 +283,23 @@ impl Engine {
     }
 
     fn get_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
-        let use_routesets = {
-            #[cfg(feature = "route")]
-            {
-                self.rule_sets.is_some()
+        #[cfg(feature = "route")]
+        {
+            if self.rule_sets.is_some() {
+                self.get_rulesets_out_selector()
+            } else if self.tag_routes.is_some() {
+                self.get_tag_route_out_selector()
+            } else {
+                self.get_fixed_out_selector()
             }
-            #[cfg(not(feature = "route"))]
-            {
-                false
+        }
+        #[cfg(not(feature = "route"))]
+        {
+            if self.tag_routes.is_some() {
+                self.get_tag_route_out_selector()
+            } else {
+                self.get_fixed_out_selector()
             }
-        };
-
-        if use_routesets {
-            self.get_rulesets_out_selector()
-        } else if self.tag_routes.is_some() {
-            self.get_tag_route_out_selector()
-        } else {
-            self.get_fixed_out_selector()
         }
     }
 
