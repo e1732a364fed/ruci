@@ -1,11 +1,14 @@
 
 开发相关：参考 rucimp/src/modes/chain/config/mod.rs
+开发相关：因为 代码实现方式不同，有些功能相近的 Map的Config是独立的
 
 在 Map说明的 首部标有 in, out 或 in/out 字样，表明可用于 InMapConfig 还是 OutMapConfig
 
 没有任何示例的Map 意为着其写法为 `"Name"`, 不 外加大括号，如 `"Echo"` , `"Blackhole"`
 
 其它的配置均要外加 大括号，如 `Direct = {}` 意味着要 写为 `{Direct = {}}`  才算一个完整的 table 
+
+
 
 # 入口、出口 Map
 
@@ -39,11 +42,11 @@ OptDirect 的出现是 为了给 Direct 添加 sockopt 选项。使用 tproxy �
 
 
 ```lua
-OptDirect= {
-    sockopt: {
+OptDirect = {
+    sockopt= {
         --...
     },
-    more_num_of_files: false, -- 可选
+    more_num_of_files= false, -- 可选
     dns_client = {}, -- 可选
 }
 ```
@@ -55,7 +58,6 @@ OptDirect= {
 more_num_of_files 为 true时，在 linux 上，程序将自动调整 系统设置,
 防止 出现 num_of_files 不够的问题 ( 在 tproxy 等情况下尤为严重)
 
-(开发相关：因为 代码实现方式不同，因此OptDirect配置是与 Direct 分开的)
 
 
 ## BindDialer
@@ -68,7 +70,7 @@ Bind 用于 udp 和 ip, dial 则用于 udp,tcp,uds(unix domain socket)
 BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中有且只有一个要设置
 
 ```lua
- BindDialerConfig= {
+ BindDialer = {
     bind_addr = "",
     dial_addr = "",
 
@@ -92,11 +94,11 @@ BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中有且�
 ### OptDialer
 in
 
-```
-pub struct OptDialerOption {
-    pub dial_addr: String,
-    pub sockopt: SockOpt,
-    pub dns_client: Option<ClientConfig>,
+```lua
+  OptDialer = {
+    dial_addr= "",
+    sockopt= {}, --optional
+    dns_client = {}, --optional
 }
 ```
 
@@ -107,10 +109,10 @@ pub struct OptDialerOption {
 ## Listener
 in
 
-```
-Listener {
-    listen_addr: String,
-    ext: Option<Ext>,
+```lua
+Listener = {
+    listen_addr ="",
+    ext={},
 }
 ```
 见[Ext](#ext)
@@ -118,11 +120,11 @@ Listener {
 ## TcpOptListener
 in
 
-```
-TcpOptListener {
-    listen_addr: String,
-    sockopt: crate::net::so2::SockOpt,
-    ext: Option<Ext>,
+```lua
+TcpOptListener = {
+    listen_addr ="",
+    sockopt={},
+    ext={},
 }
 ```
 
@@ -134,12 +136,14 @@ TcpOptListener {
 
 in/out
 
-```
-pub struct StdioConfig {
-    pub write_mode: Option<WriteMode>,
-    pub ext: Option<Ext>,
+```lua
+ StdioConfig = {
+    write_mode = "Bytes", --UTF8
+    ext={},
 }
 ```
+
+默认的 write_mode 为 UTF8, 可以用 Bytes 模式来观察16进制数据
 
 见[Ext](#ext)
 
@@ -147,13 +151,13 @@ pub struct StdioConfig {
 ## Fileio
 in/out
 
-```
-pub struct FileConfig {
-    i: String,
-    o: String,
-    sleep_interval: Option<u64>,
-    bytes_per_turn: Option<usize>,
-    ext: Option<Ext>,
+```lua
+  Fileio = {
+    i="",
+    o="",
+    sleep_interval=1, --optional, 正整数
+    bytes_per_turn=100, --optional, 正整数
+    ext={}, --optional
 }
 ```
 
@@ -166,13 +170,15 @@ linux only
 
 ### TproxyUdpListener
 
-```
-TproxyUdpListener {
-    listen_addr: String,
-    sockopt: crate::net::so2::SockOpt,
-    ext: Option<Ext>,
+```lua
+TproxyUdpListener = {
+    listen_addr="",
+    sockopt={},
+    ext={}, --optional
 }
 ```
+
+见[SockOpt](#sockopt)
 
 见[Ext](#ext)
 
@@ -180,19 +186,24 @@ TproxyUdpListener {
 
 rucimp/src/map/tproxy/route/mod.rs
 
-```
+```lua
 TproxyTcpResolver= {
-    /// tproxy 监听的端口, 默认为 [`DEFAULT_PORT`]
-    pub port: Option<u16>,
-    pub route_ipv6: Option<bool>,
-    pub proxy_local_udp_53: Option<bool>,
+    -- tproxy 监听的端口, 默认为 12345
+    port=12345, --  正整数
+    route_ipv6= false,
+    proxy_local_udp_53=false,
 
-    /// 局域网段, 默认为 [`DEFAULT_LOCAL_NET4`]
-    pub local_net4: Option<String>,
-    pub auto_route: Option<bool>,
-    pub auto_route_tcp: Option<bool>,
+    --局域网段, 默认为 192.168.0.0/16
+    local_net4 = "192.168.0.0/16",
+    auto_route = true,
+    auto_route_tcp=false,
 }
 ```
+
+所有项都是可选的
+
+auto_route 为 true 时， 若 auto_route_tcp 也为 true, 则 自动路由过程 只会为 tcp 设置路由,
+udp 将不被路由到tproxy中.
 
 ## Stack
 in
@@ -225,7 +236,7 @@ Socks5Http = { -- Socks5, Http
 ## Trojan
 
 ```lua
-trojan = {
+Trojan = {
     password: "password1",
     more: { "password2", "password3"},
 }
@@ -239,24 +250,25 @@ in/out
 
 in:
 
-```
-pub struct TlsIn {
-    cert: String,
-    key: String,
-    alpn: Option<Vec<String>>,
+```lua
+ Tls = {
+    cert="c.crt",
+    key="k.key",
+    alpn = { "h2", "h3"},--optional
 }
 ```
 
 out:
 
-```
-pub struct TlsOut {
-    host: String,
-    insecure: Option<bool>,
-    alpn: Option<Vec<String>>,
+```lua
+ Tls = {
+    host="www.myhost.com",
+    insecure=false,
+    alpn = { "h2", "h3"},--optional
 }
 ```
 
+如果任意一方的alpn 没给出, 则连接都通过；如果两方 alph 都给出, 则只有匹配了才通过
 
 
 ## NativeTLS
@@ -271,12 +283,14 @@ grpc 也是在 http2 配置中设置
 
 ### H2
 
+目前 h2 的三种Map 的 Config 格式 是一样的
+
 in
 
-```
-H2 {
-    is_grpc: Option<bool>,
-    http_config: Option<CommonConfig>,
+```lua
+H2 ={
+    is_grpc=false,
+    http_config={},
 }
 ```
 见 [HttpCommonConfig](#httpcommonconfig)
@@ -285,24 +299,23 @@ H2 {
 
 out
 
-```
-H2Single {
-    is_grpc: Option<bool>,
-
-    http_config: Option<CommonConfig>,
+```lua
+H2Single ={
+    is_grpc=false,
+    http_config={},
 },
 ```
+
 见 [HttpCommonConfig](#httpcommonconfig)
 
 ### H2Mux
 
 out
 
-```
-H2Mux {
-    is_grpc: Option<bool>,
-
-    http_config: Option<CommonConfig>,
+```lua
+H2Mux ={
+    is_grpc=false,
+    http_config={},
 },
 ```
 见 [HttpCommonConfig](#httpcommonconfig)
@@ -343,24 +356,24 @@ in:
 quic 的 监听端 是直接接管 udp 层的, listen_addr 在这里指定, 而不额外用 Listener
 
 
-```
-pub struct ServerConfig {
-    pub key_path: String,
-    pub cert_path: String,
-    pub listen_addr: String,
-    pub alpn: Option<Vec<String>>,
+```lua
+Quic= {
+    key_path="",
+    cert_path="",
+    listen_addr="",
+    alpn = { "h2", "h3"},--optional
 }
 ```
 
 out:
 
-```
-pub struct ClientConfig {
-    pub server_addr: String,
-    pub server_name: String,
-    pub cert_path: Option<String>,
-    pub alpn: Option<Vec<String>>,
-    pub is_insecure: Option<bool>,
+```lua
+Quic= {
+    server_addr="",
+    server_name="",
+    cert_path="",--optional
+    alpn = { "h2", "h3"},--optional
+    is_insecure=true,--optional
 }
 ```
 
@@ -461,13 +474,19 @@ listen 一个 本地的 udp 端口 (a), 指定 ext.fixed_target_addr (b), 其为
 ## httpCommonConfig
 
 
-```
-pub struct CommonConfig {
-    pub method: Option<String>,
-    pub scheme: Option<String>,
-    pub authority: String,
-    pub path: String,
-    pub headers: Option<BTreeMap<String, String>>,
+```lua
+ {
+    method = "GET",--optional
+    scheme = "https",--optional
+    authority = "www.myhost.com",
+    path = "/ruci_jiandan",
+    headers= { ["header1"] = "value1", ["header2"] = "value2", },--optional
 }
 ```
 
+# 接下来
+
+现在再读 resource/local.lua 就会轻松很多了。
+
+学点难的？
+[Infinite](./lua/infinite.md)

@@ -275,4 +275,4 @@ windows:
 
 
 下一步，学习 [各个 `MapConfig` 的写法 ](./map_config.md)
-或者直接开始学 各个 route 的写法？
+或者直接开始学 [各个 route 的写法](./route_config.md)？
