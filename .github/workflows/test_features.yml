@@ -3,31 +3,30 @@ name: Test Features
 on:
   workflow_dispatch:
   push:
-    branches: [ "tokio" ]
+    branches: ["tokio"]
     tags:
-      - 'v*-alpha.*'
-      - 'v*-beta.*'
-    paths-ignore: 
-      - 'doc/**'
-      - 'resource/**'
-      - '**.md'
-      - '.github/workflows/*.yml'
-      - '**/Makefile'
-      - '**/Cross.toml'
-      
-  pull_request:
-    branches: [ "tokio" ]
-    paths-ignore: 
-      - '**.md'
+      - "*"
+    paths-ignore:
+      - "doc/**"
+      - "resource/**"
+      - "**.md"
+      - ".github/workflows/*.yml"
+      - "**/Makefile"
+      - "**/Cross.toml"
 
-concurrency: 
+  pull_request:
+    branches: ["tokio"]
+    paths-ignore:
+      - "**.md"
+
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-  
+
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
-  
+
 jobs:
   test_features:
     strategy:
@@ -40,18 +39,18 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v4
-    - uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-hack@0.6.26
-    - name: Build
-      run: cargo build --verbose
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack@0.6.26
+      - name: Build
+        run: cargo build --verbose
 
-    - name: Test Ruci Every feature tag
-      run: cargo hack check --feature-powerset --no-dev-deps
+      - name: Test Ruci Every feature tag
+        run: cargo hack check --feature-powerset --no-dev-deps
 
-    - name: Test Rucimp Every feature tag
-      run: cd rucimp && cargo hack check --clean-per-run --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
+      - name: Test Rucimp Every feature tag
+        run: cd rucimp && cargo hack check --clean-per-run --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
 
-    - name: Test Ruci-Cmd Every feature tag
-      run: cd crates/ruci-cmd && cargo hack check --clean-per-run --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
+      - name: Test Ruci-Cmd Every feature tag
+        run: cd crates/ruci-cmd && cargo hack check --clean-per-run --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
