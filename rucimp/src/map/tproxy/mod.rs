@@ -52,26 +52,14 @@ impl Name for TcpResolver {
 
 impl TcpResolver {
     pub fn new(opts: Options) -> anyhow::Result<Self> {
-        if opts.auto_route.unwrap_or_default() {
+        if opts.auto_route_enabled() {
             info!("tproxy run auto_route");
 
-            anyhow::Context::context(run_tcp_route(&opts), "run auto_route commands failed")?;
+            anyhow::Context::context(run_auto_route(&opts), "run auto_route commands failed")?;
 
             if opts.route_ipv6.unwrap_or_default() {
                 info!("tproxy run_tcp_route6");
-                let r = run_tcp_route6(&opts);
-                if let Err(e) = r {
-                    warn!("tproxy run run_tcp_route6 got error {e}")
-                }
-            }
-        } else if opts.auto_route_tcp.unwrap_or_default() {
-            info!("tproxy run auto_route_tcp");
-
-            anyhow::Context::context(run_tcp_route(&opts), "run auto_route_tcp commands failed")?;
-
-            if opts.route_ipv6.unwrap_or_default() {
-                info!("tproxy run_tcp_route6");
-                let r = run_tcp_route6(&opts);
+                let r = run_auto_route6(&opts);
                 if let Err(e) = r {
                     warn!("tproxy run run_tcp_route6 got error {e}")
                 }
@@ -167,13 +155,12 @@ impl UDPListener {
 
         let r = match listen_a.network {
             Network::UDP => so2::rawlisten_udp(&listen_a, &self.sopt).map(|socket| {
-                let (tx, rx) = mpsc::channel(5); //todo: adjust this
-                                                 //let usc = us.clone();
+                let (tx, rx) = mpsc::channel(1000); //todo: adjust this
 
                 let dst_src_map = Arc::new(Mutex::new(HashMap::new()));
                 let mapc = dst_src_map.clone();
 
-                let r = UdpR { rx };
+                let r = UdpR::new(rx);
 
                 let w = UdpW { dst_src_map };
 
@@ -182,7 +169,7 @@ impl UDPListener {
                 use terminate_thread::Thread;
                 let thr = Thread::spawn(|| loop_accept_udp(socket, tx, mapc));
 
-                //let _jh = std::thread::spawn(|| loop_accept_udp(usc, tx, mapc));
+                // let _jh = std::thread::spawn(|| loop_accept_udp(socket, tx, mapc));
 
                 tokio::spawn(async move {
                     let _ = shutdown_rx.await;
@@ -248,10 +235,14 @@ impl Mapper for UDPListener {
 pub struct UdpR {
     rx: mpsc::Receiver<AddrData>,
 }
+impl UdpR {
+    fn new(rx: mpsc::Receiver<AddrData>) -> Self {
+        Self { rx }
+    }
+}
 
 /// tproxy 的 udp 不是 fullcone 的, 而是对称的
 pub struct UdpW {
-    //us: Arc<UdpSocket>,
     dst_src_map: Arc<Mutex<HashMap<Addr, Addr>>>,
 }
 
@@ -284,12 +275,12 @@ impl AsyncWriteAddr for UdpW {
 
         let laddr = match laddr {
             Some(laddr) => {
-                debug!(
-                    "tproxy UdpW get from dst_src_map ,{} {} {}",
-                    buf.len(),
-                    raddr,
-                    laddr
-                );
+                // debug!(
+                //     "tproxy UdpW get from dst_src_map ,{} {} {}",
+                //     buf.len(),
+                //     raddr,
+                //     laddr
+                // );
                 laddr
             }
             None => {
@@ -300,10 +291,10 @@ impl AsyncWriteAddr for UdpW {
         let us = so2::connect_tproxy_udp(raddr, &laddr).unwrap();
         // 实测这里不能 将 socket2::Socket 转成 tokio 的 UdpSocket使用,  否 则 poll send 会一直为 pending
 
-        debug!("tproxy UdpW connected ,will send");
+        // debug!("tproxy UdpW connected ,will send");
 
         let r = us.send(buf);
-        debug!("tproxy UdpW try_send_to r {:?}", r);
+        // debug!("tproxy UdpW try_send_to r {:?}", r);
 
         Poll::Ready(r)
     }
@@ -327,35 +318,7 @@ impl AsyncReadAddr for UdpR {
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        // let r = self.rx.try_recv();
-        // debug!("tproxy UdpR try recv got r {:?}", r);
-        // match r {
-        //     Ok(mut ad) => {
-        //         let l = ad.0.len();
-        //         let bl = buf.len();
-        //         let len_to_cp = min(bl, l);
-        //         if bl != len_to_cp {
-        //             debug!("tproxy UdpR try recv will short write {} {}", bl, len_to_cp);
-        //         }
-        //         ad.0.copy_to_slice(&mut buf[..len_to_cp]);
-
-        //         let a = ad.1;
-        //         return Poll::Ready(Ok((len_to_cp, a)));
-        //     }
-        //     Err(e) => match e {
-        //         mpsc::error::TryRecvError::Empty => {
-        //             cx.waker().wake_by_ref();
-        //             return Poll::Pending;
-        //         }
-        //         mpsc::error::TryRecvError::Disconnected => {
-        //             return Poll::Ready(Err(io_error("tproxy UdpR rx closed")));
-        //         }
-        //     },
-        // }
-
-        debug!("tproxy UdpR try recv");
         let r = self.rx.poll_recv(cx);
-        debug!("tproxy UdpR try recv got r {:?}", r);
 
         match r {
             Poll::Ready(r) => match r {
@@ -380,11 +343,11 @@ impl AsyncReadAddr for UdpR {
     }
 }
 
-impl Drop for UdpR {
-    fn drop(&mut self) {
-        debug!("UdpR Dropped!")
-    }
-}
+// impl Drop for UdpR {
+//     fn drop(&mut self) {
+//         debug!("UdpR Dropped!")
+//     }
+// }
 
 /// blocking
 fn loop_accept_udp(
@@ -395,7 +358,7 @@ fn loop_accept_udp(
     loop {
         let mut buf = BytesMut::zeroed(1500);
 
-        debug!("loop_accept_udp");
+        //debug!("loop_accept_udp");
 
         let r = tproxy_recv_from_with_destination(&us, &mut buf);
         let r = match r {
@@ -405,7 +368,7 @@ fn loop_accept_udp(
                 return;
             }
         };
-        debug!("loop_accept_udp got r {:?}", r);
+        //debug!("loop_accept_udp got r {:?}", r);
 
         // 如 本机请求 dns, 则 src 为 本机ip 随机高端口， dst 为 路由器ip 53 端口
         let (n, src, dst) = r;
@@ -429,6 +392,7 @@ fn loop_accept_udp(
             }
             // debug!("loop_accept_udp lock ok, try send");
 
+            // 用 blockiing_send 会变得卡顿
             let r = tx.try_send((buf, dst_a));
             // debug!("loop_accept_udp lock ok, try send ok",);
 

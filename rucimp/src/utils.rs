@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf, process::Command};
 
 use anyhow::{anyhow, bail};
 use tokio::signal;
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 
 use crate::COMMON_DIRS;
 
@@ -129,8 +129,8 @@ pub async fn wait_close_sig_with_closer(
 }
 
 /// keep run next command if got error
-pub fn sync_run_command_list_no_stop(list: Vec<&str>) -> anyhow::Result<()> {
-    debug!("utils: start run_command_list ");
+pub fn sync_run_command_list_no_stop(list: Vec<&str>, no_warn: bool) -> anyhow::Result<()> {
+    //debug!("utils: start run_command_list ");
     for cmd in list {
         let mut strs: Vec<_> = cmd.split(' ').collect();
         if strs.is_empty() {
@@ -144,23 +144,28 @@ pub fn sync_run_command_list_no_stop(list: Vec<&str>) -> anyhow::Result<()> {
         match r {
             Ok(o) => {
                 if !o.status.success() {
-                    bail!("run command not success, result is {:?}", o);
+                    if !no_warn {
+                        warn!("run command not success, result is {:?}", o);
+                    }
+                    continue;
                 }
             }
             Err(e) => {
-                debug!("run command got err, result is {:?}", e);
+                if !no_warn {
+                    warn!("run command got err, result is {:?}", e);
+                }
                 continue;
             }
         }
     }
-    debug!("utils: finish run_command_list ");
+    //debug!("utils: finish run_command_list ");
 
     Ok(())
 }
 
 /// stop run if got error
 pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
-    debug!("utils: start run_command_list ");
+    //debug!("utils: start run_command_list ");
     for cmd in list {
         let mut strs: Vec<_> = cmd.split(' ').collect();
         if strs.is_empty() {
@@ -179,12 +184,12 @@ pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
                 }
             }
             Err(e) => {
-                debug!("run command got err, result is {:?}", e);
+                warn!("run command got err, result is {:?}", e);
                 return Err(e.into());
             }
         }
     }
-    debug!("utils: finish run_command_list ");
+    //debug!("utils: finish run_command_list ");
 
     Ok(())
 }

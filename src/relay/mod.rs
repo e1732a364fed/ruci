@@ -349,7 +349,7 @@ pub fn cp_stream(
 
 pub async fn cp_udp(
     cid: CID,
-    mut in_conn: net::addr_conn::AddrConn,
+    in_conn: net::addr_conn::AddrConn,
     mut out_conn: net::addr_conn::AddrConn,
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
@@ -396,8 +396,8 @@ pub async fn cp_udp(
 
     let _ = net::addr_conn::cp(
         cid.clone(),
-        &mut in_conn,
-        &mut out_conn,
+        in_conn,
+        out_conn,
         tr,
         no_timeout,
         shutdown_rx1,
@@ -405,9 +405,9 @@ pub async fn cp_udp(
     )
     .await;
 
-    debug!("cp_udp: calling shutdown");
+    // debug!("cp_udp: calling shutdown");
 
-    let r1 = in_conn.w.shutdown().await;
-    let r2 = out_conn.w.shutdown().await;
-    debug!("cp_udp: called shutdown {:?} {:?}", r1, r2);
+    // let r1 = in_conn.w.shutdown().await;
+    // let r2 = out_conn.w.shutdown().await;
+    // debug!("cp_udp: called shutdown {:?} {:?}", r1, r2);
 }

@@ -4,8 +4,6 @@
 */
 use super::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use super::*;
-use parking_lot::Mutex;
-use std::cmp::min;
 use std::io;
 use std::{
     pin::Pin,
@@ -136,82 +134,83 @@ impl AsyncReadAddr for Conn {
     }
 }
 
-#[derive(Debug)]
-pub struct MockStream {
-    pub read_data: Vec<u8>,
-    pub write_data: Vec<u8>,
-    pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
-}
-impl crate::Name for MockStream {
-    fn name(&self) -> &str {
-        "mock_stream"
-    }
-}
-
-impl AsyncWriteAddr for MockStream {
-    fn poll_write_addr(
-        mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-        buf: &[u8],
-        _addr: &Addr,
-    ) -> Poll<io::Result<usize>> {
-        //debug!("MockUdp: write called");
-
-        let mut x = Vec::from(buf);
-
-        if let Some(swt) = &self.write_target {
-            let mut v = swt.lock();
-            v.append(&mut x);
-        } else if self.write_data.is_empty() {
-            self.write_data = x;
-        } else {
-            self.write_data.append(&mut x)
-        }
-
-        Poll::Ready(Ok(buf.len()))
-    }
-
-    fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
-    }
-}
-
-impl AsyncReadAddr for MockStream {
-    fn poll_read_addr(
-        mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<(usize, Addr)>> {
-        //debug!("MockUdp: read called");
-
-        let cp_size: usize = min(self.read_data.len(), buf.len());
-        buf.copy_from_slice(&self.read_data[..cp_size]);
-
-        let new_len = self.read_data.len() - cp_size;
-
-        self.read_data.copy_within(cp_size.., 0);
-        self.read_data.truncate(new_len);
-
-        Poll::Ready(Ok((cp_size, crate::net::Addr::default())))
-    }
-}
-
 #[cfg(test)]
 #[allow(unused)]
 mod test {
     use futures::select;
     use futures_util::join;
+    use parking_lot::Mutex;
     use tokio::sync::oneshot;
 
     use super::*;
     use crate::net::addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt};
-    use std::{io, ops::Deref, str::FromStr, time::Duration};
+    use std::{cmp::min, io, ops::Deref, str::FromStr, time::Duration};
 
     const CAP: usize = 1500;
+
+    #[derive(Debug)]
+    pub struct MockStream {
+        pub read_data: Vec<u8>,
+        pub write_data: Vec<u8>,
+        pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
+    }
+    impl crate::Name for MockStream {
+        fn name(&self) -> &str {
+            "mock_stream"
+        }
+    }
+
+    impl AsyncWriteAddr for MockStream {
+        fn poll_write_addr(
+            mut self: Pin<&mut Self>,
+            _cx: &mut Context<'_>,
+            buf: &[u8],
+            _addr: &Addr,
+        ) -> Poll<io::Result<usize>> {
+            //debug!("MockUdp: write called");
+
+            let mut x = Vec::from(buf);
+
+            if let Some(swt) = &self.write_target {
+                let mut v = swt.lock();
+                v.append(&mut x);
+            } else if self.write_data.is_empty() {
+                self.write_data = x;
+            } else {
+                self.write_data.append(&mut x)
+            }
+
+            Poll::Ready(Ok(buf.len()))
+        }
+
+        fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Poll::Ready(Ok(()))
+        }
+    }
+
+    impl AsyncReadAddr for MockStream {
+        fn poll_read_addr(
+            mut self: Pin<&mut Self>,
+            _cx: &mut Context<'_>,
+            buf: &mut [u8],
+        ) -> Poll<io::Result<(usize, Addr)>> {
+            //debug!("MockUdp: read called");
+
+            let cp_size: usize = min(self.read_data.len(), buf.len());
+            buf.copy_from_slice(&self.read_data[..cp_size]);
+
+            let new_len = self.read_data.len() - cp_size;
+
+            self.read_data.copy_within(cp_size.., 0);
+            self.read_data.truncate(new_len);
+
+            Poll::Ready(Ok((cp_size, crate::net::Addr::default())))
+        }
+    }
 
     async fn read_timeout(name: String, mut r: Conn) -> io::Result<()> {
         let mut buf = [0u8; CAP];
@@ -333,9 +332,10 @@ mod test {
 
             Ok::<(), io::Error>(())
         });
-        let (_, rx) = oneshot::channel();
+        // let (_, rx) = oneshot::channel();
+        let (tx1, rx1) = tokio::sync::broadcast::channel(10);
 
-        let _ = crate::net::addr_conn::cp_addr(r2, ms, false, rx).await;
+        let _ = crate::net::addr_conn::cp_addr(r2, ms, "".to_string(), false, tx1).await;
 
         let nv = buf_to_write.repeat(5);
 

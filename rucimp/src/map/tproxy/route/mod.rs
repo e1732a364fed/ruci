@@ -28,7 +28,7 @@ impl Options {
 /// 自动路由, set route table rucimp and rucimp_self
 ///
 /// 对 udp 和 tcp 执行一样的过程, 不会特别处理 udp 的 53 端口
-pub fn run_tcp_route(opts: &Options) -> anyhow::Result<()> {
+pub fn run_auto_route(opts: &Options) -> anyhow::Result<()> {
     let port = opts.port.unwrap_or(DEFAULT_PORT);
     let _ = down_auto_route(opts);
 
@@ -131,7 +131,7 @@ iptables -t mangle -A rucimp_self -d {local_net4} -p tcp -j RETURN"#
 }
 
 /// 自动路由, set route table rucimp6 and rucimp_self6
-pub fn run_tcp_route6(opts: &Options) -> anyhow::Result<()> {
+pub fn run_auto_route6(opts: &Options) -> anyhow::Result<()> {
     let port = opts.port.unwrap_or(DEFAULT_PORT);
     let also_udp = opts.auto_route.unwrap_or_default();
 
@@ -216,6 +216,7 @@ ip6tables -t mangle -A rucimp_self6 -d fd00::/8 -p tcp -j RETURN"#
 }
 
 pub fn down_auto_route(opts: &Options) -> anyhow::Result<()> {
+    debug!("down_auto_route");
     let port = opts.port.unwrap_or(DEFAULT_PORT);
     let local_net4 = opts.local_net4.as_deref().unwrap_or(DEFAULT_LOCAL_NET4);
 
@@ -250,12 +251,14 @@ iptables -t mangle -F rucimp_self
 iptables -t mangle -X rucimp_self"#
     );
     let list: Vec<_> = list.split('\n').collect();
-    sync_run_command_list_no_stop(list)?;
+    sync_run_command_list_no_stop(list, true)?;
 
     Ok(())
 }
 
 pub fn down_auto_route6(opts: &Options) -> anyhow::Result<()> {
+    debug!("down_auto_route6");
+
     let port = opts.port.unwrap_or(DEFAULT_PORT);
 
     let list = format!(
@@ -281,7 +284,7 @@ ip6tables -t mangle -F rucimp_self6
 ip6tables -t mangle -X rucimp_self6"#
     );
     let list: Vec<_> = list.split('\n').collect();
-    sync_run_command_list_no_stop(list)?;
+    sync_run_command_list_no_stop(list, true)?;
 
     Ok(())
 }

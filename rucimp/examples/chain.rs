@@ -3,9 +3,10 @@
  用户提供的参数作为配置文件 读取它并以 chain 模式运行
 */
 
-use std::env;
+use std::{env, time::Duration};
 
 use rucimp::{modes::chain::engine::Engine, utils::*};
+use tracing::debug;
 mod shared;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -33,7 +34,12 @@ async fn main() -> anyhow::Result<()> {
 
     e.stop().await;
 
-    js.shutdown().await;
+    debug!("Waiting for join set");
+
+    let r = tokio::time::timeout(Duration::from_secs(3), js.shutdown()).await;
+
+    debug!("{:?}", r);
+    // js.shutdown().await;
 
     // js.abort_all();
     // while let Some(res) = js.join_next().await {
