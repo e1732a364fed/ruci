@@ -1,0 +1,31 @@
+{
+  "common_data": {
+    "cid": "1-2",
+    "behavior": "DECODE",
+    "label": "mitm",
+    "global_data": {
+      "run_instance_id": 0,
+      "instance_start_time": "2025-01-17T18:53:41.849346Z"
+    },
+    "target_addr": {
+      "addr": {
+        "Name": ["github.com", 443]
+      },
+      "network": "TCP"
+    },
+    "start_at": "2025-01-17T18:53:44.285301Z",
+    "shutdown_at": 116457208
+  },
+  "payload": [
+    {
+      "timestamp": 3333,
+      "direction": 1,
+      "length": 431
+    },
+    {
+      "timestamp": 115819500,
+      "direction": -1,
+      "length": 318
+    }
+  ]
+}
