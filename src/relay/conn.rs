@@ -165,22 +165,17 @@ pub async fn handle_conn<'a>(
     Ok(())
 }
 
-/// mock of  handle_conn, utilize handle_in_accumulate_result and  FixedOutSelector
-pub async fn handle_conn_clonable(
+/// mock of  handle_conn, utilize handle_in_accumulate_result and  OutSelector
+pub async fn handle_conn_clonable<T, T2>(
     in_conn: net::Conn,
-
-    ins_iterator: impl Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
-    // outc_iterator: impl Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
-    // outc_addr: Option<net::Addr>,
-    // selector: Box<
-    //     dyn OutSelector<'static, impl Iterator<Item = &'static MapperBox> + Clone + Send> + 'static,
-    // >,
-    selector: &'static dyn OutSelector<
-        'static,
-        impl Iterator<Item = &'static MapperBox> + Clone + Send,
-    >,
+    ins_iterator: T,
+    selector: &'static dyn OutSelector<'_, T2>,
     ti: Option<Arc<net::TransmissionInfo>>,
-) -> io::Result<()> {
+) -> io::Result<()>
+where
+    T: Iterator<Item = &'static MapperBox>,
+    T2: Iterator<Item = &'static MapperBox>,
+{
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
         None => CID::new(),
@@ -268,21 +263,21 @@ pub async fn cp_udp(
 /// Send + Sync to use in async
 pub trait OutSelector<'a, T>: Send + Sync
 where
-    T: Iterator<Item = &'a MapperBox> + Clone + Send,
+    T: Iterator<Item = &'a MapperBox>,
 {
     fn select(&self, params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>);
 }
 
-pub async fn handle_in_accumulate_result<T, IterMapperBoxRef>(
-    mut listen_result: AccumulateResult<'static, IterMapperBoxRef>,
+pub async fn handle_in_accumulate_result<T, T2>(
+    mut listen_result: AccumulateResult<'static, T>,
 
-    out_selector: &'static dyn OutSelector<'static, T>,
+    out_selector: &'static dyn OutSelector<'_, T2>,
 
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()>
 where
-    T: Iterator<Item = &'static MapperBox> + Clone + Send,
-    IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
+    T: Iterator<Item = &'static MapperBox>,
+    T2: Iterator<Item = &'static MapperBox>,
 {
     let cid = &listen_result.id.unwrap();
     let target_addr = match listen_result.a.take() {
