@@ -6,6 +6,17 @@ suit, suit2, chain 分为以不同的代码运行 suit模式和 chain 模式
 接受 一个 命令行参数，将其作为配置文件读取，未提供或者找不到时，会在工作目录或 /resource 目录下找默认的配置文件.
 
 
+cargo run --example chain -- config.chain2.lua -s
+
+cargo run --example chain -- config.chain.lua
+
+
+cargo run --example suit -- config.suit.toml
+
+cargo run --example suit -- config.suit2.toml
+
+
+
 # chain 程序
 
 ## -s

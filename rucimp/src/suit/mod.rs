@@ -192,8 +192,8 @@ impl Suit for SuitStruct {
                 if self.has_tls() {
                     let so = tls::server::ServerOptions {
                         addr: "todo!()".to_string(),
-                        cert: c.cert.unwrap().into(),
-                        key: c.key.unwrap().into(),
+                        cert: c.cert.expect("need cert file  in config").into(),
+                        key: c.key.expect("need key file in config").into(),
                     };
                     let sa = tls::server::Server::new(so);
                     self.inmappers.push(Box::new(sa));

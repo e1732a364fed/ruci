@@ -270,7 +270,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
         .fuse();
         pin_mut!(sleepf, readf);
 
-        select! {
+        futures::select! {
             _ = sleepf =>{
                 debug!("read addrconn timeout");
 
@@ -288,7 +288,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
                             let wf = w1.write(&buf0[..m], &ad).fuse();
 
                             pin_mut!(sleepf2, wf);
-                            select!{
+                            futures::select!{
                                 _ = sleepf2 =>{
                                      debug!("write addrconn timeout");
                                 }
@@ -337,7 +337,7 @@ pub async fn cp_between<
     let (c1_to_c2, c2_to_c1) = (cp_addr(r1, w2).fuse(), cp_addr(r2, w1).fuse());
     pin_mut!(c1_to_c2, c2_to_c1);
 
-    select! {
+    futures::select! {
         rst1 = c1_to_c2 =>{
 
             if log_enabled!(log::Level::Debug) {

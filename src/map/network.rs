@@ -64,13 +64,17 @@ impl Name for TcpDialer {
 
 impl TcpDialer {
     ///  panic if dial_a is invalid. todo: try not panic
-    pub async fn dial_addr(dial_a: &net::Addr, pass_a: Option<net::Addr>) -> MapResult {
+    pub async fn dial_addr(
+        dial_a: &net::Addr,
+        pass_a: Option<net::Addr>,
+        pass_b: Option<BytesMut>,
+    ) -> MapResult {
         //todo: DNS 功能
 
         let r = TcpStream::connect(dial_a.get_socket_addr().unwrap()).await;
 
         match r {
-            Ok(c) => MapResult::oac(pass_a, Box::new(c)),
+            Ok(c) => MapResult::oabc(pass_a, pass_b, Box::new(c)),
             Err(e) => MapResult::from_err(e),
         }
     }
@@ -90,12 +94,16 @@ impl Mapper for TcpDialer {
                 Some(d) => {
                     if let Some(d) = d.calculated_data {
                         match d {
-                            AnyData::Addr(a) => return TcpDialer::dial_addr(&a, params.a).await,
+                            AnyData::Addr(a) => {
+                                return TcpDialer::dial_addr(&a, params.a, params.b).await
+                            }
                             AnyData::A(arc) => {
                                 let mut v = arc.lock().await;
                                 let a = v.downcast_mut::<net::Addr>();
                                 match a {
-                                    Some(a) => return TcpDialer::dial_addr(a, params.a).await,
+                                    Some(a) => {
+                                        return TcpDialer::dial_addr(a, params.a, params.b).await
+                                    }
                                     None => {
                                         return MapResult::err_str(
                                             "tcp dialer got dial addr paramater but it's None",
@@ -106,7 +114,9 @@ impl Mapper for TcpDialer {
                             AnyData::B(mut b) => {
                                 let a = b.downcast_mut::<net::Addr>();
                                 match a {
-                                    Some(a) => return TcpDialer::dial_addr(a, params.a).await,
+                                    Some(a) => {
+                                        return TcpDialer::dial_addr(a, params.a, params.b).await
+                                    }
                                     None => {
                                         return MapResult::err_str(
                                             "tcp dialer got dial addr paramater but it's None",
@@ -119,7 +129,7 @@ impl Mapper for TcpDialer {
                 }
                 None => {
                     if let Some(configured_dial_a) = &self.addr {
-                        return TcpDialer::dial_addr(configured_dial_a, params.a).await;
+                        return TcpDialer::dial_addr(configured_dial_a, params.a, params.b).await;
                     }
                     return MapResult::err_str(&format!(
                         "{}, tcp dialer can't dial without an address",

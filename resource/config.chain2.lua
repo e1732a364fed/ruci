@@ -9,7 +9,7 @@ socks5http_chain = { tcp, { Socks5Http = {} }, }
 
 tls = { TLS = {  cert = "test.crt", key = "test.key" } }
 
-trojan_chain = { tcp, tls,tls, { Trojan = { password = "mypassword" } }, }
+trojan_chain = { tcp, tls,  { Trojan = { password = "mypassword" } }, }
 
 dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
 

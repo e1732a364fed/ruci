@@ -21,8 +21,6 @@ pub fn cp_conn(
     pre_read_data: Option<bytes::BytesMut>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
-    debug!("{cid}, relay start");
-
     match (pre_read_data, ti) {
         (None, None) => tokio::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
         (None, Some(t)) => tokio::spawn(ti_no_ed(cid, in_conn, out_conn, t)),
@@ -32,11 +30,15 @@ pub fn cp_conn(
 }
 
 async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
+    debug!("{cid}, relay start");
+
     let _ = net::cp(in_conn, out_conn, &cid, None).await;
     debug!("{cid}, relay end",);
 }
 
 async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TransmissionInfo>) {
+    debug!("{cid}, relay start");
+
     ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
 
     defer! {

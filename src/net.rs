@@ -12,9 +12,7 @@ pub mod udp;
 
 #[cfg(test)]
 mod test;
-
 use futures::pin_mut;
-use futures::select;
 use futures::{io::Error, FutureExt};
 use log::{debug, log_enabled};
 use rand::Rng;
@@ -421,9 +419,8 @@ impl Addr {
                 NetAddr::NameAndSocket(_, ip, _) => ip.to_string(),
             },
             Network::TCP | Network::UDP => match &self.addr {
-                NetAddr::Socket(so) => so.to_string(),
+                NetAddr::Socket(so) | NetAddr::NameAndSocket(_, so, _) => so.to_string(),
                 NetAddr::Name(n, p) => format!("{}:{}", n, p),
-                NetAddr::NameAndSocket(_, ip, p) => format!("{}:{}", ip, p),
             },
             #[cfg(unix)]
             Network::Unix => match &self.addr {
@@ -601,7 +598,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     if log_enabled!(log::Level::Debug) {
-        debug!("cp start, {} ", cid);
+        debug!("cp start, {} c1: {}, c2: {}", cid, c1.name(), c2.name());
     }
 
     let (mut c1_read, mut c1_write) = tokio::io::split(c1);
@@ -616,7 +613,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
 
     // 一个方向停止后, 关闭连接, 如果info 不为空, 则等待另一个方向关闭, 以获取另一方向的流量信息。
 
-    select! {
+    futures::select! {
         r1 = c1_to_c2 => {
             if let Some(ref info) = opt {
                 if let Ok(n) = r1 {

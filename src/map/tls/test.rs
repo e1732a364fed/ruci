@@ -8,7 +8,7 @@ use futures::{join, FutureExt};
 use log::info;
 use parking_lot::Mutex;
 use tokio::{
-    io::AsyncReadExt,
+    io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     task,
 };

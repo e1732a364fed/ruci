@@ -6,4 +6,10 @@ port = 10800
 #users = [ { user = "u1", pass = "p1"},  { user = "u2", pass = "p2"}, ]
 
 [[dial]]
-protocol = "direct"
+protocol = "trojan"
+ip = "127.0.0.1"
+host = "myhost"
+port = 10801
+tls = true
+insecure = true
+uuid = "mypassword"

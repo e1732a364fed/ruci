@@ -147,6 +147,7 @@ impl AsyncReadAddr for MockStream {
 #[cfg(test)]
 #[allow(unused)]
 mod test {
+    use futures::select;
     use futures_util::join;
 
     use super::*;

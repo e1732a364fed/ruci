@@ -13,7 +13,7 @@ listen_trojan = { listen, { Trojan = { password = "mypassword" } }, }
 
 dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
 
-dial_trojan_chain = { dial,tls,tls, { Trojan = "mypassword"} }
+dial_trojan_chain = { dial,tls,  { Trojan = "mypassword"} }
 
 stdio_socks5_chain = { { Stdio="fake.com:80" } , { Socks5 = {} } }
 

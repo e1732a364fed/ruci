@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use log::debug;
 use std::{fmt, io, sync::Arc};
-use tokio::io::AsyncWriteExt;
 use tokio_rustls::{TlsAcceptor, TlsConnector};
 
 use crate::{

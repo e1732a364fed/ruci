@@ -1,0 +1,12 @@
+[[listen]]
+protocol = "trojan"
+ip = "127.0.0.1"
+host = "myhost"
+port = 10801
+uuid = "mypassword"
+tls = true
+cert = "test.crt"
+key = "test.key"
+
+[[dial]]
+protocol = "direct"

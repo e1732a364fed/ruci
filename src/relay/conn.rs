@@ -74,10 +74,21 @@ pub async fn handle_in_accumulate_result(
         }
     };
     if log_enabled!(log::Level::Info) {
-        info!(
-            "{cid}, handshake in server succeed, target_addr: {}",
-            &target_addr
-        )
+        match listen_result.b.as_ref() {
+            Some(ed) => {
+                info!(
+                    "{cid}, handshake in server succeed, target_addr: {}, ed {}",
+                    &target_addr,
+                    ed.len()
+                )
+            }
+            None => {
+                info!(
+                    "{cid}, handshake in server succeed, target_addr: {}",
+                    &target_addr,
+                )
+            }
+        }
     }
 
     let outc_iterator = out_selector.select(listen_result.d);
@@ -120,7 +131,13 @@ pub async fn handle_in_accumulate_result(
     if let Some(rta) = dial_result.a {
         warn!("{cid}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
     }
-    cp_stream(cid.clone(), listen_result.c, dial_result.c, None, ti);
+    cp_stream(
+        cid.clone(),
+        listen_result.c,
+        dial_result.c,
+        dial_result.b,
+        ti,
+    );
 
     Ok(())
 }

@@ -124,18 +124,18 @@ impl Client {
     ) -> io::Result<MapResult> {
         let connector = TlsConnector::from(self.client_config.clone());
 
-        let mut new_c = connector
+        let new_c = connector
             .connect(ServerName::try_from(self.domain.clone()).unwrap(), conn)
             .await?;
 
-        if let Some(ed) = b {
-            new_c.write_all(&ed).await?;
-            new_c.flush().await?;
-        }
+        // if let Some(ed) = b {
+        //     new_c.write_all(&ed).await?;
+        //     new_c.flush().await?;
+        // }
 
         Ok(MapResult {
             a,
-            b: None,
+            b,
             c: map::Stream::TCP(Box::new(new_c)),
             d: Some(map::AnyData::B(Box::new(ClientTLSConnDescriber {}))),
             e: None,
