@@ -317,7 +317,7 @@ pub enum ProxyBehavior {
 ///
 ///
 #[async_trait]
-pub trait Mapper: crate::Name + DynClone {
+pub trait Mapper: crate::Name + Debug {
     /// Mapper 在代理逻辑上分 in 和 out 两种
     ///
     /// InAdder 与 OutAdder 由 behavior 区分。
@@ -382,8 +382,8 @@ pub trait MapperExt: Mapper {
 }
 
 //令 Mapper 实现 Send + Sync, 否则异步/多线程报错
-pub trait MapperSync: MapperExt + Send + Sync + Debug {}
-impl<T: MapperExt + Send + Sync + Debug> MapperSync for T {}
+pub trait MapperSync: MapperExt + Send + Sync + DynClone {}
+impl<T: MapperExt + Send + Sync + DynClone> MapperSync for T {}
 dyn_clone::clone_trait_object!(MapperSync);
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
