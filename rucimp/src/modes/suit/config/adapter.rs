@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::suit;
+use crate::modes::suit;
 
 use futures::executor::block_on;
 use ruci::map::*;

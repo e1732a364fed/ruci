@@ -1,6 +1,6 @@
 use std::{io, sync::Arc};
 
-use crate::suit::*;
+use super::*;
 use config::LDConfig;
 use futures::Future;
 use log::{debug, info};
@@ -57,13 +57,13 @@ impl SuitEngine {
         FOutadder: Fn(&str, LDConfig) -> Option<MapperBox>,
     {
         //todo: 修改 suit::config::Config 的结构后要改这里
-        let c: crate::suit::config::Config = crate::suit::config::Config::from_toml(s);
+        let c: super::config::Config = super::config::Config::from_toml(s);
         self.load_config(c, load_inmappers_func, load_outmappers_func);
     }
 
     pub fn load_config<FInadder, FOutadder>(
         &mut self,
-        c: crate::suit::config::Config,
+        c: super::config::Config,
         load_inmappers_func: FInadder,
         load_outmappers_func: FOutadder,
     ) where

@@ -1,4 +1,4 @@
-use crate::chain::config::*;
+use super::*;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Result, Value};
 
@@ -21,7 +21,7 @@ pub fn load(lua_text: &str) -> Result<StaticConfig> {
 mod test {
     use std::net::TcpListener;
 
-    use crate::chain::config::*;
+    use super::*;
     use mlua::prelude::*;
     use mlua::{Error, Lua, LuaSerdeExt, Result, UserData, Value};
 

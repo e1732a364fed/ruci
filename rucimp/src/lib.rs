@@ -5,10 +5,9 @@
 以及一些对 ruci 的扩展
 
 */
-pub mod chain;
 pub mod map;
+pub mod modes;
 pub mod net;
-pub mod suit;
 pub mod user;
 
 pub mod example_common;

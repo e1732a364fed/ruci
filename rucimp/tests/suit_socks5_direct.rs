@@ -21,12 +21,12 @@ use ruci::map::socks5;
 use ruci::map::socks5::*;
 use ruci::net::TrafficRecorder;
 use ruci::{map::Mapper, net, user::PlainText};
-use rucimp::suit::config::adapter::{
+use rucimp::modes::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
-use rucimp::suit::config::{Config, LDConfig};
-use rucimp::suit::engine::{listen_ser, SuitEngine};
-use rucimp::suit::*;
+use rucimp::modes::suit::config::{Config, LDConfig};
+use rucimp::modes::suit::engine::{listen_ser, SuitEngine};
+use rucimp::modes::suit::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot::{self, Sender};
@@ -318,7 +318,7 @@ fn get_nl_config(listener_num: u8) -> Config {
 
 async fn get_socks5_mapper(lsuit: &SuitStruct) -> socks5::server::Server {
     socks5::server::Server::new(
-        rucimp::suit::config::adapter::get_socks5_server_option_from_ldconfig(
+        rucimp::modes::suit::config::adapter::get_socks5_server_option_from_ldconfig(
             lsuit.get_config().unwrap().clone(),
         ),
     )
@@ -802,7 +802,7 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
     let c: Config = get_nl_config(3);
     let cc = c.clone();
 
-    let se = rucimp::suit::engine::SuitEngine::new();
+    let se = rucimp::modes::suit::engine::SuitEngine::new();
     let se = Arc::new(Mutex::new(Box::new(se)));
     {
         let mut lo = se.lock();

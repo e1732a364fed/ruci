@@ -1,3 +1,6 @@
+/*! similar to ruci::map::network, but with SockOpt
+ *
+ */
 use async_trait::async_trait;
 use log::{debug, log_enabled};
 use macro_mapper::*;

@@ -5,7 +5,7 @@
 use log::warn;
 use rucimp::{
     example_common::*,
-    suit::{config::adapter::*, engine::SuitEngine},
+    modes::suit::{config::adapter::*, engine::SuitEngine},
 };
 
 #[tokio::main]

@@ -4,8 +4,8 @@
 */
 
 use rucimp::{
-    chain::{config::lua, engine::Engine},
     example_common::*,
+    modes::chain::{config::lua, engine::Engine},
 };
 
 #[tokio::main]
