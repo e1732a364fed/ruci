@@ -121,10 +121,10 @@ async fn test_counter1() -> anyhow::Result<()> {
     }
 
     match r.d {
-        crate::map::VecAnyData::Data(_) => {
+        crate::map::Data::Data(_) => {
             panic!("counter should return a vec instead of pure data")
         }
-        crate::map::VecAnyData::Vec(mut v) => {
+        crate::map::Data::Vec(mut v) => {
             if v.len() != 2 {
                 panic!("counter should return 2 data, got {}", v.len())
             } else {

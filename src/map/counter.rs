@@ -147,7 +147,7 @@ impl Mapper for Counter {
                 let output_data: Vec<AnyData> =
                     vec![AnyData::AU64(cd.ub.clone()), AnyData::AU64(cd.db.clone())];
 
-                let od = VecAnyData::Vec(output_data);
+                let od = Data::Vec(output_data);
 
                 MapResult::builder()
                     .a(params.a)

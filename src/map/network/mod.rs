@@ -123,11 +123,11 @@ pub fn get_addr_from_d(d: &AnyData) -> Option<net::Addr> {
     }
 }
 
-pub fn get_addr_from_vvd(vd: Vec<VecAnyData>) -> Option<net::Addr> {
+pub fn get_addr_from_vvd(vd: Vec<Data>) -> Option<net::Addr> {
     for vd in vd.iter() {
         match vd {
-            VecAnyData::Data(d) => return get_addr_from_d(d),
-            VecAnyData::Vec(vd) => {
+            Data::Data(d) => return get_addr_from_d(d),
+            Data::Vec(vd) => {
                 for x in vd {
                     let oa = get_addr_from_d(x);
                     if oa.is_some() {

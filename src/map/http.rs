@@ -23,7 +23,7 @@ use crate::{
     Name,
 };
 
-use super::{MapperBox, Stream, ToMapper, VecAnyData};
+use super::{Data, MapperBox, Stream, ToMapper};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
@@ -230,7 +230,7 @@ impl Server {
             let b: Box<dyn User> = Box::new(up);
             map::AnyData::User(b)
         });
-        let output_data = VecAnyData::from_opt_any(data);
+        let output_data = Data::from_opt_any(data);
 
         Ok(MapResult {
             a: Some(ta),

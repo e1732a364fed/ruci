@@ -442,7 +442,7 @@ impl Server {
             })
         }
         let d = ou_to_oad(the_user);
-        let d = map::VecAnyData::from_opt_any(d);
+        let d = map::Data::from_opt_any(d);
 
         if cmd == CMD_CONNECT {
             let _ = base.write(&*COMMMON_TCP_HANDSHAKE_REPLY).await?;

@@ -27,7 +27,7 @@ use ipnet::*;
 use iprange::IpRange;
 use regex::RegexSet;
 use ruci::{
-    map::{acc::DMIterBox, VecAnyData},
+    map::{acc::DMIterBox, Data},
     net::{self, *},
     relay::route::{self, *},
     user::*,
@@ -42,12 +42,7 @@ pub struct RuleSetOutSelector {
 
 #[async_trait]
 impl route::OutSelector for RuleSetOutSelector {
-    async fn select(
-        &self,
-        addr: &net::Addr,
-        in_chain_tag: &str,
-        params: &[VecAnyData],
-    ) -> DMIterBox {
+    async fn select(&self, addr: &net::Addr, in_chain_tag: &str, params: &[Data]) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),

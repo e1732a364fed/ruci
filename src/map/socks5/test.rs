@@ -262,7 +262,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
         assert_eq!(r.b, None);
 
         match r.d {
-            map::VecAnyData::Data(d) => match d {
+            map::Data::Data(d) => match d {
                 map::AnyData::User(up) => {
                     assert_eq!(up.identity_str(), "u0");
                     assert_eq!(up.auth_str(), "plaintext:u0\np0");
@@ -270,7 +270,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
                 }
                 _ => panic!("socks5 should returns a User data"),
             },
-            map::VecAnyData::Vec(_) => panic!("got vec instead of pure data"),
+            map::Data::Vec(_) => panic!("got vec instead of pure data"),
         }
 
         // match d {
