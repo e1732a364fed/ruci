@@ -8,7 +8,7 @@ pub mod recorder;
 pub mod ws;
 
 #[cfg(feature = "steganography")]
-pub mod spe1;
+pub mod steganography;
 
 #[cfg(feature = "quic")]
 pub mod quic;
@@ -35,5 +35,3 @@ pub mod tcp_ip_stack_lwip;
 
 #[cfg(any(feature = "lua", feature = "lua54"))]
 pub mod lua;
-
-pub mod ai_generated;

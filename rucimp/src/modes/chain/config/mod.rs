@@ -47,7 +47,7 @@ use crate::{
 use crate::map::tcp_ip_stack_lwip;
 
 #[cfg(feature = "steganography")]
-use crate::map::spe1;
+use crate::map::steganography::spe1;
 
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 use crate::map::tproxy::{self, TcpResolver};

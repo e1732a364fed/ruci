@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use rucimp::map::spe1::QaData;
+use rucimp::map::steganography::spe1::QaData;
 
 fn bench_bytes_to_questions(c: &mut Criterion) {
     let qa = QaData::new_simple();
