@@ -15,11 +15,22 @@ pub const USER_AGENT: &str = "grpc-go/1.41.0";
 pub fn build_grpc_request_from(c: &CommonConfig) -> Request<()> {
     let mut request = Request::builder()
         .method(c.method.as_deref().unwrap_or("POST"))
-        .uri("http://".to_string() + c.host.as_str() + &c.path)
-        .header("Host", c.host.as_str())
         .header(CONTENT_TYPE, GRPC_CONTENT_TYPE)
         .header("user-agent", USER_AGENT)
         .header("Te", "trailers");
+
+    if c.host == "" {
+        request = request.uri(&c.path)
+    } else {
+        request = request.header("Host", c.host.as_str()).uri(
+            Uri::builder()
+                .scheme(c.scheme.as_deref().unwrap_or("https"))
+                .authority(c.host.as_str())
+                .path_and_query(&c.path)
+                .build()
+                .expect("uri ok"),
+        )
+    }
 
     if let Some(h) = &c.headers {
         for (k, v) in h.iter() {
@@ -64,7 +75,7 @@ fn put_uvarint(buf: &mut [u8], mut x: usize) -> usize {
 
 use futures::ready;
 use h2::{RecvStream, SendStream};
-use http::Request;
+use http::{Request, Uri};
 use ruci::{net::http::CommonConfig, utils::io_error};
 use thiserror::Error;
 use tokio::io::{AsyncRead, AsyncWrite};

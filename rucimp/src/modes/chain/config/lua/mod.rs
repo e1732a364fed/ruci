@@ -221,9 +221,12 @@ fn get_infinite_g_map_from(text: &str, behavior: ProxyBehavior) -> anyhow::Resul
     let mut g_map: GMap = HashMap::new();
 
     let lua = Lua::new();
-    lua.load(text).eval()?;
+    lua.load(text).eval().context("eval lua failed")?;
 
-    let ct: LuaTable = lua.globals().get(INFINITE_CONFIG_FIELD)?;
+    let ct: LuaTable = lua
+        .globals()
+        .get(INFINITE_CONFIG_FIELD)
+        .context("get infinite failed")?;
 
     let t_key = match behavior {
         ProxyBehavior::UNSPECIFIED => todo!(),

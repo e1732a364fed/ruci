@@ -208,7 +208,13 @@ impl AsyncRead for PrintWrapper {
         match &r {
             Poll::Ready(r) => match r {
                 Ok(_) => {
-                    println!("{}", String::from_utf8_lossy(buf.filled()))
+                    let slice = buf.filled();
+                    let sl = slice.len();
+                    debug!(
+                        "read: {} {}",
+                        sl,
+                        String::from_utf8_lossy(&slice[..min(sl, 64)])
+                    )
                 }
                 Err(_) => {}
             },
@@ -230,7 +236,11 @@ impl AsyncWrite for PrintWrapper {
         match &r {
             Poll::Ready(r) => match r {
                 Ok(u) => {
-                    println!("{}", String::from_utf8_lossy(&buf[..*u]))
+                    debug!(
+                        "write: {} {}",
+                        *u,
+                        String::from_utf8_lossy(&buf[..min(*u, 64)])
+                    )
                 }
                 Err(_) => {}
             },

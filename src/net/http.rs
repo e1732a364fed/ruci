@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CommonConfig {
     pub method: Option<String>,
+    pub scheme: Option<String>,
     pub host: String,
     pub path: String,
     pub headers: Option<BTreeMap<String, String>>,
