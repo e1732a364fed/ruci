@@ -62,7 +62,7 @@ See [ruci-cmd](crates/ruci-cmd/README.md)
 
 rucimp provides some example binaries, like suit, chain etc.
 
-See [exmaples](rucimp/examples/README.md)
+See [exmaples](rucimp/examples/readme.md)
 
 
 # Dev
@@ -174,7 +174,7 @@ o2node-.->collector
 ### ruci
 
 - [x] basic structure (based on "Map"s)
-- [x] tcp, udp, unix domain socket, ip (tun, with auto_route)([tun example](rucimp/examples/README.md#tun))
+- [x] tcp, udp, unix domain socket, ip (tun, with auto_route)([tun example](rucimp/examples/readme.md#tun))
 - [x] 流量记录 (两种实现, 分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
 - [x] Direct, Blackhole, Listener, BindDialer, Stdio, Fileio
 - [x] fixed_target_addr

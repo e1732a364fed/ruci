@@ -701,6 +701,7 @@ local config_18_recorder = {
                 label = "socks5",
                 serialize_format = "cbor", --"json"
                 --full_record = true
+                no_truncate = true,
             }
         }, {
             Socks5Http = {}
@@ -713,7 +714,8 @@ local config_18_recorder = {
         chain = { direct, {
             Recorder = {
                 label = "direct",
-                serialize_format = "cbor"
+                serialize_format = "cbor",
+                no_truncate = true,
             }
         } }
     } }
@@ -725,7 +727,8 @@ local function get_recorder(label)
         Recorder = {
             label = label,
             serialize_format = "cbor",
-            session_truncate = 2000,
+            -- session_truncate = 2000, -- 就算设了 full_record = true 也是会默认有 truncate的，除非设了 no_truncate = true
+            no_truncate = true,
         }
     }
 end
@@ -740,7 +743,7 @@ local function random_host()
 end
 
 local config_19_recorder_trojans = {
-    tag_route = { { "listen_socks5", "dial_trojan" }, { "listen_trojan", "dial_direct" } },
+    tag_route = { { "listen_socks5", "dial_trojans" }, { "listen_trojans", "dial_direct" } },
     inbounds = {
         {
             tag = "listen_socks5",
@@ -753,7 +756,7 @@ local config_19_recorder_trojans = {
             },
         },
         {
-            tag = "listen_trojan",
+            tag = "listen_trojans",
             chain = { {
                 Listener = { listen_addr = "0.0.0.0:10801" }
             },
@@ -779,7 +782,7 @@ local config_19_recorder_trojans = {
             chain = { direct, get_recorder("direct"), }
         },
         {
-            tag = "dial_trojan",
+            tag = "dial_trojans",
             chain = {
                 {
                     BindDialer = {
@@ -806,7 +809,7 @@ local config_19_recorder_trojans = {
 }
 
 
-Config = config_19_recorder_trojans
+Config = config_18_recorder
 
 --[[
 

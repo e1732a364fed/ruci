@@ -15,15 +15,18 @@ local function random_host()
     return hosts[math.random(1, #hosts)]
 end
 
-local tlsout_config = {
-    NativeTLS = {
-        --TLS = {
-        host = random_host(), --"www.1234.com",
-        insecure = true,
-        alpn = { "h2" }
+local function gen_new_tlsout_config()
+    return {
+        NativeTLS = {
+            --TLS = {
+            host = random_host(), --"www.1234.com",
+            insecure = true,
+            alpn = { "h2" }
 
+        }
     }
-}
+end
+
 local trojan_out_config = {
     Trojan = "mypassword"
 }
@@ -92,7 +95,7 @@ Infinite = {
                 return 1, Recorder:clone()
             elseif state_index == 1 then
                 if Tlsout == nil then
-                    Tlsout = Create_out_map(tlsout_config)
+                    Tlsout = Create_out_map(gen_new_tlsout_config())
                 end
 
                 return 2, Tlsout:clone()

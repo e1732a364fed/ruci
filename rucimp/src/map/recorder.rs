@@ -80,6 +80,7 @@ impl From<&mut RecordData> for SimplifiedRecordData {
     fn from(d: &mut RecordData) -> Self {
         let piece_truncate = d.piece_truncate.unwrap_or(1500);
         let session_truncate = d.session_truncate.unwrap_or(3000);
+        let truncate = !d.no_truncate.unwrap_or(false);
 
         let convert = |d: Vec<DataPiece>, i: i8| -> Vec<(i8, u128, Vec<u8>)> {
             return d
@@ -89,7 +90,9 @@ impl From<&mut RecordData> for SimplifiedRecordData {
                         PayloadData::Pure(d) => d,
                         PayloadData::Addr(add) => add.1,
                     };
-                    data.truncate(piece_truncate);
+                    if truncate {
+                        data.truncate(piece_truncate);
+                    }
                     (i, dp.nanos_since_start, data)
                 })
                 .collect();
@@ -117,7 +120,10 @@ impl From<&mut RecordData> for SimplifiedRecordData {
                 break;
             }
         }
-        a.truncate(last);
+
+        if truncate {
+            a.truncate(last);
+        }
 
         let data = a.into_iter().map(|x| (x.0, x.2)).collect_vec();
 
@@ -146,6 +152,8 @@ pub struct RecordData {
     /// piece_truncate 和 session_truncate
     #[serde(skip)]
     pub full_record: Option<bool>,
+
+    pub no_truncate: Option<bool>,
 
     pub piece_truncate: Option<usize>,
 
@@ -463,6 +471,8 @@ pub struct Config {
     pub serialize_format: Option<String>,
     pub full_record: Option<bool>,
 
+    pub no_truncate: Option<bool>,
+
     pub piece_truncate: Option<usize>,
     pub session_truncate: Option<usize>,
 }
@@ -503,6 +513,7 @@ impl Map for RecorderMap {
                 full_record: self.config.full_record,
                 piece_truncate: self.config.piece_truncate,
                 session_truncate: self.config.session_truncate,
+                no_truncate: self.config.no_truncate,
 
                 serialize_format: self.config.serialize_format.clone(),
                 label: self.config.label.clone(),
