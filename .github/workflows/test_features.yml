@@ -17,7 +17,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-
+  CARGO_INCREMENTAL: 0
+  
 jobs:
   test_features:
     strategy:
@@ -42,4 +43,4 @@ jobs:
       run: cd rucimp && cargo hack check --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
 
     - name: Test Ruci-Cmd Every feature tag
-      run: cd crates/ruci-cmd && cargo hack check --clean-per-run --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
+      run: cd crates/ruci-cmd && cargo hack check --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features quic,quinn --mutually-exclusive-features use-native-tls,native-tls-vendored
