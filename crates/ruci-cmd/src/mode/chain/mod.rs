@@ -74,7 +74,7 @@ async fn setup_trace_flux(se: &mut Engine, s: &mut api::server::Server) {
 
         se.conn_info_updater = Some((ub_tx, db_tx));
 
-        let imcs = s.flux_trace.is_moniting.clone();
+        let imcs = s.flux_trace.is_monitoring.clone();
         let imcs2 = imcs.clone();
 
         let dc = s.flux_trace.d_cache.clone();

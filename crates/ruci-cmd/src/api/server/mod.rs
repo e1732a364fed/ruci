@@ -48,7 +48,7 @@ fn new_cache() -> FluxCache {
 
 #[cfg(feature = "trace")]
 pub struct TracePart {
-    pub is_moniting: Arc<AtomicBool>,
+    pub is_monitoring: Arc<AtomicBool>,
 
     /// upload info for each conn
     pub u_cache: FluxCache,
@@ -65,7 +65,7 @@ impl Server {
 
             #[cfg(feature = "trace")]
             flux_trace: TracePart {
-                is_moniting: Arc::new(AtomicBool::new(false)),
+                is_monitoring: Arc::new(AtomicBool::new(false)),
                 u_cache: new_cache(),
                 d_cache: new_cache(),
             },
@@ -78,17 +78,17 @@ impl Server {
 use axum::extract::{Path, State};
 use axum::{routing::get, Router};
 
-async fn is_moniting_conn_state(State(is_moniting_conn_state): State<Arc<AtomicBool>>) -> String {
-    format!("{}", is_moniting_conn_state.load(Ordering::Relaxed))
+async fn is_monitoring_flux(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> String {
+    format!("{}", is_monitoring_flux.load(Ordering::Relaxed))
 }
 
-async fn enable_moniting(State(is_moniting_conn_state): State<Arc<AtomicBool>>) -> &'static str {
-    is_moniting_conn_state.fetch_or(true, Ordering::Relaxed);
+async fn enable_monitor(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> &'static str {
+    is_monitoring_flux.fetch_or(true, Ordering::Relaxed);
     "ok"
 }
 
-async fn disable_moniting(State(is_moniting_conn_state): State<Arc<AtomicBool>>) -> &'static str {
-    is_moniting_conn_state.fetch_and(false, Ordering::Relaxed);
+async fn disable_monitor(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> &'static str {
+    is_monitoring_flux.fetch_and(false, Ordering::Relaxed);
     "ok"
 }
 
@@ -122,33 +122,33 @@ async fn get_conn_info(Path(cid): Path<String>, State(allconn): State<NewConnInf
     s
 }
 
-async fn get_d_for(Path(cid): Path<String>, State(d_cache): State<FluxCache>) -> String {
+async fn get_flux_for(Path(cid): Path<String>, State(cache): State<FluxCache>) -> String {
     let cid = CID::from_str(&cid);
     let cid = match cid {
         Some(c) => c,
         None => return String::from("None"),
     };
 
-    let x = d_cache.get(&cid);
+    let x = cache.get(&cid);
 
     let x = match x {
         Some(x) => x,
         None => return String::from("None"),
     };
 
-    fn instant_data_tostr(v: Vec<(tokio::time::Instant, u64)>) -> String {
-        let mut s = String::new();
-        for x in v {
-            s.push_str("{ -");
-            s.push_str(&x.0.elapsed().as_millis().to_string());
-            s.push_str(" ms , ");
-            s.push_str(&x.1.to_string());
-            s.push_str(" },\n");
-        }
-        s
-    }
-
     instant_data_tostr(x)
+}
+
+fn instant_data_tostr(v: Vec<(tokio::time::Instant, u64)>) -> String {
+    let mut s = String::new();
+    for x in v {
+        s.push_str("{ -");
+        s.push_str(&x.0.elapsed().as_millis().to_string());
+        s.push_str(" ms , ");
+        s.push_str(&x.1.to_string());
+        s.push_str(" },\n");
+    }
+    s
 }
 
 /// non-blocking
@@ -159,37 +159,30 @@ pub async fn serve(s: &Server) {
     let mut app = Router::new();
 
     app = app
+        .route("/c", get(get_conn_infos).with_state(s.newconn_info.clone()))
         .route(
-            "/conns",
-            get(get_conn_infos).with_state(s.newconn_info.clone()),
-        )
-        .route(
-            "/conn/:cid",
+            "/c/:cid",
             get(get_conn_info).with_state(s.newconn_info.clone()),
         );
 
     #[cfg(feature = "trace")]
     {
-        let imcs = s.flux_trace.is_moniting.clone();
+        let ism = s.flux_trace.is_monitoring.clone();
 
-        app = app.route(
-            "/moniting",
-            get(is_moniting_conn_state).with_state(imcs.clone()),
-        );
+        app = app.route("/m", get(is_monitoring_flux).with_state(ism.clone()));
 
-        app = app.route(
-            "/enable_moniting",
-            get(enable_moniting).with_state(imcs.clone()),
-        );
+        app = app.route("/m_on", get(enable_monitor).with_state(ism.clone()));
 
-        app = app.route(
-            "/disable_moniting",
-            get(disable_moniting).with_state(imcs.clone()),
-        );
+        app = app.route("/m_off", get(disable_monitor).with_state(ism.clone()));
 
         app = app.route(
             "/d/:cid",
-            get(get_d_for).with_state(s.flux_trace.d_cache.clone()),
+            get(get_flux_for).with_state(s.flux_trace.d_cache.clone()),
+        );
+
+        app = app.route(
+            "/u/:cid",
+            get(get_flux_for).with_state(s.flux_trace.u_cache.clone()),
         );
     }
 
