@@ -1,20 +1,21 @@
 use std::{
-    cmp::max,
+    cmp::{max, min},
     io,
     pin::Pin,
     task::{ready, Context, Poll},
 };
 
 use bytes::{Buf, BufMut, BytesMut};
-use tokio::io::{AsyncRead, AsyncWrite, ReadBuf, ReadHalf, WriteHalf};
+use tokio::io::{AsyncWrite, ReadHalf, WriteHalf};
 use tracing::debug;
 
 use crate::{
+    map::helpers::BufContentLenProtocolReader,
     net::{
         self,
         addr_conn::{AsyncReadAddr, AsyncWriteAddr, MAX_DATAGRAM_SIZE},
         helpers::{self, MAX_LEN_SOCKS5_BYTES},
-        Addr, Network,
+        Addr,
     },
     utils::io_error,
 };
@@ -23,21 +24,37 @@ use super::*;
 
 //Reader 包装 ReadHalf<net::Conn>, 使其可以按trojan 格式读出 数据和Addr
 pub struct Reader {
-    pub base: Pin<Box<ReadHalf<net::Conn>>>,
-    buf: BytesMut,
-    state: ReadState,
-    left_data_len: usize, //一个data包的 需要继续从base 读 的 剩余未读长读,
-    old_ad: Addr,
+    reader: BufContentLenProtocolReader,
 }
 
 impl Reader {
     pub fn new(r: ReadHalf<net::Conn>) -> Self {
         Self {
-            base: Box::pin(r),
-            buf: BytesMut::zeroed(MAX_DATAGRAM_SIZE),
-            state: ReadState::Base,
-            left_data_len: 0,
-            old_ad: Addr::default(),
+            reader: BufContentLenProtocolReader::new(
+                MAX_DATAGRAM_SIZE,
+                Box::pin(r),
+                Box::new(|data: &[u8]| {
+                    // 解析头部,返回(content_len, body_start_index)
+                    let mut buf = BytesMut::from(data);
+
+                    if buf.len() < 4 {
+                        // 2字节长度 + 2字节CRLF
+                        return Err(io::Error::other("insufficient header length"));
+                    }
+
+                    if let Err(e) = helpers::socks5_bytes_to_addr(&mut buf) {
+                        return Err(io::Error::other(e));
+                    }
+
+                    let data_len = buf.get_u16() as usize;
+                    let crlf = buf.get_u16();
+                    if crlf != CRLF {
+                        return Err(io::Error::other("invalid CRLF"));
+                    }
+
+                    Ok((data_len, data.len() - buf.len()))
+                }),
+            ),
         }
     }
 }
@@ -48,193 +65,36 @@ impl crate::Name for Reader {
     }
 }
 
-enum ReadState {
-    Base,
-    Buf,
-    LeftBuf,
-}
-impl Reader {
-    fn poll_r(&mut self, cx: &mut Context<'_>) -> (Poll<io::Result<()>>, usize) {
-        let mut tmp_rbuf = {
-            let buffer = &mut self.buf;
-            //buffer.clear();
-
-            const TARGET_LEN: usize = MAX_DATAGRAM_SIZE / 2;
-            // 每次 使用 buffer 都会 advance 导致 capcity 变小一部分
-            // 如果每次都 resize 到最大, 则失去了使用同一个 缓存的意义
-            // 故使用 一半最大. 这样 buffer 消耗到 一半之前是不会有 新 alloc 的
-
-            if buffer.capacity() > TARGET_LEN {
-                unsafe {
-                    buffer.set_len(TARGET_LEN);
-                }
-            } else {
-                buffer.resize(TARGET_LEN, 0)
-            }
-
-            ReadBuf::new(buffer.as_mut())
-        };
-        (
-            self.base.as_mut().poll_read(cx, &mut tmp_rbuf),
-            tmp_rbuf.filled().len(),
-        )
-    }
-}
-
 impl AsyncReadAddr for Reader {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         r_buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        //妥善处理 粘包, 短读 等情况
+        match ready!(self.reader.read(cx)) {
+            Ok(Some(result)) => {
+                let len = min(result.body_to - result.body_from, r_buf.len());
+                r_buf[..len].copy_from_slice(&result.buf[result.body_from..result.body_from + len]);
 
-        loop {
-            match self.state {
-                ReadState::Base => {
-                    //debug!("trojan read base");
+                // 解析地址
+                let mut a_buf = BytesMut::from(&result.buf[..result.body_from]);
+                let addr = helpers::socks5_bytes_to_addr(&mut a_buf);
 
-                    let re = self.poll_r(cx);
-
-                    //debug!("trojan reader read called");
-
-                    match ready!(re.0) {
-                        Ok(_) => {
-                            let data_len = re.1;
-                            //debug!("trojan read base got {}", data_len);
-
-                            if data_len == 0 {
-                                return Poll::Ready(Err(io::Error::new(
-                                    io::ErrorKind::BrokenPipe,
-                                    "trojan read base got 0",
-                                )));
-                            } else {
-                                self.buf.truncate(data_len);
-
-                                if self.left_data_len > 0 {
-                                    self.state = ReadState::LeftBuf;
-                                } else {
-                                    self.state = ReadState::Buf;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            return Poll::Ready(Err(e));
-                        }
+                match addr {
+                    Ok(mut addr) => {
+                        addr.network = net::Network::UDP;
+                        self.reader.put_back(result.buf);
+                        Poll::Ready(Ok((len, addr)))
                     }
-                }
-                ReadState::Buf => {
-                    let buffer = &mut self.buf;
-                    //debug!("trojan read buf {}", buffer.len());
-
-                    let addr_r = helpers::socks5_bytes_to_addr(buffer);
-                    match addr_r {
-                        Ok(mut ad) => {
-                            if buffer.len() < 2 {
-                                buffer.clear();
-                                self.state = ReadState::Base;
-                                return Poll::Ready(Err(io::Error::other(
-                                    "buf len short of data length part",
-                                )));
-                            }
-
-                            let data_len = buffer.get_u16() as usize;
-                            if buffer.len() - 2 < data_len {
-                                let msg = format!(
-                                    "buf len short of data , marked length+2:{}, real length: {}",
-                                    data_len + 2,
-                                    buffer.len()
-                                );
-
-                                buffer.clear();
-                                self.state = ReadState::Base;
-                                return Poll::Ready(Err(io::Error::other(msg)));
-                            }
-                            let crlf = buffer.get_u16();
-                            if crlf != CRLF {
-                                buffer.clear();
-                                self.state = ReadState::Base;
-                                return Poll::Ready(Err(io::Error::other(format!(
-                                    "no crlf! {}",
-                                    crlf
-                                ))));
-                            }
-
-                            let buf_len = buffer.len();
-
-                            let rbuf_len = r_buf.len();
-
-                            let actual_read_len =
-                                vec![data_len, rbuf_len, buf_len].into_iter().min().unwrap();
-
-                            buffer.copy_to_slice(&mut r_buf[..actual_read_len]);
-                            ad.network = Network::UDP;
-
-                            // 123 132 213 231 312 321
-                            //1: buf_len, 2: rbuf_len, 3: data_len
-
-                            // 1. buf_len < rbuf_len < data_len : data > buffer, buffer < rbuf, need read base next
-                            // 2. buf_len < data_len < rbuf_len : data > buffer, buffer < rbuf, need read base next
-                            // 3. rbuf_len < buf_len < data_len : buf > rbuf && data > rbuf, need read buf next for left data
-                            // 4. rbuf_len < data_len < buf_len : buf > rbuf && data > rbuf, need read buf next for left data
-                            // 5. data_len < buf_len < rbuf_len : data is small; rbuf read ok; need read buf next
-                            // 6. data_len < rbuf_len < buf_len : data is small; rbuf read ok; need read buf next
-
-                            if (buf_len < rbuf_len) && (buf_len < data_len) {
-                                self.left_data_len = data_len - rbuf_len;
-                                self.state = ReadState::Base;
-                            } else if (rbuf_len < buf_len) && (rbuf_len < data_len) {
-                                self.left_data_len = data_len - rbuf_len;
-                                self.old_ad = ad.clone();
-                                self.state = ReadState::LeftBuf;
-                            } else if (data_len < buf_len) && (data_len < rbuf_len) {
-                                self.state = ReadState::Buf;
-                            } else {
-                                self.state = ReadState::Base;
-                                self.left_data_len = 0;
-                            }
-
-                            return Poll::Ready(Ok((actual_read_len, ad)));
-                        }
-                        Err(e) => {
-                            buffer.clear();
-                            self.state = ReadState::Base;
-
-                            return Poll::Ready(Err(io::Error::other(e)));
-                        }
-                    }
-                }
-                ReadState::LeftBuf => {
-                    debug!("trojan read left buf {}", self.left_data_len);
-                    let ldl = self.left_data_len;
-
-                    let buffer = &mut self.buf;
-                    let buf_len = buffer.len();
-
-                    let rbuf_len = r_buf.len();
-
-                    let to_read_len = vec![ldl, rbuf_len, buf_len].into_iter().min().unwrap();
-
-                    buffer.copy_to_slice(&mut r_buf[..to_read_len]);
-
-                    if (buf_len < rbuf_len) && (buf_len < ldl) {
-                        self.state = ReadState::Base;
-                    } else if (rbuf_len < buf_len) && (rbuf_len < ldl) {
-                        self.left_data_len = ldl - rbuf_len;
-                        self.state = ReadState::LeftBuf;
-                    } else if (ldl < buf_len) && (ldl < rbuf_len) {
-                        self.state = ReadState::Buf;
-                    } else {
-                        self.state = ReadState::Base;
-                        self.left_data_len = 0;
-                    }
-
-                    return Poll::Ready(Ok((to_read_len, self.old_ad.clone())));
+                    Err(e) => Poll::Ready(Err(io::Error::other(e))),
                 }
             }
+            Ok(None) => Poll::Ready(Err(io::Error::new(io::ErrorKind::UnexpectedEof, "EOF"))),
+            Err(e) => Poll::Ready(Err(e)),
         }
     }
 }
+
 //Writer 包装 WriteHalf<net::Conn>, 使其可以按trojan 格式写入 数据和Addr
 pub struct Writer {
     pub base: Pin<Box<WriteHalf<net::Conn>>>,

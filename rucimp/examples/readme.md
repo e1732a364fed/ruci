@@ -21,7 +21,7 @@ run_h2_trojans_recorder_pair.sh 同时运行h2 的 local 和 remote端用于测�
 RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp use-native-tls" --example chain
 RUST_LOG=none,ruci=debug cargo run --features "lua steganography" --example chain
 
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain -- remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp use-native-tls" --example chain -- remote.lua
 RUST_LOG=none,ruci=debug cargo run --features "lua steganography" --example chain -- remote.lua
 
 RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain_infinite -- local_mux_h2.lua

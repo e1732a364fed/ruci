@@ -25,7 +25,9 @@ use std::cmp::min;
 ///max len is 2 + 2 + 255 (domain)
 pub const MAX_LEN_SOCKS5_BYTES: usize = 2 + 2 + 255;
 
-/// Read the buf, advance it and parse out the Addr
+/// Read the buf, advance it and parse out the Addr.
+///
+/// The network of the returned Addr is always TCP.
 ///
 /// todo: add unit test
 pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> anyhow::Result<Addr> {
@@ -437,8 +439,8 @@ pub struct BufContentLenProtocolReader {
 
 pub struct BufReadResult {
     pub buf: BytesMut,
-    pub from: usize,
-    pub to: usize,
+    pub body_from: usize,
+    pub body_to: usize,
 }
 
 impl BufContentLenProtocolReader {
@@ -606,8 +608,8 @@ impl BufContentLenProtocolReader {
 
                                 Poll::Ready(Ok(Some(BufReadResult {
                                     buf: rc,
-                                    from: body_start_index,
-                                    to: body_start_index + content_len,
+                                    body_from: body_start_index,
+                                    body_to: body_start_index + content_len,
                                 })))
                             }
                         }
@@ -645,16 +647,16 @@ impl BufContentLenProtocolReader {
 
                 Poll::Ready(Ok(Some(BufReadResult {
                     buf: rc,
-                    from: from + body_start_index,
-                    to: from + body_start_index + content_len,
+                    body_from: from + body_start_index,
+                    body_to: from + body_start_index + content_len,
                 })))
             }
             std::cmp::Ordering::Equal => {
                 self.read_state = BufferReadState::ReadyForNew;
                 Poll::Ready(Ok(Some(BufReadResult {
                     buf: rc,
-                    from: from + body_start_index,
-                    to: from + body_start_index + content_len,
+                    body_from: from + body_start_index,
+                    body_to: from + body_start_index + content_len,
                 })))
             }
             std::cmp::Ordering::Greater => {

@@ -140,7 +140,7 @@ local lua_example2 = { tcp, tls, trojan_in, { Lua = { file_name = "lua_protocol_
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
-        -- { chain = trojans_chain, tag = "listen1" },
+        { chain = trojans_chain, tag = "listen1" },
         -- { chain = ws_trojans_chain,  tag = "listen1"  }
         -- { chain = in_h2_trojans_chain, tag = "listen1" }
         -- { chain = in_h2_socks5s_chain, tag = "listen1" }
@@ -160,7 +160,7 @@ Config = {
 
         }
         -- ]]
-        { chain = { tcp, spe1_in, trojan_in }, tag = "listen1" }
+        -- { chain = { tcp, spe1_in, trojan_in }, tag = "listen1" }
         -- { chain = lua_example2, tag = "listen1" },
     },
 

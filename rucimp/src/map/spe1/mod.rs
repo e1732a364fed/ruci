@@ -573,7 +573,11 @@ impl AsyncRead for Conn {
         rbuf: &mut ReadBuf<'_>,
     ) -> Poll<Result<()>> {
         match ready!(self.reader.read(cx)) {
-            Ok(Some(BufReadResult { buf, from, to })) => {
+            Ok(Some(BufReadResult {
+                buf,
+                body_from: from,
+                body_to: to,
+            })) => {
                 debug_assert!(from < to);
 
                 let r = self.real_read(from, to, rbuf, &buf);

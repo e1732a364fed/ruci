@@ -149,7 +149,7 @@ local websocket_out = {
     }
 }
 
-local dial_trojan_chain = { dial, tlsout, trojan_out }
+local dial_trojans_chain = { dial, tlsout, trojan_out }
 local dial_ws_trojan_chain = { dial, tlsout, websocket_out, trojan_out }
 
 local h2_single_out = {
@@ -294,7 +294,7 @@ local config_3_tproxy2 = {
     inbounds = tproxy_listen_inbounds,
     outbounds = { {
         tag = "out",
-        chain = dial_trojan_chain
+        chain = dial_trojans_chain
     } },
 
     tag_route = { { "listen1", "out" }, { "listen_udp1", "out" } },
@@ -313,8 +313,11 @@ local config_3_tproxy2 = {
 
 
 local config_4_trojan = {
-    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
-    outbounds = { { tag = "dial1", chain = dial_trojan_chain } }
+    inbounds = { { chain = listen_socks5http, tag = "listen1" }, {
+        chain = { listen_fixed_target },
+        tag = "listen2"
+    }, },
+    outbounds = { { tag = "dial1", chain = dial_trojans_chain } }
 
     --[[
 演示 inbound 是 socks5http, outbound 是 trojan+tls 的情况
@@ -399,7 +402,7 @@ local config_10_stdin_trojan = {
         { chain = in_stdio_adder_chain, tag = "listen1" },
     },
 
-    outbounds = { { tag = "dial1", chain = dial_trojan_chain } }
+    outbounds = { { tag = "dial1", chain = dial_trojans_chain } }
 }
 
 
@@ -438,7 +441,7 @@ local config_12_fileio_trojan = {
         },
     },
 
-    outbounds = { { tag = "dial1", chain = dial_trojan_chain } }
+    outbounds = { { tag = "dial1", chain = dial_trojans_chain } }
 }
 
 local config_13_route = {
@@ -477,7 +480,7 @@ local config_13_route = {
         chain = { direct }
     }, {
         tag = "d2",
-        chain = dial_trojan_chain
+        chain = dial_trojans_chain
     }, {
         tag = "fallback_d",
         chain = { {
@@ -883,7 +886,7 @@ local config_23_tcp_ip_stack_lwip = {
 --]]
 
 
-Config = config_17_tcp_ip_stack
+Config = config_4_trojan
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)
