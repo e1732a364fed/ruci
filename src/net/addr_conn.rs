@@ -1,4 +1,4 @@
-use crate::Name;
+use crate::{utils::io_error, Name};
 
 use super::*;
 
@@ -322,6 +322,7 @@ pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 
 // todo improve the codes below
 
+/*
 async fn read_once_notimeout<R1: AddrReadTrait, W1: AddrWriteTrait>(
     name: &str,
     r1: &mut R1,
@@ -420,6 +421,96 @@ async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
     } //select
 }
 
+ */
+
+enum ReadOnceState {
+    ToRead,
+    ToWrite,
+}
+
+pub struct ReadOnceFuture<'a, R1: AddrReadTrait, W1: AddrWriteTrait> {
+    r1: &'a mut R1,
+    w1: &'a mut W1,
+    buf: &'a mut [u8],
+
+    m: usize,
+    ad: Addr,
+    state: ReadOnceState,
+}
+
+impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> ReadOnceFuture<'a, R1, W1> {
+    fn new(r1: &'a mut R1, w1: &'a mut W1, buf: &'a mut [u8]) -> Self {
+        Self {
+            r1,
+            w1,
+            buf,
+            m: 0,
+            ad: Addr::default(),
+            state: ReadOnceState::ToRead,
+        }
+    }
+    fn poll_r(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<usize>> {
+        loop {
+            match self.state {
+                ReadOnceState::ToRead => {
+                    let r = Pin::new(&mut *self.r1).poll_read_addr(cx, self.buf);
+                    match r {
+                        Poll::Pending => return Poll::Pending,
+
+                        Poll::Ready(r) => match r {
+                            Ok((m, ad)) => {
+                                if m > 0 {
+                                    self.m = m;
+                                    self.ad = ad;
+
+                                    self.state = ReadOnceState::ToWrite;
+                                    continue;
+                                } else {
+                                    return Poll::Ready(Err(io_error(format!("read <=0 {m}"))));
+                                }
+                            }
+                            Err(e) => {
+                                return Poll::Ready(Err(io_error(format!(
+                                    "read_once_notimeout GOT ERROR {e}"
+                                ))))
+                            }
+                        },
+                    }
+                }
+                ReadOnceState::ToWrite => {
+                    let m = self.m;
+                    let r = Pin::new(&mut *self.w1).poll_write_addr(cx, &self.buf[..m], &self.ad);
+                    match r {
+                        Poll::Pending => return Poll::Pending,
+
+                        Poll::Ready(r) => match r {
+                            Ok(n) => {
+                                if n < m {
+                                    debug!("read_once n<m {n} {m}")
+                                }
+                                return Poll::Ready(Ok(n));
+                            }
+                            Err(e) => {
+                                return Poll::Ready(Err(io_error(format!(
+                                    "ReadOnceFuture write GOT ERROR {e}"
+                                ))))
+                            }
+                        },
+                    }
+                }
+            } // match state
+        } // loop
+    }
+}
+
+impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> futures::Future for ReadOnceFuture<'a, R1, W1> {
+    type Output = io::Result<usize>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.poll_r(cx)
+    }
+}
+
 /// 循环读写直到read错误发生. 不会认为 read错误为错误. 每一次read都会以
 /// CP_UDP_TIMEOUT 为 最长等待时间, 一旦读不到, 就会退出函数
 ///
@@ -437,8 +528,10 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     let mut buf = Box::new([0u8; 1400]);
 
     loop {
+        let rf = ReadOnceFuture::new(&mut r1, &mut w1, buf.as_mut());
+
         tokio::select! {
-            r = read_once(&name,&mut r1, &mut w1, no_timeout,buf.as_mut()) =>{
+            r = rf =>{
                 match r {
                     Ok(n) => whole_write+=n,
                     Err(e) => {
@@ -446,6 +539,15 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
                         break},
                 }
             }
+
+            // r = read_once(&name,&mut r1, &mut w1, no_timeout,buf.as_mut()) =>{
+            //     match r {
+            //         Ok(n) => whole_write+=n,
+            //         Err(e) => {
+            //             debug!("cp_addr got e {e}");
+            //             break},
+            //     }
+            // }
             _ = shutdown_rx.recv() =>{
                 break;
             }

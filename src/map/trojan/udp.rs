@@ -12,7 +12,7 @@ use tracing::debug;
 use crate::{
     net::{
         self,
-        addr_conn::{AsyncReadAddr, AsyncWriteAddr},
+        addr_conn::{AsyncReadAddr, AsyncWriteAddr, MAX_DATAGRAM_SIZE},
         helpers::{self, MAX_LEN_SOCKS5_BYTES},
         Addr, Network,
     },
@@ -24,6 +24,16 @@ use super::*;
 //Reader 包装 ReadHalf<net::Conn>, 使其可以按trojan 格式读出 数据和Addr
 pub struct Reader {
     pub base: Pin<Box<ReadHalf<net::Conn>>>,
+    buf: Option<BytesMut>,
+}
+
+impl Reader {
+    pub fn new(r: ReadHalf<net::Conn>) -> Self {
+        Self {
+            base: Box::pin(r),
+            buf: Some(BytesMut::zeroed(MAX_DATAGRAM_SIZE)),
+        }
+    }
 }
 
 impl crate::Name for Reader {
@@ -38,7 +48,10 @@ impl AsyncReadAddr for Reader {
         cx: &mut Context<'_>,
         r_buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        let mut inner = BytesMut::zeroed(r_buf.len() + helpers::MAX_LEN_SOCKS5_BYTES);
+        //let mut inner = BytesMut::zeroed(r_buf.len() + helpers::MAX_LEN_SOCKS5_BYTES);
+        let mut inner = self.buf.take().unwrap();
+        inner.clear();
+        inner.resize(r_buf.len() + helpers::MAX_LEN_SOCKS5_BYTES, 0);
         let mut buf2 = ReadBuf::new(&mut inner[..]);
 
         //debug!("trojan reader read called");
@@ -48,7 +61,11 @@ impl AsyncReadAddr for Reader {
         //debug!("trojan reader read got {:?}", r);
 
         match r {
-            Poll::Pending => Poll::Pending,
+            Poll::Pending => {
+                self.buf = Some(inner);
+
+                Poll::Pending
+            }
 
             Poll::Ready(re) => {
                 match re {
@@ -61,6 +78,7 @@ impl AsyncReadAddr for Reader {
                         match addr_r {
                             Ok(mut ad) => {
                                 if the_buf2.len() < 2 {
+                                    self.buf = Some(the_buf2);
                                     return Poll::Ready(Err(io::Error::other(
                                         "buf len short of data length part",
                                     )));
@@ -68,10 +86,13 @@ impl AsyncReadAddr for Reader {
 
                                 let data_len = the_buf2.get_u16() as usize;
                                 if the_buf2.len() - 2 < data_len {
-                                    return Poll::Ready(Err(io::Error::other(format!("buf len short of data , marked length+2:{}, real length: {}", data_len+2, the_buf2.len()))));
+                                    let msg = format!("buf len short of data , marked length+2:{}, real length: {}", data_len+2, the_buf2.len());
+                                    self.buf = Some(the_buf2);
+                                    return Poll::Ready(Err(io::Error::other(msg)));
                                 }
                                 let crlf = the_buf2.get_u16();
                                 if crlf != CRLF {
+                                    self.buf = Some(the_buf2);
                                     return Poll::Ready(Err(io::Error::other(format!(
                                         "no crlf! {}",
                                         crlf
@@ -85,6 +106,8 @@ impl AsyncReadAddr for Reader {
                                 the_buf2.copy_to_slice(&mut r_buf[..real_len]);
                                 //r_buf.put(&the_buf2[..real_len]);
                                 ad.network = Network::UDP;
+
+                                self.buf = Some(the_buf2);
 
                                 Poll::Ready(Ok((real_len, ad)))
                             }
@@ -197,7 +220,7 @@ impl AsyncWriteAddr for Writer {
 pub fn from(c: net::Conn) -> net::addr_conn::AddrConn {
     let (r, w) = tokio::io::split(c);
 
-    let ar = Reader { base: Box::pin(r) };
+    let ar = Reader::new(r);
     let aw = Writer::new(w);
 
     let mut ac = net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw));
@@ -269,7 +292,7 @@ mod test {
 
         let (r, _w) = tokio::io::split(conn);
 
-        let mut ar = Reader { base: Box::pin(r) };
+        let mut ar = Reader::new(r);
 
         let ad = net::Addr {
             network: net::Network::UDP,
