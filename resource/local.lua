@@ -8,7 +8,7 @@ listen = {
 }
 l2 = {
     Listener = { 
-        listen_addr = "0.0.0.0:20800",
+        listen_addr = "udp://0.0.0.0:20800",
 
         ---[[ 
 
@@ -453,15 +453,23 @@ config = {
     
     {
         -- 测试: dig @127.0.0.1 -p 20800 www.baidu.com
-        
-        chain = {{
-            BindDialer = {
-                bind_addr = "udp://127.0.0.1:20800",
-                ext = {
-                    fixed_target_addr = "udp://114.114.114.114:53"
+
+        chain = {
+            l2, -- 多客户端连接的情况
+            --[[
+            {
+                -- 只允许单客户端连接的情况
+                
+                BindDialer = {
+                    bind_addr = "udp://127.0.0.1:20800",
+                    ext = {
+                        fixed_target_addr = "udp://114.114.114.114:53"
+                    }
                 }
             }
-        }},
+            --]]
+    
+    },
         tag = "l2"
     }, {
         chain = {l3, tlsin},

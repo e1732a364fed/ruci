@@ -226,7 +226,7 @@ impl Listener {
         shutdown_rx: oneshot::Receiver<()>,
         opt_fixed_target_addr: Option<net::Addr>,
     ) -> anyhow::Result<Receiver<MapResult>> {
-        let listener = match listen::listen(a).await {
+        let listener = match listen::listen(a, opt_fixed_target_addr.clone()).await {
             Ok(l) => l,
             Err(e) => return Err(e.context(format!("Listener failed for {}", a))),
         };
@@ -241,7 +241,7 @@ impl Listener {
         a: &net::Addr,
         opt_fixed_target_addr: Option<net::Addr>,
     ) -> anyhow::Result<Receiver<MapResult>> {
-        let listener = listen::listen(a).await?;
+        let listener = listen::listen(a, opt_fixed_target_addr.clone()).await?;
 
         let r = accept::loop_accept_forever(listener, opt_fixed_target_addr).await;
 

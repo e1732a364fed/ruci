@@ -301,6 +301,7 @@ pub async fn fold_from_start(
             result_dealer,
             dmiter: inmappers,
             o_gtr,
+            first_tag,
 
             #[cfg(feature = "trace")]
             trace: vec![first.name().to_string()],
@@ -346,6 +347,7 @@ pub struct InIterFoldForeverParams {
     pub result_dealer: tokio::sync::mpsc::Sender<FoldResult>,
     pub dmiter: DMIterBox,
     pub o_gtr: Option<Arc<GlobalTrafficRecorder>>,
+    pub first_tag: String,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,
@@ -410,6 +412,7 @@ pub async fn in_iter_fold_forever(params: InIterFoldForeverParams) {
             miter: dmiter.clone(),
             tx: tx.clone(),
             o_gtr: o_gtr.clone(),
+            first_tag: params.first_tag.clone(),
 
             #[cfg(feature = "trace")]
             trace: params.trace.clone(),
@@ -423,6 +426,7 @@ struct SpawnFoldForeverParams {
     miter: DMIterBox,
     tx: tokio::sync::mpsc::Sender<FoldResult>,
     o_gtr: Option<Arc<GlobalTrafficRecorder>>,
+    pub first_tag: String,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,
@@ -444,7 +448,7 @@ fn spawn_fold_forever(params: SpawnFoldForeverParams) {
             initial_state: params.new_stream_info,
             mappers: miter,
 
-            chain_tag: String::new(),
+            chain_tag: params.first_tag,
 
             #[cfg(feature = "trace")]
             trace: params.trace,
@@ -462,6 +466,7 @@ fn spawn_fold_forever(params: SpawnFoldForeverParams) {
                 result_dealer: tx,
                 dmiter: r.left_mappers_iter.clone(),
                 o_gtr,
+                first_tag: r.chain_tag,
 
                 #[cfg(feature = "trace")]
                 trace: r.trace,

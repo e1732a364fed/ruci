@@ -1,6 +1,7 @@
 use std::{fs::remove_file, path::PathBuf};
 
 use anyhow::{bail, Context};
+use bytes::BytesMut;
 use tokio::net::TcpListener;
 use tracing::warn;
 
@@ -9,7 +10,7 @@ use tokio::net::UnixListener;
 
 use crate::net::{self, Stream};
 
-use super::Addr;
+use super::{udp_listen::FixedTargetAddrUDPListener, Addr};
 
 #[derive(Debug)]
 pub enum Listener {
@@ -17,19 +18,28 @@ pub enum Listener {
 
     #[cfg(unix)]
     UNIX((UnixListener, String)),
+
+    UDP(FixedTargetAddrUDPListener),
 }
 
-pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
-    match a.network {
+pub async fn listen(
+    laddr: &net::Addr,
+    opt_fixed_target_addr: Option<net::Addr>,
+) -> anyhow::Result<Listener> {
+    match laddr.network {
         net::Network::TCP => {
-            let r = TcpListener::bind(a.get_socket_addr().expect("a has socket addr"))
+            let r = TcpListener::bind(laddr.get_socket_addr().expect("a has socket addr"))
                 .await
                 .context("tcp listen failed")?;
             Ok(Listener::TCP(r))
         }
+        net::Network::UDP => Ok(Listener::UDP(
+            FixedTargetAddrUDPListener::new(laddr.clone(), opt_fixed_target_addr.unwrap()).await?,
+        )),
+
         #[cfg(unix)]
         net::Network::Unix => {
-            let file_n = a.get_name().expect("a has a name");
+            let file_n = laddr.get_name().expect("a has a name");
             let p = PathBuf::from(file_n.clone());
 
             // is_file returns false for unix domain socket
@@ -45,7 +55,7 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
 
             Ok(Listener::UNIX((r, file_n)))
         }
-        _ => bail!("listen not implemented for this network: {}", a.network),
+        _ => bail!("listen not implemented for this network: {}", laddr.network),
     }
 }
 
@@ -59,6 +69,8 @@ impl Listener {
     pub fn network(&self) -> net::Network {
         match self {
             Listener::TCP(_) => net::Network::TCP,
+            Listener::UDP(_) => net::Network::UDP,
+
             #[cfg(unix)]
             Listener::UNIX(_) => net::Network::Unix,
         }
@@ -73,6 +85,8 @@ impl Listener {
                     Err(e) => format!("no laddr, e:{e}"),
                 }
             }
+            Listener::UDP(u) => format!("{}", u.laddr),
+
             #[cfg(unix)]
             Listener::UNIX(u) => {
                 let r = u.0.local_addr();
@@ -102,7 +116,9 @@ impl Listener {
     }
 
     /// returns stream, raddr, laddr
-    pub async fn accept(&self) -> anyhow::Result<(Stream, net::Addr, net::Addr)> {
+    pub async fn accept(
+        &mut self,
+    ) -> anyhow::Result<(Stream, net::Addr, net::Addr, Option<BytesMut>)> {
         match self {
             Listener::TCP(tl) => {
                 let (tcp_stream, tcp_soa) = tl.accept().await?;
@@ -116,7 +132,7 @@ impl Listener {
                     addr: net::NetAddr::Socket(tcp_stream.local_addr()?),
                     network: net::Network::TCP,
                 };
-                Ok((Stream::Conn(Box::new(tcp_stream)), ra, la))
+                Ok((Stream::Conn(Box::new(tcp_stream)), ra, la, None))
             }
             #[cfg(unix)]
             Listener::UNIX((ul, _)) => {
@@ -126,7 +142,11 @@ impl Listener {
                 let ra = Addr::from_unix(unix_soa);
                 let la = Addr::from_unix(unix_stream.local_addr()?);
 
-                Ok((Stream::Conn(Box::new(unix_stream)), ra, la))
+                Ok((Stream::Conn(Box::new(unix_stream)), ra, la, None))
+            }
+            Listener::UDP(ul) => {
+                let (ac, ra, la, b) = ul.accept().await?;
+                Ok((Stream::AddrConn(ac), ra, la, Some(b)))
             }
         }
     }

@@ -52,6 +52,14 @@ impl Name for AddrConn {
         &self.cached_name
     }
 }
+impl Debug for AddrConn {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AddrConn")
+            .field("default_write_to", &self.default_write_to)
+            .field("cached_name", &self.cached_name)
+            .finish()
+    }
+}
 impl AddrConn {
     pub fn new(r: Box<dyn AddrReadTrait>, w: Box<dyn AddrWriteTrait>) -> Self {
         let cached_name = match r.name() == w.name() {

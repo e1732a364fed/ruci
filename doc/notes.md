@@ -124,6 +124,48 @@ BindDialer = {
 }
 ```
 
+### udp fixed_target_addr 转发 问题
+
+fixed_target_addr (dokodemo) 对于 udp BindDialer 有一个问题
+
+比如试图监听一个 20800 端口， 作为一个 dns 服务转发
+
+只有一个 client 询问 dns 时， 如 client1 问 www.1.com 的 ip 是什么，
+
+然后我们 20800 收到后，问 实际 dns, 得到答后，回复给 client1
+
+这没问题。
+
+但
+
+假设有 client1, client2 同时问问题， client1 问 www.1.com, client2 问 www.2.com
+
+然后我们都得到了实际dns 的答，但回复时，如何知道
+
+www.1.com 的答 是回复给 client1  还是 client2 呢？
+
+注意 实际dns 的答 是不一定按原问的顺序的
+
+注意 我们是不会探查 udp 的内容并记录的
+
+
+举个形象的例子
+
+一个课代表收作业，收了很多作业，作业有记名，老师批完了，发回课代表，但发回课代表的不是批过的作业，而是一个个 成绩，请问课代表如何 发回 作业作者？
+
+不完美方案：
+
+1. 记录连接的顺序，然后按回答顺序回复给源。（如，记录交作业的顺序，按出成绩的顺序 回复）。问题：出成绩的顺序与交作业的顺序不一定一致
+2. 探查 udp 内容，按答案中的内容匹配后回复给源。问题：这样属于侵犯源的隐私
+3. 将回复 广播给所有 源。问题：这样属于侵犯源的隐私
+
+
+都不完美. 唯一的方案是: 不用 BindDialer 做 udp 转发, 而是 使用 Listener
+
+Listener 在 监听 udp, 且 有 udp 的 fixed_target_addr 时, 会对每一个 inbound
+连接新建一个 udp , 建立了一对一的转发, 而不是 一对多的转发, 就没问题了
+
+
 ### 报错示例: socks5 client only support tcplike stream, got NoStream
 
 

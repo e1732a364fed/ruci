@@ -48,7 +48,7 @@ pub async fn loop_accept_forever(
 
 /// blocking
 async fn real_loop_accept(
-    listener: Listener,
+    mut listener: Listener,
     tx: Sender<MapResult>,
     opt_fixed_target_addr: Option<net::Addr>,
 ) -> anyhow::Result<()> {
@@ -57,7 +57,7 @@ async fn real_loop_accept(
     loop {
         let r = listener.accept().await;
 
-        let (stream, raddr, laddr) = match r {
+        let (stream, raddr, laddr, ob) = match r {
             Ok(x) => x,
             Err(e) => {
                 let e = anyhow!("listen tcp ended by listen e: {}", e);
@@ -81,6 +81,7 @@ async fn real_loop_accept(
             .send(
                 MapResult::builder()
                     .a(opt_fixed_target_addr.clone())
+                    .b(ob)
                     .c(stream)
                     .d(Some(output_data))
                     .build(),

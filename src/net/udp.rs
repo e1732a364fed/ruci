@@ -26,7 +26,7 @@ pub enum Mode {
 /// 固定用同一个 udp socket 发送, 到不同的远程地址也是如此
 #[derive(Clone)]
 pub struct Conn {
-    pub last_laddr: Option<Arc<parking_lot::Mutex<Addr>>>,
+    pub last_laddr: Option<Arc<parking_lot::RwLock<Addr>>>,
 
     pub mode: Mode,
 
@@ -45,8 +45,8 @@ impl Conn {
     /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
     /// 以及用 send 而不是 send_to
     ///
-    pub fn new(u: UdpSocket, peer_addr: Option<Addr>, udp_fix_target_listen: bool) -> Self {
-        let mode = if udp_fix_target_listen {
+    pub fn new(u: UdpSocket, peer_addr: Option<Addr>, fix_target_listen: bool) -> Self {
+        let mode = if fix_target_listen {
             Mode::FixTargetListen
         } else {
             Mode::Dial
@@ -66,18 +66,18 @@ impl Conn {
 /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
 /// 以及用 send 而不是 send_to
 ///
-pub fn new(u: UdpSocket, peer_addr: Option<Addr>, udp_fix_target_listen: bool) -> AddrConn {
+pub fn new(u: UdpSocket, peer_addr: Option<Addr>, fix_target_listen: bool) -> AddrConn {
     let a = Arc::new(u);
     let b = a.clone();
-    let mode = if udp_fix_target_listen {
+    let mode = if fix_target_listen {
         Mode::FixTargetListen
     } else {
         Mode::Dial
     };
 
-    let last_laddr: Option<Arc<parking_lot::Mutex<Addr>>> = match mode {
+    let last_laddr: Option<Arc<parking_lot::RwLock<Addr>>> = match mode {
         Mode::Dial => None,
-        Mode::FixTargetListen => Some(Arc::new(parking_lot::Mutex::new(Addr::default()))),
+        Mode::FixTargetListen => Some(Arc::new(parking_lot::RwLock::new(Addr::default()))),
     };
 
     let c1 = Conn {
@@ -135,7 +135,7 @@ impl AsyncWriteAddr for Conn {
                 Ok(so) => {
                     if let Mode::FixTargetListen = self.mode {
                         let laddr = match &self.last_laddr {
-                            Some(a) => a.lock().get_socket_addr().unwrap(),
+                            Some(a) => a.read().get_socket_addr().unwrap(),
                             None => {
                                 return Poll::Ready(Err(io_error(
                                     "udp write mode FixTargetListen, no last_laddr",
@@ -195,7 +195,7 @@ impl AsyncReadAddr for Conn {
                             network: Network::UDP,
                         };
                         if let Mode::FixTargetListen = self.mode {
-                            let mut mg = self.last_laddr.as_mut().unwrap().lock();
+                            let mut mg = self.last_laddr.as_mut().unwrap().write();
                             *mg = addr.clone()
                         }
 
