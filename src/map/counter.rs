@@ -161,6 +161,7 @@ impl Mapper for Counter {
                 unimplemented!()
             }
             Stream::None => MapResult::err_str("counter: can't count without a stream"),
+            _ => MapResult::err_str("counter: can't count with a stream generator"),
         }
     }
 }

@@ -84,6 +84,11 @@ impl Mapper for TcpDialer {
             Stream::UDP(_) => {
                 return MapResult::err_str("tcp dialer can't dial when a udp conn already exists")
             }
+            _ => {
+                return MapResult::err_str(
+                    "tcp dialer can't dial when a stream generator already exists",
+                )
+            }
         }
         unimplemented!()
     }
