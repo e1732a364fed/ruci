@@ -59,7 +59,7 @@ impl Map for Stack {
 
             // Reads packet from TUN and sends to stack.
             tokio::spawn(async move {
-                let mut bs = BytesMut::zeroed(1500);
+                let mut bs = BytesMut::zeroed(4096);
                 loop {
                     // debug!("start read bc");
                     let r = r.read(&mut bs).await;

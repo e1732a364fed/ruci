@@ -12,7 +12,7 @@ use futures::stream::{SplitSink, SplitStream};
 use tokio_util::codec::Framed;
 use tracing::debug;
 
-use tun2::{AsyncDevice, IntoAddress, TunPacketCodec};
+use tun::{AsyncDevice, ToAddress, TunPacketCodec};
 
 use super::Conn;
 
@@ -25,8 +25,8 @@ pub async fn create_bind_sink_stream<A1, A2>(
     SplitStream<Framed<AsyncDevice, TunPacketCodec>>,
 )>
 where
-    A1: IntoAddress,
-    A2: IntoAddress,
+    A1: ToAddress,
+    A2: ToAddress,
 {
     let device = create_bind_device(tun_name, bind_addr, netmask).await?;
     let stream = device.into_framed();
@@ -41,10 +41,10 @@ pub async fn create_bind_device<A1, A2>(
     netmask: A2,
 ) -> anyhow::Result<Box<AsyncDevice>>
 where
-    A1: IntoAddress,
-    A2: IntoAddress,
+    A1: ToAddress,
+    A2: ToAddress,
 {
-    let mut config = tun2::Configuration::default();
+    let mut config = tun::Configuration::default();
 
     //macos only support utun{number}
 
@@ -59,7 +59,7 @@ where
         config.ensure_root_privileges(true);
     });
 
-    let device = tun2::create_as_async(&config).context("create tun device failed")?;
+    let device = tun::create_as_async(&config).context("create tun device failed")?;
 
     debug!(
         tun_name = tun_name,
@@ -76,8 +76,8 @@ pub async fn create_bind<A1, A2>(
     netmask: A2,
 ) -> anyhow::Result<Conn>
 where
-    A1: IntoAddress,
-    A2: IntoAddress,
+    A1: ToAddress,
+    A2: ToAddress,
 {
     let device = create_bind_device(tun_name, bind_addr, netmask).await?;
 

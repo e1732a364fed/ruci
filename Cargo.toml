@@ -56,11 +56,10 @@ webpki-roots = "0.22.6"
 
 macro_map = { path = "crates/macro_map" }
 
-tun2 = { version = "1", features = ["async"], optional = true }
+tun = { version = "0.7.5", features = ["async"], optional = true }
 
 
 [features]
-tun = ["tun2"]
 
 trace = []
 
