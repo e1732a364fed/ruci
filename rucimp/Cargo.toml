@@ -63,6 +63,8 @@ geoip = ["maxminddb", "route"]
 
 sockopt = ["libc", "socket2"]
 
+native-tls-vendored = ["native-tls/vendored"]
+
 
 [[example]]
 name = "chain"
