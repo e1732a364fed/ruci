@@ -5,13 +5,14 @@
 
 use crate::map;
 use async_trait::async_trait;
+use log::debug;
 use macro_mapper::{mapper_ext_fields, MapperExt};
 use std::{pin::Pin, task::Poll};
 
 use crate::{net::CID, Name};
 
 use super::*;
-use tokio::io::{self, AsyncRead, AsyncWrite, Stdin, Stdout};
+use tokio::io::{self, AsyncRead, AsyncWrite, AsyncWriteExt, Stdin, Stdout};
 
 pub struct Conn {
     input: Pin<Box<Stdin>>,
@@ -71,18 +72,8 @@ impl Name for Stdio {
 }
 
 impl Stdio {
-    pub fn from(ext: MapperExtFields) -> anyhow::Result<MapperBox> {
-        match ext.fixed_target_addr {
-            Some(a) => {
-                let mut ext_f = MapperExtFields::default();
-                ext_f.fixed_target_addr = Some(a);
-                Ok(Box::new(Stdio {
-                    ext_fields: Some(ext_f),
-                    ..Default::default()
-                }))
-            }
-            None => Ok(Box::<Stdio>::default()),
-        }
+    pub fn new() -> MapperBox {
+        Box::new(Stdio::default())
     }
 }
 
@@ -96,7 +87,7 @@ impl Mapper for Stdio {
         let stdin = tokio::io::stdin();
         let stdout = tokio::io::stdout();
 
-        let c = Conn {
+        let mut c = Conn {
             input: Box::pin(stdin),
             out: Box::pin(stdout),
         };
@@ -106,6 +97,34 @@ impl Mapper for Stdio {
         } else {
             self.configured_target_addr().map(|dr| dr.clone())
         };
-        MapResult::newc(Box::new(c)).b(params.b).a(a).build()
+
+        let mut buf = params.b;
+        if let Some(ped) = self.get_pre_defined_early_data() {
+            debug!("stdio: has pre_defined_early_data");
+            match buf {
+                Some(mut bf) => {
+                    bf.extend_from_slice(&ped);
+                    buf = Some(bf)
+                }
+                None => buf = Some(ped),
+            }
+        }
+        if let Some(ed) = buf.as_ref() {
+            if self.is_tail_of_chain() {
+                debug!("stdio: write earlydata");
+                let r = c.write(&ed).await;
+                if let Err(e) = r {
+                    return MapResult::from_e(e);
+                }
+                let r = c.flush().await;
+                if let Err(e) = r {
+                    return MapResult::from_e(e);
+                }
+
+                buf = None;
+            }
+        }
+
+        MapResult::newc(Box::new(c)).b(buf).a(a).build()
     }
 }

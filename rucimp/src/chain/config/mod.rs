@@ -159,9 +159,9 @@ pub enum OutMapperConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Ext {
-    fixed_target_addr: Option<String>,
+    pub fixed_target_addr: Option<String>,
 
-    pre_defined_early_data: Option<String>,
+    pub pre_defined_early_data: Option<String>,
 }
 impl Ext {
     fn to_ext_fields(&self) -> MapperExtFields {
@@ -212,7 +212,9 @@ impl ToMapper for InMapperConfig {
             InMapperConfig::Stdio(ext) => {
                 let extf = ext.to_ext_fields();
 
-                ruci::map::stdio::Stdio::from(extf).expect("valid extf")
+                let mut s = ruci::map::stdio::Stdio::new();
+                s.set_ext_fields(Some(extf));
+                s
             }
             InMapperConfig::Listener(l_str) => {
                 let a = net::Addr::from_network_addr_str(l_str).expect("network_addr is valid");
@@ -284,7 +286,9 @@ impl ToMapper for OutMapperConfig {
             OutMapperConfig::Stdio(ext) => {
                 let extf = ext.to_ext_fields();
 
-                ruci::map::stdio::Stdio::from(extf).expect("valid extf")
+                let mut s = ruci::map::stdio::Stdio::new();
+                s.set_ext_fields(Some(extf));
+                s
             }
             OutMapperConfig::Blackhole => Box::new(ruci::map::network::BlackHole::default()),
 
