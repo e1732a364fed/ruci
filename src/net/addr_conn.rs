@@ -10,7 +10,7 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::sync::{broadcast, oneshot};
+use tokio::sync::{broadcast, mpsc, oneshot};
 
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
 // 只是加了一个 Addr 参数. 这一部分比较难懂.
@@ -371,11 +371,7 @@ impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> ReadOnceFuture<'a, R1, W1> {
                                     return Poll::Ready(Err(io_error(format!("read <=0 {m}"))));
                                 }
                             }
-                            Err(e) => {
-                                return Poll::Ready(Err(io_error(format!(
-                                    "read_once_notimeout GOT ERROR {e}"
-                                ))))
-                            }
+                            Err(e) => return Poll::Ready(Err(e)),
                         },
                     }
                 }
@@ -393,11 +389,7 @@ impl<'a, R1: AddrReadTrait, W1: AddrWriteTrait> ReadOnceFuture<'a, R1, W1> {
                                 self.n = n;
                                 self.state = ReadOnceState::ToFlush;
                             }
-                            Err(e) => {
-                                return Poll::Ready(Err(io_error(format!(
-                                    "ReadOnceFuture write GOT ERROR {e}"
-                                ))))
-                            }
+                            Err(e) => return Poll::Ready(Err(e)),
                         },
                     }
                 }
@@ -451,8 +443,18 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
                 match r {
                     Ok(n) => whole_write+=n,
                     Err(e) => {
-                        debug!("cp_addr got e {e}");
-                        break},
+                        match e.kind(){
+                            io::ErrorKind::Other => {
+                                debug!("cp_addr got other e, will continue {e}");
+                                continue;
+                            },
+                            _ => {
+                                debug!("cp_addr got e, will break {e}");
+                            },
+                        }
+
+                        break
+                    },
                 }
             }
 
