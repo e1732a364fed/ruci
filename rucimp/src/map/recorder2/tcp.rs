@@ -3,34 +3,54 @@ use std::{io, pin::Pin, task::Poll};
 use futures::Future;
 use pin_project::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tracing::info;
+use tracing::{debug, info};
 
 use super::Recorder;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(super) enum State {
+    #[default]
+    Normal,
+    SavingToFile,
+    Saved,
+}
 
 #[pin_project]
 pub(super) struct RecorderConn {
     #[pin]
     pub(super) base: Pin<ruci::net::Conn>,
     pub(super) record: Recorder,
-    pub(super) save_future: Option<Pin<Box<dyn Future<Output = ()> + Send + Sync>>>,
+    pub(super) save_future:
+        Option<Pin<Box<dyn Future<Output = std::io::Result<()>> + Send + Sync>>>,
+
+    pub(super) state: State,
 }
 
 impl RecorderConn {
-    fn poll_save_future(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<()> {
+    /// if save_future is ready, it will set state to Saved
+    fn poll_save_future(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<std::io::Result<()>> {
         let this = self.project();
         if let Some(fut) = this.save_future.as_mut() {
-            let res = fut.as_mut().poll(cx);
-            if res.is_ready() {
+            let result = fut.as_mut().poll(cx);
+            if result.is_ready() {
                 *this.save_future = None;
+                *this.state = State::Saved;
             }
-            res
+            result
         } else {
-            Poll::Ready(())
+            Poll::Ready(Ok(()))
         }
     }
 
     fn start_save(self: Pin<&mut Self>) {
         let this = self.project();
+        if *this.state != State::Normal {
+            return;
+        }
+        *this.state = State::SavingToFile;
         if this.save_future.is_none() {
             *this.save_future = Some(Box::pin(this.record.async_save()));
         }
@@ -43,37 +63,41 @@ impl AsyncRead for RecorderConn {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        // First poll the save future if it exists
-        let _ = self.as_mut().poll_save_future(cx);
+        match self.as_mut().project().state {
+            State::Normal => {
+                let r = self.as_mut().project().base.poll_read(cx, buf);
 
-        let r = self.as_mut().project().base.poll_read(cx, buf);
-
-        if let Poll::Ready(r) = &r {
-            match r {
-                Ok(_) => {
-                    let l = buf.filled().len();
-                    if l == 0 {
-                        let cid = self.record.cid().to_string();
-                        info!(
-                            cid = %cid,
-                            "recorder read got EOF(len=0), Saving to file",
-                        );
-                        self.as_mut().start_save();
-                    } else {
-                        self.record.record_d(buf.filled())
+                if let Poll::Ready(r) = &r {
+                    match r {
+                        Ok(_) => {
+                            let l = buf.filled().len();
+                            if l == 0 {
+                                let cid = self.record.cid().to_string();
+                                info!(
+                                    cid = %cid,
+                                    "recorder read got EOF(len=0), Saving to file",
+                                );
+                                self.as_mut().start_save();
+                            } else {
+                                self.record.record_d(buf.filled())
+                            }
+                        }
+                        Err(e) => {
+                            let cid = self.record.cid().to_string();
+                            info!(
+                                cid = %cid,
+                                "recorder read got err, Saving to file; err: {e}",
+                            );
+                            self.as_mut().start_save();
+                        }
                     }
                 }
-                Err(e) => {
-                    let cid = self.record.cid().to_string();
-                    info!(
-                        cid = %cid,
-                        "recorder read got err, Saving to file; err: {e}",
-                    );
-                    self.as_mut().start_save();
-                }
+
+                r
             }
+
+            _ => Poll::Ready(Ok(())),
         }
-        r
     }
 }
 
@@ -83,48 +107,65 @@ impl AsyncWrite for RecorderConn {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        // First poll the save future if it exists
-        let _ = self.as_mut().poll_save_future(cx);
+        match self.as_mut().project().state {
+            State::Normal => {
+                let r = self.as_mut().project().base.poll_write(cx, buf);
 
-        let r = self.as_mut().project().base.poll_write(cx, buf);
-
-        if let Poll::Ready(Ok(u)) = &r {
-            self.record.record_u(&buf[..*u]);
+                if let Poll::Ready(Ok(u)) = &r {
+                    self.record.record_u(&buf[..*u]);
+                }
+                r
+            }
+            _ => Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::Other,
+                "recorder is not in normal state",
+            ))),
         }
-        r
     }
 
     fn poll_flush(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<io::Result<()>> {
-        // First poll the save future if it exists
-        let _ = self.as_mut().poll_save_future(cx);
-
-        self.project().base.poll_flush(cx)
+        match self.as_mut().project().state {
+            State::Normal => self.project().base.poll_flush(cx),
+            _ => Poll::Ready(Ok(())),
+        }
     }
 
     fn poll_shutdown(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<io::Result<()>> {
-        // First poll the save future if it exists
-        let _ = self.as_mut().poll_save_future(cx);
+        match *self.as_mut().project().state {
+            State::Normal => {
+                info!(
+                    cid = %self.record.cid(),
+                    label = %self.record.label(),
+                    "recorder got shutdown, Saving to file",
+                );
 
-        let cid = self.record.cid().to_string();
-        let label = self.record.label().to_string();
+                self.as_mut().start_save();
 
-        info!(
-            cid = %cid,
-            label = %label,
-            "recorder got shutdown, Saving to file...",
-        );
+                let r = self.as_mut().poll_save_future(cx);
+                if r.is_ready() {
+                    debug!("recorder save ready {:?}", r);
+                    self.project().base.poll_shutdown(cx)
+                } else {
+                    Poll::Pending
+                }
+            }
+            State::SavingToFile => {
+                let r = self.as_mut().poll_save_future(cx);
+                if r.is_ready() {
+                    debug!("recorder save ready {:?}", r);
 
-        self.as_mut().start_save();
-
-        // Poll again to make progress on the save
-        let _ = self.as_mut().poll_save_future(cx);
-
-        self.project().base.poll_shutdown(cx)
+                    self.project().base.poll_shutdown(cx)
+                } else {
+                    Poll::Pending
+                }
+            }
+            State::Saved => self.project().base.poll_shutdown(cx),
+        }
     }
 }

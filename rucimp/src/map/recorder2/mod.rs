@@ -14,7 +14,8 @@ use ruci::{
     net::Addr,
 };
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncWriteExt, BufWriter as AsyncBufWriter};
+use tokio::io::AsyncWriteExt;
+use tracing::debug;
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum OutputFileExtension {
@@ -118,22 +119,22 @@ impl Recorder {
         }
     }
 
-    pub fn async_save(&self) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>> {
+    pub fn async_save(&self) -> Pin<Box<dyn Future<Output = std::io::Result<()>> + Send + Sync>> {
         match self {
             Recorder::Full(r) => {
                 let config = r.config.clone();
                 let r = r.clone();
-                Box::pin(async move { r.async_save_to_file(&config).await.unwrap() })
+                Box::pin(async move { r.async_save_to_file(&config).await })
             }
             Recorder::Simplified(r) => {
                 let config = r.config.clone();
                 let r = r.clone();
-                Box::pin(async move { r.async_save_to_file(&config).await.unwrap() })
+                Box::pin(async move { r.async_save_to_file(&config).await })
             }
             Recorder::Info(r) => {
                 let config = r.config.clone();
                 let r = r.clone();
-                Box::pin(async move { r.async_save_to_file(&config).await.unwrap() })
+                Box::pin(async move { r.async_save_to_file(&config).await })
             }
         }
     }
@@ -478,13 +479,28 @@ async fn async_save_to_file<T: serde::Serialize + Send + 'static + Clone>(
     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?
     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
 
-    // Use tokio's async file operations
-    let file = tokio::fs::File::create(file_name).await?;
-    let mut writer = AsyncBufWriter::new(file);
+    if buf.is_empty() {
+        debug!("serde got empty data: {}", file_name);
 
-    // Write the serialized data
-    writer.write_all(&buf).await?;
-    writer.flush().await?;
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "empty data".to_string(),
+        ));
+    } else {
+        debug!("serde got data: {}, file: {}", buf.len(), file_name);
+    }
+
+    let mut file = tokio::fs::File::create(&file_name).await?;
+
+    debug!("file created: {}", file_name);
+
+    file.write_all(&buf).await?;
+    file.sync_all().await?;
+
+    file.flush().await?;
+    file.sync_all().await?;
+
+    debug!("saved to file: {}", file_name);
 
     Ok(())
 }
@@ -673,6 +689,7 @@ impl Map for RecorderMap {
                     base: Box::pin(c),
                     record: r,
                     save_future: None,
+                    state: tcp::State::Normal,
                 };
                 MapResult::builder()
                     .a(params.a)

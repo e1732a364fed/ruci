@@ -706,7 +706,7 @@ local config_18_recorder = {
             Recorder = {
                 label = "socks5",
                 output_file_extension = "Json", --"Cbor"
-                output_format = "Har",          --"Ruci"
+                output_format = "Ruci",         --"Ruci", "Har"
                 record_mode = "Info",
                 -- piece_truncate_option = "NoTruncate",
                 -- session_truncate_option = "NoTruncate",
@@ -723,7 +723,7 @@ local config_18_recorder = {
             Recorder = {
                 label = "direct",
                 output_file_extension = "Json",
-                output_format = "Har",
+                output_format = "Ruci",
                 record_mode = "Info",
 
                 -- piece_truncate_option = "NoTruncate",
