@@ -2,7 +2,7 @@
 Defines types returned by [`Map`].
 */
 
-use std::mem;
+use std::{mem, time};
 
 use super::*;
 
@@ -10,9 +10,11 @@ use bitflags::bitflags;
 
 pub const DEFAULT_READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间.
 
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct GlobalData {
     pub run_instance_id: u32,
+
+    pub instance_start_time: Option<time::SystemTime>,
 
     pub read_handshake_timeout: Option<u64>,
 }

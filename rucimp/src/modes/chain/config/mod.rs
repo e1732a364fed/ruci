@@ -24,7 +24,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 use crate::map::quic;
 
 use bytes::BytesMut;
-use recorder::Recorder;
+use recorder::RecorderMap;
 use ruci::{
     map::{
         counter::Counter,
@@ -464,7 +464,7 @@ impl ToMapBox for InMapConfig {
             }
             InMapConfig::Adder(i) => i.to_map_box(),
             InMapConfig::Counter => Box::<Counter>::default(),
-            InMapConfig::Recorder => Box::<Recorder>::default(),
+            InMapConfig::Recorder => Box::<RecorderMap>::default(),
 
             InMapConfig::TLS(c) => tls::server::ServerOptions {
                 addr: "todo!()".to_string(),
@@ -611,7 +611,7 @@ impl ToMapBox for OutMapConfig {
             OutMapConfig::BindDialer(dc) => dc.to_map_box(),
             OutMapConfig::Adder(i) => i.to_map_box(),
             OutMapConfig::Counter => Box::<counter::Counter>::default(),
-            OutMapConfig::Recorder => Box::<Recorder>::default(),
+            OutMapConfig::Recorder => Box::<RecorderMap>::default(),
 
             OutMapConfig::TLS(c) => {
                 let a = tls::client::Client::new(tls::client::ClientOptions {

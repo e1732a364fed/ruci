@@ -19,7 +19,7 @@ use ruci::{
     net::{GlobalTrafficRecorder, CID},
     relay::{handle_in_fold_result, route::*, *},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time};
 use tokio::sync::{
     mpsc::{self, Receiver},
     oneshot::{self, Sender},
@@ -66,6 +66,7 @@ impl Engine {
         Engine {
             global_data: GlobalData {
                 run_instance_id,
+                instance_start_time: Some(time::SystemTime::now()),
                 ..Default::default()
             },
             ..Default::default()
