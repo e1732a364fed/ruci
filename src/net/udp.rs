@@ -1,6 +1,11 @@
 /*!
  * 为 UdpSocket 实现 net::addr_conn 中的trait
 
+tokio 中有 poll_recv_from 和 poll_send_to, 所以不用 再自行实现
+
+async_std分支中，参考了
+
+//https://users.rust-lang.org/t/implementing-custom-udp-trait-for-async-std/81000
 
 */
 use std::{
@@ -16,9 +21,9 @@ use self::addr_conn::{AddrConn, AddrReadTrait, AddrWriteTrait, AsyncReadAddr, As
 
 use super::*;
 
-const CAP: usize = 256 * 256; //todo: change this
+/*
 
-//https://users.rust-lang.org/t/implementing-custom-udp-trait-for-async-std/81000
+const CAP: usize = 256 * 256; //todo: change this
 
 pub struct Writer {
     fut: Option<Pin<Box<dyn Future<Output = usize>>>>,
@@ -267,3 +272,5 @@ mod test {
         unimplemented!()
     }
 }
+
+ */
