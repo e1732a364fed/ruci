@@ -33,7 +33,7 @@ impl TcpOptListener {
     ) -> anyhow::Result<Receiver<MapResult>> {
         let listener = match so2::listen_tcp(a, &self.sopt).await {
             Ok(l) => l,
-            Err(e) => return Err(e.context(format!("Listener failed for {}", a))),
+            Err(e) => return Err(e.context(format!("tcp_opt_listener failed for {}", a))),
         };
 
         let listener = ruci::net::listen::Listener::TCP(listener);
@@ -62,11 +62,11 @@ impl Mapper for TcpOptListener {
             None => self
                 .configured_target_addr()
                 .as_ref()
-                .expect("Listener always has a fixed_target_addr"),
+                .expect("tcp_opt_listener always has a fixed_target_addr"),
         };
 
         if tracing::enabled!(tracing::Level::DEBUG) {
-            debug!(cid = %cid,addr= %a, "start listen")
+            debug!(cid = %cid,addr= %a, "tcp_opt_listener start listen")
         }
 
         let r = match params.shutdown_rx {

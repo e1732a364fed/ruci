@@ -1,11 +1,14 @@
 /*!
 Tproxy related Mapper. Tproxy is shortcut for transparent proxy,
+
+Only support linux
  */
 use async_trait::async_trait;
 use ruci::map::{self, *};
 use ruci::{net::*, Name};
 
 use macro_mapper::{mapper_ext_fields, MapperExt};
+use tracing::debug;
 
 /// TproxyResolver 从 系统发来的 tproxy 相关的 连接
 /// 解析出实际 target_addr
@@ -33,7 +36,7 @@ fn get_laddr_from_vd(vd: Vec<Option<Box<dyn Data>>>) -> Option<ruci::net::Addr> 
 impl Mapper for TproxyResolver {
     ///tproxy only has decode behavior
     ///
-    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::Conn(c) => {
                 let oa = get_laddr_from_vd(params.d);
@@ -43,9 +46,10 @@ impl Mapper for TproxyResolver {
                         "Tproxy needs data for local_addr, did't get it from the data.",
                     );
                 }
+                debug!(cid = %cid, a=?oa, "tproxy got target_addr: ");
 
                 // laddr in tproxy is in fact target_addr
-                MapResult::new_c(c).a(oa).build()
+                MapResult::new_c(c).a(oa).b(params.b).build()
             }
             Stream::AddrConn(_) => todo!(),
             _ => MapResult::err_str(&format!("Tproxy needs a stream, got {}", params.c)),
