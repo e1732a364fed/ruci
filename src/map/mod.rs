@@ -122,10 +122,13 @@ impl MapParams {
     }
 }
 
-/// [`fn@Map::maps`]s return type.
+/// [`fn@Map::maps`]s return type. It can also be used as an input of a function.
 ///
 /// MapResult has basic fields : a,b,c,d,e which are
 /// massively used in ruci.
+///
+/// if there's an error (e), if c (Stream) is also returned, then this marks
+/// the connection will be fallback.
 ///
 #[derive(TypedBuilder, Default)]
 pub struct MapResult {

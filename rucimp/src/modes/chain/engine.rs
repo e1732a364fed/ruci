@@ -64,7 +64,10 @@ impl Engine {
         debug!("new Engine {run_instance_id}");
 
         Engine {
-            global_data: GlobalData { run_instance_id },
+            global_data: GlobalData {
+                run_instance_id,
+                ..Default::default()
+            },
             ..Default::default()
         }
     }

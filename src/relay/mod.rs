@@ -28,8 +28,6 @@ use std::time::Duration;
 
 use crate::map::*;
 
-pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间.  //todo: adjust this
-
 /// this function utilizes [`handle_in_fold_result`] and  [`OutSelector`]
 /// to select an outbound, fold it and then copy streams.
 ///
@@ -52,8 +50,15 @@ pub async fn handle_in_stream(
     };
 
     let cid_c = cid.clone();
+    let mut read_timeout = DEFAULT_READ_HANDSHAKE_TIMEOUT;
+    if let Some(ref gd) = global_data {
+        if let Some(u) = gd.read_handshake_timeout {
+            read_timeout = u;
+        }
+    }
+
     let listen_result = tokio::time::timeout(
-        Duration::from_secs(READ_HANDSHAKE_TIMEOUT),
+        Duration::from_secs(read_timeout),
         fold::fold(FoldParams {
             cid: cid_c,
             behavior: ProxyBehavior::DECODE,
@@ -190,27 +195,33 @@ pub async fn handle_in_fold_result(
         }
     };
 
+    let mut read_timeout = DEFAULT_READ_HANDSHAKE_TIMEOUT;
+    if let Some(ref gd) = global_data {
+        if let Some(u) = gd.read_handshake_timeout {
+            read_timeout = u;
+        }
+    }
+
     let cid_c = cid.clone();
     let ta_clone = target_addr.clone();
-    let dial_result =
-        tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            fold::fold(FoldParams {
-                cid: cid_c,
-                behavior: ProxyBehavior::ENCODE,
-                initial_state: MapResult {
-                    a: Some(ta_clone),
-                    b: listen_result.b,
-                    g: global_data,
-                    ..Default::default()
-                },
-                maps: outbound,
-                chain_tag: String::new(),
-                #[cfg(feature = "trace")]
-                trace: Vec::new(),
-            })
-            .await
+    let dial_result = tokio::time::timeout(Duration::from_secs(read_timeout), async move {
+        fold::fold(FoldParams {
+            cid: cid_c,
+            behavior: ProxyBehavior::ENCODE,
+            initial_state: MapResult {
+                a: Some(ta_clone),
+                b: listen_result.b,
+                g: global_data,
+                ..Default::default()
+            },
+            maps: outbound,
+            chain_tag: String::new(),
+            #[cfg(feature = "trace")]
+            trace: Vec::new(),
         })
-        .await;
+        .await
+    })
+    .await;
 
     let dial_result = match dial_result {
         Ok(d) => d,

@@ -8,9 +8,13 @@ use super::*;
 
 use bitflags::bitflags;
 
+pub const DEFAULT_READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间.
+
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct GlobalData {
     pub run_instance_id: u32,
+
+    pub read_handshake_timeout: Option<u64>,
 }
 
 bitflags! {
