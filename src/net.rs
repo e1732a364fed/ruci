@@ -338,11 +338,10 @@ pub type Conn = Box<dyn ConnTrait>;
 
 /// may log debug or do other side-effect stuff with id.
 /// shutdown_f 用于同时关闭 c1 和 c2 对应的两个底层连接。
-pub async fn cp<F: FnMut() -> (), C1: ConnTrait, C2: ConnTrait>(
+pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
     c1: C1,
     c2: C2,
     id: u32,
-    mut shutdown_f: F,
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     if log_enabled!(log::Level::Debug) {
@@ -372,7 +371,13 @@ pub async fn cp<F: FnMut() -> (), C1: ConnTrait, C2: ConnTrait>(
                     }
                 }
 
-                shutdown_f();
+                //c1_read.unsplit(c1_write);
+
+                // can't borrow mut more than once. We just hope tokio will shutdown tcp
+                // when it's dropped.
+
+                // c1_write.shutdown();
+                // c2_write.shutdown();
 
                 let r2 = c2_to_c1.await;
                 if let Some(info) = opt {
@@ -385,7 +390,8 @@ pub async fn cp<F: FnMut() -> (), C1: ConnTrait, C2: ConnTrait>(
                     }
                 }
             }else{
-                shutdown_f();
+                // c1_write.shutdown();
+                // c2_write.shutdown();
             }
 
             if log_enabled!(log::Level::Debug) {
@@ -403,7 +409,8 @@ pub async fn cp<F: FnMut() -> (), C1: ConnTrait, C2: ConnTrait>(
                         debug!("cp, c2_to_c1r2, {}, {}",n,tt);
                     }
                 }
-                shutdown_f();
+                // c1_write.shutdown();
+                // c2_write.shutdown();
 
                 let r1 = c1_to_c2.await;
                 if let Some(ref info) = opt {
@@ -416,7 +423,8 @@ pub async fn cp<F: FnMut() -> (), C1: ConnTrait, C2: ConnTrait>(
                     }
                 }
             }else{
-                shutdown_f();
+                // c1_write.shutdown();
+                // c2_write.shutdown();
             }
 
             if log_enabled!(log::Level::Debug) {

@@ -3,6 +3,7 @@ use log::{info, log_enabled, warn};
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
 use crate::map::*;
@@ -41,10 +42,8 @@ pub async fn handle_tcp<'a>(
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             type DummyType = std::vec::IntoIter<OptData>;
-            //Ok::<AccumulateResult, E>(
             TcpInAccumulator::accumulate::<_, DummyType>(cid, Box::new(in_tcp), ins_iterator, None)
                 .await
-            //)
         })
         .await;
 
@@ -68,7 +67,9 @@ pub async fn handle_tcp<'a>(
                 "{}, handshake in server succeed but got no target_addr",
                 state
             );
-            //let _ = in_tcp.shutdown();
+            if let Some(mut c) = listen_result.c {
+                let _ = c.shutdown().await;
+            }
             return Err(io::Error::other(
                 "handshake in server succeed but got no target_addr",
             ));
@@ -102,7 +103,9 @@ pub async fn handle_tcp<'a>(
                 "{}, parse target addr failed, {} , {}",
                 state, real_target_addr, e
             );
-            //let _ = in_tcp.shutdown();
+            if let Some(mut c) = listen_result.c {
+                let _ = c.shutdown().await;
+            }
             return Err(e);
         }
     };
@@ -111,7 +114,9 @@ pub async fn handle_tcp<'a>(
         Ok(tcp) => tcp,
         Err(e) => {
             warn!("{}, handshake in server failed: {}", state, e);
-            //let _ = in_tcp.shutdown();
+            if let Some(mut c) = listen_result.c {
+                let _ = c.shutdown().await;
+            }
             return Err(e);
         }
     };
@@ -120,8 +125,6 @@ pub async fn handle_tcp<'a>(
     if is_direct {
         cp_tcp::cp_tcp(
             cid,
-            // in_tcp,
-            // out_tcp,
             listen_result.c.take().unwrap(),
             out_conn,
             listen_result.b.take(),
@@ -163,16 +166,7 @@ pub async fn handle_tcp<'a>(
                 state, rta
             );
         }
-        cp_tcp::cp_tcp(
-            cid,
-            //in_tcp,
-            //out_tcp,
-            listen_result.c.take().unwrap(),
-            out_conn,
-            None,
-            ti,
-        )
-        .await;
+        cp_tcp::cp_tcp(cid, listen_result.c.take().unwrap(), out_conn, None, ti).await;
     }
 
     Ok(())

@@ -15,51 +15,37 @@ use tokio::task;
 //non-blocking
 pub async fn cp_tcp(
     cid: u32,
-    //mut raw_intcp: TcpStream,
-    //mut raw_out_tcp: TcpStream,
     in_conn: net::Conn,
     out_conn: net::Conn,
     pre_read_data: Option<bytes::BytesMut>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
-    let cf = move || {
-        //let _ = raw_intcp.shutdown();
-        //let _ = raw_out_tcp.shutdown();
-    };
-
     info!("cid: {}, relay start", cid);
 
     match (pre_read_data, ti) {
-        (None, None) => task::spawn(no_ti_no_ed(cid, in_conn, out_conn, cf)),
-        (None, Some(t)) => task::spawn(ti_no_ed(cid, in_conn, out_conn, cf, t)),
-        (Some(ed), None) => task::spawn(no_ti_ed(cid, in_conn, out_conn, cf, ed)),
-        (Some(ed), Some(t)) => task::spawn(ti_ed(cid, in_conn, out_conn, cf, t, ed)),
+        (None, None) => task::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
+        (None, Some(t)) => task::spawn(ti_no_ed(cid, in_conn, out_conn, t)),
+        (Some(ed), None) => task::spawn(no_ti_ed(cid, in_conn, out_conn, ed)),
+        (Some(ed), Some(t)) => task::spawn(ti_ed(cid, in_conn, out_conn, t, ed)),
     };
 }
 
-async fn no_ti_no_ed(cid: u32, in_conn: net::Conn, out_tcp: net::Conn, cf: impl FnMut()) {
-    let _ = net::cp(in_conn, out_tcp, cid, cf, None).await;
+async fn no_ti_no_ed(cid: u32, in_conn: net::Conn, out_conn: net::Conn) {
+    let _ = net::cp(in_conn, out_conn, cid, None).await;
     info!("cid: {}, relay end", cid);
 }
 
-async fn ti_no_ed(
-    cid: u32,
-    in_conn: net::Conn,
-    out_conn: net::Conn,
-    cf: impl FnMut(),
-    ti: Arc<TransmissionInfo>,
-) {
+async fn ti_no_ed(cid: u32, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TransmissionInfo>) {
     ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
-    let _ = net::cp(in_conn, out_conn, cid, cf, Some(ti.clone())).await;
+    let _ = net::cp(in_conn, out_conn, cid, Some(ti.clone())).await;
     ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
     info!("cid: {}, relay end", cid);
 }
 
 async fn no_ti_ed(
     cid: u32,
-    in_conn: net::Conn,
+    mut in_conn: net::Conn,
     mut out_conn: net::Conn,
-    mut cf: impl FnMut(),
     earlydata: bytes::BytesMut,
 ) {
     if log_enabled!(Debug) {
@@ -75,21 +61,21 @@ async fn no_ti_ed(
         Err(e) => {
             warn!("cid: {}, upload early_data failed: {}", cid, e);
 
-            cf();
+            let _ = in_conn.shutdown().await;
+            let _ = out_conn.shutdown().await;
             return;
         }
     }
 
-    let _ = net::cp(in_conn, out_conn, cid, cf, None).await;
+    let _ = net::cp(in_conn, out_conn, cid, None).await;
 
     info!("cid: {}, relay end", cid);
 }
 
 async fn ti_ed(
     cid: u32,
-    in_conn: net::Conn,
+    mut in_conn: net::Conn,
     mut out_conn: net::Conn,
-    mut cf: impl FnMut(),
     ti: Arc<TransmissionInfo>,
     earlydata: bytes::BytesMut,
 ) {
@@ -110,12 +96,13 @@ async fn ti_ed(
         Err(e) => {
             warn!("cid: {}, upload early_data failed: {}", cid, e);
 
-            cf();
+            let _ = in_conn.shutdown().await;
+            let _ = out_conn.shutdown().await;
             return;
         }
     }
 
-    let _ = net::cp(in_conn, out_conn, cid, cf, Some(ti.clone())).await;
+    let _ = net::cp(in_conn, out_conn, cid, Some(ti.clone())).await;
     ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
 
     info!("cid: {}, relay end", cid);
