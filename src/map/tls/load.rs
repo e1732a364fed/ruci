@@ -48,12 +48,15 @@ fn load_keys(path: &Path) -> io::Result<PrivateKey> {
 
 #[cfg(test)]
 mod test {
-    use std::path::PathBuf;
+    use std::{env, path::PathBuf};
 
     use super::*;
 
     #[test]
     fn test_load_key() {
+        //println!("{:?}", env::current_dir()); //ruci
+        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource")).unwrap();
+
         let mut path = PathBuf::new();
         path.push("test.key");
 
@@ -68,6 +71,8 @@ mod test {
 
     #[test]
     fn test_load_cert() {
+        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource")).unwrap();
+
         let mut path = PathBuf::new();
         path.push("test.crt");
 

@@ -125,7 +125,7 @@ pub async fn handle_conn<'a>(
                         c: out_stream,
                         d: None,
                         e: None,
-                        id: None,
+                        new_id: None,
                     },
                     outc_iterator,
                 )
@@ -317,7 +317,7 @@ where
                     c: Stream::None,
                     d: None,
                     e: None,
-                    id: None,
+                    new_id: None,
                 },
                 outc_iterator,
             )

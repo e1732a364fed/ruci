@@ -52,7 +52,7 @@ pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
 
 #[derive(Clone)]
 pub struct InStreamCID {
-    pub id_list: Vec<u32>, //首项为根id，末项为末端stream的id
+    pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
 }
 impl Display for InStreamCID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -199,13 +199,13 @@ pub enum IPName {
 /// Addr 结构是一个可表示多种网络地址的结构,
 /// 可以是 ip, ipv4, ipv6, unix domain socket, domain name
 ///
-/// 具体是哪一种由 network 决定。若 network 不为 unix，
+/// 具体是哪一种由 network 决定。若 network 不为 unix,
 /// addr 可以为 Socket 或 Name (表示 domain name),
 /// 否则 addr 只能为 Name (表示 file name)
 ///
-/// port = 0 表示不用端口
+/// port = 0 表示不用端口, 或表示让系统在拨号时使用系统分配的端口
 ///
-/// Addr实现 Eq和 Hash，以支持作为Key存入 HashMap 等集合中。
+/// Addr实现 Eq和 Hash, 以支持作为Key存入 HashMap 等集合中。
 ///
 /// default is  tcp://0.0.0.0:0
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
@@ -317,7 +317,7 @@ impl Addr {
         }
     }
 
-    /// 只由 SocketAddr 转，无视 name
+    /// 只由 SocketAddr 转, 无视 name
     pub fn get_socket_addr(&self) -> Option<SocketAddr> {
         if let NetAddr::Socket(s) = &self.addr {
             Some(*s)
@@ -328,7 +328,7 @@ impl Addr {
         }
     }
 
-    /// 如果没法从已有的 SocketAddr 转，则尝试用系统方法解析域名, 并使用第一个值.
+    /// 如果没法从已有的 SocketAddr 转, 则尝试用系统方法解析域名, 并使用第一个值.
     /// 不适用于 UDS
     pub fn get_socket_addr_or_resolve(&self) -> io::Result<SocketAddr> {
         use std::net::ToSocketAddrs;
@@ -375,7 +375,7 @@ impl Addr {
     }
 
     ///可为 www.baidu.com:80 或 127.0.0.1:1234 这种形式,
-    /// 如果 name和ip都给出了，首选ip
+    /// 如果 name和ip都给出了, 首选ip
     ///
     /// 如果为 UDS, 则不会打印 port
     pub fn get_addr_str(&self) -> String {
@@ -556,7 +556,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
 
     pin_mut!(c1_to_c2, c2_to_c1);
 
-    // 一个方向停止后，关闭连接，如果info 不为空，则等待另一个方向关闭, 以获取另一方向的流量信息。
+    // 一个方向停止后, 关闭连接, 如果info 不为空, 则等待另一个方向关闭, 以获取另一方向的流量信息。
 
     select! {
         r1 = c1_to_c2 => {

@@ -11,9 +11,13 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 流映射函数 的提供者 在本包中被命名为 "Mapper", 映射的行为叫 "maps"
 
+在本包中， 映射 不常使用，而经常使用 “加法” 来指代 映射。以“累加”来指代迭代映射。
+按顺序执行若干映射函数 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
+
+之所以叫加法，是因为代理的映射只会增加信息（熵），不会减少信息
+
 按代理的方向, 逻辑上分 InAdder 和 OutAdder 两种, 以 maps 方法的 behavior 参数加以区分.
 
-按顺序执行若干映射函数 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
 
 一个完整的代理配置 是 【若干 映射函数 的集合】其在 rucimp 子项目中有定义。
 
@@ -241,7 +245,8 @@ pub struct MapResult {
     pub d: OptData,
     pub e: Option<io::Error>,
 
-    pub id: Option<CID>, //有值代表产生了与之前不同的 cid
+    /// 有值代表产生了与之前不同的 cid
+    pub new_id: Option<CID>,
 }
 
 //some helper initializers
@@ -253,7 +258,7 @@ impl MapResult {
             c: Stream::TCP(c),
             d: None,
             e: None,
-            id: None,
+            new_id: None,
         }
     }
 
@@ -265,7 +270,7 @@ impl MapResult {
             c: Stream::TCP(c),
             d: None,
             e: None,
-            id: None,
+            new_id: None,
         }
     }
 
@@ -276,7 +281,7 @@ impl MapResult {
             c: Stream::UDP(c),
             d: None,
             e: None,
-            id: None,
+            new_id: None,
         }
     }
 
@@ -287,7 +292,7 @@ impl MapResult {
             c: Stream::TCP(c),
             d: None,
             e: None,
-            id: None,
+            new_id: None,
         }
     }
 
@@ -298,7 +303,7 @@ impl MapResult {
             c: s,
             d: None,
             e: None,
-            id: None,
+            new_id: None,
         }
     }
 
@@ -310,7 +315,7 @@ impl MapResult {
             c: Stream::Generator(gs),
             d: None,
             e: None,
-            id: Some(cid),
+            new_id: Some(cid),
         }
     }
 
@@ -321,7 +326,7 @@ impl MapResult {
             c: Stream::None,
             d: None,
             e: Some(e),
-            id: None,
+            new_id: None,
         }
     }
 
@@ -342,7 +347,7 @@ impl MapResult {
             c: Stream::None,
             d: None,
             e: Some(e),
-            id: None,
+            new_id: None,
         }
     }
     pub fn buf_err_str(buf: BytesMut, estr: &str) -> Self {
@@ -367,7 +372,7 @@ pub enum ProxyBehavior {
 ///
 /// 且InAdder试图生产出 target_addr 和 pre_read_data
 ///
-/// 一般来说add方法就是执行一个新层中的握手, 之后得到一个新Conn;
+/// 一般来说 maps 方法就是执行一个新层中的握手, 之后得到一个新Conn;
 /// 在 新Conn中 对数据进行加/解密后, pass to next layer Conn
 ///
 /// 一旦某一层中获得了 target_addr, 就要继续将它传到下一层。参阅累加器部分。
@@ -378,6 +383,8 @@ pub enum ProxyBehavior {
 ///
 #[async_trait]
 pub trait Mapper: crate::Name + DynClone {
+    /// Mapper 在代理逻辑上分 in 和 out 两种
+    ///
     /// InAdder 与 OutAdder 由 behavior 区分。
     ///
     /// # InAdder
@@ -397,11 +404,11 @@ pub trait Mapper: crate::Name + DynClone {
     /// 一旦切换连接, 则原连接将不再被 ruci::relay 包控制关闭, 其关闭将由InAdder自行处理.
     /// 这种情况下, 如果 socks5 支持 udp associate, 则 socks5必须为 代理链的最终端。此时base会被关闭, 返回的 AddResult.c 应为 None
     ///
-    /// 这里不用 Result<...> 的形式, 是因为 在有错误的同时也可能返回一些有用的数据, 比如用于回落等
+    /// 这里不用 Result<...> 的形式, 是因为 在有错误的同时也可能返回一些有用的数据, 比如用于路由,回落等
     ///
     /// # OutAdder
     ///
-    /// OutAdder 是 out client 的 adder, 从拨号基本连接开始,
+    /// OutAdder 是 out client 的 mapper, 从拨号基本连接开始,
     ///  以 targetAddr (不是direct时就不是拔号的那个地址) 为参数创建新层
     ///
     /// 与InAdder 相比, InAdder是试图生产 target_addr 和 earlydata 的机器, 而OutAdder 就是 试图消耗 target_addr 和 earlydata 的机器
@@ -413,7 +420,7 @@ pub trait Mapper: crate::Name + DynClone {
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult;
 
-    fn get_target_addr(&self) -> Option<net::Addr> {
+    fn configured_target_addr(&self) -> Option<net::Addr> {
         None
     }
 }
@@ -440,7 +447,7 @@ where
     pub d: Vec<OptData>,
     pub e: Option<io::Error>,
 
-    /// 有值代表产生了与之前不同的 cid
+    /// 代表 迭代完成后，最终的 cid
     pub id: Option<CID>,
 
     /// 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
@@ -511,7 +518,7 @@ where
                 };
                 last_r = adder
                     .maps(
-                        match last_r.id {
+                        match last_r.new_id {
                             Some(id) => id,
                             None => cid.clone(),
                         },
@@ -550,8 +557,8 @@ where
         c: last_r.c,
         d: calculated_output_vec,
         e: last_r.e,
-        id: if last_r.id.is_some() {
-            last_r.id
+        id: if last_r.new_id.is_some() {
+            last_r.new_id
         } else {
             Some(cid)
         },

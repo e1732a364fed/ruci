@@ -90,7 +90,7 @@ impl Client {
             c: map::Stream::TCP(base),
             d: Some(map::AnyData::B(Box::new(adopted_method))),
             e: None,
-            id: None,
+            new_id: None,
         })
     }
 }

@@ -66,7 +66,7 @@ impl Server {
             c: map::Stream::TCP(Box::new(c)),
             d: Some(map::AnyData::B(Box::new(SeverTLSConnDescriber {}))),
             e: None,
-            id: None,
+            new_id: None,
         })
     }
 }

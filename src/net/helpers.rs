@@ -140,7 +140,7 @@ impl EarlyDataWrapper {
 
 impl Name for EarlyDataWrapper {
     fn name(&self) -> &'static str {
-        "earlydata wrapper conn"
+        "earlydata_wrapper_conn"
     }
 }
 
@@ -197,7 +197,7 @@ impl AsyncWrite for EarlyDataWrapper {
     }
 }
 
-/// useful for testing; 因为比较常用，没放在 helpers 中
+/// useful for testing
 #[derive(Debug)]
 pub struct MockTcpStream {
     pub read_data: Vec<u8>,
@@ -219,7 +219,6 @@ impl AsyncRead for MockTcpStream {
     ) -> Poll<io::Result<()>> {
         debug!("MockTcp: read called");
         let size: usize = min(self.read_data.len(), buf.initialized().len());
-        //buf[..size].copy_from_slice(&self.read_data[..size]);
         buf.put(&self.read_data[..size]);
 
         let new_len = self.read_data.len() - size;

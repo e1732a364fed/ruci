@@ -12,7 +12,7 @@ use std::{
 };
 use tokio::{io::ReadBuf, net::UdpSocket};
 
-//固定用同一个 udpsocket 发送，到不同的远程地址也是如此
+/// 固定用同一个 udpsocket 发送，到不同的远程地址也是如此
 pub struct Conn(Arc<UdpSocket>);
 
 impl Conn {
@@ -31,7 +31,7 @@ pub fn new(u: UdpSocket) -> AddrConn {
     AddrConn(Box::new(Conn(a)), Box::new(Conn(b)))
 }
 
-/// wrap u with Arc, and return 2 copys.
+/// wrap u with Arc, then return 2 copys.
 pub fn duplicate(u: UdpSocket) -> (Conn, Conn) {
     let a = Arc::new(u);
     let b = a.clone();
@@ -193,8 +193,8 @@ mod test {
 
     #[tokio::test]
     async fn test_udp_rw() -> io::Result<()> {
-        let u = UdpSocket::bind("127.0.0.1:12345").await?;
-        let u2 = UdpSocket::bind("127.0.0.1:23456").await?;
+        let u = UdpSocket::bind("127.0.0.1:23456").await?;
+        let u2 = UdpSocket::bind("127.0.0.1:34567").await?;
         let (mut r, mut w) = duplicate(u);
         let (mut r2, mut w2) = duplicate(u2);
 
@@ -206,7 +206,7 @@ mod test {
             let mut buf = [0u8, 1, 2, 3, 4];
             let ta = crate::net::Addr {
                 addr: NetAddr::Socket(
-                    SocketAddr::from_str("127.0.0.1:23456")
+                    SocketAddr::from_str("127.0.0.1:34567")
                         .map_err(|x| io::Error::other(format!("{}", x)))?,
                 ),
                 network: Network::TCP,

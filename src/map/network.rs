@@ -66,7 +66,7 @@ impl Name for TcpDialer {
 }
 
 impl TcpDialer {
-    ///  panic if a isn't valid
+    ///  panic if a is invalid
     pub async fn dial_addr(a: &net::Addr) -> MapResult {
         //todo: DNS 功能
 
@@ -83,10 +83,11 @@ impl TcpDialer {
 
 #[async_trait]
 impl Mapper for TcpDialer {
-    fn get_target_addr(&self) -> Option<net::Addr> {
+    fn configured_target_addr(&self) -> Option<net::Addr> {
         self.addr.clone()
     }
 
+    /// try the paramater first, if no addr was given, use configured addr
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::None => match params.d {
@@ -125,7 +126,7 @@ impl Mapper for TcpDialer {
                         return TcpDialer::dial_addr(a).await;
                     }
                     return MapResult::err_str(&format!(
-                        "cid: {}, tcp dialer can't dial without a address",
+                        "cid: {}, tcp dialer can't dial without an address",
                         cid
                     ));
                 }
@@ -246,11 +247,15 @@ impl TcpStreamGenerator {
 
 #[async_trait]
 impl Mapper for TcpStreamGenerator {
-    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
             None => self.addr.as_ref().unwrap(),
         };
+
+        if log_enabled!(log::Level::Debug) {
+            debug!("cid: {}, start listen {}", cid, a)
+        }
 
         let r = match params.shutdown_rx {
             Some(rx) => TcpStreamGenerator::listen_addr(a, rx).await,
