@@ -96,6 +96,8 @@ impl AsyncWriteAddr for Writer {
 
         buf2.put_u16(CRLF);
 
+        buf2.put(buf);
+
         self.base.as_mut().poll_write(cx, &buf2)
     }
 
@@ -121,21 +123,25 @@ pub fn split_conn_to_trojan_udp_rw(c: net::Conn) -> net::addr_conn::AddrConn {
 #[cfg(test)]
 mod test {
 
-    use tokio::net::TcpStream;
+    use std::sync::Arc;
 
-    use self::net::addr_conn::AsyncWriteAddrExt;
+    use tokio::{net::TcpStream, sync::Mutex};
+
+    use self::net::{addr_conn::AsyncWriteAddrExt, helpers::MockTcpStream};
 
     use super::*;
 
-    //#[tokio::test]
+    #[tokio::test]
     async fn test1() -> std::io::Result<()> {
         let ps = net::gen_random_higher_port();
-        let listen_host = "127.0.0.1";
-        let listen_port = ps;
+        let writev = Arc::new(Mutex::new(Vec::new()));
+        let writevc = writev.clone();
 
-        let cs = TcpStream::connect((listen_host, listen_port))
-            .await
-            .unwrap();
+        let cs = MockTcpStream {
+            read_data: Vec::new(),
+            write_data: Vec::new(),
+            write_target: Some(writev),
+        };
 
         let conn: net::Conn = Box::new(cs);
 
@@ -145,7 +151,14 @@ mod test {
 
         let mut aw = Writer { base: Box::pin(w) };
 
-        let r = aw.write(&b"hello"[..], &net::Addr::default()).await;
+        let ad = net::Addr {
+            network: net::Network::UDP,
+            addr: net::NetAddr::Name("www.b".to_string(), 43),
+        };
+
+        let r = aw.write(&b"hello"[..], &ad).await;
+
+        println!("r, {:?}, writev {:?}", r, writevc);
 
         Ok(())
     }

@@ -18,6 +18,7 @@ pub struct Conn {
     pub base: Arc<UdpSocket>,
 }
 
+/// wrap u with Arc, and return 2 copys.
 pub fn duplicate(u: UdpSocket) -> (Conn, Conn) {
     let a = Arc::new(u);
     let b = a.clone();
@@ -132,12 +133,13 @@ impl AsyncReadAddr for MockStream {
     }
 }
 
+#[cfg(test)]
 #[allow(unused)]
 mod test {
     use futures_util::join;
 
     use super::*;
-    use crate::net::addr_conn::{AddrReadTrait, AsyncReadAddrExt, AsyncWriteAddrExt};
+    use crate::net::addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt};
     use std::{io, ops::Deref, str::FromStr, time::Duration};
 
     const CAP: usize = 1500;
@@ -177,7 +179,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test1() -> io::Result<()> {
+    async fn test_udp_rw() -> io::Result<()> {
         let u = UdpSocket::bind("127.0.0.1:12345").await?;
         let u2 = UdpSocket::bind("127.0.0.1:23456").await?;
         let (mut r, mut w) = duplicate(u);
@@ -230,20 +232,20 @@ mod test {
         let ad2_str = "127.0.0.1:23456";
         let u2 = UdpSocket::bind(ad2_str).await?;
 
-        let (mut r, mut w) = duplicate(u);
-        let (mut r2, mut w2) = duplicate(u2);
+        let (_r, mut w) = duplicate(u);
+        let (r2, _w2) = duplicate(u2);
 
         let writev = Arc::new(Mutex::new(Vec::new()));
         let writevc = writev.clone();
 
-        let mut ms = MockStream {
+        let ms = MockStream {
             read_data: Vec::new(),
             write_data: Vec::new(),
             write_target: Some(writev),
         };
         let mut buf_to_write = [0u8, 1, 2, 3, 4];
 
-        let w1 = tokio::task::spawn(async move {
+        let _w1 = tokio::task::spawn(async move {
             let ta = crate::net::Addr {
                 addr: NetAddr::Socket(
                     SocketAddr::from_str(ad2_str)
@@ -268,7 +270,7 @@ mod test {
             Ok::<(), io::Error>(())
         });
 
-        crate::net::addr_conn::cp_addr(r2, ms).await;
+        let _ = crate::net::addr_conn::cp_addr(r2, ms).await;
 
         let nv = buf_to_write.repeat(5);
 
