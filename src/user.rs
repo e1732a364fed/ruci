@@ -3,8 +3,8 @@ use std::fmt::Debug;
 
 use async_trait::async_trait;
 use dyn_clone::DynClone;
+use parking_lot::Mutex;
 use std::hash::Hash;
-use std::sync::Mutex;
 /// 用于用户鉴权
 pub trait UserTrait: Debug + Send + Sync {
     /// 每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name. 用于在非敏感环境显示该用户
@@ -160,7 +160,7 @@ pub struct UsersMap<T: UserTrait + Clone> {
 impl<T: UserTrait + Clone> Clone for UsersMap<T> {
     fn clone(&self) -> Self {
         Self {
-            m: Mutex::new(self.m.lock().unwrap().clone()),
+            m: Mutex::new(self.m.lock().clone()),
         }
     }
 }
@@ -195,24 +195,24 @@ impl<T: UserTrait + Clone> UsersMap<T> {
 
     pub async fn add_user(&mut self, u: T) {
         let uc = u.clone();
-        let mut inner = self.m.lock().unwrap();
+        let mut inner = self.m.lock();
         inner.idmap.insert(u.identity_str(), u);
         inner.amap.insert(uc.auth_str(), uc);
     }
 
     pub async fn len(&self) -> usize {
-        self.m.lock().unwrap().idmap.len()
+        self.m.lock().idmap.len()
     }
 
     pub async fn is_empty(&self) -> bool {
-        self.m.lock().unwrap().idmap.is_empty()
+        self.m.lock().idmap.is_empty()
     }
 }
 
 #[async_trait]
 impl<T: UserTrait + Clone> AsyncUserAuthenticator<T> for UsersMap<T> {
     async fn auth_user_by_authstr(&self, authstr: &str) -> Option<T> {
-        let inner = self.m.lock().unwrap();
+        let inner = self.m.lock();
         let s = authstr.to_string();
         inner.amap.get(&s).cloned()
     }
