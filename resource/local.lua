@@ -54,6 +54,8 @@ tproxy_listen_tcp_chain = {
 
             route_ipv6 = true, -- 如果为true, 则  也会 对 ipv6 网段执行 自动路由
 
+            proxy_local_udp_53 = true, -- 如果为true, 则 udp 53 端口不会直连, 而是会流经 tproxy
+
             -- local_net4 = "192.168.0.0/16" -- 直连 ipv4 局域网段 不给出时, 默认即为 192.168.0.0/16
         }
     }

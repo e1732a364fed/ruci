@@ -36,17 +36,6 @@ use crate::net::so2::{self, SockOpt};
 use crate::net::so_opts::tproxy_recv_from_with_destination;
 use crate::utils::{run_command, sync_run_command_list_no_stop, sync_run_command_list_stop};
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Options {
-    pub port: Option<u16>,
-    pub route_ipv6: Option<bool>,
-
-    /// 局域网段, 默认为 [`DEFAULT_LOCAL_NET4`]
-    pub local_net4: Option<String>,
-    pub auto_route: Option<bool>,
-    pub auto_route_tcp: Option<bool>,
-}
-
 /// TproxyResolver 从 系统发来的 tproxy 相关的 连接
 /// 解析出实际 target_addr
 #[mapper_ext_fields]
@@ -61,23 +50,16 @@ impl Name for TcpResolver {
     }
 }
 
-const DEFAULT_PORT: u16 = 12345;
-
 impl TcpResolver {
     pub fn new(opts: Options) -> anyhow::Result<Self> {
-        let p = opts.port.unwrap_or(DEFAULT_PORT);
-
         if opts.auto_route.unwrap_or_default() {
             info!("tproxy run auto_route");
 
-            anyhow::Context::context(
-                run_tcp_route(p, true, &opts.local_net4),
-                "run auto_route commands failed",
-            )?;
+            anyhow::Context::context(run_tcp_route(&opts), "run auto_route commands failed")?;
 
             if opts.route_ipv6.unwrap_or_default() {
                 info!("tproxy run_tcp_route6");
-                let r = run_tcp_route6(p, true);
+                let r = run_tcp_route6(&opts);
                 if let Err(e) = r {
                     warn!("tproxy run run_tcp_route6 got error {e}")
                 }
@@ -85,14 +67,11 @@ impl TcpResolver {
         } else if opts.auto_route_tcp.unwrap_or_default() {
             info!("tproxy run auto_route_tcp");
 
-            anyhow::Context::context(
-                run_tcp_route(opts.port.unwrap_or(DEFAULT_PORT), false, &opts.local_net4),
-                "run auto_route_tcp commands failed",
-            )?;
+            anyhow::Context::context(run_tcp_route(&opts), "run auto_route_tcp commands failed")?;
 
             if opts.route_ipv6.unwrap_or_default() {
                 info!("tproxy run_tcp_route6");
-                let r = run_tcp_route6(p, false);
+                let r = run_tcp_route6(&opts);
                 if let Err(e) = r {
                     warn!("tproxy run run_tcp_route6 got error {e}")
                 }
@@ -108,16 +87,16 @@ impl TcpResolver {
 
 impl Drop for TcpResolver {
     fn drop(&mut self) {
-        if let Some(port) = self.opts.port {
+        if self.opts.auto_route_enabled() {
             info!("tproxy run down_auto_route");
 
-            let r = down_auto_route(port, &self.opts.local_net4);
+            let r = down_auto_route(&self.opts);
             if let Err(e) = r {
                 warn!("tproxy run down_auto_route got error {e}")
             }
 
             if self.opts.route_ipv6.unwrap_or_default() {
-                let r = down_auto_route6(port);
+                let r = down_auto_route6(&self.opts);
                 if let Err(e) = r {
                     warn!("tproxy run down_auto_route6 got error {e}")
                 }
