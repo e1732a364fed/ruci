@@ -187,6 +187,17 @@ impl MapResult {
         }
     }
 
+    pub fn obc(b: Option<BytesMut>, c: net::Conn) -> Self {
+        MapResult {
+            a: None,
+            b,
+            c: Stream::TCP(c),
+            d: None,
+            e: None,
+            new_id: None,
+        }
+    }
+
     pub fn udp_abc(a: net::Addr, b: BytesMut, c: AddrConn) -> Self {
         MapResult {
             a: Some(a),

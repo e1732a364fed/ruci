@@ -41,7 +41,7 @@ impl Mapper for Direct {
 
                 match r {
                     Ok(c) => {
-                        return MapResult::c(Box::new(c));
+                        return MapResult::obc(params.b, Box::new(c));
                     }
                     Err(e) => return MapResult::from_err(e),
                 }
