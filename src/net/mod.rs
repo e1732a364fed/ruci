@@ -184,9 +184,9 @@ impl CID {
         CID::Unit(li)
     }
 
-    pub fn new_by_ogtr(oti: Option<Arc<GlobalTrafficRecorder>>) -> CID {
-        match oti {
-            Some(ti) => CID::new_ordered(&ti.last_connection_id),
+    pub fn new_by_ogtr(ogtr: Option<Arc<GlobalTrafficRecorder>>) -> CID {
+        match ogtr {
+            Some(gtr) => CID::new_ordered(&gtr.last_connection_id),
             None => CID::new_random(),
         }
     }
@@ -211,22 +211,22 @@ impl CID {
     /// use ruci::net::CID;
     /// use ruci::net::GlobalTrafficRecorder;
     /// use std::sync::Arc;
-    /// let oti = Some(Arc::new(GlobalTrafficRecorder::default()));
+    /// let ogtr = Some(Arc::new(GlobalTrafficRecorder::default()));
     ///
-    /// let mut x = CID::new_by_ogtr(oti.clone());
+    /// let mut x = CID::new_by_ogtr(ogtr.clone());
     /// assert!(matches!(x, CID::Unit(1)));
-    /// x.push(oti.clone());
+    /// x.push(ogtr.clone());
     /// assert!(matches!(x.clone(), CID::Chain(chain) if chain.id_list[0] == 1));
     ///
-    /// x.push(oti);
+    /// x.push(ogtr);
     /// assert!(
     ///     matches!(x.clone(), CID::Chain(chain) if chain.id_list[0] == 1 || chain.id_list[1] == 2)
     /// );
     ///
     /// ```
-    pub fn push(&mut self, oti: Option<Arc<GlobalTrafficRecorder>>) {
-        let newidnum = match oti.as_ref() {
-            Some(ti) => new_ordered_cid(&ti.last_connection_id),
+    pub fn push(&mut self, ogtr: Option<Arc<GlobalTrafficRecorder>>) {
+        let newidnum = match ogtr.as_ref() {
+            Some(gtr) => new_ordered_cid(&gtr.last_connection_id),
             None => new_rand_cid(),
         };
 
@@ -245,9 +245,9 @@ impl CID {
         };
     }
     /// won't change self
-    pub fn clone_push(&self, oti: Option<Arc<GlobalTrafficRecorder>>) -> Self {
+    pub fn clone_push(&self, ogtr: Option<Arc<GlobalTrafficRecorder>>) -> Self {
         let mut cid = self.clone();
-        cid.push(oti);
+        cid.push(ogtr);
         cid
     }
 

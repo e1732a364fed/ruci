@@ -349,8 +349,8 @@ async fn lisen_ser() -> anyhow::Result<(
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
 
-    let ti = net::GlobalTrafficRecorder::default();
-    let arc_ti = Arc::new(ti);
+    let gtr = net::GlobalTrafficRecorder::default();
+    let arc_ti = Arc::new(gtr);
     let arc_tic = arc_ti.clone();
 
     let (tx, rx) = oneshot::channel();
@@ -710,9 +710,9 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
         select! {
 
             () = dial_future => {
-                info!("dial finished first, will return , {:?}", se.ti);
+                info!("dial finished first, will return , {:?}", se.gtr);
                 tokio::time::sleep(Duration::from_millis(400)).await;
-                info!("dial finished first ,print again, {:?}",se.ti);
+                info!("dial finished first ,print again, {:?}",se.gtr);
 
                 break;
             },
@@ -780,9 +780,9 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> anyhow::Resul
     select! {
 
         () = dial_future => {
-            info!("dial finished first, will return , {:?}",se.ti);
+            info!("dial finished first, will return , {:?}",se.gtr);
             tokio::time::sleep(Duration::from_millis(400)).await;
-            info!("dial finished first ,print again, {:?}",se.ti);
+            info!("dial finished first ,print again, {:?}",se.gtr);
 
         },
         () = listen_future => {
@@ -883,9 +883,9 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
     }
 
     if dialfirstok {
-        info!("dial finished first, will return , {:?}", sec.lock().ti);
+        info!("dial finished first, will return , {:?}", sec.lock().gtr);
         tokio::time::sleep(Duration::from_millis(400)).await;
-        info!("dial finished first ,print again, {:?}", sec.lock().ti);
+        info!("dial finished first ,print again, {:?}", sec.lock().gtr);
     }
 
     //tokio::time::sleep(Duration::from_secs(2)).await;

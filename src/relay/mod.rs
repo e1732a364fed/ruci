@@ -34,14 +34,14 @@ pub async fn handle_in_stream(
     in_conn: Stream,
     ins_iterator: DMIterBox,
     out_selector: Arc<Box<dyn OutSelector>>,
-    ti: Option<Arc<net::GlobalTrafficRecorder>>,
+    gtr: Option<Arc<net::GlobalTrafficRecorder>>,
 
     newc_recorder: OptNewInfoSender,
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) -> anyhow::Result<()> {
-    let cid = match ti.as_ref() {
-        Some(ti) => CID::new_ordered(&ti.alive_connection_count),
+    let cid = match gtr.as_ref() {
+        Some(gtr) => CID::new_ordered(&gtr.alive_connection_count),
         None => CID::new_random(),
     };
 
@@ -76,7 +76,7 @@ pub async fn handle_in_stream(
     handle_in_accumulate_result(
         listen_result,
         out_selector,
-        ti,
+        gtr,
         newc_recorder,
         #[cfg(feature = "trace")]
         updater,
@@ -286,8 +286,8 @@ pub async fn cp_udp(
     let tc = tr.clone();
     scopeguard::defer! {
 
-        if let Some(ti) = tc {
-            ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        if let Some(gtr) = tc {
+            gtr.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 
         }
         info!( cid = %cid,

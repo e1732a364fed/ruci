@@ -134,7 +134,7 @@ pub fn get_addr_from_vvd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
 impl Mapper for Dialer {
     /// try the paramater first, if no addr was given, use configured addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
-    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::None => {
                 let vd = params.d;
@@ -149,7 +149,7 @@ impl Mapper for Dialer {
                             return Dialer::dial_addr(configured_dial_a, params.a, params.b).await;
                         }
                         return MapResult::err_str(&format!(
-                            "{cid} Dialer can't dial without an address",
+                            "Dialer can't dial without an address",
                         ));
                     }
                 }
@@ -157,7 +157,7 @@ impl Mapper for Dialer {
 
             _ => {
                 return MapResult::err_str(&format!(
-                    "{cid} Dialer can't dial when a stream already exists"
+                    "Dialer can't dial when a stream already exists"
                 ))
             }
         }

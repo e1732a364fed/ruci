@@ -160,9 +160,9 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
         futures::select! {
 
             r = dialh => {
-                info!("dial finished first, will return ,{:?}, {:?}",r, sec.lock().ti);
+                info!("dial finished first, will return ,{:?}, {:?}",r, sec.lock().gtr);
                 tokio::time::sleep(Duration::from_millis(400)).await;
-                info!("dial finished first ,print again, {:?}",sec.lock().ti);
+                info!("dial finished first ,print again, {:?}",sec.lock().gtr);
 
                 break;
             },
@@ -215,9 +215,9 @@ async fn suit_engine2_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
         futures::select! {
 
             r = dialh => {
-                info!("dial finished first, will return ,{:?}, {:?}",r, sec.lock().ti);
+                info!("dial finished first, will return ,{:?}, {:?}",r, sec.lock().gtr);
                 tokio::time::sleep(Duration::from_millis(400)).await;
-                info!("dial finished first ,print again, {:?}",sec.lock().ti);
+                info!("dial finished first ,print again, {:?}",sec.lock().gtr);
 
                 break;
             },

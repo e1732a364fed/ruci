@@ -371,10 +371,10 @@ pub async fn cp_between<
                 debug!( cid = %cid,"cp_addr end, u");
             }
 
-            if let Some(ti) = opt.as_ref(){
+            if let Some(gtr) = opt.as_ref(){
                 match &rst1{
                     Ok(n) => {
-                        let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
+                        let tt = gtr.ub.fetch_add(*n, Ordering::Relaxed);
                         debug!(cid = %cid,"cp_addr_end, u, ub, {},{}",n,tt+n);
                     },
                     Err(e) => {
@@ -392,10 +392,10 @@ pub async fn cp_between<
                 debug!(cid = %cid,"cp_addr end, d");
             }
 
-            if let Some(ti) = opt{
+            if let Some(gtr) = opt{
                 match &rst2{
                     Ok(n) => {
-                        let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
+                        let tt = gtr.db.fetch_add(*n, Ordering::Relaxed);
                         debug!(cid = %cid,"cp_addr_end, u ,db, {},{}",n,tt+n);
                     },
                     Err(e) => {
@@ -411,10 +411,10 @@ pub async fn cp_between<
             if tracing::enabled!(tracing::Level::DEBUG)  {
                 debug!(cid = %cid,"cp_addr end, d");
             }
-            if let Some(ti) = opt.as_ref(){
+            if let Some(gtr) = opt.as_ref(){
                 match &rst2{
                     Ok(n) => {
-                        let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
+                        let tt = gtr.db.fetch_add(*n, Ordering::Relaxed);
                         debug!(cid = %cid,"cp_addr_end, d, db, {},{}",n,tt+n);
                     },
                     Err(e) => {
@@ -429,11 +429,11 @@ pub async fn cp_between<
             if tracing::enabled!(tracing::Level::DEBUG)  {
                 debug!(cid = %cid,"cp_addr end, u, ");
             }
-            if let Some(ti) = opt{
+            if let Some(gtr) = opt{
 
                 match &rst1{
                     Ok(n) => {
-                        let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
+                        let tt = gtr.ub.fetch_add(*n, Ordering::Relaxed);
                         debug!(cid = %cid,"cp_addr_end, d, ub, {},{}",n,tt+n);
                     },
                     Err(e) => {

@@ -25,15 +25,15 @@ pub async fn cp_udp_tcp(
     ed_from_ac: bool,
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
-    ti: Option<Arc<net::GlobalTrafficRecorder>>,
+    gtr: Option<Arc<net::GlobalTrafficRecorder>>,
 ) -> io::Result<u64> {
     info!(cid = %cid, "relay udp to tcp start",);
 
-    let tic = ti.clone();
+    let tic = gtr.clone();
     scopeguard::defer! {
 
-        if let Some(ti) = tic {
-            ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        if let Some(gtr) = tic {
+            gtr.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 
         }
         info!( cid = %cid,

@@ -360,7 +360,7 @@ impl InnerLuaNextGenerator {
                         if let Ok(f) = t.to_ref().get::<_, LuaFunction>("new_thread_fn") {
                             let of = f.into_owned();
 
-                            // debug!("storing thread_fn, {cid}");
+                            //debug!(cid = %cid,"storing thread_fn");
                             self.create_thread_func_map.insert(cid, of);
                         }
 
@@ -394,7 +394,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
         data: OVOD,
     ) -> Option<dynamic::IndexMapperBox> {
         let mut mg = self.inner.lock();
-        //debug!("IndexNextMapperGenerator called {cid} ,{:?}", mg.behavior);
+        //debug!(cid = %cid,"IndexNextMapperGenerator called ,{:?}", mg.behavior);
 
         let mut parent = cid.clone();
         parent.pop();
@@ -402,7 +402,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
         if !parent.is_zero() {
             //debug!("has parent {parent}");
             if mg.thread_map.contains_key(&cid) {
-                //log::debug!("has previous thread {cid}");
+                //debug!(cid = %cid,"has previous thread");
 
                 let r = {
                     let t = mg.thread_map.get(&cid).expect("ok");
@@ -438,7 +438,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
             }
 
             if let Some(f) = mg.create_thread_func_map.get(&parent) {
-                //debug!("has create_thread_func, {cid}");
+                //debug!(cid = %cid,"has create_thread_func");
                 let (t, r) = {
                     let r = {
                         let l = &mg.lua;

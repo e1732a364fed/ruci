@@ -23,13 +23,13 @@ impl Mapper for Echo {
                 if let Some(b) = params.b {
                     let r = c.write_all(&b).await;
                     if let Err(e) = r {
-                        let e = anyhow!("{cid} echo write ed stopped by: {e}");
+                        let e = anyhow!("echo write ed stopped by: {e}");
 
                         return MapResult::from_e(e);
                     }
                     let r = c.flush().await;
                     if let Err(e) = r {
-                        let e = anyhow!("{cid} echo flush ed stopped by: {e}");
+                        let e = anyhow!("echo flush ed stopped by: {e}");
                         return MapResult::from_e(e);
                     }
                 }
@@ -74,7 +74,7 @@ impl Mapper for Echo {
                         let r = u.w.write(&b, &a).await;
 
                         if let Err(e) = r {
-                            let e = anyhow!("{cid} echo write ed stoped by: {e}");
+                            let e = anyhow!("echo write ed stoped by: {e}");
 
                             return MapResult::from_e(e);
                         }

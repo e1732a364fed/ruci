@@ -86,7 +86,7 @@ async fn setup_api_server_with_chain_engine(
     api_ser: &mut api::server::Server,
     gtr: Arc<ruci::net::GlobalTrafficRecorder>,
 ) {
-    e.ti = gtr;
+    e.gtr = gtr;
 
     setup_record_newconn_info(e, api_ser).await;
     #[cfg(feature = "trace")]

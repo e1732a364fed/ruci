@@ -21,7 +21,7 @@ use super::config;
 #[derive(Default)]
 pub struct SuitEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
-    pub ti: Arc<GlobalTrafficRecorder>,
+    pub gtr: Arc<GlobalTrafficRecorder>,
 
     servers: Vec<Arc<Box<dyn Suit>>>,
     clients: Vec<Arc<Box<dyn Suit>>>,
@@ -159,7 +159,7 @@ impl SuitEngine {
             let task = listen_ser(
                 s,
                 self.default_c.clone().expect("has default_c"),
-                Some(self.ti.clone()),
+                Some(self.gtr.clone()),
                 rx,
             );
             tasks.push(task);
@@ -197,7 +197,7 @@ impl SuitEngine {
 pub async fn listen_ser(
     ins: Arc<Box<dyn Suit>>,
     outc: Arc<Box<dyn Suit>>,
-    oti: Option<Arc<net::GlobalTrafficRecorder>>,
+    ogtr: Option<Arc<net::GlobalTrafficRecorder>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
     let n = ins.network();
@@ -209,7 +209,7 @@ pub async fn listen_ser(
                     outc.network()
                 )
             }
-            listen_tcp(ins, outc, oti, shutdown_rx).await
+            listen_tcp(ins, outc, ogtr, shutdown_rx).await
         }
         _ => Err(io::Error::other(format!(
             "such network not supported: {}",
@@ -222,7 +222,7 @@ pub async fn listen_ser(
 async fn listen_tcp(
     ins: Arc<Box<dyn Suit>>,
     outc: Arc<Box<dyn Suit>>,
-    oti: Option<Arc<net::GlobalTrafficRecorder>>,
+    ogtr: Option<Arc<net::GlobalTrafficRecorder>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
     let laddr = ins.addr_str().to_string();
@@ -231,7 +231,7 @@ async fn listen_tcp(
 
     let listener = TcpListener::bind(laddr.clone()).await?;
 
-    let clone_oti = move || oti.clone();
+    let clone_ogtr = move || ogtr.clone();
 
     let iter = outc.get_mappers_vec().into_iter();
     let ib = Box::new(DynVecIterWrapper(iter));
@@ -243,7 +243,7 @@ async fn listen_tcp(
             loop {
                 let (tcpstream, raddr) = listener.accept().await?;
 
-                let ti = clone_oti();
+                let gtr = clone_ogtr();
                 if tracing::enabled!(tracing::Level::DEBUG)  {
                     debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
                 }
@@ -256,7 +256,7 @@ async fn listen_tcp(
                         Stream::c(Box::new(tcpstream)),
                         ib,
                         slt,
-                        ti,
+                        gtr,
                         None,
 
                         #[cfg(feature = "trace")]

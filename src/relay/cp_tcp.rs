@@ -18,11 +18,11 @@ pub fn cp_conn(
     in_conn: net::Conn,
     out_conn: net::Conn,
     pre_read_data: Option<bytes::BytesMut>,
-    ti: Option<Arc<net::GlobalTrafficRecorder>>,
+    gtr: Option<Arc<net::GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
-    match (pre_read_data, ti) {
+    match (pre_read_data, gtr) {
         (None, None) => tokio::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
         (None, Some(t)) => tokio::spawn(ti_no_ed(
             cid,
@@ -64,16 +64,16 @@ async fn ti_no_ed(
     cid: CID,
     in_conn: net::Conn,
     out_conn: net::Conn,
-    ti: Arc<GlobalTrafficRecorder>,
+    gtr: Arc<GlobalTrafficRecorder>,
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
     debug!(cid = %cid, "relay start");
 
-    ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
+    gtr.alive_connection_count.fetch_add(1, Ordering::Relaxed);
 
     defer! {
-        ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
+        gtr.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
         debug!(cid = %cid, "relay end", );
     }
 
@@ -81,7 +81,7 @@ async fn ti_no_ed(
         in_conn,
         out_conn,
         &cid,
-        Some(ti.clone()),
+        Some(gtr.clone()),
         #[cfg(feature = "trace")]
         updater,
     )
@@ -144,7 +144,7 @@ async fn ti_ed(
     cid: CID,
     mut in_conn: net::Conn,
     mut out_conn: net::Conn,
-    ti: Arc<GlobalTrafficRecorder>,
+    gtr: Arc<GlobalTrafficRecorder>,
     earlydata: bytes::BytesMut,
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
@@ -163,7 +163,7 @@ async fn ti_ed(
                 debug!(cid = %cid, "upload earlydata ok ");
             }
 
-            ti.ub.fetch_add(earlydata.len() as u64, Ordering::Relaxed);
+            gtr.ub.fetch_add(earlydata.len() as u64, Ordering::Relaxed);
         }
         Err(e) => {
             warn!(cid = %cid, "upload early_data failed: {}", e);
@@ -174,10 +174,10 @@ async fn ti_ed(
         }
     }
 
-    ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
+    gtr.alive_connection_count.fetch_add(1, Ordering::Relaxed);
 
     defer! {
-        ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
+        gtr.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
         debug!(cid = %cid, "relay end");
     }
 
@@ -185,7 +185,7 @@ async fn ti_ed(
         in_conn,
         out_conn,
         &cid,
-        Some(ti.clone()),
+        Some(gtr.clone()),
         #[cfg(feature = "trace")]
         updater,
     )

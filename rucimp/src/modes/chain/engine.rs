@@ -29,7 +29,7 @@ pub struct Engine {
     ///
     ///  若有值说明 is running
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
-    pub ti: Arc<GlobalTrafficRecorder>,
+    pub gtr: Arc<GlobalTrafficRecorder>,
 
     pub newconn_recorder: OptNewInfoSender,
 
@@ -55,7 +55,7 @@ impl Engine {
             self.outbounds = Arc::<HashMap<String, DMIterBox>>::default();
             self.default_outbound = None;
             self.tag_routes = None;
-            self.ti = Arc::<GlobalTrafficRecorder>::default();
+            self.gtr = Arc::<GlobalTrafficRecorder>::default();
             info!("Engine is reset successful");
         } else {
             warn!("Engine is running, can't be reset. You should try to stop before reset.");
@@ -236,13 +236,14 @@ impl Engine {
 
             let cid = CID::Unit(index);
             debug!(inbound_index = index, "accumulate_from_start");
-            let t1 = acc::accumulate_from_start(cid, atx, rx, miter.clone(), Some(self.ti.clone()));
+            let t1 =
+                acc::accumulate_from_start(cid, atx, rx, miter.clone(), Some(self.gtr.clone()));
             index += 1;
 
             let t2 = Engine::loop_a(
                 arx,
                 out_selector.clone(),
-                self.ti.clone(),
+                self.gtr.clone(),
                 self.newconn_recorder.clone(),
                 #[cfg(feature = "trace")]
                 self.conn_info_updater.clone(),
@@ -260,7 +261,7 @@ impl Engine {
     async fn loop_a(
         mut arx: Receiver<acc::AccumulateResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
-        ti: Arc<GlobalTrafficRecorder>,
+        gtr: Arc<GlobalTrafficRecorder>,
         conn_info_recorder: OptNewInfoSender,
         #[cfg(feature = "trace")] conn_info_updater: net::OptUpdater,
     ) -> anyhow::Result<()> {
@@ -270,7 +271,7 @@ impl Engine {
                 tokio::spawn(handle_in_accumulate_result(
                     ar,
                     out_selector.clone(),
-                    Some(ti.clone()),
+                    Some(gtr.clone()),
                     conn_info_recorder.clone(),
                     #[cfg(feature = "trace")]
                     conn_info_updater.clone(),
