@@ -141,6 +141,7 @@ pub enum InMapperConfig {
     Stdio(Ext),       //单流发生器
     Dialer(String),   //单流发生器
     Listener(String), //多流发生器
+    Echo,             //单流消耗器
     Adder(i8),
     Counter,
     TLS(TlsIn),
@@ -217,6 +218,7 @@ pub struct TrojanIn {
 impl ToMapper for InMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
+            InMapperConfig::Echo => Box::new(ruci::map::network::echo::Echo::default()),
             InMapperConfig::Stdio(ext) => {
                 let extf = ext.to_ext_fields();
 

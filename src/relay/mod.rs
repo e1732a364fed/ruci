@@ -80,9 +80,17 @@ pub async fn handle_in_accumulate_result(
                 Some(err) => {
                     return_e = anyhow!("{cid}, handshake inbound failed with Error: {:#?}", err);
                 }
-                None => {
-                    return_e = anyhow!("{cid}, handshake inbound succeed but got no target_addr");
-                }
+                None => match &listen_result.c {
+                    Stream::None => {
+                        return_e = anyhow!("{cid}, handshake inbound ok and stream got consumed");
+                        info!("{}", return_e);
+                        return Ok(());
+                    }
+                    _ => {
+                        return_e =
+                            anyhow!("{cid}, handshake inbound succeed but got no target_addr");
+                    }
+                },
             }
 
             warn!("{}", return_e);
