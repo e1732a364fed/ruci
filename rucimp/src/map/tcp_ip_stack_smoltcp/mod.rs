@@ -39,7 +39,7 @@ impl Map for Stack {
                 let mut shutdown_rx = match params.shutdown_rx {
                     Some(r) => r,
                     None => {
-                        return MapResult::err_str(
+                        return MapResult::from_err_str(
                             "smoltcp requires a shutdown_rx for graceful shutdown",
                         )
                     }
@@ -168,7 +168,7 @@ impl Map for Stack {
                     .build();
             }
             _ => {
-                return MapResult::err_str(&format!(
+                return MapResult::from_err_str(&format!(
                     "smoltcp only support Conn stream, got {}",
                     params.c
                 ))

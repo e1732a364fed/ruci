@@ -11,7 +11,7 @@ use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
 use macro_map::*;
 use tokio::io::AsyncReadExt;
-use tracing::debug;
+use tracing::{debug, warn};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -48,7 +48,10 @@ impl Server {
             }
         }
         if um.is_empty() {
-            panic!("can't init a trojan server without any password");
+            warn!("init a trojan server without any password, the program will insert an empty string as a password");
+            warn!("THIS IS HIGHLY DANGEROUS, PLEASE ADD A PASSWORD TO THE SERVER CONFIG");
+            let uup = User::new("");
+            um.add_user(uup);
         }
 
         Server {
@@ -185,7 +188,7 @@ impl Server {
                     "trojan no suffix crlf field, 1byte left",
                 ));
             }
-            return Ok(MapResult::err_str("trojan no suffix crlf field"));
+            return Ok(MapResult::from_err_str("trojan no suffix crlf field"));
         }
         let supposed_crlf = buf.get_u16();
         if supposed_crlf != CRLF {
@@ -218,7 +221,7 @@ impl Server {
 
                 let l = buf.get_u16() as usize;
                 if buf.len() - 2 < l {
-                    return Ok(MapResult::err_str(&format!(
+                    return Ok(MapResult::from_err_str(&format!(
                         "buf len short of data , marked length+2:{}, real length: {}",
                         l + 2,
                         buf.len()
@@ -226,7 +229,7 @@ impl Server {
                 }
                 let crlf = buf.get_u16();
                 if crlf != CRLF {
-                    return Ok(MapResult::err_str(&format!("no crlf! {}", crlf)));
+                    return Ok(MapResult::from_err_str(&format!("no crlf! {}", crlf)));
                 }
                 buf.truncate(l);
 
@@ -270,7 +273,7 @@ impl Map for Server {
                 let r = self.handshake(cid, c, params.b).await;
                 MapResult::from_result(r)
             }
-            _ => MapResult::err_str("trojan only support tcplike stream"),
+            _ => MapResult::from_err_str("trojan only support tcplike stream"),
         }
     }
 }

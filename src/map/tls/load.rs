@@ -1,3 +1,5 @@
+use anyhow::Context;
+use rcgen::KeyPair;
 use rustls::{
     pki_types::{
         CertificateDer, PrivateKeyDer, PrivatePkcs1KeyDer, PrivatePkcs8KeyDer, PrivateSec1KeyDer,
@@ -5,26 +7,77 @@ use rustls::{
     server::NoClientAuth,
     ServerConfig,
 };
-use std::{fs::File, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 use tracing::debug;
 
 use rustls_pemfile::{certs, read_one, Item};
 use std::io::{self, BufReader};
 
-use super::server::ServerOptions;
+use super::server::{ServerOptions, ServerPEMOptions};
 
-pub fn load_ser_config(options: &ServerOptions) -> io::Result<ServerConfig> {
-    let c = options.cert.clone();
-    let certs = load_certs(&c)?;
+pub fn load_ser_config_by_pem(
+    options: &ServerPEMOptions,
+    opt_authority: Option<&http::uri::Authority>,
+) -> anyhow::Result<ServerConfig> {
+    let c_pem = options.cert.clone();
+    let certs = load_certs_from_pem(c_pem.as_bytes())?;
     debug_assert!(!certs.is_empty());
-    let k = options.key.clone();
-    let key = load_keys(&k)?;
 
-    //todo: we don't use client authentication yet
-    let mut config = rustls::ServerConfig::builder()
-        .with_client_cert_verifier(Arc::new(NoClientAuth))
-        .with_single_cert(certs, key)
-        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+    let key_pem = options.key.clone();
+    let key_der = load_key_from_pem(key_pem.as_bytes()).context("1")?;
+
+    let mut config = match opt_authority {
+        Some(authority) => {
+            // 参考 rcgen/example/sign-leaf-with-ca.rs
+
+            let cacert_pem = c_pem;
+            let cakey_pem = key_pem;
+
+            let ca_key_pair = KeyPair::from_pem(&cakey_pem)?;
+
+            let ca_params = rcgen::CertificateParams::from_ca_cert_pem(&cacert_pem)?;
+
+            let ca = ca_params.self_signed(&ca_key_pair)?;
+
+            use rand::thread_rng;
+            use rand::Rng;
+
+            const NOT_BEFORE_OFFSET: i64 = 60;
+            const TTL_SECS: i64 = 31536000;
+
+            let mut params = rcgen::CertificateParams::default();
+            params.serial_number = Some(thread_rng().gen::<u64>().into());
+
+            let not_before =
+                time::OffsetDateTime::now_utc() - time::Duration::seconds(NOT_BEFORE_OFFSET);
+            params.not_before = not_before;
+            params.not_after = not_before + time::Duration::seconds(TTL_SECS);
+
+            let mut distinguished_name = rcgen::DistinguishedName::new();
+            distinguished_name.push(rcgen::DnType::CommonName, authority.host());
+            params.distinguished_name = distinguished_name;
+
+            params.subject_alt_names.push(rcgen::SanType::DnsName(
+                rcgen::Ia5String::try_from(authority.host()).expect("Failed to create Ia5String"),
+            ));
+
+            // 直接用 随机生成的 key_pair 会 在实际 tls 连接时报错 Illegal Parameters, 目前我不知道为什么
+            // let key_pair = KeyPair::generate().context("KeyPair::generate() failed")?;
+
+            // 这里是参考了 hudsucker/ src/certificate_authority/rcgen_authority.rs 中的 gen_cert 函数
+
+            let cert = params.signed_by(&ca_key_pair, &ca, &ca_key_pair)?;
+
+            rustls::ServerConfig::builder()
+                .with_client_cert_verifier(Arc::new(NoClientAuth))
+                .with_single_cert(vec![cert.der().to_owned()], key_der)
+                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?
+        }
+        None => rustls::ServerConfig::builder()
+            .with_client_cert_verifier(Arc::new(NoClientAuth))
+            .with_single_cert(certs, key_der)
+            .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?,
+    };
 
     if let Some(a) = &options.alpn {
         config.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
@@ -33,17 +86,32 @@ pub fn load_ser_config(options: &ServerOptions) -> io::Result<ServerConfig> {
     Ok(config)
 }
 
+/// if `opt_authority` is given, we will use the given cert as CA and generate a new cert for the
+/// authority.
+pub fn load_ser_config(
+    options: &ServerOptions,
+    opt_authority: Option<&http::uri::Authority>,
+) -> anyhow::Result<ServerConfig> {
+    let pem_opts = ServerPEMOptions::from(options)?;
+    load_ser_config_by_pem(&pem_opts, opt_authority)
+}
+
 /// Load the passed certificates file
-fn load_certs(path: &PathBuf) -> io::Result<Vec<CertificateDer<'static>>> {
-    Ok(certs(&mut BufReader::new(File::open(path)?))
+pub fn load_certs(path: &PathBuf) -> io::Result<Vec<CertificateDer<'static>>> {
+    let certs_data = std::fs::read(path)?;
+    load_certs_from_pem(certs_data.as_slice())
+}
+
+pub fn load_certs_from_pem(data: &[u8]) -> io::Result<Vec<CertificateDer<'static>>> {
+    Ok(certs(&mut BufReader::new(data))
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("{:?}", e)))?
         .into_iter()
         .map(CertificateDer::from)
         .collect())
 }
 
-fn load_keys(path: &PathBuf) -> io::Result<PrivateKeyDer<'static>> {
-    match read_one(&mut BufReader::new(File::open(path)?)) {
+pub fn load_key_from_pem(data: &[u8]) -> io::Result<PrivateKeyDer<'static>> {
+    match read_one(&mut BufReader::new(data)) {
         Ok(Some(Item::PKCS8Key(data))) => {
             debug!("key type PKCS8Key");
             Ok(PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(data)))
@@ -58,10 +126,15 @@ fn load_keys(path: &PathBuf) -> io::Result<PrivateKeyDer<'static>> {
         }
         Ok(x) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("invalid key in {:?}, {:?}", &path, x),
+            format!("invalid key in {}, {:?}", String::from_utf8_lossy(data), x),
         )),
         Err(e) => Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
     }
+}
+
+pub fn load_key(path: &PathBuf) -> io::Result<PrivateKeyDer<'static>> {
+    let key_data = std::fs::read(path)?;
+    load_key_from_pem(key_data.as_slice())
 }
 
 #[cfg(test)]
@@ -79,7 +152,7 @@ mod test {
         let mut path = PathBuf::new();
         path.push("test.key");
 
-        let r = load_keys(&path);
+        let r = load_key(&path);
         match r {
             Ok(pk) => {
                 println!("{:?}", pk);
@@ -113,34 +186,16 @@ mod test {
         let mut path2 = PathBuf::new();
         path2.push("test.key");
 
-        let r = load_ser_config(&ServerOptions {
-            // addr: "addr".to_string(),
-            cert: path,
-            key: path2,
-            ..Default::default()
-        });
+        let r = load_ser_config(
+            &ServerOptions {
+                // addr: "addr".to_string(),
+                cert: path,
+                key: path2,
+                ..Default::default()
+            },
+            None,
+        );
 
         println!("{:#?}", r);
     }
 }
-
-// see https://github.com/async-rs/async-tls/blob/master/examples/client/src/main.rs
-// 但是我发现对新版的 rustls_pemfile 来说, 内部要 map 一下再 unwrap
-// pub async fn client_connector_for_ca_file(ca_file: &Path) -> io::Result<TlsConnector> {
-//     let mut root_store = rustls::RootCertStore::empty();
-
-//     let ca_bytes = async_std::fs::read(ca_file).await?;
-
-//     let cert: Vec<_> = certs(&mut BufReader::new(Cursor::new(ca_bytes)))
-//         .map(|x| x.unwrap())
-//         .collect();
-
-//     debug_assert_eq!((1, 0), root_store.add_parsable_certificates(&cert));
-
-//     let config = ClientConfig::builder()
-//         .with_safe_defaults()
-//         .with_root_certificates(root_store)
-//         .with_no_client_auth();
-
-//     Ok(TlsConnector::from(Arc::new(config)))
-// }

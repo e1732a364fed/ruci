@@ -45,6 +45,7 @@ impl Map for BlackHole {
 #[map_ext_fields]
 #[derive(Clone, Debug, Default, MapExt)]
 pub struct Direct {
+    pub leak_target_addr: bool,
     pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
 impl Name for Direct {
@@ -60,7 +61,10 @@ impl Map for Direct {
         let dial_a = match params.a {
             Some(a) => a,
             None => {
-                return MapResult::err_str(&format!("{}, direct need params.a, got empty", cid))
+                return MapResult::from_err_str(&format!(
+                    "{}, direct need params.a, got empty",
+                    cid
+                ))
             }
         };
 
@@ -97,9 +101,21 @@ impl Map for Direct {
                         e = e.context("Direct try write early data");
                         return MapResult::from_e(e);
                     }
-                    return MapResult::builder().c(stream).build();
+
+                    let builder = MapResult::builder().c(stream);
+                    return if self.leak_target_addr {
+                        builder.a(Some(dial_a)).build()
+                    } else {
+                        builder.build()
+                    };
                 }
-                return MapResult::builder().c(stream).b(params.b).build();
+
+                let builder = MapResult::builder().c(stream);
+                if self.leak_target_addr {
+                    builder.a(Some(dial_a)).b(params.b).build()
+                } else {
+                    builder.b(params.b).build()
+                }
             }
             Err(e) => {
                 return MapResult::from_e(e.context(format!("Direct dial {} failed", dial_a)))
@@ -337,7 +353,9 @@ impl Map for BindDialer {
                 }
             }
 
-            _ => return MapResult::err_str("BindDialer can't map when a stream already exists"),
+            _ => {
+                return MapResult::from_err_str("BindDialer can't map when a stream already exists")
+            }
         }
     }
 }

@@ -303,22 +303,20 @@ fn test_config1() -> mlua::Result<()> {
                     ext: None,
                 },
                 InMapConfig::Counter,
-                InMapConfig::Socks5(PlainTextSet {
-                    userpass: None,
-                    more: None,
-                }),
+                InMapConfig::Socks5(PlainTextSet::default()),
             ],
         }],
         outbounds: vec![OutMapConfigChain {
             tag: String::from("todo!()"),
             chain: vec![
-                OutMapConfig::Direct(DirectConfig { dns_client: None }),
+                OutMapConfig::Direct(DirectConfig::default()),
                 OutMapConfig::Direct(DirectConfig {
                     dns_client: Some(dns::ClientConfig {
                         dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
                         ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
                         static_pairs: HashMap::new(),
                     }),
+                    ..Default::default()
                 }),
             ],
         }],

@@ -36,6 +36,7 @@ use ruci::{
     net::{self, dns, http::CommonConfig},
 };
 use serde::{Deserialize, Serialize};
+use tls::server::ServerPEMOptions;
 use tracing::warn;
 
 use crate::{
@@ -215,6 +216,9 @@ pub struct OutMapConfigChain {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct DirectConfig {
+    /// 此项是用于 建立 Direct 之后, Chain 中还有 后续的 Map, 且还需要读取target_addr时，使用
+    /// 默认 Direct 将把 target_addr 消耗掉
+    pub leak_target_addr: Option<bool>,
     pub dns_client: Option<dns::ClientConfig>,
 }
 
@@ -356,6 +360,8 @@ pub enum InMapConfig {
         file_name: String,          //如不给出，默认为直接使用该 lua 配置文件，但不建议
         handshake_function: String, // 用于 handshake 的 函数名
     },
+
+    MITM(TlsIn),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -450,17 +456,19 @@ pub struct TlsIn {
     pub alpn: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct TlsOut {
-    pub host: String,
+    pub host: Option<String>,
     pub insecure: Option<bool>,
     pub alpn: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+/// 明文密码配置
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct PlainTextSet {
     pub userpass: Option<String>,
     pub more: Option<Vec<String>>,
+    pub upgrade_to_h2: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -471,7 +479,7 @@ pub struct Socks5Out {
     pub ext: Option<Ext>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct TrojanPassSet {
     pub password: Option<String>,
     pub more: Option<Vec<String>>,
@@ -655,6 +663,20 @@ impl AdvancedToMapBox for InMapConfig {
             InMapConfig::StackLwip => Box::new(tcp_ip_stack_lwip::Stack {
                 ext_fields: Some(MapExtFields::default()),
             }),
+            InMapConfig::MITM(c) => {
+                let sc = tls::server::ServerOptions {
+                    cert: PathBuf::from(c.cert.clone()),
+                    key: PathBuf::from(c.key.clone()),
+                    alpn: c.alpn.clone(),
+                };
+
+                let sc = ServerPEMOptions::from(&sc).unwrap();
+
+                Box::new(ruci::map::tls::mitm::MITM {
+                    sc,
+                    ext_fields: None,
+                })
+            }
         }
     }
 }
@@ -679,6 +701,7 @@ impl AdvancedToMapBox for OutMapConfig {
                 if let Some(dc) = &dc.dns_client {
                     m.opt_dns_client = Some(Arc::new(dns::AsyncClient::new(dc.clone())));
                 }
+                m.leak_target_addr = dc.leak_target_addr.unwrap_or_default();
                 m
             }
             OutMapConfig::BindDialer(dc) => dc.to_map_box(),

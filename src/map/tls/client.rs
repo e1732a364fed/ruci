@@ -17,7 +17,7 @@ use super::*;
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
 pub struct Client {
-    pub domain: String,
+    pub server_domain: Option<String>,
     pub is_insecure: bool,
     client_config: Arc<ClientConfig>,
 }
@@ -36,7 +36,7 @@ fn default_cc() -> ClientConfig {
 
 #[derive(Debug, Default)]
 pub struct ClientOptions {
-    pub domain: String,
+    pub domain: Option<String>,
     pub is_insecure: bool,
     pub alpn: Option<Vec<String>>,
 }
@@ -51,11 +51,11 @@ impl Client {
                 .set_certificate_verifier(Arc::new(SuperDanVer {}));
         }
         if let Some(a) = opt.alpn {
-            config.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
+            config.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect();
         }
 
         Client {
-            domain: opt.domain,
+            server_domain: opt.domain,
             is_insecure: opt.is_insecure,
             client_config: Arc::new(config),
             ext_fields: Some(MapExtFields::default()),
@@ -123,7 +123,12 @@ impl Client {
 
         let new_c = connector
             .connect(
-                ServerName::try_from(self.domain.clone()).expect("domain string to serverName ok"),
+                ServerName::try_from(
+                    self.server_domain
+                        .clone()
+                        .unwrap_or(a.clone().unwrap().get_name().unwrap()),
+                )
+                .expect("domain string to serverName ok"),
                 conn,
             )
             .await?;
@@ -167,7 +172,7 @@ impl map::Map for Client {
                 Err(e) => MapResult::from_e(e.context("TLS client handshake failed")),
             }
         } else {
-            MapResult::err_str(&format!(
+            MapResult::from_err_str(&format!(
                 "tls client only support tcplike stream, got {}",
                 &conn
             ))

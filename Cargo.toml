@@ -47,6 +47,13 @@ url = "2"
 base64 = "0.21.7"
 sha2 = "0.10.8"
 
+time = "0.3.6"
+http = "1.1.0"
+rcgen = { version = "0.13.1", optional = false, features = [
+    "pem",
+    "x509-parser",
+] }
+
 
 hickory-resolver = { version = "0.24.1", features = ["serde-config"] }
 tokio-rustls = "0.25.0"
@@ -57,7 +64,6 @@ webpki-roots = "0.22.6"
 macro_map = { path = "crates/macro_map" }
 
 tun = { version = "0.7.5", features = ["async"], optional = true }
-
 
 [features]
 

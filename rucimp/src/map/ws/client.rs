@@ -139,7 +139,7 @@ impl Map for Client {
                 Err(e) => MapResult::from_e(e.context("websocket_client maps failed")),
             }
         } else {
-            MapResult::err_str("websocket_client only support tcplike stream")
+            MapResult::from_err_str("websocket_client only support tcplike stream")
         }
     }
 }

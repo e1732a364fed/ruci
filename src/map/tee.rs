@@ -116,7 +116,7 @@ impl Map for Tee {
                     .build();
             }
             _ => {
-                return MapResult::err_str(&format!(
+                return MapResult::from_err_str(&format!(
                     "tee only support Conn stream, got {}",
                     params.c
                 ))

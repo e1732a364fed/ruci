@@ -187,8 +187,8 @@ impl Map for Adder {
             Stream::AddrConn(_) => {
                 todo!()
             }
-            Stream::None => MapResult::err_str("adder: can't add without a stream"),
-            _ => MapResult::err_str("adder: can't count with a stream generator"),
+            Stream::None => MapResult::from_err_str("adder: can't add without a stream"),
+            _ => MapResult::from_err_str("adder: can't count with a stream generator"),
         }
     }
 }

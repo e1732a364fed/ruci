@@ -165,8 +165,8 @@ impl Map for Counter {
                     .dynamic_data(output_data)
                     .build()
             }
-            Stream::None => MapResult::err_str("counter: can't init without a stream"),
-            _ => MapResult::err_str("counter: can't init with a stream generator"),
+            Stream::None => MapResult::from_err_str("counter: can't init without a stream"),
+            _ => MapResult::from_err_str("counter: can't init with a stream generator"),
         }
     }
 }

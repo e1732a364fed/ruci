@@ -1,5 +1,9 @@
 /*!
 Implements a [`Map`] for http proxy by section 5.2 of https://www.ietf.org/rfc/rfc2817.txt.
+
+
+h2 also has a CONNECT method, but it is not commonly used for proxy purpose.
+https://datatracker.ietf.org/doc/html/rfc7540#section-8.3
  */
 
 use std::cmp::min;
@@ -116,6 +120,9 @@ impl Server {
 
             return Ok(MapResult::ebc(e1, buf, base));
         }
+
+        // debug!("http get request: {:?}", r);
+
         let mut authed_user: Option<PlainText> = None;
 
         //todo: add test for auth
@@ -257,7 +264,7 @@ impl Map for Server {
 
                 MapResult::from_result(r)
             }
-            _ => MapResult::err_str("http proxy only support tcplike stream"),
+            _ => MapResult::from_err_str("http proxy only support tcplike stream"),
         }
     }
 }
@@ -333,10 +340,10 @@ impl Map for Client {
                     let r = self.handshake(cid, c, a, params.b).await;
                     MapResult::from_result(r)
                 } else {
-                    MapResult::err_str("http proxy client requires a target_addr, got None")
+                    MapResult::from_err_str("http proxy client requires a target_addr, got None")
                 }
             }
-            _ => MapResult::err_str("http proxy only support tcplike stream"),
+            _ => MapResult::from_err_str("http proxy only support tcplike stream"),
         }
     }
 }

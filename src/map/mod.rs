@@ -184,7 +184,7 @@ impl MapResult {
         MapResult::new_c(c).b(b).build()
     }
 
-    pub fn err_str(estr: &str) -> Self {
+    pub fn from_err_str(estr: &str) -> Self {
         MapResult::builder().e(anyhow!("{}", estr)).build()
     }
 

@@ -163,7 +163,7 @@ impl Map for FileIO {
         // function is similar to Stdio
 
         if params.c.is_some() {
-            return MapResult::err_str("fileio can't generate stream when there's already one");
+            return MapResult::from_err_str("fileio can't generate stream when there's already one");
         };
 
         let c = match self

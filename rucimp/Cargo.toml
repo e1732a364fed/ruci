@@ -55,7 +55,8 @@ tokio-native-tls = { version = "0.3.1", optional = true }
 
 http = "1.1.0"
 tokio-tungstenite = "0.21.0"
-h2 = "0.4.2"
+h2 = { version = "0.4.2" }
+hpack = "0.3.0"
 
 rustls = { version = "0.21", optional = true, features = [
     "dangerous_configuration",
@@ -97,11 +98,13 @@ zip = "2.2.2"
 
 reqwest = { version = "0.11", features = ["json"] }
 
+
 [dev-dependencies]
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 criterion = "0.5"
 wiremock = "0.6.2"
+
 
 [features]
 default = ["route", "geoip", "sockopt"]
@@ -142,15 +145,15 @@ windows-sys = { version = "0.52", features = [
 
 
 [[example]]
-name = "chain"
+name = "lua"
 required-features = ["lua", "route"]
 
 [[example]]
-name = "chain_infinite"
+name = "lua_infinite"
 required-features = ["lua", "route"]
 
 [[example]]
-name = "chain_trace"
+name = "lua_trace"
 required-features = ["lua", "route"]
 
 [[example]]

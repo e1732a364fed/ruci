@@ -99,10 +99,10 @@ impl Map for Client {
                     let r = self.handshake(cid, c, a, params.b).await;
                     MapResult::from_result(r)
                 } else {
-                    MapResult::err_str("trojan client requires a target_addr, got None")
+                    MapResult::from_err_str("trojan client requires a target_addr, got None")
                 }
             }
-            _ => MapResult::err_str("trojan only support tcplike stream"),
+            _ => MapResult::from_err_str("trojan only support tcplike stream"),
         }
     }
 }

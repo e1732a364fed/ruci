@@ -9,9 +9,11 @@ test.crt 为 pem 格式的 x509 证书, test.key 为 pem 格式的 EC key
 test2.key, test2.crt 为 自签名根证书, 比 test.crt/key 更好
 test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 localhost,
 
+而 test_ca_cert.pem 和 test_ca_key.pem 则是 随机生成的一个 CA证书 和其密钥，可以用于 MITM 的配置。
+
 
 inspect.lua 是一个lua模块, 来自
-//https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua
+[inspect.lua](https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua)
 
 可以帮助在 lua中打印一个值的内容
 

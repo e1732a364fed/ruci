@@ -7,11 +7,27 @@ use self::map::{MapExtFields, CID};
 use super::*;
 
 #[derive(Debug, Clone, Default)]
+pub struct ServerPEMOptions {
+    pub cert: String,
+    pub key: String,
+    pub alpn: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct ServerOptions {
-    // pub addr: String,
     pub cert: PathBuf,
     pub key: PathBuf,
     pub alpn: Option<Vec<String>>,
+}
+
+impl ServerPEMOptions {
+    pub fn from(opts: &ServerOptions) -> std::io::Result<Self> {
+        Ok(Self {
+            cert: std::fs::read_to_string(opts.cert.clone())?,
+            key: std::fs::read_to_string(opts.key.clone())?,
+            alpn: opts.alpn.clone(),
+        })
+    }
 }
 
 impl ToMapBox for ServerOptions {
@@ -21,7 +37,7 @@ impl ToMapBox for ServerOptions {
     }
 }
 
-// todo: 添加 alpn 和 tls_min_v
+// todo: 添加  tls_min_v
 #[map_ext_fields]
 #[derive(Clone, MapExt)]
 pub struct Server {
@@ -42,7 +58,7 @@ impl<IO> crate::Name for tokio_rustls::server::TlsStream<IO> {
 
 impl Server {
     pub fn new(c: ServerOptions) -> Self {
-        let config = load::load_ser_config(&c).expect("tls server config valid");
+        let config = load::load_ser_config(&c, None).expect("tls server config valid");
         Server {
             ta: TlsAcceptor::from(Arc::new(config)),
             option_cache: c.clone(),
@@ -94,7 +110,7 @@ impl map::Map for Server {
                 Err(e) => MapResult::from_e(e.context("TLS server handshake failed")),
             }
         } else {
-            MapResult::err_str("tls only support tcplike stream")
+            MapResult::from_err_str("tls only support tcplike stream")
         }
     }
 }

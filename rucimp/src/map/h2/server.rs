@@ -196,7 +196,7 @@ impl Map for Server {
                 Err(e) => MapResult::from_e(e.context("h2_server handshake failed")),
             }
         } else {
-            MapResult::err_str("h2_server only support tcplike stream")
+            MapResult::from_err_str("h2_server only support tcplike stream")
         }
     }
 }

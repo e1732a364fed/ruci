@@ -58,6 +58,9 @@ Which ALPN protocols we include in our client hello. If empty, no ALPN extension
 
 如果任意一方的alpn 没给出, 则连接都通过；如果两方 alpn 都给出, 则只有匹配了才通过
 
+而 匹配的逻辑是，如果 client 给出的是 ["h2", "http/1.1"], 而 server 给出的是 ["http/1.1", "h2"],
+则 实际选用的是 http/1.1, 而 如果此时 server 给出的是 ["h2", "http/1.1"], 则实际选用的是 h2.
+
 native-tls 的 server 不支持手动设置 alpn
 
 ## tproxy

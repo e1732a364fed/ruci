@@ -1,5 +1,3 @@
-use std::io::Read;
-
 use anyhow::bail;
 use rucimp::{utils::FileSource, DEFAULT_LUA_CONFIG_FILE_NAME};
 use tracing::debug;
@@ -9,6 +7,7 @@ use tracing::debug;
 */
 pub mod chain;
 
+#[allow(unused)]
 pub async fn get_file(
     file_name: &mut String,
     in_memory: bool,
@@ -26,6 +25,8 @@ pub async fn get_file(
     {
         #[cfg(feature = "utils")]
         {
+            use std::io::Read;
+
             let url: String = file_name.to_string();
 
             file_name.replace_range(.., url.split('/').last().unwrap());
@@ -125,22 +126,20 @@ mod test {
                         ext: None,
                     },
                     InMapConfig::Counter,
-                    InMapConfig::Socks5(PlainTextSet {
-                        userpass: None,
-                        more: None,
-                    }),
+                    InMapConfig::Socks5(PlainTextSet::default()),
                 ],
             }],
             outbounds: vec![OutMapConfigChain {
                 tag: String::from("todo!()"),
                 chain: vec![
-                    OutMapConfig::Direct(DirectConfig { dns_client: None }),
+                    OutMapConfig::Direct(DirectConfig::default()),
                     OutMapConfig::Direct(DirectConfig {
                         dns_client: Some(ClientConfig {
                             dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
                             ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
                             static_pairs: HashMap::new(),
                         }),
+                        ..Default::default()
                     }),
                 ],
             }],

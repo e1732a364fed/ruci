@@ -23,7 +23,7 @@ async fn dial_future(
         .expect("dial tcp succeed");
 
     let a = super::client::Client::new(ClientOptions {
-        domain: "test.domain".to_string(),
+        domain: Some("test.domain".to_string()),
         is_insecure: true,
         ..Default::default()
     });

@@ -223,7 +223,7 @@ impl Map for Stack {
                 None => todo!(),
             }
         } else {
-            MapResult::err_str("stack only support None stream")
+            MapResult::from_err_str("stack only support None stream")
         }
     }
 }

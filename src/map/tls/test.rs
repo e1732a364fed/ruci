@@ -32,7 +32,7 @@ async fn dial_tls_in_mem() {
     };
 
     let a = tls::client::Client::new(ClientOptions {
-        domain: "www.baidu.com".to_string(),
+        domain: Some("www.baidu.com".to_string()),
         is_insecure: true,
         ..Default::default()
     });
@@ -71,7 +71,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
         .unwrap();
 
     let a = tls::client::Client::new(ClientOptions {
-        domain: "www.baidu.com".to_string(),
+        domain: Some("www.baidu.com".to_string()),
         is_insecure: true,
         ..Default::default()
     });

@@ -105,7 +105,7 @@ impl map::Map for Server {
                 Err(e) => MapResult::from_e(e.context("NativeTLS server handshake failed")),
             }
         } else {
-            MapResult::err_str("tls only support tcplike stream")
+            MapResult::from_err_str("tls only support tcplike stream")
         }
     }
 }
@@ -113,7 +113,7 @@ impl map::Map for Server {
 #[map_ext_fields]
 #[derive(Clone, Debug, MapExt)]
 pub struct Client {
-    pub domain: String,
+    pub domain: Option<String>,
     pub insecure: bool,
     pub alpn: Option<Vec<String>>,
 }
@@ -158,7 +158,15 @@ impl map::Map for Client {
                 TlsConnector::from(b.build().unwrap())
             };
 
-            let r = connector.connect(&self.domain, conn).await;
+            let r = connector
+                .connect(
+                    &self
+                        .domain
+                        .as_ref()
+                        .unwrap_or(&params.a.clone().unwrap().get_name().unwrap()),
+                    conn,
+                )
+                .await;
             match r {
                 anyhow::Result::Ok(c) => {
                     return MapResult::new_c(Box::new(c))
@@ -169,7 +177,7 @@ impl map::Map for Client {
                 Err(e) => MapResult::from_e(e),
             }
         } else {
-            MapResult::err_str("tls only support tcplike stream")
+            MapResult::from_err_str("tls only support tcplike stream")
         }
     }
 }

@@ -796,7 +796,7 @@ impl map::Map for ClientOrServer {
 
                 self.connect_with_rw(Box::new(r), Box::new(w), params.a, params.b, cid)
             }
-            _ => MapResult::err_str("spe1 only support tcplike stream"),
+            _ => MapResult::from_err_str("spe1 only support tcplike stream"),
         }
     }
 }

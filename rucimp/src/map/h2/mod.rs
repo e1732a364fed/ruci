@@ -2,6 +2,8 @@
 Defines [`ruci::map::Map`]s for h2 and grpc.
 
 目前的设定: grpc client 默认使用 0rtt; 非 grpc 的 h2 不使用0rtt
+
+See <https://datatracker.ietf.org/doc/html/rfc7540>
 */
 
 pub mod client;
@@ -13,6 +15,7 @@ use std::io::{Error, ErrorKind, Result};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use anyhow::bail;
 use bytes::{Bytes, BytesMut};
 use futures::ready;
 
@@ -136,4 +139,145 @@ impl AsyncWrite for H2Stream {
             },
         ))
     }
+}
+
+// 注意， h2 中的 header 使用了 HPACK 算法进行压缩，需要使用 hpack crate 进行解析
+// https://datatracker.ietf.org/doc/html/rfc7541
+
+// 帧头结构
+// pub struct FrameHeader {
+//     pub length: u32,    // 24 bits
+//     pub frame_type: u8, // 8 bits
+//     pub flags: u8,      // 8 bits
+//     pub stream_id: u32, // 31 bits
+// }
+
+pub const FRAME_TYPE_DATA: u8 = 0x0;
+pub const FRAME_TYPE_HEADERS: u8 = 0x1;
+pub const FRAME_TYPE_PRIORITY: u8 = 0x2;
+pub const FRAME_TYPE_RST_STREAM: u8 = 0x3;
+pub const FRAME_TYPE_SETTINGS: u8 = 0x4;
+pub const FRAME_TYPE_PUSH_PROMISE: u8 = 0x5;
+pub const FRAME_TYPE_PING: u8 = 0x6;
+pub const FRAME_TYPE_GOAWAY: u8 = 0x7;
+pub const FRAME_TYPE_WINDOW_UPDATE: u8 = 0x8;
+pub const FRAME_TYPE_CONTINUATION: u8 = 0x9;
+
+/// 返回 settings 和 headers
+pub fn parse_frames(buf: &[u8]) -> anyhow::Result<(Vec<SettingFrame>, Vec<(String, String)>)> {
+    // 解析帧头（9字节）
+    if buf.len() < 9 {
+        bail!("buf.len() < 9")
+    }
+
+    let mut index = 0;
+    let mut frame = buf;
+
+    let mut settings = vec![];
+    let mut headers = vec![];
+
+    // 常见的帧类型为 settings, headers, data, WINDOW_UPDATE
+    loop {
+        // 解析长度（24位,3字节）
+        let length = ((frame[0] as u32) << 16) | ((frame[1] as u32) << 8) | (frame[2] as u32);
+
+        let whole_size = length as usize + 9;
+
+        let frame_type = frame[3];
+        let flags = frame[4];
+
+        // 解析 Stream ID（31位，忽略第一位），4字节
+        // let stream_id = ((buf[5] as u32) << 24)
+        //     | ((buf[6] as u32) << 16)
+        //     | ((buf[7] as u32) << 8)
+        //     | (buf[8] as u32);
+        // let stream_id = stream_id & 0x7FFF_FFFF;
+
+        let frame_data = &frame[9..whole_size];
+
+        // 根据帧类型解析负载
+        match frame_type {
+            // SETTINGS 帧 (type = 0x4)
+            FRAME_TYPE_SETTINGS => {
+                settings = parse_settings_frame(frame_data)?;
+            }
+            // HEADERS 帧 (type = 0x1)
+            FRAME_TYPE_HEADERS => {
+                headers = parse_headers_frame(frame_data, flags)?;
+            }
+            _ => debug!("unhandled frame type: {}", frame_type),
+        }
+        index += whole_size;
+
+        frame = &buf[index..];
+
+        if frame.is_empty() {
+            break;
+        }
+    }
+
+    return Ok((settings, headers));
+}
+
+#[derive(Debug, Clone)]
+pub struct SettingFrame(pub u16, pub u32);
+
+/// https://datatracker.ietf.org/doc/html/rfc7540#section-6.5
+pub fn parse_settings_frame(payload: &[u8]) -> anyhow::Result<Vec<SettingFrame>> {
+    debug!("parsing settings frame");
+    // SETTINGS 帧的每个设置项是 6 字节
+
+    let mut settings = Vec::new();
+    for chunk in payload.chunks(6) {
+        if chunk.len() == 6 {
+            let identifier = ((chunk[0] as u16) << 8) | (chunk[1] as u16);
+            let value = ((chunk[2] as u32) << 24)
+                | ((chunk[3] as u32) << 16)
+                | ((chunk[4] as u32) << 8)
+                | (chunk[5] as u32);
+
+            let f = SettingFrame(identifier, value);
+            settings.push(f);
+        }
+    }
+    Ok(settings)
+}
+
+pub fn parse_headers_frame(payload: &[u8], flags: u8) -> anyhow::Result<Vec<(String, String)>> {
+    debug!("parsing headers frame");
+
+    use hpack::Decoder;
+
+    let mut headers_data = payload;
+
+    if flags & 0x8 != 0 {
+        // PADDED flag
+        let pad_length = payload[0] as usize;
+        headers_data = &payload[1..payload.len() - pad_length];
+    }
+
+    // 处理优先级（如果有的话）
+    if flags & 0x20 != 0 {
+        // PRIORITY flag
+        headers_data = &headers_data[5..];
+    }
+
+    // 使用 HPACK 解码 headers
+    let mut decoder = Decoder::new();
+    let mut headers = Vec::new();
+
+    // 这里需要 HPACK 解码器来解析实际的 header 字段
+    // 实际实现中应该使用 hpack crate 或类似的库
+
+    match decoder.decode(headers_data) {
+        Ok(decoded_headers) => {
+            for header in decoded_headers {
+                headers.push((String::from_utf8(header.0)?, String::from_utf8(header.1)?));
+            }
+        }
+        Err(e) => debug!("HPACK decode error: {:?}", e),
+    }
+
+    // debug!("Decoded headers: {:?}", headers);
+    Ok(headers)
 }

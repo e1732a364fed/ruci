@@ -130,7 +130,7 @@ impl Map for Server {
 
                 MapResult::from_result(r)
             }
-            _ => MapResult::err_str("socks5http only support tcplike stream"),
+            _ => MapResult::from_err_str("socks5http only support tcplike stream"),
         }
     }
 }

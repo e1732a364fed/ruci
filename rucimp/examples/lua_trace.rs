@@ -17,7 +17,7 @@ mod shared;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    shared::print_env_version_and_init_log("example: chain_trace_and_record_new_conn");
+    shared::print_env_version_and_init_log("example: chain_trace");
 
     let default_fn = DEFAULT_LUA_CONFIG_FILE_NAME.to_string();
 

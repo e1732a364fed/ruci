@@ -142,7 +142,7 @@ impl Map for OptDirect {
         let a = match params.a {
             Some(a) => a,
             None => {
-                return MapResult::err_str(&format!("{}, opt_direct need params.a, got empty", cid))
+                return MapResult::from_err_str(&format!("{}, opt_direct need params.a, got empty", cid))
             }
         };
 
@@ -198,7 +198,7 @@ impl Map for OptDirect {
                             .a(Some(a))
                             .build();
                     }
-                    _ => return MapResult::err_str("OptDirect only supports Conn or AddrConn"),
+                    _ => return MapResult::from_err_str("OptDirect only supports Conn or AddrConn"),
                 }
             }
             Err(e) => return MapResult::from_e(e.context(format!("opt_direct dial {} failed", a))),
@@ -274,7 +274,7 @@ impl Map for OptDialer {
                 return self.dial_addr(&self.dial_addr, params.a, params.b).await;
             }
 
-            _ => return MapResult::err_str("OptDialer can't dial when a stream already exists"),
+            _ => return MapResult::from_err_str("OptDialer can't dial when a stream already exists"),
         }
     }
 }

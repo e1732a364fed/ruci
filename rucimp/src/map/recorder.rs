@@ -561,8 +561,8 @@ impl Map for RecorderMap {
                     .c(Stream::AddrConn(ac))
                     .build()
             }
-            Stream::None => MapResult::err_str("recorder: can't init without a stream"),
-            _ => MapResult::err_str("recorder: can't init with a stream generator"),
+            Stream::None => MapResult::from_err_str("recorder: can't init without a stream"),
+            _ => MapResult::from_err_str("recorder: can't init with a stream generator"),
         }
     }
 }

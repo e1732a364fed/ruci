@@ -119,7 +119,7 @@ impl Name for Stdio {
 impl Map for Stdio {
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.c.is_some() {
-            return MapResult::err_str("stdio can't generate stream when there's already one");
+            return MapResult::from_err_str("stdio can't generate stream when there's already one");
         };
 
         let stdin = tokio::io::stdin();

@@ -595,7 +595,7 @@ impl Map for LuaMap {
                             LuaValue::Error(error) => return MapResult::from_e(error),
 
                             _ => {
-                                return MapResult::err_str(
+                                return MapResult::from_err_str(
                                     "got c from lua not of table/userdata type",
                                 )
                             }
@@ -618,7 +618,7 @@ impl Map for LuaMap {
                             }
                             LuaValue::Error(error) => return MapResult::from_e(error),
                             _ => {
-                                return MapResult::err_str(
+                                return MapResult::from_err_str(
                                     "got a from lua not of nil/string/userdata type",
                                 )
                             }
@@ -637,7 +637,7 @@ impl Map for LuaMap {
                             }
                             LuaValue::Error(error) => return MapResult::from_e(error),
                             _ => {
-                                return MapResult::err_str(
+                                return MapResult::from_err_str(
                                     "got b from lua not of nil/string/userdata type",
                                 )
                             }
@@ -648,7 +648,7 @@ impl Map for LuaMap {
                     Err(e) => MapResult::from_e(e),
                 }
             }
-            _ => MapResult::err_str("LuaMap only support tcplike stream"),
+            _ => MapResult::from_err_str("LuaMap only support tcplike stream"),
         }
     }
 }

@@ -83,7 +83,7 @@ impl Map for Server {
 
             MapResult::new_c(conn).b(Some(buf)).a(params.a).build()
         } else {
-            MapResult::err_str("http_filter only support tcplike stream")
+            MapResult::from_err_str("http_filter only support tcplike stream")
         }
     }
 }

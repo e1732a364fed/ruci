@@ -188,7 +188,7 @@ impl map::Map for Client {
         let target_addr = match params.a {
             Some(ta) => ta,
             None => {
-                return MapResult::err_str(&format!(
+                return MapResult::from_err_str(&format!(
                     "{}, socks5 client called without target_addr",
                     cid
                 ));
@@ -200,7 +200,7 @@ impl map::Map for Client {
                 let r = self.handshake(cid, c, target_addr, params.b).await;
                 MapResult::from_result(r)
             }
-            _ => MapResult::err_str(&format!(
+            _ => MapResult::from_err_str(&format!(
                 "socks5 client only support tcplike stream, got {}",
                 params.c
             )),

@@ -162,7 +162,7 @@ impl Map for SingleClient {
                 Err(e) => MapResult::from_e(e.context("h2_single_client handshake failed")),
             }
         } else {
-            MapResult::err_str("h2_single_client only support tcplike stream")
+            MapResult::from_err_str("h2_single_client only support tcplike stream")
         }
     }
 }
@@ -307,7 +307,7 @@ impl Map for MuxClient {
                     Err(e) => MapResult::from_e(e.context("h2_mux_client handshake failed")),
                 }
             }
-            _ => MapResult::err_str("h2_mux_client only support tcplike stream or None stream"),
+            _ => MapResult::from_err_str("h2_mux_client only support tcplike stream or None stream"),
         }
     }
 }
