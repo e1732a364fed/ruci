@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ruci::map::MapperBox;
 
 #[derive(Debug)]
@@ -7,7 +9,7 @@ pub struct DynamicConfig {}
 pub struct DynamicIter {}
 
 impl Iterator for DynamicIter {
-    type Item = &'static MapperBox;
+    type Item = Arc<MapperBox>;
 
     fn next(&mut self) -> Option<Self::Item> {
         todo!()

@@ -210,8 +210,6 @@ pub async fn accumulate_from_start(
 /// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
 ///
-/// 因为要spawn, 所以对 Iter 的类型提了比 accumulate更高的要求, 加了
-/// Clone + Send + 'static
 ///
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去;
 ///
