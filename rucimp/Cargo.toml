@@ -82,7 +82,7 @@ smoltcp = { version = "0.12", optional = true, default-features = false, feature
     "socket-tcp",
 ] }
 
-netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d" }
+netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d", optional = true }
 
 
 array-init = "2.1.0"
@@ -121,6 +121,8 @@ sockopt = ["libc", "socket2", "rlimit"]
 use-native-tls = ["native-tls", "tokio-native-tls"]
 
 native-tls-vendored = ["native-tls/vendored", "tokio-native-tls/vendored"]
+
+lwip = ["netstack-lwip"]
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52", features = [

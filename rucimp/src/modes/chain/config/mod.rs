@@ -37,7 +37,10 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{recorder, tcp_ip_stack_lwip, ws};
+use crate::map::{recorder, ws};
+
+#[cfg(feature = "lwip")]
+use crate::map::tcp_ip_stack_lwip;
 
 #[cfg(feature = "steganography")]
 use crate::map::spe1;
@@ -332,6 +335,7 @@ pub enum InMapConfig {
     #[cfg(feature = "smoltcp")]
     Stack,
 
+    #[cfg(feature = "lwip")]
     StackLwip,
 
     #[cfg(feature = "steganography")]
@@ -635,6 +639,7 @@ impl ToMapBox for InMapConfig {
                     Err(e) => panic!("get lua file content err {e}"),
                 }
             }
+            #[cfg(feature = "lwip")]
             InMapConfig::StackLwip => Box::new(tcp_ip_stack_lwip::Stack {
                 ext_fields: Some(MapExtFields::default()),
             }),

@@ -30,6 +30,7 @@ pub mod tproxy;
 #[cfg(feature = "smoltcp")]
 pub mod tcp_ip_stack_smoltcp;
 
+#[cfg(feature = "lwip")]
 pub mod tcp_ip_stack_lwip;
 
 #[cfg(any(feature = "lua", feature = "lua54"))]
