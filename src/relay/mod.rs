@@ -409,11 +409,9 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
     let shutdown_in_rx = args.shutdown_in_rx;
     let shutdown_out_rx = args.shutdown_out_rx;
 
-    info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
-
     if let Some(real_ed) = ed {
         if let Some(real_first_target) = first_target {
-            debug!("cp_addr_conn: writing ed {:?}", real_ed.len());
+            debug!(cid = %cid, "cp_addr_conn: writing ed {:?}", real_ed.len());
             let r = out_conn.w.write(&real_ed, &real_first_target).await;
             if let Err(e) = r {
                 warn!("cp_addr_conn: writing ed failed: {e}");
@@ -421,18 +419,19 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
                 return;
             }
         } else {
-            debug!(
+            debug!(cid = %cid,
                 "cp_addr_conn: writing ed without real_first_target {:?}",
                 real_ed.len()
             );
             let r = out_conn.w.write(&real_ed, &Addr::default()).await;
             if let Err(e) = r {
-                warn!("cp_addr_conn: writing ed failed: {e}");
+                warn!(cid = %cid, "cp_addr_conn: writing ed failed: {e}");
                 let _ = out_conn.w.shutdown().await;
                 return;
             }
         }
     }
+    info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
 
     tokio::spawn(net::addr_conn::cp(
         cid.clone(),
