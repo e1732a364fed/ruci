@@ -349,7 +349,8 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    //#[test]
+    #[allow(unused)]
     #[cfg(feature = "geoip")]
     fn rs_country() -> anyhow::Result<()> {
         let mut rs = RuleSet::default();

@@ -84,6 +84,7 @@ pub fn filter_iso_string_to_iso3166(s: &str) -> &str {
     s
 }
 
+#[allow(unused)]
 #[cfg(test)]
 mod test {
 
@@ -93,8 +94,8 @@ mod test {
 
     use super::get_ip_iso;
 
-    /// see  doc/notes.md
-    #[test]
+    /// see  doc/notes.md, Country.mmdb is required
+    //#[test]
     fn test1() {
         set_var("RUST_LOG", "debug");
 

@@ -142,6 +142,10 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 
 我想这应该就是 Loyalsoldier/geoip 的readme 中说明了 添加了 "geoip:cloudflare" 等类别的原因
 
+### test 相关
+
+为了在github action 通过 测试, 将 需要 Country.mmdb 的几个 test 注释掉了
+
 ## "trace" feature
 
 在0.0.3，添加 "trace" feature, 对每条连接加以监视、记录, 其可能导处性能下降, 但
