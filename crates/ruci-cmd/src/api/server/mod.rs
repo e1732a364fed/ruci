@@ -2,11 +2,11 @@ mod folder_serve;
 
 use std::{
     collections::BTreeMap,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::{atomic::Ordering, Arc},
 };
+
+#[cfg(feature = "trace")]
+use std::sync::atomic::AtomicBool;
 
 use chrono::{DateTime, Utc};
 
@@ -15,6 +15,7 @@ use ruci::{
     net::{GlobalTrafficRecorder, CID},
     relay::NewConnInfo,
 };
+#[cfg(feature = "trace")]
 use tinyufo::TinyUfo;
 use tokio::sync::mpsc;
 
@@ -43,7 +44,9 @@ pub async fn deal_args(
 type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, (DateTime<Utc>, NewConnInfo)>>>;
 
 /// 缓存 某时间点的流量
+#[cfg(feature = "trace")]
 type FluxCache = Arc<TinyUfo<CID, Vec<(tokio::time::Instant, u64)>>>;
+#[cfg(feature = "trace")]
 fn new_cache() -> FluxCache {
     Arc::new(TinyUfo::new(100, 100))
 }
@@ -98,15 +101,16 @@ impl Server {
 use axum::extract::{Path, State};
 use axum::{routing::get, Router};
 
+#[cfg(feature = "trace")]
 async fn is_monitoring_flux(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> String {
     format!("{}", is_monitoring_flux.load(Ordering::Relaxed))
 }
-
+#[cfg(feature = "trace")]
 async fn enable_monitor(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> &'static str {
     is_monitoring_flux.fetch_or(true, Ordering::Relaxed);
     "ok"
 }
-
+#[cfg(feature = "trace")]
 async fn disable_monitor(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> &'static str {
     is_monitoring_flux.fetch_and(false, Ordering::Relaxed);
     "ok"
@@ -204,6 +208,7 @@ async fn get_conn_info(Path(cid): Path<String>, State(allconn): State<NewConnInf
     s
 }
 
+#[cfg(feature = "trace")]
 async fn get_flux_for(Path(cid): Path<String>, State(cache): State<FluxCache>) -> String {
     use std::str::FromStr;
     let cid = CID::from_str(&cid);
@@ -222,6 +227,7 @@ async fn get_flux_for(Path(cid): Path<String>, State(cache): State<FluxCache>) -
     instant_data_tostr(x)
 }
 
+#[cfg(feature = "trace")]
 fn instant_data_tostr(v: Vec<(tokio::time::Instant, u64)>) -> String {
     let mut s = String::new();
     for x in v {

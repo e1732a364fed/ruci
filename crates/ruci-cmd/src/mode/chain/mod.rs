@@ -1,16 +1,15 @@
-use std::sync::Arc;
-
 use log::info;
-use ruci::net::GlobalTrafficRecorder;
 use rucimp::{
     cmd_common::{wait_close_sig, wait_close_sig_with_closer},
     modes::chain::engine::Engine,
 };
 use tokio::sync::mpsc;
 
-use chrono::{DateTime, Utc};
-
+#[cfg(feature = "api_server")]
 use crate::api;
+
+#[cfg(feature = "api_server")]
+use std::sync::Arc;
 
 ///blocking
 #[allow(unused)]
@@ -19,7 +18,7 @@ pub(crate) async fn run(
     #[cfg(feature = "api_server")] opts: Option<(
         api::server::Server,
         mpsc::Receiver<()>,
-        Arc<GlobalTrafficRecorder>,
+        Arc<ruci::net::GlobalTrafficRecorder>,
     )>,
 ) -> anyhow::Result<()> {
     info!("try to start rucimp chain engine");
@@ -36,53 +35,59 @@ pub(crate) async fn run(
         se.init_lua(contents)?;
     }
 
-    let mut se = Box::new(se);
-
     #[cfg(feature = "api_server")]
     {
         if let Some(mut s) = opts {
             setup_api_server_with_chain_engine(&mut se, &mut s.0, s.2).await;
 
-            se.run().await?;
-            info!("started rucimp chain engine");
-
-            wait_close_sig_with_closer(s.1).await?;
-
-            se.stop().await;
+            run_engine(&se, Some(s.1)).await?;
 
             return Ok(());
         }
     }
 
-    se.run().await?;
-    info!("started rucimp chain engine");
-
-    wait_close_sig().await?;
-
-    se.stop().await;
+    run_engine(&se, None).await?;
 
     Ok(())
 }
 
-async fn setup_api_server_with_chain_engine(
-    se: &mut Engine,
-    s: &mut api::server::Server,
-    ti: Arc<GlobalTrafficRecorder>,
-) {
-    se.ti = ti;
+async fn run_engine(e: &Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow::Result<()> {
+    let mut js = e.run().await?;
 
-    setup_record_newconn_info(se, s).await;
+    info!("started rucimp chain engine");
+
+    match close_rx {
+        Some(rx) => wait_close_sig_with_closer(rx).await?,
+        None => wait_close_sig().await?,
+    }
+
+    e.stop().await;
+
+    js.shutdown().await;
+    Ok(())
+}
+
+#[cfg(feature = "api_server")]
+async fn setup_api_server_with_chain_engine(
+    e: &mut Engine,
+    api_ser: &mut api::server::Server,
+    gtr: Arc<ruci::net::GlobalTrafficRecorder>,
+) {
+    e.ti = gtr;
+
+    setup_record_newconn_info(e, api_ser).await;
     #[cfg(feature = "trace")]
-    setup_trace_flux(se, s).await;
+    setup_trace_flux(e, api_ser).await;
 }
 
 /// 记录新连接信息
-async fn setup_record_newconn_info(se: &mut Engine, s: &mut api::server::Server) {
+#[cfg(feature = "api_server")]
+async fn setup_record_newconn_info(e: &mut Engine, api_ser: &mut api::server::Server) {
     let (nci_tx, mut nci_rx) = mpsc::channel(100);
 
-    se.newconn_recorder = Some(nci_tx);
+    e.newconn_recorder = Some(nci_tx);
 
-    let aci = s.newconn_info_map.clone();
+    let aci = api_ser.newconn_info_map.clone();
 
     tokio::spawn(async move {
         loop {
@@ -92,7 +97,8 @@ async fn setup_record_newconn_info(se: &mut Engine, s: &mut api::server::Server)
                     let mut aci = aci.write();
                     let cid = nc.cid.clone();
 
-                    let now: DateTime<Utc> = Utc::now();
+                    use chrono::Utc;
+                    let now: chrono::DateTime<Utc> = Utc::now();
                     aci.insert(cid, (now, nc));
                 }
                 None => break,
@@ -102,61 +108,59 @@ async fn setup_record_newconn_info(se: &mut Engine, s: &mut api::server::Server)
 }
 
 /// 记录每条连接的实时流量
+#[cfg(feature = "trace")]
 async fn setup_trace_flux(se: &mut Engine, s: &mut api::server::Server) {
-    #[cfg(feature = "trace")]
-    {
-        let (ub_tx, ub_rx) = mpsc::channel::<(ruci::net::CID, u64)>(4096);
+    let (ub_tx, ub_rx) = mpsc::channel::<(ruci::net::CID, u64)>(4096);
 
-        let (db_tx, db_rx) = mpsc::channel::<(ruci::net::CID, u64)>(4096);
+    let (db_tx, db_rx) = mpsc::channel::<(ruci::net::CID, u64)>(4096);
 
-        se.conn_info_updater = Some((ub_tx, db_tx));
+    se.conn_info_updater = Some((ub_tx, db_tx));
 
-        let imcs = s.flux_trace.is_monitoring.clone();
-        let imcs2 = imcs.clone();
+    let imcs = s.flux_trace.is_monitoring.clone();
+    let imcs2 = imcs.clone();
 
-        let dc = s.flux_trace.d_cache.clone();
-        let uc = s.flux_trace.u_cache.clone();
+    let dc = s.flux_trace.d_cache.clone();
+    let uc = s.flux_trace.u_cache.clone();
 
-        use ruci::net::CID;
-        use std::sync::atomic;
-        use tokio::time::Instant;
+    use ruci::net::CID;
+    use std::sync::atomic;
+    use tokio::time::Instant;
 
-        fn spawn_for(
-            mut rx: mpsc::Receiver<(CID, u64)>,
-            is_moniting: Arc<atomic::AtomicBool>,
-            cache: Arc<tinyufo::TinyUfo<CID, Vec<(Instant, u64)>>>,
-        ) {
-            tokio::spawn(async move {
-                loop {
-                    let x = rx.recv().await;
-                    match x {
-                        Some(info) => {
-                            if is_moniting.load(atomic::Ordering::SeqCst) {
-                                let e = (Instant::now(), info.1);
+    fn spawn_for(
+        mut rx: mpsc::Receiver<(CID, u64)>,
+        is_moniting: Arc<atomic::AtomicBool>,
+        cache: Arc<tinyufo::TinyUfo<CID, Vec<(Instant, u64)>>>,
+    ) {
+        tokio::spawn(async move {
+            loop {
+                let x = rx.recv().await;
+                match x {
+                    Some(info) => {
+                        if is_moniting.load(atomic::Ordering::SeqCst) {
+                            let e = (Instant::now(), info.1);
 
-                                let v = cache.get(&info.0);
+                            let v = cache.get(&info.0);
 
-                                match v {
-                                    Some(mut v) => {
-                                        v.push(e);
-                                        let vl = v.len() as u16;
-                                        cache.put(info.0, v, vl);
-                                    }
-                                    None => {
-                                        let v = vec![e];
+                            match v {
+                                Some(mut v) => {
+                                    v.push(e);
+                                    let vl = v.len() as u16;
+                                    cache.put(info.0, v, vl);
+                                }
+                                None => {
+                                    let v = vec![e];
 
-                                        cache.put(info.0, v, 1);
-                                    }
+                                    cache.put(info.0, v, 1);
                                 }
                             }
                         }
-                        None => break,
                     }
+                    None => break,
                 }
-            });
-        }
-
-        spawn_for(db_rx, imcs, dc);
-        spawn_for(ub_rx, imcs2, uc);
+            }
+        });
     }
+
+    spawn_for(db_rx, imcs, dc);
+    spawn_for(ub_rx, imcs2, uc);
 }
