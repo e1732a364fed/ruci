@@ -2219,6 +2219,7 @@ dependencies = [
  "regex",
  "ruci",
  "s2n-quic",
+ "s2n-quic-tls",
  "serde",
  "serde_json",
  "socket2",

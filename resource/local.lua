@@ -24,10 +24,10 @@ listen_socks5http = {listen, {
 }}
 
 tlsout = {
-    --NativeTLS = {
+    -- NativeTLS = {
     TLS = {
         host = "www.1234.com",
-        insecure = true,
+        insecure = true
         -- alpn = {"http"}
 
     }
@@ -81,16 +81,16 @@ h2_single_out = {
     }
 }
 
-quic_out_chain = {
-    {
-        Quic = {
-            cert_path = "test.crt", -- need cert of the server
-            server_addr = "127.0.0.1:10801",
-            server_name = "www.mytest.com", -- 我们提供的 test.crt中的 CN(CommonName) 为 www.mytest.com
-        }
-    },
-    trojan_out
-}
+quic_out_chain = {{
+    Quic = {
+        cert_path = "test.crt", -- need cert of the server
+        server_addr = "127.0.0.1:10801",
+
+        -- 须为 证书中所写的 CN, 我们提供的 test.crt中的 CN(CommonName) 为 www.mytest.com, 
+        server_name = "www.mytest.com"
+        -- alpn = ["h3", "myalpn1"] -- 默认 apln 为 h3
+    }
+}, trojan_out}
 
 dial_h2_trojan_chain = {dial, tlsout, h2_single_out, trojan_out}
 
@@ -200,18 +200,21 @@ config = {
 
 --]=]
 
-
 ---[=[
-    config = {
-        inbounds = { {chain = listen_socks5http, tag = "listen1"} },
-        outbounds = { { tag="dial1", chain = quic_out_chain } },
-    
-        -- 演示 inbound 是 socks5http, outbound 是 quic 的情况 
-    }
-    
---]=]
+config = {
+    inbounds = {{
+        chain = listen_socks5http,
+        tag = "listen1"
+    }},
+    outbounds = {{
+        tag = "dial1",
+        chain = quic_out_chain
+    }}
 
+    -- 演示 inbound 是 socks5http, outbound 是 quic 的情况 
+}
 
+-- ]=]
 
 --[=[
 config = {

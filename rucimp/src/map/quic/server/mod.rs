@@ -19,6 +19,7 @@ pub struct Config {
     pub key_path: String,
     pub cert_path: String,
     pub listen_addr: String,
+    pub alpn: Option<Vec<String>>,
 }
 
 #[mapper_ext_fields]
@@ -27,6 +28,7 @@ pub struct Server {
     tls_key_path: String,
     tls_cert_path: String,
     listen_addr: String,
+    pub alpn: Option<Vec<String>>,
 
     a_next_cid: Arc<AtomicU32>,
 }
@@ -43,22 +45,31 @@ impl Server {
             tls_key_path: c.key_path,
             tls_cert_path: c.cert_path,
             listen_addr: c.listen_addr,
+            alpn: c.alpn,
             a_next_cid: Arc::new(AtomicU32::new(1)),
             ext_fields: Some(MapperExtFields::default()),
         }
     }
     async fn handshake(&self, cid: CID) -> anyhow::Result<map::MapResult> {
+        //builder() use default, default will use h3 as alpn
+        let mut tls = s2n_quic_tls::Server::builder().with_certificate(
+            Path::new(self.tls_cert_path.as_str()),
+            Path::new(self.tls_key_path.as_str()),
+        )?;
+        if let Some(a) = &self.alpn {
+            tls = tls.with_application_protocols(a.into_iter())?;
+        }
+        let tls = tls.build()?;
+
         let mut server = s2n_quic::Server::builder()
-            .with_tls((
-                Path::new(self.tls_cert_path.as_str()),
-                Path::new(self.tls_key_path.as_str()),
-            ))?
+            .with_tls(tls)?
             .with_io(self.listen_addr.as_str())?
             .start()
             .context("quic init server failed")?;
 
         let (tx, rx) = mpsc::channel(100); //todo adjust this
 
+        let cidc = cid.clone();
         let a_ncid = self.a_next_cid.clone();
         tokio::spawn(async move {
             while let Some(mut connection) = server.accept().await {
@@ -91,6 +102,7 @@ impl Server {
             }
         });
 
+        debug!(cid = %cidc , laddr= self.listen_addr.as_str(), "quic server started");
         let mr = MapResult::builder()
             .c(ruci::net::Stream::Generator(rx))
             .build();

@@ -21,6 +21,7 @@ pub struct Config {
 
     pub server_addr: String,
     pub server_name: String,
+    pub alpn: Option<Vec<String>>,
 }
 
 #[mapper_ext_fields]
@@ -41,8 +42,17 @@ impl Name for Client {
 
 impl Client {
     pub fn new(c: Config) -> anyhow::Result<Self> {
+        let mut tls =
+            s2n_quic_tls::Client::builder().with_certificate(Path::new(c.cert_path.as_str()))?;
+
+        if let Some(a) = c.alpn {
+            tls = tls.with_application_protocols(a.into_iter())?;
+        }
+
+        let tls = tls.build()?;
+
         let client = s2n_quic::Client::builder()
-            .with_tls(Path::new(c.cert_path.as_str()))?
+            .with_tls(tls)?
             .with_io("0.0.0.0:0")?
             .start()?;
 
