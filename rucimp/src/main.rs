@@ -10,7 +10,9 @@ use std::{
 };
 
 use log::{info, log_enabled, Level};
-use rucimp::{load_in_adder_by_str, load_out_adder_by_str, SuitEngine};
+use rucimp::{
+    load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig, SuitEngine,
+};
 //use rucimp::{load_in_adder_by_str, load_out_adder_by_str, SuitEngine};
 
 #[tokio::main]
@@ -38,7 +40,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let contents = fs::read_to_string("config.toml").expect("no config.toml");
     println!("{}", contents);
-    let mut se = SuitEngine::new(load_in_adder_by_str, load_out_adder_by_str);
+    let mut se = SuitEngine::new(
+        load_in_mappers_by_str_and_ldconfig,
+        load_out_mappers_by_str_and_ldconfig,
+    );
 
     se.load_config_from_str(&contents);
     let r = se.block_run().await;

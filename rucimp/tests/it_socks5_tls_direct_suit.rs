@@ -5,7 +5,10 @@ use ruci::{
     net,
     user::UserPass,
 };
-use rucimp::{load_in_adder_by_str, load_out_adder_by_str, suit::config::Config, SuitEngine};
+use rucimp::{
+    load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
+    suit::config::Config, SuitEngine,
+};
 use std::{env::set_var, io};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -107,7 +110,10 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
     let (ws, port) = get_lconfig_str();
     let c: Config = toml::from_str(&ws).unwrap();
 
-    let mut se = SuitEngine::new(load_in_adder_by_str, load_out_adder_by_str);
+    let mut se = SuitEngine::new(
+        load_in_mappers_by_str_and_ldconfig,
+        load_out_mappers_by_str_and_ldconfig,
+    );
     se.load_config(rucimp::Config { proxy_config: c });
 
     let listen_future = async move {

@@ -19,7 +19,9 @@ use ruci::map::{self, socks5::*};
 use ruci::map::{socks5, MappersVec};
 use ruci::{map::Mapper, net, user::UserPass};
 use rucimp::suit::config::Config;
-use rucimp::{load_in_adder_by_str, load_out_adder_by_str, suit::*, SuitEngine};
+use rucimp::{
+    load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig, suit::*, SuitEngine,
+};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -688,7 +690,10 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     let c: Config = get_config();
     let cc = c.clone();
 
-    let mut se = SuitEngine::new(load_in_adder_by_str, load_out_adder_by_str);
+    let mut se = SuitEngine::new(
+        load_in_mappers_by_str_and_ldconfig,
+        load_out_mappers_by_str_and_ldconfig,
+    );
     se.load_config(rucimp::Config { proxy_config: c });
 
     let ti = net::TransmissionInfo::default();
@@ -750,7 +755,10 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
     let c: Config = get_nl_config(3);
     let cc = c.clone();
 
-    let mut se = SuitEngine::new(load_in_adder_by_str, load_out_adder_by_str);
+    let mut se = SuitEngine::new(
+        load_in_mappers_by_str_and_ldconfig,
+        load_out_mappers_by_str_and_ldconfig,
+    );
     se.load_config(rucimp::Config { proxy_config: c });
 
     let ti = net::TransmissionInfo::default();

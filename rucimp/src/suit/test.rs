@@ -5,6 +5,13 @@ use super::config::Config;
 use super::SuitStruct;
 
 #[test]
+fn replace_empty_string() {
+    let mut s = String::new();
+    s.replace_range(.., "direct");
+    assert_eq!(s, "direct");
+}
+
+#[test]
 fn init_suit() {
     let toml_str = r#"
     [[listen]]

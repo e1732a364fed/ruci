@@ -28,10 +28,14 @@ use ruci::net::{self, Addr};
 pub trait SuitConfigHolder: Send + Sync {
     fn set_behavior(&mut self, b: ProxyBehavior);
     fn get_behavior(&self) -> ProxyBehavior;
-    //addr_str 是包含port的,用于 拨号, 但不包含network
+    ///addr_str 是包含port的,用于 拨号, 但不包含network
     fn addr_str(&self) -> &str;
     fn addr(&self) -> Option<Addr>;
+
+    ///config 所定义的所有的层的名称之和
     fn whole_name(&self) -> &str;
+
+    ///代理层名
     fn protocol(&self) -> &str;
     fn get_config(&self) -> Option<&config::LDConfig>;
     fn set_config(&mut self, c: config::LDConfig) -> io::Result<()>;
@@ -51,7 +55,7 @@ pub trait Suit: SuitConfigHolder + MappersVec {
     /// stop 停止监听，同时移除一切因用户登录而生成的动态数据, 恢复到运行前的状态
     fn stop(&self) {}
 
-    fn generate_upper_adders(&mut self);
+    fn generate_upper_mappers(&mut self);
 }
 
 #[derive(Default, Debug)]
@@ -62,8 +66,8 @@ pub struct SuitStruct {
 
     pub config: config::LDConfig,
 
-    pub inadders: Vec<MapperBox>,
-    pub outadders: Vec<MapperBox>,
+    pub inmappers: Vec<MapperBox>,
+    pub outmappers: Vec<MapperBox>,
 
     addr: Option<Addr>,
     protocol_str: String,
@@ -74,13 +78,6 @@ pub fn direct_suit() -> SuitStruct {
     let mut c = config::LDConfig::default();
     c.protocol.replace_range(.., "direct");
     SuitStruct::from(c)
-}
-
-#[test]
-fn replace_empty_string() {
-    let mut s = String::new();
-    s.replace_range(.., "direct");
-    assert_eq!(s, "direct");
 }
 
 impl SuitStruct {
@@ -143,16 +140,16 @@ impl SuitConfigHolder for SuitStruct {
 
 impl MappersVec for SuitStruct {
     fn get_mappers_vec(&self) -> &Vec<MapperBox> {
-        &self.inadders
+        &self.inmappers
     }
 
-    /// 添加adder 到尾部。会自动推导出 whole_name.
+    /// 添加 mapper 到尾部。会自动推导出 whole_name.
     ///
     /// 可多次调用，每次都会更新 whole_name
-    fn push_mapper(&mut self, adder: MapperBox) {
-        self.inadders.push(adder);
+    fn push_mapper(&mut self, mapper: MapperBox) {
+        self.inmappers.push(mapper);
         self.whole_name = self
-            .inadders
+            .inmappers
             .iter()
             .map(|a| a.name())
             .collect::<Vec<_>>()
@@ -162,7 +159,7 @@ impl MappersVec for SuitStruct {
 
 #[async_trait]
 impl Suit for SuitStruct {
-    fn generate_upper_adders(&mut self) {
+    fn generate_upper_mappers(&mut self) {
         let c = self.get_config().unwrap().clone();
 
         match self.get_behavior() {
@@ -183,7 +180,7 @@ impl Suit for SuitStruct {
                         key: c.key.unwrap().into(),
                     };
                     let sa = tls::Server::new(so);
-                    self.inadders.push(Box::new(sa));
+                    self.inmappers.push(Box::new(sa));
                 }
             }
             ProxyBehavior::UNSPECIFIED => {}

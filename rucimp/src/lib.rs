@@ -18,7 +18,7 @@ use suit::*;
 /// 将所有在本包中实现的 in_adder 从 名称映射到 InAdderBox.
 ///
 /// 可作为 SuitEngine::new 的参数
-pub fn load_in_adder_by_str(s: &str, c: LDConfig) -> Option<MapperBox> {
+pub fn load_in_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<MapperBox> {
     match s {
         "socks5" => {
             let a = block_on(socks5::server::Server::new(
@@ -37,7 +37,7 @@ pub fn load_in_adder_by_str(s: &str, c: LDConfig) -> Option<MapperBox> {
 /// 将所有在本包中实现的 out_adder 从 名称映射到 OutAdderBox.
 ///
 /// 可作为 SuitEngine::new 的参数
-pub fn load_out_adder_by_str(s: &str, _: LDConfig) -> Option<MapperBox> {
+pub fn load_out_mappers_by_str_and_ldconfig(s: &str, _: LDConfig) -> Option<MapperBox> {
     match s {
         _ => None,
     }
@@ -66,8 +66,8 @@ where
 
     ti: Arc<TransmissionInfo>,
 
-    load_inadder_func: FInadder,
-    load_outadder_func: FOutadder,
+    load_inmappers_func: FInadder,
+    load_outmappers_func: FOutadder,
 }
 
 impl<LI, LO> SuitEngine<LI, LO>
@@ -82,8 +82,8 @@ where
             clients: Vec::new(),
             default_c: None,
             running: Arc::new(Mutex::new(0)),
-            load_inadder_func,
-            load_outadder_func,
+            load_inmappers_func: load_inadder_func,
+            load_outmappers_func: load_outadder_func,
         }
     }
 
@@ -111,8 +111,8 @@ where
             .map(|lc| {
                 let mut s = SuitStruct::from(lc.clone());
                 s.set_behavior(ProxyBehavior::ENCODE);
-                s.generate_upper_adders();
-                let r_proxy_outadder = (self.load_outadder_func)(s.protocol(), s.config.clone());
+                s.generate_upper_mappers();
+                let r_proxy_outadder = (self.load_outmappers_func)(s.protocol(), s.config.clone());
                 if let Some(proxy_outadder) = r_proxy_outadder {
                     s.push_mapper(proxy_outadder);
                 }
@@ -136,8 +136,8 @@ where
                 let mut s = SuitStruct::from(lc.clone());
                 s.set_behavior(ProxyBehavior::DECODE);
 
-                s.generate_upper_adders();
-                let r_proxy_inadder = (self.load_inadder_func)(s.protocol(), s.config.clone());
+                s.generate_upper_mappers();
+                let r_proxy_inadder = (self.load_inmappers_func)(s.protocol(), s.config.clone());
                 if let Some(proxy_inadder) = r_proxy_inadder {
                     s.push_mapper(proxy_inadder);
                 }
