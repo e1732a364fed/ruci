@@ -69,7 +69,57 @@ pub fn set_tproxy_socket_opts<T: AsRawFd>(v4: bool, is_udp: bool, socket: &T) ->
     Ok(())
 }
 
-fn tproxy_get_destination_addr(msg: &libc::msghdr) -> Option<libc::sockaddr_storage> {
+/// blocking, returns usize, src_addr, dst_addr
+pub fn tproxy_udp_recv_from_with_destination<T: AsRawFd>(
+    socket: &T,
+    buf: &mut [u8],
+) -> Result<(usize, SocketAddr, SocketAddr)> {
+    unsafe {
+        let mut control_buf = [0u8; 64];
+        let mut src_addr: libc::sockaddr_storage = std::mem::zeroed();
+
+        let mut msg: libc::msghdr = std::mem::zeroed();
+        msg.msg_name = &mut src_addr as *mut _ as *mut _;
+        msg.msg_namelen = std::mem::size_of_val(&src_addr) as libc::socklen_t;
+
+        let mut iov = libc::iovec {
+            iov_base: buf.as_mut_ptr() as *mut _,
+            iov_len: buf.len() as libc::size_t,
+        };
+        msg.msg_iov = &mut iov;
+        msg.msg_iovlen = 1;
+
+        msg.msg_control = control_buf.as_mut_ptr() as *mut _;
+        // Note: some platform define msg_controllen as size_t, some define as u32
+        msg.msg_controllen = TryFrom::try_from(control_buf.len())
+            .expect("failed to convert usize to msg_controllen");
+
+        let fd = socket.as_raw_fd();
+        let ret = libc::recvmsg(fd, &mut msg, 0);
+        if ret < 0 {
+            return Err(Error::last_os_error());
+        }
+
+        let dst_addr = match tproxy_udp_get_destination_addr(&msg) {
+            None => {
+                let err = Error::new(
+                    ErrorKind::InvalidData,
+                    "missing destination address in msghdr",
+                );
+                return Err(err);
+            }
+            Some(d) => d,
+        };
+
+        Ok((
+            ret as usize,
+            sockaddr_to_std(&src_addr)?,
+            sockaddr_to_std(&dst_addr)?,
+        ))
+    }
+}
+
+fn tproxy_udp_get_destination_addr(msg: &libc::msghdr) -> Option<libc::sockaddr_storage> {
     unsafe {
         let mut cmsg: *mut libc::cmsghdr = libc::CMSG_FIRSTHDR(msg);
         while !cmsg.is_null() {
@@ -104,56 +154,6 @@ fn tproxy_get_destination_addr(msg: &libc::msghdr) -> Option<libc::sockaddr_stor
     }
 
     None
-}
-
-/// blocking, returns usize, src_addr, dst_addr
-pub fn tproxy_recv_from_with_destination<T: AsRawFd>(
-    socket: &T,
-    buf: &mut [u8],
-) -> Result<(usize, SocketAddr, SocketAddr)> {
-    unsafe {
-        let mut control_buf = [0u8; 64];
-        let mut src_addr: libc::sockaddr_storage = std::mem::zeroed();
-
-        let mut msg: libc::msghdr = std::mem::zeroed();
-        msg.msg_name = &mut src_addr as *mut _ as *mut _;
-        msg.msg_namelen = std::mem::size_of_val(&src_addr) as libc::socklen_t;
-
-        let mut iov = libc::iovec {
-            iov_base: buf.as_mut_ptr() as *mut _,
-            iov_len: buf.len() as libc::size_t,
-        };
-        msg.msg_iov = &mut iov;
-        msg.msg_iovlen = 1;
-
-        msg.msg_control = control_buf.as_mut_ptr() as *mut _;
-        // Note: some platform define msg_controllen as size_t, some define as u32
-        msg.msg_controllen = TryFrom::try_from(control_buf.len())
-            .expect("failed to convert usize to msg_controllen");
-
-        let fd = socket.as_raw_fd();
-        let ret = libc::recvmsg(fd, &mut msg, 0);
-        if ret < 0 {
-            return Err(Error::last_os_error());
-        }
-
-        let dst_addr = match tproxy_get_destination_addr(&msg) {
-            None => {
-                let err = Error::new(
-                    ErrorKind::InvalidData,
-                    "missing destination address in msghdr",
-                );
-                return Err(err);
-            }
-            Some(d) => d,
-        };
-
-        Ok((
-            ret as usize,
-            sockaddr_to_std(&src_addr)?,
-            sockaddr_to_std(&dst_addr)?,
-        ))
-    }
 }
 
 fn sockaddr_to_std(saddr: &libc::sockaddr_storage) -> Result<SocketAddr> {

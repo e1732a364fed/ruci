@@ -24,7 +24,7 @@ only use Box::leak if have to.
 
 灵活使用迭代器
 
-不要过多使用元组结构
+不要过多使用元组或元组结构
 
 ## 子项目
 
@@ -63,6 +63,6 @@ test basic web page load, test video web page, test 4k video web page
 
 ## 异步架构
 
-在项目初期e选用了 async_std. 
+在项目初期选用了 async_std. 
 后来才创建的 tokio 分支, 可查看commit历史 求证. 
 不过难以维护两套异步架构, 现在async_std分支只能作为参考了. 

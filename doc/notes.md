@@ -260,7 +260,7 @@ async_std的 UdpSocket 少了 poll 方法 (until 24.2.18)
 
 ## Cargo.lock
 
-本来作为类库是不应该有 Cargo.lock 的, 但我们同时也发布 examples, 
+本来作为类库是不应该有 Cargo.lock 的, 但我们同时也发布 ruci-cmd, 
 为保证其能正常编译, 还是提供了 lock 文件
 
 
@@ -285,12 +285,12 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 
 ## MapResult 中的 "任意数据类型"
 
-在项目初期, 对其实现做了多种尝试, 一开始使用 enum AnyData, 后来将 enum 分成
-单体AnyData 和 Vec<AnyData> 两部分, 再后来尝试使用smallvec<[AnyData;1]>
+在项目初期, 对其实现做了多种尝试, 一开始使用 enum `AnyData`, 后来将 enum 分成
+单体 `AnyData` 和 `Vec<AnyData>` 两部分, 再后来尝试使用`smallvec<[AnyData;1]>`
 
-最终使用了 #[typetag::serde] 的 trait 方式
+最终使用了 `#[typetag::serde]` 的 trait 方式
 
-最初是将动态数据 Arc<AtomicU64>也放在 enum 中, 后来移出, 单独做处理, 因为
+最初是将动态数据 `Arc<AtomicU64>`也放在 enum 中, 后来移出, 单独做处理, 因为
 动态数据不能也不应该做序列化
 
 ## maxmind db 的 geoip
@@ -363,7 +363,7 @@ quinn: 全没问题
 
 ## 编译运行问题
 
-tproxy,tun 要使用sudo 运行
+tproxy,tun 要使用 管理员权限 运行
 
 ### 1
 `panic = "abort"` 不能在 windows release 版中正常运行
@@ -384,7 +384,7 @@ linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 2. 使用 musl 版
 3. 自己编译
 
-更新系统的 glibc 是比较危险的做法, 推荐使用 musl
+更新系统的 glibc 是比较危险的做法, 此时推荐使用 musl
 
 ## tproxy: Too many open files
 
@@ -403,7 +403,7 @@ linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 
 run `ulimit -a` to see. run `ulimit -n 1000000` as root to set
 
-ruci tproxy 在启动监听后, 进程所打开的文件在12个左右.
+ruci-cmd tproxy 在启动监听后, 进程所打开的文件在12个左右.
 
 ## 其它
 

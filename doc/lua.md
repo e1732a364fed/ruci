@@ -103,13 +103,13 @@ end
 
 -- 下面两个selector 示例都是 最简单的示例, 使得动态链的行为和静态链相同
 
-dyn_inbound_next_selector = function (this_index, data)
+local dyn_inbound_next_selector = function (this_index, data)
     -- print("data:",data)
    
     return this_index + 1
 end
 
-dyn_outbound_next_selector = function (this_index, data)
+local dyn_outbound_next_selector = function (this_index, data)
     return this_index + 1
 end
 

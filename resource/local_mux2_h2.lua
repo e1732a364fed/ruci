@@ -20,7 +20,7 @@ local trojan_out_config = {
     Trojan = "mypassword"
 }
 
-local common_part = {
+local h2_common_part = {
     is_grpc = true,
     http_config = {
         authority = "myhost",
@@ -29,11 +29,11 @@ local common_part = {
 }
 
 local h2_out_config = {
-    H2Mux = common_part
+    H2Mux = h2_common_part
 }
 
 local h2_single_out_config = {
-    H2Single = common_part
+    H2Single = h2_common_part
 }
 
 local h2_out_pool = {}
@@ -96,7 +96,7 @@ Infinite = {
                 -- 导致悬垂连接
 
 
-                local pool_n = table.getn(h2_out_pool)
+                local pool_n = #h2_out_pool
 
                 --print("1 pooln",pool_n, max_num)
 

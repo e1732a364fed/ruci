@@ -22,7 +22,7 @@ use tracing::{debug, warn};
 
 use crate::net::{
     so2::{self, SockOpt},
-    so_opts::tproxy_recv_from_with_destination,
+    so_opts::tproxy_udp_recv_from_with_destination,
 };
 
 use super::{
@@ -65,7 +65,7 @@ pub fn loop_accept_udp<T>(
         };
         let buf = &mut b[left_bound..left_bound + MTU];
 
-        let r = tproxy_recv_from_with_destination(us, buf);
+        let r = tproxy_udp_recv_from_with_destination(us, buf);
 
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
             debug!("tproxy udp thread got shutdown_atomic = true");
