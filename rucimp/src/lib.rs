@@ -15,6 +15,7 @@ pub mod utils;
 pub mod route;
 
 pub use serde_json;
+pub use strum;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

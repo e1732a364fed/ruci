@@ -324,7 +324,9 @@ impl TryFrom<StdioConfig> for MapBox {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+use strum_macros::EnumIter;
+
+#[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
 pub enum InMapConfig {
     Echo,                              //单流消耗器
     Stdio(StdioConfig),                //单流发生器
@@ -398,7 +400,7 @@ pub enum InMapConfig {
     MITM(tls::server::TlsServerOptions),
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
 pub enum OutMapConfig {
     Blackhole,                         //单流消耗器
     Direct(DirectConfig),              //单流发生器
@@ -473,7 +475,7 @@ impl Ext {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct FileConfig {
     pub i: String,
     pub o: String,
@@ -492,7 +494,7 @@ pub struct PlainTextPassSet {
     pub upgrade_to_h2: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Socks5Out {
     pub userpass: Option<String>,
     pub early_data: Option<bool>,

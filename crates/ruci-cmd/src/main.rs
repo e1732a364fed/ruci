@@ -19,7 +19,7 @@ use std::env::{self, set_var};
 
 use clap::{Parser, Subcommand, ValueEnum};
 use rucimp::DEFAULT_LUA_CONFIG_FILE_NAME;
-use tracing::info;
+use tracing::{debug, info};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
@@ -275,6 +275,32 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     if no_file {
         info!("Empty log-file name specified, no log file would be generated.")
     }
+
+    use rucimp::strum::IntoEnumIterator;
+
+    let all_possible_in_maps: Vec<String> = rucimp::modes::chain::config::InMapConfig::iter()
+        .map(|x| {
+            format!("{:?}", x)
+                .split(['{', '(', ' ']) // 分割所有可能的结构体开始标记
+                .next()
+                .unwrap_or_default()
+                .to_string()
+        })
+        .collect();
+
+    debug!("possible in maps: {}", all_possible_in_maps.join(", "));
+
+    let all_possible_out_maps: Vec<String> = rucimp::modes::chain::config::OutMapConfig::iter()
+        .map(|x| {
+            format!("{:?}", x)
+                .split(['{', '(', ' ']) // 分割所有可能的结构体开始标记
+                .next()
+                .unwrap_or_default()
+                .to_string()
+        })
+        .collect();
+
+    debug!("possible out maps: {}", all_possible_out_maps.join(", "));
 
     guard
 }
