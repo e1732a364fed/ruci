@@ -213,7 +213,7 @@ impl Listener {
 
                         let k = (dst.clone(),src.clone());
 
-                        debug!("new with {:?}",k);
+                        // debug!("new with {:?}",k);
 
                         let now = Instant::now();
 
@@ -348,10 +348,10 @@ impl AsyncWriteAddr for Writer {
             entry.last_active = Instant::now();
         }
 
-        debug!("will write {}", buf.len());
+        // debug!("will write {}", buf.len());
         let us = so2::connect_tproxy_udp(dst, &self.src).unwrap();
         let r = us.send(buf);
-        debug!("  write got {r:?}",);
+        // debug!("  write got {r:?}",);
 
         Poll::Ready(r)
     }
@@ -407,9 +407,9 @@ impl AsyncReadAddr for Reader {
                     }
                 }
                 ReadState::Rx => {
-                    debug!("will read rx");
+                    // debug!("will read rx");
                     let r = self.rx.poll_recv(cx);
-                    debug!("  read rx got {r:?}");
+                    // debug!("  read rx got {r:?}");
 
                     match std::task::ready!(r) {
                         Some(b) => {

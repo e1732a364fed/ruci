@@ -114,17 +114,17 @@ local dial = {
     }
 }
 
---[[
+---[[
 -- 在本示例中 tproxy 是单机自连测试, 因此没有用到 OptDialer
 -- 在实际使用中, 如果是dial 一个真实的远程服务器, 需要用 OptDialer
 -- 加 so_mark 和 bind_to_device
 
 local opt_dial = {
     OptDialer = {
-        dial_addr = "tcp://127.0.0.1:10801",
+        dial_addr = "tcp://192.168.0.202:10801", --"tcp://127.0.0.1:10801",
         sockopt = {
             so_mark = 255,
-            bind_to_device = "enp0s1"
+            bind_to_device = "wlp3s0" --"enp0s1"
         }
     }
 }
@@ -150,6 +150,8 @@ local websocket_out = {
 }
 
 local dial_trojans_chain = { dial, tlsout, trojan_out }
+local optdial_trojans_chain = { opt_dial, tlsout, trojan_out }
+
 local dial_ws_trojan_chain = { dial, tlsout, websocket_out, trojan_out }
 
 local h2_single_out = {
@@ -294,7 +296,7 @@ local config_3_tproxy2 = {
     inbounds = tproxy_listen_inbounds,
     outbounds = { {
         tag = "out",
-        chain = dial_trojans_chain
+        chain = optdial_trojans_chain
     } },
 
     tag_route = { { "listen1", "out" }, { "listen_udp1", "out" } },
@@ -886,7 +888,7 @@ local config_23_tcp_ip_stack_lwip = {
 --]]
 
 
-Config = config_3_tproxy2
+Config = config_2_tproxy1
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)

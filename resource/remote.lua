@@ -164,7 +164,7 @@ Config = {
         -- { chain = lua_example2, tag = "listen1" },
     },
 
-    --[[
+    ---[[
     -- 一般情况下 的 outbound 配置
 
     outbounds = { {
@@ -181,7 +181,7 @@ Config = {
     -- ]]
 
 
-    ---[[
+    --[[
     -- 对应 local.lua 使用 tproxy 的 outbound 配置
     -- 如果 用 tproxy 时 direct 不用 opt_direct 设置 somark, 将造成无限回环, 无法联网
 
