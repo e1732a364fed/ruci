@@ -12,7 +12,10 @@ pub type UpdateSender = tokio::sync::mpsc::Sender<(CID, u64)>;
 pub type Updater = (UpdateSender, UpdateSender);
 pub type OptUpdater = Option<Updater>;
 
-#[allow(unused)]
+/// copy between two AsyncConn
+///
+/// blocking
+#[allow(unused_variables)]
 pub async fn copy<C1: AsyncConn, C2: AsyncConn>(
     local_c: &mut C1,
     remote_c: &mut C2,
@@ -30,6 +33,8 @@ pub async fn copy<C1: AsyncConn, C2: AsyncConn>(
 }
 
 /// cp with updater will send msg when each single read/write ends.
+///
+/// blocking
 ///
 /// Note: the more info you want to access, the slower performance you would get
 #[cfg(feature = "trace")]

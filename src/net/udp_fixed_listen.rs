@@ -214,7 +214,7 @@ impl AsyncWriteAddr for Writer {
     fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         let x = &self.conn_map;
         let f = x.lock();
-        let x = Future::poll(Pin::new(&mut Box::pin(f)), cx);
+        let x = Future::poll(std::pin::pin!(f), cx);
         match x {
             Poll::Ready(mut map) => {
                 map.remove(&self.src);

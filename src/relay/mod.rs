@@ -48,7 +48,7 @@ pub async fn handle_in_stream(
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) -> anyhow::Result<()> {
     let cid = match gtr.as_ref() {
-        Some(gtr) => CID::new_ordered(&gtr.alive_connection_count),
+        Some(gtr) => CID::new_ordered(&gtr.last_connection_id),
         None => CID::new_random(),
     };
 
@@ -285,7 +285,8 @@ pub async fn handle_in_fold_result(
         shutdown_rx2: dial_result.shutdown_rx,
         #[cfg(feature = "trace")]
         updater,
-    });
+    })
+    .await;
 
     Ok(())
 }
@@ -308,7 +309,7 @@ pub struct CpStreamArgs {
 /// copy between two [`Stream`]
 ///
 /// non-blocking,
-pub fn cp_stream(args: CpStreamArgs) {
+pub async fn cp_stream(args: CpStreamArgs) {
     let cid = args.cid;
     let s1 = args.s1;
     let s2 = args.s2;
@@ -359,7 +360,7 @@ pub fn cp_stream(args: CpStreamArgs) {
             ));
         }
         (Stream::AddrConn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_addr_conn(CpAddrConnArgs {
+            cp_addr_conn(CpAddrConnArgs {
                 cid,
                 in_conn: i,
                 out_conn: o,
@@ -369,7 +370,8 @@ pub fn cp_stream(args: CpStreamArgs) {
                 no_timeout,
                 shutdown_rx1,
                 shutdown_rx2,
-            }));
+            })
+            .await;
         }
         (s1, s2) => {
             warn!( s1 = %s1, s2 = %s2,"can't cp stream when one of them is not (Conn or AddrConn)");
@@ -390,6 +392,9 @@ pub struct CpAddrConnArgs {
 }
 
 /// copy between two [`AddrConn`]
+///
+/// non-blocking
+///
 pub async fn cp_addr_conn(args: CpAddrConnArgs) {
     use crate::Name;
 
@@ -404,18 +409,6 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
     let shutdown_rx2 = args.shutdown_rx2;
 
     info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
-
-    let tc = tr.clone();
-    scopeguard::defer! {
-
-        if let Some(gtr) = tc {
-            gtr.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
-
-        }
-        info!( cid = %cid,
-        "cp_addr_conn end" );
-
-    }
 
     if let Some(real_ed) = ed {
         if let Some(real_first_target) = first_target {
@@ -440,7 +433,7 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
         }
     }
 
-    let _ = net::addr_conn::cp(
+    tokio::spawn(net::addr_conn::cp(
         cid.clone(),
         in_conn,
         out_conn,
@@ -448,12 +441,5 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
         no_timeout,
         shutdown_rx1,
         shutdown_rx2,
-    )
-    .await;
-
-    // debug!("cp_addr_conn: calling shutdown");
-
-    // let r1 = in_conn.w.shutdown().await;
-    // let r2 = out_conn.w.shutdown().await;
-    // debug!("cp_addr_conn: called shutdown {:?} {:?}", r1, r2);
+    ));
 }

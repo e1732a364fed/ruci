@@ -139,7 +139,7 @@ async fn no_gtr_ed(
     )
     .await;
 
-    debug!("{}, relay end", cid);
+    debug!(cid = %cid, "relay end");
 }
 
 async fn gtr_ed(

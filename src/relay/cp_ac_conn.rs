@@ -8,6 +8,7 @@ use crate::net::CID;
 use bytes::BytesMut;
 use std::io;
 use std::ops::DerefMut;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
@@ -30,77 +31,53 @@ pub struct CpAddrConnAndConnArgs {
     pub no_timeout: bool,
 }
 
+/// blocking. discard udp addr part when copy from AddrConn to Conn
 pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u64> {
     let cid = args.cid;
     let mut ac = args.ac;
     let mut c = args.c;
     let ed_from_ac = args.ed_from_ac;
-    let ed = args.ed;
-    let first_target = args.first_target;
     let gtr = args.gtr;
-    let no_timeout = args.no_timeout;
     use crate::Name;
     info!(cid = %cid, ac = ac.name(), "cp_addr_conn_and_conn start",);
 
-    let tic = gtr.clone();
+    if let Some(ed) = args.ed {
+        if ed_from_ac {
+            c.write_all(&ed).await?;
+        } else {
+            ac.w.write(&ed, &args.first_target.unwrap_or_default())
+                .await?;
+        }
+    }
+
+    if let Some(gtr) = &gtr {
+        gtr.alive_connection_count.fetch_add(1, Ordering::Relaxed);
+    }
+
     scopeguard::defer! {
 
-        if let Some(gtr) = tic {
+        if let Some(gtr) = &gtr {
             gtr.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 
         }
         info!( cid = %cid,
         "cp_addr_conn_and_conn end", );
     }
-    //might discard udp addr part
-
-    if let Some(ed) = ed {
-        if ed_from_ac {
-            let r = c.write(&ed).await;
-            if r.is_err() {
-                return r.map(|x| x as u64);
-            }
-        } else {
-            let r = ac.w.write(&ed, &first_target.unwrap_or_default()).await;
-            if r.is_err() {
-                return r.map(|x| x as u64);
-            }
-        }
-    }
 
     let (mut r, mut w) = tokio::io::split(c);
 
-    if no_timeout {
-        let (c1_to_c2, c2_to_c1) = (
-            cp_conn_to_addr_conn(&mut r, ac.w),
-            cp_addr_conn_to_conn(ac.r, &mut w),
-        );
-
-        tokio::select! {
-            r1 = c1_to_c2 => {
-
-                r1
-            }
-            r2 = c2_to_c1 => {
-
-                r2
-            }
+    tokio::select! {
+        r1 = cp_conn_to_addr_conn(&mut r, ac.w) => {
+            r1
         }
-    } else {
-        let (c1_to_c2, c2_to_c1) = (
-            cp_conn_to_addr_conn(&mut r, ac.w),
-            cp_addr_conn_to_conn_timeout(ac.r, &mut w),
-        );
-
-        tokio::select! {
-            r1 = c1_to_c2 => {
-
-                r1
+        r2 = async{
+            if args.no_timeout{
+                cp_addr_conn_to_conn(ac.r, &mut w).await
+            }else{
+                cp_addr_conn_to_conn_timeout(ac.r, &mut w).await
             }
-            r2 = c2_to_c1 => {
-
-                r2
-            }
+        } => {
+            r2
         }
     }
 }
@@ -110,14 +87,14 @@ where
     R: AsyncRead + Unpin + ?Sized,
 {
     let mut whole: u64 = 0;
-    let mut buf0 = Box::new([0u8; MTU]);
+    let mut buf = Box::new([0u8; MTU]);
 
     let a = net::Addr::default();
     loop {
-        let r = r.read(buf0.deref_mut()).await;
+        let r = r.read(buf.deref_mut()).await;
         match r {
             Ok(n) => {
-                let r = w.write(&buf0[..n], &a).await;
+                let r = w.write(&buf[..n], &a).await;
                 match r {
                     Ok(n) => whole += n as u64,
                     Err(_) => break,
@@ -140,49 +117,51 @@ where
     W: AsyncWrite + Unpin + ?Sized,
 {
     let mut whole_write = 0;
+    let mut buf = Box::new([0u8; MTU]);
 
     loop {
-        let r1ref = &mut r;
+        let r_ref = &mut r;
+        let buf_ref = buf.deref_mut();
 
-        let sleep_f = tokio::time::sleep(CP_UDP_TIMEOUT);
         let read_f = async move {
-            let mut buf0 = Box::new([0u8; MTU]);
-            let mut buf = ReadBuf::new(buf0.deref_mut());
-            let r = r1ref.read(buf.initialized_mut()).await;
-
-            (r, buf0)
+            let mut buf = ReadBuf::new(buf_ref);
+            r_ref.read(buf.initialized_mut()).await
         };
 
         tokio::select! {
-            _ = sleep_f =>{
-                debug!("read addrconn timeout");
+            _ = tokio::time::sleep(CP_UDP_TIMEOUT) =>{
+                debug!("cp_addr_conn_to_conn timeout");
 
                 break;
             }
             r = read_f =>{
-                let (r,  buf0) = r;
+
                 match r {
-                    Err(_) => break,
+                    Err(e) => {
+                        debug!("cp_addr_to_conn, read got e, will break: {e}");
+                        break
+                    },
                     Ok((m, _ad)) => {
                         if m > 0 {
                             //debug!("cp_addr_to_conn, read got {m}");
-                            let r = w.write(&buf0[..m]).await;
-                            if let Ok(n) = r{
-                                //debug!("cp_addr_to_conn, write ok {n}");
+                            let r = w.write(&buf[..m]).await;
+                            match r{
+                                Ok(n) => {
+                                    //debug!("cp_addr_to_conn, write ok {n}");
 
-                                whole_write += n;
+                                    whole_write += n;
 
-                                let r = w.flush().await;
-                                if r.is_err(){
-                                    debug!("cp_addr_to_conn, write  flush not ok ");
+                                    let r = w.flush().await;
+                                    if let Err(e) = r{
+                                        debug!("cp_addr_to_conn, write  flush not ok: {e}");
+                                        break;
+                                    }
+                                },
+                                Err(_) => {
+                                    debug!("cp_addr_to_conn, write not ok ");
                                     break;
-                                }
-
-                            }else{
-                                debug!("cp_addr_to_conn, write not ok ");
-                                break;
+                                },
                             }
-
                         }
                     }
                 }

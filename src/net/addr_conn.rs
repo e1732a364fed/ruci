@@ -421,6 +421,8 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
 }
 
 /// copy data between two [`AddrConn`] struct
+///
+/// blocking
 #[inline]
 pub async fn cp(
     cid: CID,
@@ -440,19 +442,9 @@ pub async fn cp(
     let cp1 = tokio::spawn(cp_addr(c1.r, c2.w, n1, no_timeout, rx1, false, opt.clone()));
     let cp2 = tokio::spawn(cp_addr(c2.r, c1.w, n2, no_timeout, rx2, true, opt.clone()));
 
-    let (_tmpx0, tmp_rx0) = oneshot::channel();
-    let shutdown_rx1 = if let Some(x) = shutdown_rx1 {
-        x
-    } else {
-        tmp_rx0
-    };
-
-    let (_tmpx, tmp_rx) = oneshot::channel();
-    let shutdown_rx2 = if let Some(x) = shutdown_rx2 {
-        x
-    } else {
-        tmp_rx
-    };
+    if let Some(gtr) = &opt {
+        gtr.alive_connection_count.fetch_add(1, Ordering::Relaxed);
+    }
 
     let r = tokio::select! {
         r = cp1 =>{
@@ -479,7 +471,13 @@ pub async fn cp(
                 Err(_) => 0,
             }
         }
-         _ = shutdown_rx1 =>{
+        _ = async{
+            if let Some(shutdown_rx1) = shutdown_rx1{
+                shutdown_rx1.await
+            }else{
+                std::future::pending().await
+            }
+        } =>{
             debug!("addrconn cp_between got shutdown1 signal");
 
             let _ = tx1.send(());
@@ -488,7 +486,13 @@ pub async fn cp(
             0
         }
 
-        _ = shutdown_rx2 =>{
+        _ = async{
+            if let Some(shutdown_rx2) = shutdown_rx2{
+                shutdown_rx2.await
+            }else{
+                std::future::pending().await
+            }
+        } =>{
             debug!("addrconn cp_between got shutdown2 signal");
             let _ = tx1.send(());
             let _ = tx2.send(());
@@ -496,6 +500,12 @@ pub async fn cp(
             0
         }
     };
+
+    if let Some(gtr) = opt {
+        gtr.alive_connection_count
+            .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+    }
+    info!( cid = %cid, "cp_addr_conn end" );
 
     Ok(r)
 }
