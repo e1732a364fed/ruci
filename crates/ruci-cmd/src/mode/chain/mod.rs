@@ -54,6 +54,10 @@ pub(crate) async fn run(
             serde_path_to_error::deserialize(dr).context("yaml to StaticConfig failed")?;
 
         e.init_static(c);
+    } else if file_name.ends_with(".json") {
+        let c: StaticConfig =
+            rucimp::serde_json::from_str(&contents).context("json to StaticConfig failed")?;
+        e.init_static(c);
     } else {
         anyhow::bail!("unsupported file extension: {}", file_name);
     }

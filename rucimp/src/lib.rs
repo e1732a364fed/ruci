@@ -14,6 +14,8 @@ pub mod utils;
 #[cfg(feature = "route")]
 pub mod route;
 
+pub use serde_json;
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Common directories to search for configuration files

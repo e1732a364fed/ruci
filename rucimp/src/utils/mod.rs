@@ -11,6 +11,7 @@ use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
 
+/// [`crate::COMMON_DIRS`]
 pub fn default_file_source() -> FileSource {
     FileSource::Folders(COMMON_DIRS.iter().map(|str| str.to_string()).collect())
 }

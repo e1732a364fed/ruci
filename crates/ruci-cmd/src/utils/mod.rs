@@ -3,6 +3,7 @@ use std::{fs, sync::Arc, time::Duration};
 use super::*;
 use anyhow::{Context, Ok};
 use ruci::net;
+use serde_value::Value;
 use tokio::sync::mpsc;
 use tracing::info;
 
@@ -180,7 +181,8 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
                 .context("无法从文件名获取格式")?
                 .to_lowercase();
 
-            let output = convert_config(&contents, &input_format, &output_format, file_source)?;
+            let output =
+                convert_static_config(&contents, &input_format, &output_format, file_source)?;
 
             let mut output_file = format!(
                 "{}.{}",
@@ -331,13 +333,13 @@ fn print_qrcode_of(str: &str) {
 }
 
 /// 在不同配置格式之间转换
-/// 支持的格式: lua, toml, yaml
+/// 支持的格式: lua, toml, yaml, json
 ///
 /// # Arguments
 /// * `input` - 输入的配置文件内容
-/// * `input_format` - 输入格式 ("lua", "toml", "yaml")
-/// * `output_format` - 输出格式 ("lua", "toml", "yaml")
-pub fn convert_config(
+/// * `input_format` - 输入格式 ("lua", "toml", "yaml", "json")
+/// * `output_format` - 输出格式 ("lua", "toml", "yaml", "json")
+pub fn convert_static_config(
     input_file_content: &str,
     input_format: &str,
     output_format: &str,
@@ -345,54 +347,73 @@ pub fn convert_config(
 ) -> anyhow::Result<String> {
     use rucimp::modes::chain::config::StaticConfig;
 
-    // 首先将输入解析为 StaticConfig
-    let config: StaticConfig = match input_format.to_lowercase().as_str() {
-        "lua" => {
-            #[cfg(any(feature = "lua", feature = "lua54"))]
-            {
-                rucimp::modes::chain::config::lua::load_static(
-                    input_file_content,
-                    Arc::new(file_source),
-                )
-                .context("init_lua_static failed")?
-            }
-            #[cfg(not(any(feature = "lua", feature = "lua54")))]
-            anyhow::bail!("lua feature not enabled")
+    // 处理 lua 格式的特殊情况
+    if input_format.to_lowercase() == "lua" {
+        #[cfg(any(feature = "lua", feature = "lua54"))]
+        {
+            let config: StaticConfig = rucimp::modes::chain::config::lua::load_static(
+                input_file_content,
+                Arc::new(file_source),
+            )
+            .context("init_lua_static failed")?;
+            return match output_format.to_lowercase().as_str() {
+                "toml" => Ok(toml::to_string(&config)?),
+                "json" => Ok(rucimp::serde_json::to_string_pretty(&config)?),
+                "yaml" | "yml" => Ok(serde_yaml::to_string(&config)?),
+                _ => anyhow::bail!("unsupported output format: {}", output_format),
+            };
         }
-        "toml" => toml::from_str(input_file_content)?,
-        "yaml" | "yml" => serde_yaml::from_str(input_file_content)?,
+        #[cfg(not(any(feature = "lua", feature = "lua54")))]
+        anyhow::bail!("lua feature not enabled");
+    }
+
+    if output_format.to_lowercase() == "lua" {
+        #[cfg(any(feature = "lua", feature = "lua54"))]
+        {
+            let config: StaticConfig = match input_format.to_lowercase().as_str() {
+                "toml" => toml::from_str(input_file_content)?,
+                "json" => rucimp::serde_json::from_str(input_file_content)?,
+                "yaml" | "yml" => serde_yaml::from_str(input_file_content)?,
+                _ => anyhow::bail!("unsupported input format: {}", input_format),
+            };
+            use rucimp::modes::chain::config::lua::mlua::{self, LuaSerdeExt};
+            let lua = mlua::Lua::new();
+            let lua_value = lua.to_value(&config)?;
+
+            let s = rucimp::modes::chain::config::lua::lua_value_to_string_with_prefix(
+                &lua_value,
+                "Config = ",
+            )?;
+
+            let s = s
+                .lines()
+                .filter(|s| {
+                    let s = s.trim_end();
+                    !(s.ends_with("= nil,") || s.contains("= nil"))
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            return Ok(s);
+        }
+        #[cfg(not(any(feature = "lua", feature = "lua54")))]
+        anyhow::bail!("lua feature not enabled");
+    }
+
+    // 首先将输入解析为 serde_value::Value
+    let value: Value = match input_format.to_lowercase().as_str() {
+        "json" => rucimp::serde_json::from_str(input_file_content).context("json parse failed")?,
+        "yaml" | "yml" => serde_yaml::from_str(input_file_content).context("yaml parse failed")?,
+        "toml" => toml::from_str(input_file_content).context("toml parse failed")?,
         _ => anyhow::bail!("unsupported input format: {}", input_format),
     };
 
-    // 然后将 StaticConfig 转换为目标格式
+    // 然后将 Value 序列化为目标格式
     match output_format.to_lowercase().as_str() {
-        "toml" => Ok(toml::to_string(&config)?),
-        "yaml" | "yml" => Ok(serde_yaml::to_string(&config)?),
-        "lua" => {
-            #[cfg(any(feature = "lua", feature = "lua54"))]
-            {
-                use rucimp::modes::chain::config::lua::mlua::{self, LuaSerdeExt};
-                let lua = mlua::Lua::new();
-                let lua_value = lua.to_value(&config)?;
-
-                let s = rucimp::modes::chain::config::lua::lua_value_to_string_with_prefix(
-                    &lua_value,
-                    "Config = ",
-                )?;
-
-                let s = s
-                    .lines()
-                    .filter(|s| {
-                        let s = s.trim_end();
-                        !(s.ends_with("= nil,") || s.contains("= nil"))
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                Ok(s)
-            }
-            #[cfg(not(any(feature = "lua", feature = "lua54")))]
-            anyhow::bail!("lua feature not enabled")
+        "json" => {
+            Ok(rucimp::serde_json::to_string_pretty(&value)?).context("serialize json failed")
         }
+        "yaml" | "yml" => Ok(serde_yaml::to_string(&value)?).context("serialize yaml failed"),
+        "toml" => Ok(toml::to_string(&value)?).context("serialize toml failed"),
         _ => anyhow::bail!("unsupported output format: {}", output_format),
     }
 }
