@@ -251,7 +251,7 @@ pub async fn serve(s: &Server, global_traffic: Arc<ruci::net::GlobalTrafficRecor
     let addr = s
         .listen_addr
         .clone()
-        .unwrap_or(String::from(DEFAULT_API_ADDR));
+        .unwrap_or_else(|| String::from(DEFAULT_API_ADDR));
     info!("api server starting {addr}");
 
     let mut app = Router::new().route("/stop_core", get(stop_core).with_state(s.close_tx.clone()));

@@ -22,7 +22,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         None => return Ok(()),
     };
     fn get_real_addr(addr: Option<String>) -> String {
-        addr.unwrap_or(String::from("http://") + DEFAULT_API_ADDR)
+        addr.unwrap_or_else(|| String::from("http://") + DEFAULT_API_ADDR)
     }
     async fn timeout_get(ad: String, url: &str) -> Result<reqwest::Response> {
         Ok(

@@ -164,7 +164,7 @@ pub fn print_env_version(ll: Option<Level>) {
 
     println!(
         "Log Level(env): {:?}",
-        std::env::var(RL).map_or(String::new(), |v| v)
+        std::env::var(RL).map_or_else(|_| String::new(), |v| v)
     );
 
     if !log_enabled!(Level::Info) {

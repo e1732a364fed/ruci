@@ -16,7 +16,7 @@ pub fn print_env_version(name: &str) {
     println!("working dir: {:?} \n", cdir);
 
     const RL: &str = "RUST_LOG";
-    let l = env::var(RL).unwrap_or("info".to_string());
+    let l = env::var(RL).unwrap_or_else(|_| "info".to_string());
 
     if l == "warn" {
         println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";rucimp \n shell like so: RUST_LOG=info ./rucimp")
@@ -27,7 +27,7 @@ pub fn print_env_version(name: &str) {
 
     println!(
         "Log Level(env): {:?}",
-        std::env::var(RL).map_or(String::new(), |v| v)
+        std::env::var(RL).map_or_else(|_| String::new(), |v| v)
     );
 
     if log_enabled!(Level::Info) {

@@ -24,7 +24,7 @@ where
     let mut config = tun2::Configuration::default();
 
     config
-        .tun_name(tun_name.as_ref().unwrap_or(&String::from("utun321")))
+        .tun_name(tun_name.as_ref().map(String::as_str).unwrap_or("utun321"))
         .address(dial_addr)
         .netmask(netmask)
         .up();

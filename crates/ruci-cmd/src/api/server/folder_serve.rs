@@ -44,7 +44,9 @@ async fn download(Path(filename): Path<String>) -> Result<Vec<u8>, StatusCode> {
 
 /// non-blocking
 pub async fn serve_static(listen_addr: Option<String>) {
-    let addr = listen_addr.clone().unwrap_or(String::from("0.0.0.0:18143"));
+    let addr = listen_addr
+        .clone()
+        .unwrap_or_else(|| String::from("0.0.0.0:18143"));
 
     info!("serving folder {addr}");
 

@@ -52,7 +52,9 @@ impl StaticConfig {
                     .iter()
                     .map(|mapper_config| {
                         let mut mapper = mapper_config.to_mapper_box();
-                        mapper.set_chain_tag(config_chain.tag.as_ref().unwrap_or(&String::new()));
+                        mapper.set_chain_tag(
+                            config_chain.tag.as_ref().map(String::as_str).unwrap_or(""),
+                        );
                         mapper
                     })
                     .collect::<Vec<_>>();
