@@ -38,4 +38,5 @@ api_client = ["reqwest"]
 utils = ["reqwest"]
 trace = ["rucimp/trace","TinyUFO"]
 
+use-native-tls = ["rucimp/use-native-tls"]
 native-tls-vendored = ["rucimp/native-tls-vendored"]

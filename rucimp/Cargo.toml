@@ -50,7 +50,7 @@ serde_json = "1.0.114"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [features]
-default = ["lua", "route","geoip","tokio-native-tls","native-tls"]
+default = ["lua", "route","geoip"]
 
 tun = ["ruci/tun"]
 trace = ["ruci/trace"]
@@ -62,6 +62,8 @@ route = ["ipnet" ,"iprange" ,"regex"]
 geoip = ["maxminddb", "route"]
 
 sockopt = ["libc", "socket2"]
+
+use-native-tls = ["native-tls","tokio-native-tls"]
 
 native-tls-vendored = ["native-tls/vendored","tokio-native-tls/vendored"]
 

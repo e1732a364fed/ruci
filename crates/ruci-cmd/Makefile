@@ -1,5 +1,5 @@
 define compile
-	cargo build --target ${BUILD_TRIPLET} -F api_server -F api_client -F utils --release 
+	cargo build --target ${BUILD_TRIPLET} -F api_server -F api_client -F utils -F use-native-tls --release 
 endef
 
 define copy
