@@ -196,13 +196,13 @@ impl CID {
     /// let ogtr = Some(Arc::new(GlobalTrafficRecorder::default()));
     ///
     /// let mut x = CID::new_by_ogtr(ogtr.clone());
-    /// assert!(matches!(x, CID::Unit(1)));
+    /// assert!(x == CID::new(1));
     /// x.push(ogtr.clone());
-    /// assert!(matches!(x.clone(), CID::Chain(chain) if chain.id_list[0] == 1));
+    /// assert!(x.id_list[0] == 1);
     ///
     /// x.push(ogtr);
     /// assert!(
-    ///     matches!(x.clone(), CID::Chain(chain) if chain.id_list[0] == 1 || chain.id_list[1] == 2)
+    ///      x.id_list[0] == 1 || x.id_list[1] == 2
     /// );
     ///
     /// ```
