@@ -321,7 +321,7 @@ impl ToMapperBox for InMapperConfig {
             }
             .to_mapper_box(),
             InMapperConfig::Http(c) => {
-                let so = http::Config {
+                let so = http_proxy::Config {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()

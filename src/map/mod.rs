@@ -31,7 +31,7 @@ pub use data::*;
 
 pub mod counter;
 pub mod fileio;
-pub mod http;
+pub mod http_proxy;
 pub mod math;
 pub mod network;
 pub mod socks5;

@@ -1,9 +1,10 @@
 /*!
+提供一些通用的 http1.1 的工具
 
 移植verysimple 的 httpLayer/h1_requestfilter.go
 
 verysimple 上的实现有个大问题, iota 不是 enum , 导致函数返回的数可能有不同含义.
-rust上就好了
+rust上用enum就好了
 
 */
 

@@ -16,7 +16,7 @@ use crate::{
     Name,
 };
 
-use super::{http, socks5, MapperBox, ToMapperBox};
+use super::{http_proxy, socks5, MapperBox, ToMapperBox};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -34,7 +34,7 @@ impl ToMapperBox for Config {
 #[mapper_ext_fields]
 #[derive(Debug, Clone, MapperExt)]
 pub struct Server {
-    pub http_s: http::Server,
+    pub http_s: http_proxy::Server,
     pub socks5_s: socks5::server::Server,
 }
 
@@ -69,7 +69,7 @@ impl Server {
         }
 
         Server {
-            http_s: http::Server {
+            http_s: http_proxy::Server {
                 um: oum.clone(),
                 only_connect: false,
             },

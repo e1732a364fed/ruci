@@ -38,7 +38,7 @@ pub fn load_in_mappers_by_str_and_ld_config(s: &str, c: LDConfig) -> Option<Mapp
             Some(Box::new(a))
         }
         "http" => {
-            let a = block_on(http::Server::new(
+            let a = block_on(http_proxy::Server::new(
                 suit::config::adapter::get_http_server_option_from_ld_config(c),
             ));
             Some(Box::new(a))
@@ -129,8 +129,8 @@ pub fn get_socks5_server_option_from_toml_config_str(toml_str: &str) -> socks5::
     get_socks5_server_option_from_ld_config(c)
 }
 
-pub fn get_http_server_option_from_ld_config(c: LDConfig) -> http::Config {
-    let mut so = http::Config {
+pub fn get_http_server_option_from_ld_config(c: LDConfig) -> http_proxy::Config {
+    let mut so = http_proxy::Config {
         user_whitespace_pass: c.uuid,
         ..Default::default()
     };
