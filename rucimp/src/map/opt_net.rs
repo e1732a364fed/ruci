@@ -11,7 +11,7 @@ use ruci::*;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::oneshot;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::net::so2::{self, SockOpt};
 
@@ -103,18 +103,18 @@ impl Name for OptDirect {
 }
 impl OptDirect {
     pub fn new(sopt: SockOpt, more_num_of_files: Option<bool>) -> anyhow::Result<Self> {
-        use anyhow::Context;
-
         if more_num_of_files.unwrap_or_default() {
             tracing::info!("calls rlimit::prlimit");
 
-            rlimit::prlimit(
+            let r = rlimit::prlimit(
                 std::process::id().try_into().unwrap(),
                 rlimit::Resource::NOFILE,
                 Some((1024000, 1024000)),
                 None,
-            )
-            .context("run rlimit::prlimit failed")?;
+            );
+            if let Err(e) = r {
+                warn!(err = %e, "OptDirect: call rlimit::prlimit failed")
+            }
         }
 
         Ok(Self {
@@ -179,7 +179,6 @@ impl Map for OptDirect {
                             .c(stream)
                             .b(params.b)
                             .a(Some(a))
-                            //.no_timeout(true)
                             .build();
                     }
                     Stream::Generator(_) => todo!(),
@@ -226,7 +225,6 @@ impl OptDialer {
         pass_a: Option<net::Addr>,
         pass_b: Option<BytesMut>,
     ) -> MapResult {
-        //debug!("start dial");
         let r = match dial_a.network {
             Network::UDP => so2::dial_udp(&dial_a, &self.sockopt)
                 .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None, false))),
@@ -236,11 +234,9 @@ impl OptDialer {
             _ => todo!(),
         };
 
-        //debug!("  dial r {:?}", r);
-
         match r {
             Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
-            Err(e) => MapResult::from_e(e.context(format!("BindDialer dial {} failed", dial_a))),
+            Err(e) => MapResult::from_e(e.context(format!("OptDialer dial {} failed", dial_a))),
         }
     }
 }
@@ -255,7 +251,7 @@ impl Map for OptDialer {
                 return self.dial_addr(&self.dial_addr, params.a, params.b).await;
             }
 
-            _ => return MapResult::err_str("BindDialer can't dial when a stream already exists"),
+            _ => return MapResult::err_str("OptDialer can't dial when a stream already exists"),
         }
     }
 }

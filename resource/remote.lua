@@ -19,7 +19,7 @@ local opt_direct_chain = { {
             so_mark = 255,
             bind_to_device = "enp0s1"
         },
-        more_num_of_files = true, -- run system call to increase NOFILE to prevent Too many of files
+        more_num_of_files = true, -- auto run system call to increase NOFILE to prevent Too many of files, root required
     }
 } }
 

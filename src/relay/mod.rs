@@ -245,8 +245,18 @@ pub async fn handle_in_fold_result(
                     );
                 }
             } else {
-                info!( cid = %cid, is_fallback = is_fallback,
-                "fold outbound succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
+                if let Stream::AddrConn(_) = dial_result.c {
+                    if tracing::enabled!(tracing::Level::DEBUG) {
+                        debug!( cid = %cid, is_fallback = is_fallback,
+                            "fold outbound succeed with AddrConn and target_addr {rta} ",);
+                    } else {
+                        info!( cid = %cid, is_fallback = is_fallback,
+                            "fold outbound succeed with AddrConn",);
+                    }
+                } else {
+                    info!( cid = %cid, is_fallback = is_fallback, target_addr = %rta, stream = %dial_result.c,
+                        "fold outbound succeed, but the target_addr is not consumed ",);
+                }
             }
         } else {
             info!(cid = %cid, is_fallback = is_fallback,"fold outbound succeed, will start relay");
@@ -431,7 +441,7 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
             }
         }
     }
-    info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
+    debug!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
 
     tokio::spawn(net::addr_conn::cp(
         cid.clone(),

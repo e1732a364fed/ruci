@@ -11,7 +11,6 @@ use std::{
     time::Duration,
 };
 use tokio::sync::oneshot;
-use tracing::info;
 
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
 // 只是加了一个 Addr 参数. 这一部分比较难懂.
@@ -522,7 +521,7 @@ pub async fn cp(
         gtr.alive_connection_count
             .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
     }
-    info!( cid = %cid, "cp_addr_conn end" );
+    debug!( cid = %cid, "cp_addr_conn end" );
 
     Ok(r)
 }

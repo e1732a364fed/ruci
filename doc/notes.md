@@ -386,6 +386,17 @@ linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 
 更新系统的 glibc 是比较危险的做法, 推荐使用 musl
 
+## tproxy: Too many open files
+
+每打开一个网页后, ruci 进程新增 200-300个文件(socket)是很常见的现象, 主要都是 dns 
+的 udp 请求造成的. 一般linux 对一个进程的 NOFILE 上限的设定是1024, 这对代理来说太小了.
+
+在v0.0.5正式版中, 为 OptDirect 提供了 more_num_of_files 选项,
+以自动调用 linux 的 系统调用来提高 NOFILE 上限. 且 TproxyUdpListener 初始化时也会
+自动提高 NOFILE 上限
+
+同时, udp 的 timeout 默认设为 40 秒, 这样超时没有新信息产生就会断开连接, opened files
+就会自动减少恢复
 
 
 ## 其它
