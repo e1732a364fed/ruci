@@ -43,7 +43,7 @@ impl SingleClient {
         } else {
             http_config
                 .as_ref()
-                .map(|c| crate::net::build_request_from(c, "http://"))
+                .map(|c| crate::net::http::build_request_from(c, "http://"))
         };
 
         Self {
@@ -191,7 +191,7 @@ impl MuxClient {
         } else {
             http_config
                 .as_ref()
-                .map(|c| crate::net::build_request_from(c, "http://"))
+                .map(|c| crate::net::http::build_request_from(c, "http://"))
         };
 
         Self {

@@ -47,7 +47,7 @@ impl Server {
             use http::Response;
 
             if let Some(c) = &self.config {
-                let r = crate::net::match_request_http_header(c, r);
+                let r = crate::net::http::match_request_http_header(c, r);
 
                 if let Err(e) = r {
                     let r: Response<Option<String>> = Response::builder()

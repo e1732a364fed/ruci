@@ -1,5 +1,5 @@
 /*!
- * Tproxy related Mapper. t is shortcut for transparent proxy,
+Tproxy related Mapper. Tproxy is shortcut for transparent proxy,
  */
 use async_trait::async_trait;
 use ruci::map::{self, *};

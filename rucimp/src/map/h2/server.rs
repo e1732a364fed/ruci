@@ -106,7 +106,7 @@ impl Server {
                             continue;
                         }
                     }
-                    let r = crate::net::match_request_http_header(c, &req);
+                    let r = crate::net::http::match_request_http_header(c, &req);
 
                     if let Err(e) = r {
                         warn!(

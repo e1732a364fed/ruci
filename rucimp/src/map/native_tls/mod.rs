@@ -109,7 +109,7 @@ impl map::Mapper for Server {
 #[derive(Clone, Debug, MapperExt)]
 pub struct Client {
     pub domain: String,
-    pub in_secure: bool,
+    pub insecure: bool,
     pub alpn: Option<Vec<String>>,
 }
 
@@ -129,7 +129,7 @@ impl map::Mapper for Client {
     ) -> map::MapResult {
         let conn = params.c;
         if let ruci::net::Stream::Conn(conn) = conn {
-            let connector = if self.in_secure {
+            let connector = if self.insecure {
                 let mut b = tokio_native_tls::native_tls::TlsConnector::builder();
 
                 if let Some(a) = &self.alpn {

@@ -74,7 +74,7 @@ fn put_uvarint(buf: &mut [u8], mut x: usize) -> usize {
     i + 1
 }
 
-use crate::net::HttpMatchError;
+use crate::net::http::HttpMatchError;
 use futures::ready;
 use h2::{RecvStream, SendStream};
 use http::{Request, Uri};
