@@ -106,5 +106,5 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: dist/*.tar.xz
-          tag: ${{ github.ref }}
-          file_glob: true
+          tag: ${{ inputs.tag || github.ref_name }}
+          
