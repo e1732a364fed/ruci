@@ -31,6 +31,8 @@ use tracing::{debug, info, warn};
 #[cfg(feature = "api_server")]
 use utoipa;
 
+mod log_ws;
+
 #[derive(
     Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
 )]
@@ -340,6 +342,8 @@ pub mod android {
 
 /// blocking
 pub async fn run_main_with_args(args: Args) -> anyhow::Result<()> {
+    CORE_STATE.get_or_init(|| Arc::new(parking_lot::Mutex::new(State::default())));
+
     let _g = log_setup(args.clone());
 
     match args.sub_cmds {
@@ -474,18 +478,6 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     use tracing_appender::{non_blocking, rolling};
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    #[cfg(debug_assertions)]
-    let console_layer = fmt::layer()
-        .with_line_number(true)
-        .with_writer(std::io::stderr);
-
-    #[cfg(not(debug_assertions))]
-    let console_layer = fmt::layer().with_writer(std::io::stderr);
-
-    let logger = tracing_subscriber::registry()
-        .with(EnvFilter::from_default_env())
-        .with(console_layer);
-
     let mut no_file = false;
     let mut file_name = String::from("ruci-cmd.log");
 
@@ -498,17 +490,75 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
         }
     }
 
+    #[cfg(feature = "api_server")]
+    let ws_logger = {
+        let logger = log_ws::WebsocketLogger::new();
+        let ws_writer = logger.get_writer();
+        logger.serve("127.0.0.1:40682");
+
+        // tokio::spawn(async {
+        //     loop {
+        //         tokio::time::sleep(Duration::from_secs(1)).await;
+        //         info!("test")
+        //     }
+        // });
+
+        Some(ws_writer)
+    };
+
     let guard = if !no_file {
         let file_appender = rolling::daily(args.log_dir.unwrap_or(String::from("logs")), file_name);
         let (non_blocking_appender, guard) = non_blocking(file_appender);
-        let file_layer = fmt::layer()
-            .json()
-            .with_ansi(false)
-            .with_writer(non_blocking_appender);
-        logger.with(file_layer).init();
+
+        let mut layers = vec![
+            Box::new(
+                fmt::layer()
+                    .with_line_number(true)
+                    .with_writer(std::io::stderr),
+            ) as Box<dyn tracing_subscriber::Layer<_> + Send + Sync>,
+            Box::new(
+                fmt::layer()
+                    .json()
+                    .with_ansi(false)
+                    .with_writer(non_blocking_appender),
+            ) as Box<dyn tracing_subscriber::Layer<_> + Send + Sync>,
+        ];
+
+        #[cfg(feature = "api_server")]
+        if let Some(ws_writer) = ws_logger {
+            layers.push(
+                Box::new(fmt::layer().json().with_ansi(false).with_writer(ws_writer))
+                    as Box<dyn tracing_subscriber::Layer<_> + Send + Sync>,
+            );
+        }
+
+        tracing_subscriber::registry()
+            .with(EnvFilter::from_default_env())
+            .with(layers)
+            .init();
+
         Some(guard)
     } else {
-        logger.init();
+        let mut layers = vec![Box::new(
+            fmt::layer()
+                .with_line_number(true)
+                .with_writer(std::io::stderr),
+        )
+            as Box<dyn tracing_subscriber::Layer<_> + Send + Sync>];
+
+        #[cfg(feature = "api_server")]
+        if let Some(ws_writer) = ws_logger {
+            layers.push(
+                Box::new(fmt::layer().json().with_ansi(false).with_writer(ws_writer))
+                    as Box<dyn tracing_subscriber::Layer<_> + Send + Sync>,
+            );
+        }
+
+        tracing_subscriber::registry()
+            .with(EnvFilter::from_default_env())
+            .with(layers)
+            .init();
+
         None
     };
 
