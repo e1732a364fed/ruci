@@ -632,7 +632,7 @@ local config_17_tcp_ip_stack = {
                 dns_list = { "114.114.114.114" }
 
             }
-        }, "StackSmoltcp" }, --StackLwip
+        }, "StackLwip" },
     },
     --outbounds = { dial1 = out_stdio_show_bytes_chain }
     outbounds = {
