@@ -26,6 +26,10 @@ pub struct AccumulateResult {
     pub id: CID,
 
     pub chain_tag: String,
+
+    #[cfg(feature = "trace")]
+    pub trace: Vec<String>, // table of Names of each Mapper during accumulation.
+
     // 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
     pub left_mappers_iter: MIterBox,
 }
@@ -42,6 +46,13 @@ impl Debug for AccumulateResult {
             .field("tag", &self.chain_tag)
             .finish()
     }
+}
+
+pub struct AccumulateParams {
+    pub cid: CID,
+    pub behavior: ProxyBehavior,
+    pub initial_state: MapResult,
+    pub mappers: MIterBox,
 }
 
 ///  accumulate 是一个作用很强的函数,是 mappers 的累加器
@@ -61,12 +72,14 @@ impl Debug for AccumulateResult {
 ///
 /// 能生成 Stream::Generator 说明其 behavior 为 DECODE
 ///
-pub async fn accumulate(
-    cid: CID,
-    behavior: ProxyBehavior,
-    initial_state: MapResult,
-    mut mappers: MIterBox,
-) -> AccumulateResult {
+pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
+    let cid = params.cid;
+    let initial_state = params.initial_state;
+    let mut mappers = params.mappers;
+
+    #[cfg(feature = "trace")]
+    let mut trace = Vec::new();
+
     let mut last_r: MapResult = initial_state;
 
     let mut calculated_output_vec = Vec::new();
@@ -92,7 +105,7 @@ pub async fn accumulate(
                     Some(id) => id,
                     None => cid.clone(),
                 },
-                behavior,
+                params.behavior,
                 MapParams {
                     c: last_r.c,
                     a: last_r.a,
@@ -112,6 +125,9 @@ pub async fn accumulate(
         }
 
         calculated_output_vec.push(last_r.d);
+
+        #[cfg(feature = "trace")]
+        trace.push(adder.name().to_string());
 
         if last_r.c.is_none_or_generator() {
             break;
@@ -133,6 +149,9 @@ pub async fn accumulate(
             None => cid,
         },
         left_mappers_iter: mappers,
+
+        #[cfg(feature = "trace")]
+        trace,
         chain_tag: tag,
     }
 }
@@ -182,12 +201,12 @@ pub async fn accumulate_from_start(
         }
 
         tokio::spawn(async move {
-            let r = accumulate(
-                CID::new_by_opti(oti),
-                ProxyBehavior::DECODE,
-                first_r,
-                inmappers,
-            )
+            let r = accumulate(AccumulateParams {
+                cid: CID::new_by_opti(oti),
+                behavior: ProxyBehavior::DECODE,
+                initial_state: first_r,
+                mappers: inmappers,
+            })
             .await;
             let _ = tx.send(r).await;
         });
@@ -245,7 +264,13 @@ fn spawn_acc_forever(
     oti: Option<Arc<TrafficRecorder>>,
 ) {
     tokio::spawn(async move {
-        let r = accumulate(cid, ProxyBehavior::DECODE, new_stream_info, miter).await;
+        let r = accumulate(AccumulateParams {
+            cid,
+            behavior: ProxyBehavior::DECODE,
+            initial_state: new_stream_info,
+            mappers: miter,
+        })
+        .await;
 
         if let Stream::Generator(rx) = r.c {
             let cid = r.id;

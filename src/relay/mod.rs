@@ -15,7 +15,7 @@ use log::{debug, info, log_enabled, warn};
 use crate::net::addr_conn::AsyncWriteAddrExt;
 use crate::net::{self, Addr, Stream, CID};
 
-use self::acc::MIterBox;
+use self::acc::{AccumulateParams, MIterBox};
 use self::route::OutSelector;
 
 use anyhow::anyhow;
@@ -41,12 +41,12 @@ pub async fn handle_in_stream(
     let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            acc::accumulate(
-                cidc,
-                ProxyBehavior::DECODE,
-                MapResult::builder().c(in_conn).build(),
-                ins_iterator,
-            )
+            acc::accumulate(AccumulateParams {
+                cid: cidc,
+                behavior: ProxyBehavior::DECODE,
+                initial_state: MapResult::builder().c(in_conn).build(),
+                mappers: ins_iterator,
+            })
             .await
         })
         .await;
@@ -125,16 +125,16 @@ pub async fn handle_in_accumulate_result(
     let cidc = cid.clone();
     let dial_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            acc::accumulate(
-                cidc,
-                ProxyBehavior::ENCODE,
-                MapResult {
+            acc::accumulate(AccumulateParams {
+                cid: cidc,
+                behavior: ProxyBehavior::ENCODE,
+                initial_state: MapResult {
                     a: Some(target_addr),
                     b: listen_result.b,
                     ..Default::default()
                 },
-                outbound,
-            )
+                mappers: outbound,
+            })
             .await
         })
         .await;

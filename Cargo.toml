@@ -50,6 +50,7 @@ macro_mapper ={ path = "crates/macro_mapper" }
 [features]
 tun = ["tun2"]
 
+trace = []
 
 
 [dev-dependencies]
