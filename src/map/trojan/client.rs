@@ -78,7 +78,9 @@ impl Mapper for Client {
     ) -> MapResult {
         match params.c {
             map::Stream::TCP(c) => {
-                let r = self.handshake(cid, c, params.a.unwrap(), params.b).await;
+                let r = self
+                    .handshake(cid, c, params.a.expect("params has target addr"), params.b)
+                    .await;
                 MapResult::from_result(r)
             }
             _ => MapResult::err_str("trojan only support tcplike stream"),

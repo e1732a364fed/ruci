@@ -18,7 +18,7 @@ async fn dial_future(
 ) -> std::io::Result<Box<dyn ConnTrait>> {
     let cs = TcpStream::connect((listen_host_str, listen_port))
         .await
-        .unwrap();
+        .expect("dial tcp succeed");
 
     let a = super::client::Client::new("test.domain", true);
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.

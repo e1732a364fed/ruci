@@ -60,7 +60,10 @@ pub async fn handle_in_accumulate_result(
 
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
-    let cid = listen_result.id.as_ref().unwrap();
+    let cid = listen_result
+        .id
+        .as_ref()
+        .expect("listen_result contains an id");
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {
@@ -115,11 +118,14 @@ pub async fn handle_in_accumulate_result(
         })
         .await;
 
-    if let Err(e) = dial_result {
-        warn!("{cid}, dial out client timeout, {e}",);
-        return Err(e.into());
-    }
-    let dial_result = dial_result.unwrap();
+    let dial_result = match dial_result {
+        Ok(d) => d,
+        Err(e) => {
+            warn!("{cid}, dial out client timeout, {e}",);
+            return Err(e.into());
+        }
+    };
+
     if let Some(e) = dial_result.e {
         warn!("{cid}, dial out client failed, {e}",);
         return Err(e);

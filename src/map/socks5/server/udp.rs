@@ -49,7 +49,9 @@ pub async fn loop_listen_udp_for_certain_client(
 
     let mut buf2 = BytesMut::with_capacity(CAP);
 
-    let mut user_raddr: IpAddr = client_future_addr.get_ip().unwrap();
+    let mut user_raddr: IpAddr = client_future_addr
+        .get_ip()
+        .expect("client_future_addr has ip");
     let mut user_port: u16 = client_future_addr.get_port();
 
     use futures::FutureExt;
@@ -87,8 +89,7 @@ pub async fn loop_listen_udp_for_certain_client(
                                     network: net::Network::UDP,
                                 },
                                 &mut buf_w,
-                            )
-                            .unwrap();
+                            );
 
                             buf_w.extend_from_slice(&buf);
 
@@ -114,13 +115,14 @@ pub async fn loop_listen_udp_for_certain_client(
             */
 
             result = base.read(&mut buf2).fuse()  =>{
-                if result.is_err(){
-                    debug!("{}, socks5 server, will end loop listen udp because of the read err of the tcp conn, {}", cid, result.unwrap());
+                if let Err(e ) = result{
+                    debug!("{}, socks5 server, will end loop listen udp because of the read err of the tcp conn, {}", cid, e);
 
                     drop(tx);
 
                     break;
                 }
+
                 warn!("{cid}, socks5 server, tcp conn got read data, but we don't know what to do with it", );
 
             },
@@ -142,12 +144,14 @@ pub async fn loop_listen_udp_for_certain_client(
 
                     let a = decode_udp_diagram(&mut buf)?;
 
-                    let sor = a.get_socket_addr_or_resolve();
-                    if let Err(e) = sor{
-                        warn!("can't convert to socketaddr, {}",e);
-                        continue;
-                    }
-                    let so = sor.unwrap();
+                    let so = match a.get_socket_addr_or_resolve(){
+                        Ok(s) => s,
+                        Err(e) => {
+                            warn!("can't convert to socketaddr, {}",e);
+                            continue;
+                        },
+
+                    };
 
                     let x= tx.send(( None,buf, so)).await;
                     if let Err(e) = x{

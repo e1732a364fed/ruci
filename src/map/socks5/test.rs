@@ -61,20 +61,20 @@ async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
 
     assert!(
         a.um.as_ref()
-            .unwrap()
+            .expect("a as um")
             .auth_user_by_authstr("plaintext:u1\np1")
             .await
-            .unwrap()
+            .expect("auth success")
             .pass
             == "p1"
     );
 
     assert!(
         a.um.as_ref()
-            .unwrap()
+            .expect("a as um")
             .auth_user_by_authstr("plaintext:u0\np0")
             .await
-            .unwrap()
+            .expect("auth success")
             .pass
             == "p0"
     );
@@ -123,8 +123,8 @@ async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
         .await;
     match r.e {
         None => {
-            let ad = r.a.unwrap();
-            assert_eq!(ad.get_name().unwrap(), name);
+            let ad = r.a.expect("result.a has target_addr");
+            assert_eq!(ad.get_name().expect("a has domain name"), name);
             assert_eq!(ad.get_port(), port);
             assert_eq!(r.b, None);
 
@@ -205,8 +205,8 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> std::io::Result<()> {
         .await;
     match r.e {
         None => {
-            let ad = r.a.unwrap();
-            assert_eq!(ad.get_name().unwrap(), name);
+            let ad = r.a.expect("result.a has value");
+            assert_eq!(ad.get_name().expect("target_addr is name"), name);
             assert_eq!(ad.get_port(), port);
             assert_eq!(r.b, None);
 
@@ -239,14 +239,14 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
 
     let listener = TcpListener::bind(listen_host.clone() + ":" + &listen_port.to_string())
         .await
-        .unwrap();
+        .expect("listen successful");
 
     let target_name = "www.b";
     let target_port: u16 = 43;
 
     let listen_future = async {
         let r = listener.accept().await;
-        let (ss, _) = r.unwrap();
+        let (ss, _) = r.expect("listener.accept returns a valid stream");
         // let (mut newc, addr, client_data, authed_user) =
         //     a.add(1, Box::new(ss), None, None).await.unwrap();
 
@@ -258,12 +258,12 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
             )
             .await;
 
-        let ad = r.a.unwrap();
-        assert_eq!(ad.get_name().unwrap(), target_name);
+        let ad = r.a.expect("result.a has value");
+        assert_eq!(ad.get_name().expect("a is name"), target_name);
         assert_eq!(ad.get_port(), target_port);
         assert_eq!(r.b, None);
 
-        let d = r.d.unwrap();
+        let d = r.d.expect("result.d has value");
 
         match d {
             crate::map::AnyData::B(mut d) => {
@@ -279,7 +279,7 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];
-        let n = r.c.try_unwrap_tcp()?.read(&mut readbuf[..]).await.unwrap();
+        let n = r.c.try_unwrap_tcp()?.read(&mut readbuf[..]).await?;
         assert_eq!(&readbuf[..n], &[b'h', b'e', b'l', b'l', b'o']);
 
         Ok::<(), io::Error>(())
@@ -288,18 +288,20 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
     let dial_future = async {
         let mut cs = TcpStream::connect((listen_host.as_str(), listen_port))
             .await
-            .unwrap();
+            .expect("dial ok");
 
         let mut readbuf = [0u8; 1024];
 
-        cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
+        cs.write(&[VERSION5, 1, AUTH_PASSWORD])
+            .await
+            .expect("write1 ok");
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
         // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
 
-        let n = cs.read(&mut readbuf[..]).await.unwrap();
+        let n = cs.read(&mut readbuf[..]).await.expect("read1 ok");
         println!("client read, {:?}", &readbuf[..n]);
 
         assert_eq!(&readbuf[..n], &[5, 2]);
@@ -314,11 +316,11 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
             b'0',
         ])
         .await
-        .unwrap();
+        .expect("write ok");
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
-        let n = cs.read(&mut readbuf[..]).await.unwrap();
+        let n = cs.read(&mut readbuf[..]).await.expect("read2 ok");
         println!("client read, {:?}", &readbuf[..n]);
         assert_eq!(&readbuf[..n], &[1, 0]);
 
@@ -337,14 +339,14 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
             target_port as u8,
         ])
         .await
-        .unwrap();
+        .expect("write2 ok");
 
-        let n = cs.read(&mut readbuf[..]).await.unwrap();
+        let n = cs.read(&mut readbuf[..]).await.expect("read3 ok");
         println!("client read, {:?}", &readbuf[..n]);
         assert_eq!(&readbuf[..n], &*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
 
         //发送测试数据
-        cs.write(&b"hello"[..]).await.unwrap();
+        cs.write(&b"hello"[..]).await.expect("write3 ok");
         1
     };
 

@@ -61,7 +61,8 @@ mod test {
     #[test]
     fn test_load_key() {
         //println!("{:?}", env::current_dir()); //ruci
-        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource")).unwrap();
+        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource"))
+            .expect("go to resource folder");
 
         let mut path = PathBuf::new();
         path.push("test.key");
@@ -77,7 +78,8 @@ mod test {
 
     #[test]
     fn test_load_cert() {
-        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource")).unwrap();
+        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource"))
+            .expect("go to resource folder");
 
         let mut path = PathBuf::new();
         path.push("test.crt");

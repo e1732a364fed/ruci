@@ -59,7 +59,7 @@ pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<Use
     for anyd in adv
         .iter()
         .filter(|d| d.is_some())
-        .map(|d| d.as_ref().unwrap())
+        .map(|d| d.as_ref().expect("d is some"))
     {
         match anyd {
             AnyData::A(arc) => {

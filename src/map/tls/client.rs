@@ -106,7 +106,7 @@ impl rustls::client::danger::ServerCertVerifier for SuperDanVer {
 
         WebPkiClientVerifier::builder(Arc::new(root_certs))
             .build()
-            .unwrap()
+            .expect("WebPkiClientVerifier::builder build ok ")
             .supported_verify_schemes()
     }
 }
@@ -124,7 +124,10 @@ impl Client {
         let connector = TlsConnector::from(self.client_config.clone());
 
         let new_c = connector
-            .connect(ServerName::try_from(self.domain.clone()).unwrap(), conn)
+            .connect(
+                ServerName::try_from(self.domain.clone()).expect("domain string to serverName ok"),
+                conn,
+            )
             .await?;
 
         // if let Some(ed) = b {

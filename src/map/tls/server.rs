@@ -40,7 +40,7 @@ impl<IO> crate::Name for tokio_rustls::server::TlsStream<IO> {
 
 impl Server {
     pub fn new(c: ServerOptions) -> Self {
-        let config = load::load_ser_config(&c).unwrap();
+        let config = load::load_ser_config(&c).expect("tls server config valid");
         Server {
             ta: TlsAcceptor::from(Arc::new(config)),
             option_cache: c.clone(),
