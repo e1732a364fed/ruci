@@ -6,9 +6,9 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 ruci = { path = "../.." }
-data-source = { workspace = true }
-anyhow = { workspace = true }
-tracing = { workspace = true }
+data-source.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
 rustls-pemfile = { version = "1.0" }
 webpki-roots = { version = "0.22" }
 rustls = { version = "0.21", features = ["dangerous_configuration", "quic"] }

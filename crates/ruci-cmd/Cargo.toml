@@ -15,17 +15,17 @@ jni = "0.21"
 
 ruci = { path = "../.." }
 rucimp = { path = "../../rucimp" }
-data-source = { workspace = true }
+data-source.workspace = true
 
-tracing = { workspace = true }
-anyhow = { workspace = true }
-tokio = { workspace = true }
-serde = { workspace = true }
-toml = { workspace = true }
-futures = { workspace = true }
-tokio-util = { workspace = true }
-parking_lot = { workspace = true }
-serde_path_to_error = { workspace = true }
+tracing.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+serde.workspace = true
+toml.workspace = true
+futures.workspace = true
+tokio-util.workspace = true
+parking_lot.workspace = true
+serde_path_to_error.workspace = true
 
 tar = { workspace = true, optional = true }
 

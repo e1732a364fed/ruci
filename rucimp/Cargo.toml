@@ -9,29 +9,29 @@ macro_map = { path = "../crates/macro_map" }
 ruci-recorder = { path = "../crates/ruci-recorder" }
 ruci-rustls22 = { path = "../crates/ruci-rustls22" }
 ruci-rustls21 = { path = "../crates/ruci-rustls21", optional = true }
-user_trait = { workspace = true }
-tracing = { workspace = true }
-bytes = { workspace = true }
-rand = { workspace = true }
-serde = { workspace = true }
-tokio = { workspace = true }
-anyhow = { workspace = true }
-futures = { workspace = true }
-async-trait = { workspace = true }
-tokio-util = { workspace = true }
-parking_lot = { workspace = true }
-dyn-clone = { workspace = true }
-futures-lite = { workspace = true }
-pin-project = { workspace = true }
+user_trait.workspace = true
+tracing.workspace = true
+bytes.workspace = true
+rand.workspace = true
+serde.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+futures.workspace = true
+async-trait.workspace = true
+tokio-util.workspace = true
+parking_lot.workspace = true
+dyn-clone.workspace = true
+futures-lite.workspace = true
+pin-project.workspace = true
 
-data-source = { workspace = true }
+data-source.workspace = true
 
-chrono = { workspace = true }
+chrono.workspace = true
 
-serde_json = { workspace = true }
-serde_path_to_error = { workspace = true }
-tar = { workspace = true }
-reqwest = { workspace = true }
+serde_json.workspace = true
+serde_path_to_error.workspace = true
+tar.workspace = true
+reqwest.workspace = true
 
 
 axum = { workspace = true, optional = true }

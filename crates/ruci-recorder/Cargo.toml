@@ -7,15 +7,15 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 ruci = { path = "../.." }
 macro_map = { path = "../macro_map" }
-tracing = { workspace = true }
-anyhow = { workspace = true }
-async-trait = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-tokio = { workspace = true }
-chrono = { workspace = true }
-futures = { workspace = true }
-pin-project = { workspace = true }
+tracing.workspace = true
+anyhow.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+chrono.workspace = true
+futures.workspace = true
+pin-project.workspace = true
 
 serde_cbor = { version = "0.11" }
 har = { version = "0.8.1" }
