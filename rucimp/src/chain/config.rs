@@ -7,7 +7,6 @@ pub mod lua;
 
 use std::path::PathBuf;
 
-use futures::executor::block_on;
 use ruci::map::{socks5, tls, trojan, ToMapper};
 use serde::{Deserialize, Serialize};
 
@@ -46,7 +45,7 @@ pub enum OutMapper {
     Counter,
     TLS(TlsOut),
     Socks5(Socks5Out),
-    Trojan(TrojanOut),
+    Trojan(String),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -80,16 +79,16 @@ pub struct Socks5In {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Socks5Out(Option<String>);
+pub struct Socks5Out {
+    userpass: String,
+    early_data: bool,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TrojanIn {
     password: Option<String>,
     more: Option<Vec<String>>,
 }
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TrojanOut(String);
 
 impl ToMapper for InMapper {
     fn to_mapper(&self) -> ruci::map::MapperBox {
@@ -126,6 +125,36 @@ impl ToMapper for InMapper {
                 so.passes = ruci_userpass;
 
                 so.to_mapper()
+            }
+        }
+    }
+}
+
+impl ToMapper for OutMapper {
+    fn to_mapper(&self) -> ruci::map::MapperBox {
+        match self {
+            OutMapper::Dialer(_) => todo!(),
+            OutMapper::Adder(i) => i.to_mapper(),
+            OutMapper::Counter => Box::new(ruci::map::counter::Counter),
+            OutMapper::TLS(c) => {
+                let a = tls::client::Client::new(c.host.as_str(), c.insecure);
+                Box::new(a)
+            }
+            OutMapper::Socks5(c) => {
+                let u = c.userpass.clone();
+                let a = socks5::client::Client {
+                    up: if u == "" {
+                        None
+                    } else {
+                        Some(ruci::user::UserPass::from(u))
+                    },
+                    use_earlydata: c.early_data,
+                };
+                Box::new(a)
+            }
+            OutMapper::Trojan(pass) => {
+                let a = trojan::client::Client::new(&pass);
+                Box::new(a)
             }
         }
     }
