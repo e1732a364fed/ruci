@@ -7,11 +7,11 @@
 */
 
 use bytes::{BufMut, BytesMut};
+use std::sync::Mutex;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
-use tokio::sync::Mutex;
 
 use crate::map;
 use crate::map::socks5::server::*;
@@ -132,7 +132,7 @@ async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
             vf.splice(0..0, vhead);
             println!("should be {:?}", vf);
 
-            let v = writevc.lock().await;
+            let v = writevc.lock().unwrap();
             println!("it     be {:?}", v);
 
             assert!(v.eq(&vf));
@@ -233,7 +233,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> std::io::Result<()> {
             vf.splice(0..0, vhead);
             println!("should be {:?}", vf);
 
-            let v = writevc.lock().await;
+            let v = writevc.lock().unwrap();
             println!("it     be {:?}", v);
 
             assert!(v.eq(&vf));
@@ -642,7 +642,7 @@ async fn no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
 
             println!("should be {:?}", vf);
 
-            let v = writevc.lock().await;
+            let v = writevc.lock().unwrap();
             println!("it     be {:?}", v);
 
             assert!(v.eq(&vf));
@@ -711,7 +711,7 @@ async fn no_auth_tcp_handshake_in_mem_stick_hello() -> std::io::Result<()> {
 
             println!("should be {:?}", vf);
 
-            let v = writevc.lock().await;
+            let v = writevc.lock().unwrap();
             println!("it     be {:?}", v);
 
             assert!(v.eq(&vf));

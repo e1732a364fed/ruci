@@ -2,12 +2,11 @@ use std::{net::Ipv4Addr, pin::Pin, task::Poll};
 
 use super::*;
 use bytes::{Buf, BufMut, BytesMut};
+use std::sync::Mutex;
 use tokio::io::ReadBuf;
-use tokio::sync::Mutex;
 
 use super::ConnTrait;
 
-use futures::executor::block_on;
 use futures::task::Context;
 
 use std::cmp::min;
@@ -241,7 +240,7 @@ impl AsyncWrite for MockTcpStream {
         let mut x = Vec::from(buf);
 
         if let Some(swt) = &self.write_target {
-            let mut v = block_on(swt.lock());
+            let mut v = swt.lock().unwrap();
             v.append(&mut x);
         } else {
             if self.write_data.len() == 0 {
@@ -268,7 +267,8 @@ mod test {
     use super::*;
 
     use bytes::BufMut;
-    use tokio::{io::AsyncReadExt, sync::Mutex};
+    use std::sync::Mutex;
+    use tokio::io::AsyncReadExt;
 
     #[tokio::test]
     async fn test_ed_wrapper() -> std::io::Result<()> {

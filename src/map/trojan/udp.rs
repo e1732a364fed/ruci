@@ -129,7 +129,7 @@ mod test {
     };
     use super::*;
     use std::sync::Arc;
-    use tokio::sync::Mutex;
+    use std::sync::Mutex;
 
     #[tokio::test]
     async fn test_w() -> std::io::Result<()> {

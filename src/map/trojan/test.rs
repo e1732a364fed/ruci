@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bytes::{BufMut, BytesMut};
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 
 use crate::map::{MapParams, Mapper, ProxyBehavior};
 use crate::net::{self, Addr};
