@@ -7,6 +7,7 @@ Important parts: [`MIter`],  [`DynIterator`],  [`DMIterBox`], [`FoldParams`], [`
 
 */
 
+use dyn_clone::DynClone;
 use tracing::{debug, info, warn, Level};
 
 use super::*;

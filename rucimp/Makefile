@@ -1,36 +1,38 @@
+# Common variables
+DIST_DIR := dist
+TARGET_DIR := ../target/${BUILD_TRIPLET}/release/examples
+RESOURCE_DIR := ../resource
+
+# run like : make BUILD_TRIPLET=aarch64-apple-darwin
+
+# Common commands
+define make_dist
+	mkdir -p ${DIST_DIR}
+	cd ${TARGET_DIR} && cp $(1) ../../../../rucimp/${DIST_DIR}/
+	cp -r ${RESOURCE_DIR} ${DIST_DIR}/
+endef
+
 define compile
-	cargo build --target ${BUILD_TRIPLET}  -F lua --release --example lua
+	cargo build --target ${BUILD_TRIPLET} -F lua --release --example lua
 endef
 
-define copy
-	mkdir -p dist
-	cd ../target/${BUILD_TRIPLET}/release/examples && cp lua ../../../../rucimp/dist/
-	cp -r ../resource dist/
+define package
+	cd ${DIST_DIR} && tar -cJf rucimp_${BUILD_VERSION}_${BUILD_TRIPLET}.tar.xz *
 endef
 
-define copy_exe
-	mkdir -p dist
-	cd ../target/${BUILD_TRIPLET}/release/examples && cp lua.exe ../../../../rucimp/dist/
-	cp -r ../resource dist/
-endef
-
-
-define cmp
-	cd dist && tar -cJf rucimp_$(1)_$(2).tar.xz *
-endef
-
+# Targets
 main:
 	$(call compile)
-	$(call copy)
-	$(call cmp,${BUILD_VERSION},${BUILD_TRIPLET})
+	$(call make_dist,lua)
+	$(call package)
 
 exe:
 	$(call compile)
-	$(call copy_exe)
-	$(call cmp,${BUILD_VERSION},${BUILD_TRIPLET})
+	$(call make_dist,lua.exe)
+	$(call package)
 
 cp:
-	$(call copy)
+	$(call make_dist,lua)
 
 rm:
-	rm -rf dist
+	rm -rf ${DIST_DIR}

@@ -48,7 +48,7 @@ bitflags! {
 
 /// Map 的 maps 返回的 MapResult 中的静态数据类型
 #[typetag::serde(tag = "type")]
-pub trait Data: Debug + Send + Sync + DynClone {
+pub trait Data: Debug + Send + Sync + dyn_clone::DynClone {
     fn get_flags(&self) -> DataFlags {
         DataFlags::None
     }

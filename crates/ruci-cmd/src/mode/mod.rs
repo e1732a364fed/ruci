@@ -1,10 +1,10 @@
+/*! mode 模块对应 rucimp 中的 mode 模块。
+*/
+
 use anyhow::bail;
 use rucimp::{utils::FileSource, DEFAULT_LUA_CONFIG_FILE_NAME};
 use tracing::debug;
 
-/*
-! mode 模块对应 rucimp 中的 mode 模块。
-*/
 pub mod chain;
 
 #[allow(unused)]
