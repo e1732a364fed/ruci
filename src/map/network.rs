@@ -20,14 +20,21 @@ impl Name for Direct {
 impl Mapper for Direct {
     /// dial params.a.
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        if params.a.is_none() {
-            return MapResult::err_str(&format!("cid: {}, direct need params.a, got empty", cid));
-        }
-        let a = params.a.unwrap();
+        let a = match params.a {
+            Some(a) => a,
+            None => {
+                return MapResult::err_str(&format!(
+                    "cid: {}, direct need params.a, got empty",
+                    cid
+                ))
+            }
+        };
 
         if log_enabled!(log::Level::Debug) {
             debug!("direct dial, {} , {}", a, cid);
         }
+
+        //todo: DNS 功能
 
         let asor = a.get_socket_addr_or_resolve();
 
@@ -54,12 +61,15 @@ pub struct TcpDialer {
 
 impl Name for TcpDialer {
     fn name(&self) -> &'static str {
-        "tcp dialer"
+        "tcp_dialer"
     }
 }
 
 impl TcpDialer {
+    ///  panic if a isn't valid
     pub async fn dial_addr(a: &net::Addr) -> MapResult {
+        //todo: DNS 功能
+
         let r = TcpStream::connect(a.get_socket_addr().unwrap()).await;
 
         match r {
@@ -144,7 +154,7 @@ pub struct TcpStreamGenerator {
 
 impl Name for TcpStreamGenerator {
     fn name(&self) -> &'static str {
-        "tcp listener"
+        "tcp_listener"
     }
 }
 impl TcpStreamGenerator {

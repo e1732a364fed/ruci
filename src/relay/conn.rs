@@ -305,8 +305,6 @@ where
 
     let outc_iterator = out_selector.select(listen_result.d);
 
-    //todo: DNS 功能
-
     let cidc = cid.clone();
     let dial_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
@@ -315,7 +313,7 @@ where
                 ProxyBehavior::ENCODE,
                 MapResult {
                     a: Some(target_addr),
-                    b: listen_result.b.take(),
+                    b: listen_result.b,
                     c: Stream::None,
                     d: None,
                     e: None,
@@ -329,15 +327,11 @@ where
 
     if let Err(e) = dial_result {
         warn!("{cid}, dial out client timeout, {e}",);
-        //let _ = in_conn.shutdown();
-        //let _ = out_stream.try_shutdown();
         return Err(e.into());
     }
     let dial_result = dial_result.unwrap();
     if let Some(e) = dial_result.e {
         warn!("{cid}, dial out client failed, {e}",);
-        //let _ = in_conn.shutdown();
-        //let _ = out_stream.try_shutdown();
         return Err(e);
     } else if let Stream::None = dial_result.c {
         warn!("{cid}, dial out client stream got consumed ",);
