@@ -289,3 +289,78 @@ async fn listen_tcp(
         }
     }
 }
+
+pub struct FixedOutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox> + Clone + Send,
+{
+    pub mappers: T,
+    pub addr: Option<net::Addr>,
+}
+
+impl<'a, T> relay::conn::OutSelector<'a, T> for FixedOutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox> + Clone + Send + Sync,
+{
+    fn select(&self, _params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>) {
+        (self.mappers.clone(), self.addr.clone())
+    }
+}
+
+/// 阻塞监听 ins tcp。
+async fn listen_tcp2(
+    ins: &'static dyn Suit,
+    outc: &'static dyn Suit,
+    oti: Option<Arc<net::TransmissionInfo>>,
+    shutdown_rx: oneshot::Receiver<()>,
+) -> io::Result<()> {
+    let laddr = ins.addr_str().to_string();
+    let wn = ins.whole_name().to_string();
+    info!("start listen tcp {}, {}", laddr, wn);
+
+    let listener = TcpListener::bind(laddr.clone()).await?;
+
+    let clone_oti = move || oti.clone();
+
+    let selector = FixedOutSelector {
+        mappers: outc.get_mappers_vec().iter(),
+        addr: outc.addr(),
+    };
+    let f = Box::new(selector);
+    let f = Box::leak(f);
+
+    tokio::select! {
+        r = async {
+            loop {
+                let r = listener.accept().await;
+                if r.is_err(){
+
+                    break;
+                }
+                let (tcpstream, raddr) = r.unwrap();
+
+                let ti = clone_oti();
+                if log_enabled!(Debug) {
+                    debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
+                }
+
+                tokio::spawn( relay::conn::handle_conn_clonable(
+                        Box::new(tcpstream),
+                        ins.get_mappers_vec().iter(),
+                        f,
+                        ti,
+                    )
+                );
+            }
+
+            Ok::<_, io::Error>(())
+        } => {
+            r
+
+        }
+        _ = shutdown_rx => {
+            info!("terminating accept loop, {} ",wn );
+            Ok(())
+        }
+    }
+}

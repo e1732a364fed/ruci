@@ -33,6 +33,7 @@ pub async fn handle_conn<'a>(
     network_str: &'static str,
 
     ins_iterator: impl Iterator<Item = &'a MapperBox>,
+
     outc_iterator: impl Iterator<Item = &'a MapperBox>,
     outc_addr: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
@@ -169,8 +170,15 @@ pub async fn handle_conn_clonable(
     in_conn: net::Conn,
 
     ins_iterator: impl Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
-    outc_iterator: impl Iterator<Item = &'static MapperBox> + Clone + 'static,
-    outc_addr: Option<net::Addr>,
+    // outc_iterator: impl Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
+    // outc_addr: Option<net::Addr>,
+    // selector: Box<
+    //     dyn OutSelector<'static, impl Iterator<Item = &'static MapperBox> + Clone + Send> + 'static,
+    // >,
+    selector: &'static dyn OutSelector<
+        'static,
+        impl Iterator<Item = &'static MapperBox> + Clone + Send,
+    >,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
     let cid = match ti.as_ref() {
@@ -203,13 +211,13 @@ pub async fn handle_conn_clonable(
         }
     };
 
-    let f = FixedOutSelector {
-        mappers: outc_iterator,
-        addr: outc_addr,
-    };
-    let f = Box::new(f);
+    // let f = FixedOutSelector {
+    //     mappers: outc_iterator,
+    //     addr: outc_addr,
+    // };
+    // let f = Box::new(f);
 
-    handle_in_accumulate_result(listen_result, f, ti).await
+    handle_in_accumulate_result(listen_result, selector, ti).await
 }
 
 pub async fn cp_stream(
@@ -257,39 +265,23 @@ pub async fn cp_udp(
     let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, ti).await;
 }
 
-pub trait OutSelector<'a, T>
+/// Send + Sync to use in async
+pub trait OutSelector<'a, T>: Send + Sync
 where
-    T: Iterator<Item = &'a MapperBox>,
+    T: Iterator<Item = &'a MapperBox> + Clone + Send,
 {
     fn select(&self, params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>);
 }
 
-pub struct FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox>,
-{
-    pub mappers: T,
-    pub addr: Option<net::Addr>,
-}
-
-impl<'a, T> OutSelector<'a, T> for FixedOutSelector<'a, T>
-where
-    T: Iterator<Item = &'a MapperBox> + Clone,
-{
-    fn select(&self, _params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>) {
-        (self.mappers.clone(), self.addr.clone())
-    }
-}
-
-pub async fn handle_in_accumulate_result<'a, T, IterMapperBoxRef>(
+pub async fn handle_in_accumulate_result<T, IterMapperBoxRef>(
     mut listen_result: AccumulateResult<'static, IterMapperBoxRef>,
 
-    out_selector: Box<dyn OutSelector<'a, T>>,
+    out_selector: &'static dyn OutSelector<'static, T>,
 
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()>
 where
-    T: Iterator<Item = &'a MapperBox>,
+    T: Iterator<Item = &'static MapperBox> + Clone + Send,
     IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
 {
     let cid = &listen_result.id.unwrap();
