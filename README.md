@@ -14,7 +14,8 @@ Rucimple可读作：如森剖。根项目可读作"如C"或 lucy。
 
 本项目是 [verysimple](https://github.com/e1732a364fed/v2ray_simple) 项目的继承者，是一个网络代理项目，采用rust(Rust 2021 edition 1.75+)
 
-rucimple 对代理架构 做了比verysimple 中更高级的抽象，因此功能更强大
+rucimple 对代理架构 做了比verysimple 中更高级的抽象，因此功能更强大. 
+verysimple可以说是一个初级项目，而ruci最终将成为一个中级项目.
 
 文档所限，肯定有东西没有涉及到，可提交issue提问或加入讨论。
 本项目不是一个人能做完的，所以欢迎加入我们。注意低调。

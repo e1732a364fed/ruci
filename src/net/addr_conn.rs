@@ -182,13 +182,11 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut w1: W1,
 ) -> Result<u64, Error> {
     const CAP: usize = 1500;
-    //let mut buf: BytesMut = BytesMut::with_capacity(CAP);
-    let mut buf0 = [0u8; CAP];
+    let mut buf0 = vec![0u8; CAP]; //[0u8; CAP];
     let mut buf = ReadBuf::new(&mut buf0);
     let mut whole_write = 0;
 
     loop {
-        //buf.resize(CAP, 0);
         buf.clear();
 
         let r = r1.read(buf.initialized_mut()).await;
