@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 
 /// 用于用户鉴权
 pub trait User: Clone {
@@ -109,20 +109,20 @@ impl<T: User> UsersMap<T> {
 
     pub async fn add_user(&mut self, u: T) {
         let uc = u.clone();
-        let mut inner = self.m.lock().await;
+        let mut inner = self.m.lock().unwrap();
         inner.idmap.insert(u.identity_str(), u);
         inner.amap.insert(uc.auth_str(), uc);
     }
 
     pub async fn len(&self) -> usize {
-        self.m.lock().await.idmap.len()
+        self.m.lock().unwrap().idmap.len()
     }
 }
 
 #[async_trait]
 impl<T: User + Send> AsyncUserAuthenticator<T> for UsersMap<T> {
     async fn auth_user_by_authstr(&self, authstr: &str) -> Option<T> {
-        let inner = self.m.lock().await;
+        let inner = self.m.lock().unwrap();
         let s = authstr.to_string();
         inner.amap.get(&s).cloned()
     }
