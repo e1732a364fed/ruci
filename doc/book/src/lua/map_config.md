@@ -1,5 +1,6 @@
 
 开发相关：参考 rucimp/src/modes/chain/config/mod.rs
+
 开发相关：因为 代码实现方式不同，有些功能相近的 Map的Config是独立的
 
 在 Map说明的 首部标有 in, out 或 in/out 字样，表明可用于 InMapConfig 还是 OutMapConfig
@@ -29,7 +30,7 @@ Direct = {}
 Direct = {
     dns_client = {
         --...
-    }
+    }--optional
 }
 ```
 见[DnsClient](#dnsclient)
@@ -67,14 +68,25 @@ BindDialer 是 一个 既可以 Bind 又可以 Dial 的配置
 
 Bind 用于 udp 和 ip, dial 则用于 udp,tcp,uds(unix domain socket)
 
-BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中有且只有一个要设置
+BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中至少有一个要设置
+
+    对于 ip, bind_addr 须提供, 否则将报错
+
+    对于 tcp/udp, 如果 bind_addr 不提供, 将采用 随机端口
+
+    对于 uds, bind_addr 无意义
+
+    对于 ip, dial_addr 无意义
+
+    对于 tcp/uds, dial_addr 须提供，否则将报错
+
 
 ```lua
  BindDialer = {
     bind_addr = "",
     dial_addr = "",
 
-    dns_client= {..} 
+    dns_client= {..} --optional
 
     --#[cfg(feature = "tun")]
     in_auto_route= {..}, 
@@ -82,7 +94,7 @@ BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中有且�
     --#[cfg(feature = "tun")]
     out_auto_route = {..}, 
 
-    ext= {..}, 
+    ext= {..}, --optional
 }
 ```
 
@@ -112,7 +124,7 @@ in
 ```lua
 Listener = {
     listen_addr ="",
-    ext={},
+    ext={},--optional
 }
 ```
 见[Ext](#ext)
@@ -124,7 +136,7 @@ in
 TcpOptListener = {
     listen_addr ="",
     sockopt={},
-    ext={},
+    ext={},--optional
 }
 ```
 
@@ -139,7 +151,7 @@ in/out
 ```lua
  StdioConfig = {
     write_mode = "Bytes", --UTF8
-    ext={},
+    ext={},--optional
 }
 ```
 
@@ -422,7 +434,7 @@ dns_client = {
 }
 
 ```
-
+Direct,OptDirect,BindDialer,OptDialer 都可加此块。
 
 ## SockOpt
 
@@ -448,7 +460,7 @@ bind_to_device 的一些可能的值：
 
 ## Ext
 
-ruci 中, Listener,TcpOptListener, BindDialer, Stdio, Fileio 都能如此配置 ext
+Listener,TcpOptListener, BindDialer, Stdio, Fileio 都能如此配置 ext
 
 ```lua
 ext = {
