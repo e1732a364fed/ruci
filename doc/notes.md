@@ -552,11 +552,19 @@ https://github.com/Shadowrocket/lua-backend/tree/master
 
 ### 项目对比,参考与评估
 
-链式代理的想法来自 v2ray-rust, 但是 ruci中 的 Infinity 完全动态链 与 Dyn_Selectors 部分动态链 的实现是新的想法。
+链式代理配置的想法来自 v2ray-rust, 但是 ruci中 的 Infinity 完全动态链 与 Dyn_Selectors 部分动态链 的实现是新的想法。
+
+ruci 中的基本结构 Map 的先例是 YtFlowCore 中的 Plugin，（ruci并未参考其对应代码）。不过它使用的是json配置，没有 lua配置灵活。
+
+v2ray-rust, YtFlowCore, ruci 三个项目 都是建立在 “链式结构” 的基础上的。
+
+要注意的是，链式结构 与 “链式代理” 是两个概念。链式代理 涉及多台中转机器，是用户级的情况。链式结构是 代码与配置文件的架构。
+采用链式结构的项目 是 必然可以实现 链式代理的。
+（相较而言，v2ray、verysimple 等项目是扁平结构，较难实现 链式代理，或实现配置麻烦，或曲线救国导致开销更大）
 
 lua自定义协议 先例是 小火箭的 lua-backend, （ruci并未参考其代码） 但是对比而言 ruci 中的lua协议写起来更复杂，因为使用了异步代码。
 
-ruci 中的基本结构 Map 的先例是 YtFlowCore中的 Plugin，（ruci并未参考其对应代码）。不过它使用的是json配置，没有 lua配置灵活。
+要注意的是，lua协议与 lua配置是两个概念。ruci 中既有 lua 配置，又有 lua 协议。
 
 http2代码实现 参考了 midori，
 so_opts 代码参考了 trojan-rs 和 shadowsocks-rust . 
@@ -574,4 +582,5 @@ todo 充斥代码行间，
 typo、不完整文档、bug、debug 日志 随处可见。
 
 故明显不应在真实的生产环境下使用，也不应对本项目作任何宣传。不过也许对一些看到本项目的人有一定的参考价值。
+当然，随着时间发现，项目会逐步正规化。
 如果您发现了本项目的任何问题，还望多发issue, 共同提高。
