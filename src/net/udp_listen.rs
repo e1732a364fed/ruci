@@ -7,7 +7,7 @@ use std::{
 };
 
 use bytes::{Buf, BytesMut};
-use futures::Future;
+use futures::{channel::oneshot, Future};
 use tokio::{
     net::UdpSocket,
     sync::{
@@ -29,6 +29,7 @@ pub struct FixedTargetAddrUDPListener {
     pub laddr: Addr,
     pub dst: Addr,
     rx: mpsc::Receiver<(AddrConn, Addr)>,
+    shutdown_tx: Option<oneshot::Sender<()>>,
 }
 
 impl FixedTargetAddrUDPListener {
@@ -42,62 +43,78 @@ impl FixedTargetAddrUDPListener {
 
         let dst_c = dst.clone();
 
+        let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
+
         tokio::spawn(async move {
             let mut buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
             let conn_map: Arc<Mutex<HashMap<Addr, Sender<BytesMut>>>> =
                 Arc::new(Mutex::new(HashMap::new()));
             loop {
-                let r = udp.recv_from(&mut buf).await;
-                let (u, a) = match r {
-                    Ok(r) => r,
-                    Err(e) => {
-                        debug!("UdpListener loop recv_from got e will break {e}");
+                tokio::select! {
+                    _ = &mut shutdown_rx=>{
+                        debug!("UdpListener got shutdown, will break");
                         break;
                     }
-                };
-                let src = Addr {
-                    network: Network::UDP,
-                    addr: NetAddr::Socket(a),
-                };
-                let mut mg = conn_map.lock().await;
 
-                if mg.contains_key(&src) {
-                    //debug!("UdpListener loop got old conn msg: {src} {u}");
+                    r =udp.recv_from(&mut buf) =>{
+                        let (u, a) = match r {
+                            Ok(r) => r,
+                            Err(e) => {
+                                debug!("UdpListener loop recv_from got e, will break: {e}");
+                                break;
+                            }
+                        };
+                        let src = Addr {
+                            network: Network::UDP,
+                            addr: NetAddr::Socket(a),
+                        };
+                        let mut mg = conn_map.lock().await;
 
-                    let new_buf = BytesMut::from(&buf[..u]);
+                        if mg.contains_key(&src) {
+                            //debug!("UdpListener loop got old conn msg: {src} {u}");
 
-                    let tx = mg.get(&src).unwrap();
-                    let r = tx.send(new_buf).await;
-                    if let Err(e) = r {
-                        debug!("UdpListener tx send got e: {e}");
-                        continue;
-                    }
-                } else {
-                    //debug!("UdpListener loop got new conn: {src} {u}");
-                    let (tx2, rx2) = mpsc::channel(100);
+                            let new_buf = BytesMut::from(&buf[..u]);
 
-                    mg.insert(src.clone(), tx2);
-                    let first_buf = BytesMut::from(&buf[..u]);
+                            let tx = mg.get(&src).unwrap();
+                            let r = tx.send(new_buf).await;
+                            if let Err(e) = r {
+                                debug!("UdpListener tx send got e: {e}");
+                                continue;
+                            }
+                        } else {
+                            //debug!("UdpListener loop got new conn: {src} {u}");
+                            let (tx2, rx2) = mpsc::channel(100);
 
-                    let ac = new(
-                        udp.clone(),
-                        rx2,
-                        src.clone(),
-                        dst_c.clone(),
-                        first_buf,
-                        conn_map.clone(),
-                    );
+                            mg.insert(src.clone(), tx2);
+                            let first_buf = BytesMut::from(&buf[..u]);
 
-                    let r = tx.send((ac, src)).await;
-                    if let Err(e) = r {
-                        debug!("UdpListener loop got e: {e}");
-                        break;
+                            let ac = new(
+                                udp.clone(),
+                                rx2,
+                                src.clone(),
+                                dst_c.clone(),
+                                first_buf,
+                                conn_map.clone(),
+                            );
+
+                            let r = tx.send((ac, src)).await;
+                            if let Err(e) = r {
+                                debug!("UdpListener loop got e: {e}");
+                                break;
+                            }
+                        }
+
                     }
                 }
             } //loop
         });
 
-        Ok(Self { laddr, rx, dst })
+        Ok(Self {
+            shutdown_tx: Some(shutdown_tx),
+            laddr,
+            rx,
+            dst,
+        })
     }
 
     /// conn, raddr, laddr, first_data
@@ -108,6 +125,13 @@ impl FixedTargetAddrUDPListener {
             .await
             .ok_or(anyhow::anyhow!("udplistener accept got rx closed"))?;
         Ok((ac, raddr, self.laddr.clone()))
+    }
+
+    pub fn shutdown(&mut self) {
+        let tx = self.shutdown_tx.take();
+        if let Some(tx) = tx {
+            let _ = tx.send(());
+        }
     }
 }
 

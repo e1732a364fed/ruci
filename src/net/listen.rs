@@ -97,7 +97,7 @@ impl Listener {
         }
     }
 
-    pub fn clean_up(&self) {
+    pub fn clean_up(&mut self) {
         match self {
             #[cfg(unix)]
             Listener::UNIX((_, file_n)) => {
@@ -109,6 +109,9 @@ impl Listener {
                         warn!("{}", e)
                     }
                 }
+            }
+            Listener::UDP(ul) => {
+                ul.shutdown();
             }
             _ => {}
         }
