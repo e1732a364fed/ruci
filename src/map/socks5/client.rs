@@ -53,7 +53,7 @@ impl Client {
             buf.put_u8(upr.pass.len() as u8);
             buf.put(upr.pass.as_bytes());
 
-            base.write(&buf).await?;
+            base.write_all(&buf).await?;
 
             buf.resize(BUFLEN, 0);
             n = base.read(&mut buf).await?;

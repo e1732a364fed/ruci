@@ -410,21 +410,16 @@ where
 
     let mut calculated_output_vec = Vec::new();
 
-    while let Some(adder) = mappers.next() {
+    for adder in mappers.by_ref() {
         let input_data = InputData {
-            calculated_data: match calculated_output_vec.last() {
-                Some(x) => match x {
-                    Some(y) => match y {
-                        AnyData::A(a) => {
-                            let na = a.clone();
-                            Some(AnyData::A(na))
-                        }
+            calculated_data: calculated_output_vec
+                .last()
+                .and_then(|x: &Option<AnyData>| {
+                    x.as_ref().and_then(|y| match y {
+                        AnyData::A(a) => Some(AnyData::A(a.clone())),
                         _ => None,
-                    },
-                    None => None,
-                },
-                None => None,
-            },
+                    })
+                }),
             hyperparameter: None,
         };
         let input_data =
@@ -513,8 +508,6 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
             .await;
     } else {
         warn!("accumulate_from_start, not a stream generator, {}", r.c);
-
-        return;
     }
 }
 
@@ -588,15 +581,19 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
             )
             .await;
             if r.e.is_none() {
-                if let Stream::Generator(s_rx) = r.c {
-                    let cid = r.id.unwrap();
-                    let _ = in_iter_accumulate_forever::<IterMapperBoxRef>(
-                        cid,
-                        s_rx,
-                        txc,
-                        r.left_mappers_iter,
-                        oti,
-                    );
+                if let Stream::Generator(_s_rx) = r.c {
+                    //todo: solve
+                    // cycle detected when computing type of opaque `map::in_iter_accumulate_forever::{opaque#0}`
+
+                    // let cid = r.id.unwrap();
+
+                    // tokio::spawn(in_iter_accumulate_forever::<IterMapperBoxRef>(
+                    //     cid,
+                    //     s_rx,
+                    //     txc,
+                    //     r.left_mappers_iter,
+                    //     oti,
+                    // ));
 
                     return;
                 }

@@ -132,7 +132,7 @@ pub struct EarlyDataWrapper {
 impl EarlyDataWrapper {
     pub fn from(bs: BytesMut, conn: Box<dyn ConnTrait>) -> Self {
         EarlyDataWrapper {
-            ed: if bs.len() > 0 { Some(bs) } else { None },
+            ed: if bs.is_empty() { None } else { Some(bs) },
             base: Box::pin(conn),
         }
     }
@@ -160,7 +160,7 @@ impl AsyncRead for EarlyDataWrapper {
                     //buf.set_filled(m);
                     buf.put(&ed[..m]);
                     ed.advance(m);
-                    if ed.len() == 0 {
+                    if ed.is_empty() {
                         self.ed = None;
                     }
                     Poll::Ready(Ok(()))
@@ -241,7 +241,7 @@ impl AsyncWrite for MockTcpStream {
         if let Some(swt) = &self.write_target {
             let mut v = swt.lock();
             v.append(&mut x);
-        } else if self.write_data.len() == 0 {
+        } else if self.write_data.is_empty() {
             self.write_data = x;
         } else {
             self.write_data.append(&mut x)

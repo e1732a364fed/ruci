@@ -85,7 +85,7 @@ where
         let r = r1.read(buf0.deref_mut()).await;
         match r {
             Ok(n) => {
-                let r = w1.write(&mut buf0[..n], &a).await;
+                let r = w1.write(&buf0[..n], &a).await;
                 match r {
                     Ok(n) => whole += n as u64,
                     Err(_) => break,

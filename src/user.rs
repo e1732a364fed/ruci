@@ -47,12 +47,12 @@ impl UserPass {
 
     ///只要user不为空就视为有效
     pub fn valid(&self) -> bool {
-        self.user.len() > 0
+        !self.user.is_empty()
     }
 
     /// user不为空 且 pass 不为空
     pub fn strict_valid(&self) -> bool {
-        self.user.len() > 0 && self.pass.len() > 0
+        !self.user.is_empty() && !self.pass.is_empty()
     }
 
     ///auth string slice
@@ -108,6 +108,12 @@ impl<T: User> InnerUsersmapStruct<T> {
     }
 }
 
+impl<T: User> Default for UsersMap<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: User> UsersMap<T> {
     pub fn new() -> Self {
         UsersMap {
@@ -124,6 +130,10 @@ impl<T: User> UsersMap<T> {
 
     pub async fn len(&self) -> usize {
         self.m.lock().unwrap().idmap.len()
+    }
+
+    pub async fn is_empty(&self) -> bool {
+        self.m.lock().unwrap().idmap.is_empty()
     }
 }
 

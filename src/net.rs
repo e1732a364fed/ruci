@@ -57,7 +57,7 @@ pub struct CIDChain {
 }
 impl Display for CIDChain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match (&self.id_list).len() {
+        match (self.id_list).len() {
             0 => {
                 write!(f, "[ empty ]")
             }
@@ -252,8 +252,8 @@ impl Addr {
     pub fn from_strs(network: &str, host: &str, ip: &str, port: u16) -> io::Result<Self> {
         let mut host_is_ip = false;
 
-        let ip = if ip == "" {
-            if host == "" {
+        let ip = if ip.is_empty() {
+            if host.is_empty() {
                 None
             } else {
                 let parsed = host.parse::<IpAddr>();
@@ -268,9 +268,7 @@ impl Addr {
             ip.parse::<IpAddr>().ok()
         };
 
-        let host = if host == String::new() {
-            None
-        } else if host_is_ip {
+        let host = if (host == String::new()) || host_is_ip {
             None
         } else {
             Some(host.to_string())
@@ -281,7 +279,7 @@ impl Addr {
 
     //127.0.0.1:80 or www.b.com:80
     pub fn from_addr_str(network: &'static str, s: &str) -> io::Result<Self> {
-        let ns: Vec<_> = s.split(":").collect();
+        let ns: Vec<_> = s.split(':').collect();
         if ns.len() != 2 {
             return Err(io::Error::other(
                 "Addr::from_addr_str, split colon got len!=2",
@@ -375,18 +373,18 @@ impl Addr {
                 let so = self.get_socket_addr_or_resolve()?;
 
                 let c = TcpStream::connect(so).await?;
-                return Ok(Stream::TCP(Box::new(c)));
+                Ok(Stream::TCP(Box::new(c)))
             }
             Network::UDP => {
                 let so = self.get_socket_addr_or_resolve()?;
 
                 let u = UdpSocket::bind(so).await?;
-                return Ok(Stream::UDP(udp::new(u)));
+                Ok(Stream::UDP(udp::new(u)))
             }
             #[cfg(unix)]
             Network::Unix => {
                 let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
-                return Ok(Stream::TCP(Box::new(u)));
+                Ok(Stream::TCP(Box::new(u)))
             }
             _ => unimplemented!(),
         }
@@ -420,7 +418,7 @@ impl Addr {
 
     //127.0.0.1:80
     pub fn from_ip_addr_str(network: &'static str, s: &str) -> io::Result<Self> {
-        let ns: Vec<_> = s.split(":").collect();
+        let ns: Vec<_> = s.split(':').collect();
         if ns.len() != 2 {
             return Err(io::Error::other(
                 "Addr::from_ip_addr_str, split colon got len!=2",

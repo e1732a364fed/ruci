@@ -75,7 +75,6 @@ pub struct RawHeader {
 ///```
 pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     let mut request = ParsedHttpRequest::default();
-    request.fail_reason = FailReason::None;
 
     if bs.len() < 16 {
         request.fail_reason = FailReason::TooShort;
@@ -210,7 +209,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
 
                 for header in header_str_list {
                     let hs = header.to_string();
-                    let ss: Vec<&str> = hs.splitn(2, ":").collect();
+                    let ss: Vec<&str> = hs.splitn(2, ':').collect();
 
                     if ss.len() != 2 {
                         request.fail_reason = FailReason::HeaderNoColon;
@@ -220,13 +219,13 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                         head: ss[0].to_string(),
                         value: ss[1].to_string(),
                     });
-                    return request;
                 }
             } else {
                 request.fail_reason = FailReason::NoEndMark2;
-                return request;
             }
-        }
+
+            return request;
+        } //b = ' '
     }
     request.last_checked_index = last;
     request

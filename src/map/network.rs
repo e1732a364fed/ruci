@@ -233,7 +233,7 @@ impl TcpStreamGenerator {
                         }
                     }
                 });
-                return Ok(rx);
+                Ok(rx)
             }
             Err(e) => Err(e),
         }
