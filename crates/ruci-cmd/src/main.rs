@@ -35,8 +35,12 @@ struct Args {
     #[arg(short, long, value_name = "FILE", default_value = "local.lua")]
     config: String,
 
-    #[arg(short, long, default_value_t = log::Level::Info)]
-    log_level: log::Level,
+    #[arg(short, long)]
+    log_level: Option<log::Level>,
+
+    #[cfg(feature = "api_server")]
+    #[arg(short, long, value_enum)]
+    api_server: Option<api::server::Commands>,
 
     #[command(subcommand)]
     sub_cmds: Option<SubCommands>,
@@ -44,13 +48,6 @@ struct Args {
 
 #[derive(Subcommand)]
 enum SubCommands {
-    /// api server
-    #[cfg(feature = "api_server")]
-    ApiServer {
-        #[command(subcommand)]
-        command: Option<api::server::Commands>,
-    },
-
     /// api client
     #[cfg(feature = "api_client")]
     ApiClient {
@@ -74,19 +71,26 @@ async fn main() -> anyhow::Result<()> {
     print_env_version();
     let args = Args::parse();
 
-    println!("Mode {:?}!", args.mode);
-    println!("Path {}!", args.config);
-    println!("LogLevel {}!", args.log_level);
+    println!("Mode: {:?}", args.mode);
+    println!("Path: {}", args.config);
+    println!("LogLevel: {:?}", args.log_level);
 
     match args.sub_cmds {
-        None => start_engine(args.mode, args.config).await?,
+        None => {
+            #[cfg(feature = "api_server")]
+            {
+                let mut opts = match args.api_server {
+                    Some(s) => api::server::deal_cmds(s).await,
+                    None => None,
+                };
+
+                start_engine(args.mode, args.config, &mut opts).await?;
+            }
+            #[cfg(not(feature = "api_server"))]
+            start_engine(args.mode, args.config).await?;
+        }
 
         Some(cs) => match cs {
-            #[cfg(feature = "api_server")]
-            SubCommands::ApiServer { command } => {
-                api::server::deal_cmds(command).await;
-            }
-
             #[cfg(feature = "api_client")]
             SubCommands::ApiClient { command } => {
                 api::client::deal_cmds(command).await;
@@ -111,7 +115,7 @@ pub fn print_env_version() {
     let l = env::var(RL).unwrap_or("info".to_string());
 
     if l == "warn" {
-        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";rucimp \n shell like so: RUST_LOG=info ./rucimp")
+        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";ruci-cmd \n shell like so: RUST_LOG=info ./ruci-cmd")
     }
 
     set_var(RL, l);
@@ -125,13 +129,21 @@ pub fn print_env_version() {
     if !log_enabled!(Level::Info) {
         return;
     }
-    info!("version: ruci-cmd: rucimp_{}", rucimp::VERSION,)
+    info!(
+        "version: ruci-cmd:{}, rucimp_{}",
+        env!("CARGO_PKG_VERSION"),
+        rucimp::VERSION,
+    )
 }
 
-async fn start_engine(m: Mode, f: String) -> anyhow::Result<()> {
+async fn start_engine(
+    m: Mode,
+    f: String,
+    #[cfg(feature = "api_server")] opts: &mut Option<api::server::Server>,
+) -> anyhow::Result<()> {
     match m {
         Mode::C => {
-            mode::chain::run(&f).await?;
+            mode::chain::run(&f, opts).await?;
         }
         Mode::S => todo!(),
     }

@@ -3,6 +3,8 @@
  用户提供的参数作为配置文件 读取它并以 chain 模式运行。
 */
 
+use std::env;
+
 use chrono::{DateTime, Utc};
 use log::warn;
 use ruci::relay::*;
@@ -21,7 +23,15 @@ async fn main() -> anyhow::Result<()> {
 
     let default_fn = "local.lua".to_string();
 
-    let contents = try_get_filecontent(&default_fn)?;
+    let args: Vec<String> = env::args().collect();
+
+    let arg_f = if args.len() > 1 && args[1] != "-s" {
+        Some(args[1].as_str())
+    } else {
+        None
+    };
+
+    let contents = try_get_filecontent(&default_fn, arg_f)?;
 
     let mut se = Engine::default();
     let sc = lua::load(&contents).expect("has valid lua codes in the file content");

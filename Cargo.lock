@@ -1789,6 +1789,7 @@ dependencies = [
  "env_logger",
  "futures",
  "log",
+ "parking_lot",
  "reqwest",
  "ruci",
  "rucimp",

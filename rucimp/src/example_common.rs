@@ -40,13 +40,10 @@ pub fn print_env_version(name: &str) {
 /// try the default_file given or the first cmd argument
 ///
 /// and will set current dir to the directory
-pub fn try_get_filecontent(default_file: &str) -> anyhow::Result<String> {
-    let args: Vec<String> = env::args().collect();
-
-    let filename = if args.len() > 1 && args[1] != "-s" {
-        &args[1]
-    } else {
-        default_file
+pub fn try_get_filecontent(default_file: &str, arg_file: Option<&str>) -> anyhow::Result<String> {
+    let filename = match arg_file.as_ref() {
+        Some(a) => a,
+        None => default_file,
     };
 
     let mut last_e: Option<std::io::Error> = None;

@@ -71,7 +71,7 @@ pub fn new_ordered_cid(lastid: &std::sync::atomic::AtomicU32) -> u32 {
     lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
 }
 
-#[derive(Clone, Debug, Hash)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CIDChain {
     pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
 }
@@ -98,7 +98,7 @@ impl Display for CIDChain {
 }
 
 /// stream id ('c' for conn as convention)
-#[derive(Clone, Debug, Hash)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CID {
     Unit(u32),
     Chain(CIDChain),
@@ -121,6 +121,14 @@ impl CID {
             Some(ti) => CID::new_ordered(&ti.last_connection_id),
             None => CID::new(),
         }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        let u = s.parse::<u32>();
+        if let Ok(u) = u {
+            return Some(CID::Unit(u));
+        }
+        None
     }
 
     ///
