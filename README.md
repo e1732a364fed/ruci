@@ -46,17 +46,18 @@ ruci根项目只提供 TLS, Socks5, Trojan 这三种主要的 流映射函数, �
 
 ## 目前的编译执行方式
 
-rucimp 子项目提供若干示例程序
+rucimp 子项目提供若干示例程序, suit, suit2, chain
 
 ```sh
 cd rucimp
-cargo build --release --example suit  --example suit2
+cargo build --release --example suit  --example suit2  --example chain
 
 #到 ruci/target/release/examples 找可执行文件，拷回 .toml 或resource文件夹 所在的位置
 
 cd ..
 cp target/release/examples/suit .
 cp target/release/examples/suit2 .
+cp target/release/examples/chain .
 ```
 
 
