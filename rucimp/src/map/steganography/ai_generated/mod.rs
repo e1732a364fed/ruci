@@ -321,7 +321,10 @@ impl AIGeneratedMap {
             }
         }
 
-        Err(anyhow::anyhow!("No decrypted data found in response"))
+        Err(anyhow::anyhow!(
+            "No decrypted data found in response, {}",
+            content
+        ))
     }
 }
 
