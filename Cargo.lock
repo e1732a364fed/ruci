@@ -3138,6 +3138,7 @@ dependencies = [
  "reqwest",
  "ruci",
  "rucimp",
+ "serde",
  "serde-transcode",
  "serde-value",
  "serde_path_to_error",

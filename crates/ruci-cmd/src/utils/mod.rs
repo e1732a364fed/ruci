@@ -3,6 +3,7 @@ use std::{fs, sync::Arc, time::Duration};
 use super::*;
 use anyhow::{Context, Ok};
 use ruci::net;
+use serde::Deserialize;
 use serde_value::Value;
 use tokio::sync::mpsc;
 use tracing::info;
@@ -53,11 +54,6 @@ pub enum Commands {
     /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
     PackZ { folder: String },
 
-    // /// serve folder "static" in plain http.
-    // ///
-    // /// default listen is "0.0.0.0:18143"
-    // #[cfg(feature = "file_server")]
-    // ServeStatic { addr: Option<String> },
     /// print the QrCode of a string in the console.
     QR { str: String },
 
@@ -82,66 +78,15 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         Commands::Wintun => {
             download_wintun().await?;
         }
-        Commands::CalcuTrojanHash { password } => calcu_trojan_hash(&password),
+        Commands::CalcuTrojanHash { password } => print_calcu_trojan_hash(&password),
         Commands::GenCA {
             subject_alt_names,
             organization_name,
             common_name,
-        } => {
-            let on = organization_name.unwrap_or("My Company".to_string());
-            let cn = common_name.unwrap_or("My CA Root".to_string());
-
-            info!("generating CA cert and key... with {on} as OrganizationName and {cn} as CommonName");
-
-            if !subject_alt_names.is_empty() {
-                info!("and with subject_alt_names: {:?}", subject_alt_names);
-            }
-
-            use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
-            use std::fs;
-
-            let mut params = CertificateParams::new(subject_alt_names)?;
-
-            params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
-            params.distinguished_name.push(DnType::OrganizationName, on);
-            params.distinguished_name.push(DnType::CommonName, cn);
-
-            let key_pair = KeyPair::generate()?;
-            let cert = params.self_signed(&key_pair)?;
-
-            let key_file_name = "ca_private_key.pem";
-
-            fs::write(key_file_name, key_pair.serialize_pem())?;
-
-            let cert_file_name = "ca_cert.pem";
-
-            fs::write(cert_file_name, cert.pem())?;
-
-            info!("generated {key_file_name} as {cert_file_name}");
-        }
+        } => generate_ca_certificate(subject_alt_names, organization_name, common_name)?,
         Commands::GenCer {
             subject_alt_names: names,
-        } => {
-            info!("generating cert and key...");
-
-            use rcgen::generate_simple_self_signed;
-
-            let cert = generate_simple_self_signed(names)?;
-            let c = cert.key_pair.serialize_pem();
-
-            let key_file_name = "generated.key";
-
-            fs::write(key_file_name, c)?;
-            info!("generated key as {key_file_name}");
-
-            let c = cert.cert.pem();
-
-            let cert_file_name = "generated.crt";
-
-            fs::write(cert_file_name, c)?;
-
-            info!("generated cert as {cert_file_name}");
-        }
+        } => generate_certificate(names)?,
         #[cfg(any(feature = "lua", feature = "lua54"))]
         Commands::Repl => rucimp::utils::lua_repl(),
         Commands::Pack { folder } => {
@@ -161,57 +106,142 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             write_file(data, md5)?;
         }
 
-        // #[cfg(feature = "file_server")]
-        // Commands::ServeStatic { addr } => {
-        //     folder_serve::serve_static(addr).await;
-
-        //     let _ = rucimp::utils::wait_close_sig().await;
-        // }
         Commands::QR { str } => print_qrcode_of(&str),
         Commands::ConvertFormat {
-            mut input_file,
+            input_file,
             output_format,
-        } => {
-            let (contents, data_source) = mode::chain::get_config_file(&mut input_file, false)
-                .await
-                .context(format!("failed to read file: {}", input_file))?;
-
-            // 从文件名获取输入格式
-            let input_format = input_file
-                .rsplit('.')
-                .next()
-                .context("无法从文件名获取格式")?
-                .to_lowercase();
-            let output =
-                convert_static_config(&contents, &input_format, &output_format, data_source)
-                    .context("convert_static_config")?;
-
-            let ifp = std::path::Path::new(&input_file);
-
-            let x = ifp.parent().unwrap_or(std::path::Path::new("")).join(
-                ifp.file_stem()
-                    .map(|x| x.to_string_lossy().to_string())
-                    .unwrap_or(input_file.clone()),
-            );
-
-            let mut output_file = format!("{}.{}", x.as_path().to_str().unwrap(), output_format);
-
-            // 如果文件已存在，则在文件名后添加数字
-            let mut counter = 1;
-            while fs::metadata(&output_file).is_ok() {
-                output_file = format!(
-                    "{}_{}.{}",
-                    input_file.rsplit('.').nth(1).unwrap_or(&input_file),
-                    counter,
-                    output_format
-                );
-                counter += 1;
-            }
-
-            fs::write(&output_file, &output).context(format!("fs::write {output_file}"))?;
-            info!("配置已转换并保存至: {}", output_file);
-        }
+        } => convert_format(input_file, output_format).await?,
     };
+    Ok(())
+}
+
+pub async fn convert_format_with_content(
+    input_file_name: String,
+    input_file_content: String,
+    data_source: data_source::DataSource,
+    output_format: String,
+) -> anyhow::Result<()> {
+    // 从文件名获取输入格式
+    let input_format = input_file_name
+        .rsplit('.')
+        .next()
+        .context("无法从文件名获取格式")?
+        .to_lowercase();
+    let output = convert_static_config(
+        &input_file_content,
+        &input_format,
+        &output_format,
+        data_source,
+    )
+    .context("convert_static_config")?;
+
+    let ifp = std::path::Path::new(&input_file_name);
+
+    let x = ifp.parent().unwrap_or(std::path::Path::new("")).join(
+        ifp.file_stem()
+            .map(|x| x.to_string_lossy().to_string())
+            .unwrap_or(input_file_name.clone()),
+    );
+
+    let mut output_file = format!("{}.{}", x.as_path().to_str().unwrap(), output_format);
+
+    // 如果文件已存在，则在文件名后添加数字
+    let mut counter = 1;
+    while fs::metadata(&output_file).is_ok() {
+        output_file = format!(
+            "{}_{}.{}",
+            input_file_name
+                .rsplit('.')
+                .nth(1)
+                .unwrap_or(&input_file_name),
+            counter,
+            output_format
+        );
+        counter += 1;
+    }
+
+    fs::write(&output_file, &output).context(format!("fs::write {output_file}"))?;
+    info!("配置已转换并保存至: {}", output_file);
+
+    Ok(())
+}
+
+pub async fn convert_format(
+    mut input_file_name: String,
+    output_format: String,
+) -> anyhow::Result<()> {
+    let (input_file_contents, data_source) =
+        mode::chain::get_config_file(&mut input_file_name, false)
+            .await
+            .context(format!("failed to read file: {}", input_file_name))?;
+
+    convert_format_with_content(
+        input_file_name,
+        input_file_contents,
+        data_source,
+        output_format,
+    )
+    .await
+}
+
+fn generate_ca_certificate(
+    subject_alt_names: Vec<String>,
+    organization_name: Option<String>,
+    common_name: Option<String>,
+) -> anyhow::Result<()> {
+    let on = organization_name.unwrap_or("My Company".to_string());
+    let cn = common_name.unwrap_or("My CA Root".to_string());
+
+    info!("generating CA cert and key... with {on} as OrganizationName and {cn} as CommonName");
+
+    if !subject_alt_names.is_empty() {
+        info!("and with subject_alt_names: {:?}", subject_alt_names);
+    }
+
+    use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
+    use std::fs;
+
+    let mut params = CertificateParams::new(subject_alt_names)?;
+
+    params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+    params.distinguished_name.push(DnType::OrganizationName, on);
+    params.distinguished_name.push(DnType::CommonName, cn);
+
+    let key_pair = KeyPair::generate()?;
+    let cert = params.self_signed(&key_pair)?;
+
+    let key_file_name = "ca_private_key.pem";
+
+    fs::write(key_file_name, key_pair.serialize_pem())?;
+
+    let cert_file_name = "ca_cert.pem";
+
+    fs::write(cert_file_name, cert.pem())?;
+
+    info!("generated {key_file_name} as {cert_file_name}");
+    Ok(())
+}
+
+fn generate_certificate(names: Vec<String>) -> anyhow::Result<()> {
+    info!("generating cert and key...");
+
+    use rcgen::generate_simple_self_signed;
+
+    let cert = generate_simple_self_signed(names)?;
+    let c = cert.key_pair.serialize_pem();
+
+    let key_file_name = "generated.key";
+
+    fs::write(key_file_name, c)?;
+    info!("generated key as {key_file_name}");
+
+    let c = cert.cert.pem();
+
+    let cert_file_name = "generated.crt";
+
+    fs::write(cert_file_name, c)?;
+
+    info!("generated cert as {cert_file_name}");
     Ok(())
 }
 
@@ -237,7 +267,7 @@ fn calcu_trojan_hash_fn(plain_text: &str) -> String {
     h
 }
 
-fn calcu_trojan_hash(plain_text: &str) {
+fn print_calcu_trojan_hash(plain_text: &str) {
     let h = calcu_trojan_hash_fn(plain_text);
     info!("trojan hash for {plain_text} is : {h}")
 }
@@ -441,11 +471,32 @@ pub fn convert_static_config(
 pub fn register_command_apis(
     api_extensions: &mut rucimp::api::ApiExtensionMap,
 ) -> anyhow::Result<()> {
-    use axum::routing::get;
+    use axum::routing::{get, post};
 
     let mut extensions = api_extensions.write();
 
-    // Mmdb
+    extensions.insert(
+        "/api/utils/generate_ca_certificate/{name}".to_string(),
+        get(
+            |axum::extract::Path(name): axum::extract::Path<String>| async {
+                let r = generate_ca_certificate(vec![name], None, None);
+                format!("{r:?}")
+            },
+        )
+        .into(),
+    );
+
+    extensions.insert(
+        "/api/utils/generate_certificate/{name}".to_string(),
+        get(
+            |axum::extract::Path(name): axum::extract::Path<String>| async {
+                let r = generate_certificate(vec![name]);
+                format!("{r:?}")
+            },
+        )
+        .into(),
+    );
+
     extensions.insert(
         "/api/utils/mmdb".to_string(),
         get(|| async {
@@ -455,7 +506,6 @@ pub fn register_command_apis(
         .into(),
     );
 
-    // Wintun
     extensions.insert(
         "/api/utils/wintun".to_string(),
         get(|| async {
@@ -465,7 +515,6 @@ pub fn register_command_apis(
         .into(),
     );
 
-    // CalcuTrojanHash
     extensions.insert(
         "/api/utils/trojan_hash/{password}".to_string(),
         get(
@@ -477,7 +526,6 @@ pub fn register_command_apis(
         .into(),
     );
 
-    // QR
     extensions.insert(
         "/api/utils/qr/{text}".to_string(),
         get(
@@ -488,7 +536,57 @@ pub fn register_command_apis(
         .into(),
     );
 
-    info!("Registered {} command APIs", extensions.len());
+    #[derive(Deserialize)]
+    pub struct ConvertFormatRequest {
+        pub input_file_name: String,
+        pub output_format: String,
+    }
+
+    extensions.insert(
+        "/api/utils/convert_format/name".to_string(),
+        post(
+            |axum::Json(params): axum::Json<ConvertFormatRequest>| async move {
+                let input_file = params.input_file_name;
+                let output_format = params.output_format;
+
+                if input_file.is_empty() || output_format.is_empty() {
+                    return "错误: 缺少必要参数 input_file 或 output_format".to_string();
+                }
+
+                let r = convert_format(input_file, output_format).await;
+                format!("{r:?}")
+            },
+        )
+        .into(),
+    );
+
+    #[derive(Deserialize)]
+    pub struct ConvertFormatRequestByContent {
+        pub input_file_name: String,
+        pub input_file_content: String,
+        pub output_format: String,
+    }
+
+    extensions.insert(
+        "/api/utils/convert_format/content".to_string(),
+        post(
+            |axum::Json(params): axum::Json<ConvertFormatRequestByContent>| async move {
+                let input_file = params.input_file_name;
+                let input_file_c = params.input_file_content;
+                let output_format = params.output_format;
+
+                if input_file.is_empty() || output_format.is_empty()|| input_file_c.is_empty(){
+                    return "错误: 缺少必要参数 input_file_name 或 input_file_content 或 output_format".to_string();
+                }
+
+                let r = convert_format_with_content(input_file,input_file_c, rucimp::utils::default_file_source(), output_format).await;
+                format!("{r:?}")
+            },
+        )
+        .into(),
+    );
+
+    info!("utils: Registered {} command APIs", extensions.len());
 
     Ok(())
 }
