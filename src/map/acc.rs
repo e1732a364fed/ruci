@@ -214,17 +214,16 @@ pub async fn accumulate_from_start(
     Ok(())
 }
 
-/// blocking.block until rx got closed.
+/// blocking until rx got closed.
+///
 /// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
 ///
 ///
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去;
 ///
-/// 如果子连接又是一个 Stream::Generator, 则不会继续调用 自己 进行递归
-/// 因为 会报错 cycle detected when computing type;
+/// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
 ///
-/// 这里只能返回给调用者去处理
 pub async fn in_iter_accumulate_forever(
     cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<MapResult>, //Stream::Generator
@@ -274,9 +273,30 @@ pub async fn in_iter_accumulate_forever(
             info!("{cid}, new accepted stream");
         }
 
-        tokio::spawn(async move {
-            let r = accumulate(cid, ProxyBehavior::DECODE, new_stream_info, mc).await;
-            let _ = txc.send(r).await;
-        });
+        let inmappers2 = inmappers.clone();
+
+        spawn_acc_forever(cid, new_stream_info, mc, txc, inmappers2, oti);
     }
+}
+
+// solve async recursive spawn issue by :
+//
+// https://github.com/tokio-rs/tokio/issues/2394
+fn spawn_acc_forever(
+    cid: CID,
+    new_stream_info: MapResult,
+    mc: Box<dyn MIter>,
+    txc: tokio::sync::mpsc::Sender<AccumulateResult>,
+    inmappers2: Box<dyn MIter>,
+    oti: Option<Arc<TransmissionInfo>>,
+) {
+    tokio::spawn(async move {
+        let r = accumulate(cid.clone(), ProxyBehavior::DECODE, new_stream_info, mc).await;
+
+        if let Stream::Generator(rx) = r.c {
+            in_iter_accumulate_forever(cid.clone(), rx, txc, inmappers2, oti).await;
+        } else {
+            let _ = txc.send(r).await;
+        }
+    });
 }
