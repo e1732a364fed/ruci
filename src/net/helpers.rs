@@ -179,6 +179,82 @@ impl AsyncWrite for EarlyDataWrapper {
     }
 }
 
+pub struct PrintWrapper {
+    base: Pin<Conn>,
+}
+
+impl PrintWrapper {
+    pub fn from(conn: Conn) -> Self {
+        PrintWrapper {
+            base: Box::pin(conn),
+        }
+    }
+}
+
+impl Name for PrintWrapper {
+    fn name(&self) -> &'static str {
+        "print_wrapper_conn"
+    }
+}
+
+impl AsyncRead for PrintWrapper {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        let r = self.base.as_mut().poll_read(cx, buf);
+
+        match &r {
+            Poll::Ready(r) => match r {
+                Ok(_) => {
+                    println!("{}", String::from_utf8_lossy(buf.filled()))
+                }
+                Err(_) => {}
+            },
+            Poll::Pending => {}
+        }
+
+        r
+    }
+}
+
+impl AsyncWrite for PrintWrapper {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        let r = self.base.as_mut().poll_write(cx, buf);
+
+        match &r {
+            Poll::Ready(r) => match r {
+                Ok(u) => {
+                    println!("{}", String::from_utf8_lossy(&buf[..*u]))
+                }
+                Err(_) => {}
+            },
+            Poll::Pending => {}
+        };
+
+        r
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<io::Result<()>> {
+        self.base.as_mut().poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<io::Result<()>> {
+        self.base.as_mut().poll_shutdown(cx)
+    }
+}
+
 /// useful for testing
 #[derive(Debug)]
 pub struct MockTcpStream {
