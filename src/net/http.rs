@@ -1,5 +1,7 @@
 /*!
-提供一些通用的 http1.1 的工具
+provide facilities to filter http1.1
+
+See https://datatracker.ietf.org/doc/html/rfc2616
 
 移植verysimple 的 httpLayer/h1_requestfilter.go
 
@@ -82,7 +84,7 @@ pub enum ParseError {
     StrHttpNotFoundInRightPlace,
     NoEndMark,
     NoEndMark2,
-    HeaderNoColon,
+    HeaderNoColonOrColonNotFollowedBySpace,
 }
 
 pub const FAIL_NO_END_MARK: i32 = -12;
@@ -250,7 +252,8 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                     let ss: Vec<&str> = hs.splitn(2, ": ").collect();
 
                     if ss.len() != 2 {
-                        request.parse_result = Err(ParseError::HeaderNoColon);
+                        request.parse_result =
+                            Err(ParseError::HeaderNoColonOrColonNotFollowedBySpace);
                         return request;
                     }
                     request.headers.push(Header {
@@ -322,7 +325,10 @@ mod tests {
     #[test]
     fn test_invalid_header_no_colon() {
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHeaderValue\r\n\r\n", false);
-        assert_eq!(request.parse_result, Err(ParseError::HeaderNoColon));
+        assert_eq!(
+            request.parse_result,
+            Err(ParseError::HeaderNoColonOrColonNotFollowedBySpace)
+        );
     }
 
     #[test]
@@ -334,6 +340,9 @@ mod tests {
     #[test]
     fn test_valid_request() {
         let request = parse_h1_request(b"GET / HTTP/1.1\r\nHost:x\r\n\r\n", false);
+        assert_ne!(request.parse_result, Ok(()));
+
+        let request = parse_h1_request(b"GET / HTTP/1.1\r\nHost: x\r\n\r\n", false);
         assert_eq!(request.parse_result, Ok(()));
     }
 }
