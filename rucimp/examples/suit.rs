@@ -1,5 +1,5 @@
 /*!
-在working dir 或 working dir /resource 文件夹查找 local.suit.toml 文件, 读取它并以suit模式运行。
+在working dir 或 working dir /resource 文件夹查找 local.suit.toml 文件, 读取它并以suit模式运行.
  */
 
 use std::env;

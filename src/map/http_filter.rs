@@ -1,9 +1,9 @@
 /*!
-http_filter 过滤http1.1信息，并原样返回
+http_filter 过滤http1.1信息, 并原样返回
 
-一般用于 前置于 websocket 层 或 grpc 层，提供预过滤以用于 回落
+一般用于 前置于 websocket 层 或 grpc 层, 提供预过滤以用于 回落
 
-http_filter 与 http_proxy 完全不同，不要搞混
+http_filter 与 http_proxy 完全不同, 不要搞混
 
  */
 

@@ -15,7 +15,7 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 use super::*;
 
-/// 按字节加法器。
+/// 按字节加法器.
 ///
 /// 输出为输入按字节+(add), 可设置+的方向 AddDirection
 ///

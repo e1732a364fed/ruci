@@ -262,7 +262,7 @@ pub enum Stream {
     /// udp 的情况
     AddrConn(AddrConn),
 
-    /// 比如： tcp listener.
+    /// 比如:  tcp listener.
     ///
     /// Receiver 中的元素为 MapResult, 是为了
     ///
@@ -390,9 +390,9 @@ impl Stream {
 /// ## About Real Data Traffic and Original Traffic
 ///
 /// 注意, 考虑在两个累加结果的Conn之间拷贝, 若用 [`mod@crate::net::cp`] 拷贝并给出 [`GlobalTrafficRecorder`],
-/// 则它统计出的流量为 未经加密的原始流量, 实际流量一般会比原始流量大。要想用
+/// 则它统计出的流量为 未经加密的原始流量, 实际流量一般会比原始流量大. 要想用
 /// [`mod@crate::net::cp`] 统计真实流量, 只能有一种情况, 那就是 tcp到tcp的直接拷贝,
-/// 不使用累加器。
+/// 不使用累加器.
 ///
 /// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 counter 模块
 ///
@@ -409,7 +409,7 @@ pub struct GlobalTrafficRecorder {
     pub ub: AtomicU64,
 }
 
-/// AsyncConn 将 可异步读写的功能抽象出来。
+/// AsyncConn 将 可异步读写的功能抽象出来.
 ///
 /// [`TcpStream`] 也实现了 AsyncConn
 ///

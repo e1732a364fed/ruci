@@ -1,14 +1,14 @@
 # user note 
 
-链式配置中，每条链都必须标一个 tag
+链式配置中, 每条链都必须标一个 tag
 
 ## tls
 
 ### 证书
 
-tls 中， native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前又只写了pks8 一种情况(即不支持 rsa 和 ecc key);
+tls 中,  native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前又只写了pks8 一种情况(即不支持 rsa 和 ecc key);
 
-而默认的 rustls 则支持得更广泛一些,pem格式的 x509证书（后缀可能为 pem, cer 或 crt）, key(rsa, pks8, ecc) 都支持 ，但不支持 pks12 (pfx) 格式
+而默认的 rustls 则支持得更广泛一些,pem格式的 x509证书（后缀可能为 pem, cer 或 crt）, key(rsa, pks8, ecc) 都支持 , 但不支持 pks12 (pfx) 格式
 
 ### alpn 的行为
 
@@ -19,7 +19,7 @@ Protocol names we support, most preferred first. If empty we don't do ALPN at al
 client:
 Which ALPN protocols we include in our client hello. If empty, no ALPN extension is sent
 
-如果任意一方的alpn 都没给出，则连接都通过；如果两方 alph 都给出，则只有匹配了才通过
+如果任意一方的alpn 都没给出, 则连接都通过；如果两方 alph 都给出, 则只有匹配了才通过
 
 native-tls 的 server 不支持手动设置 alpn
 
@@ -50,10 +50,10 @@ outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不�
 Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是无限的,
 (即无限状态机)
 
-比如，一个 tcp 到一个 tls 监听 ，这部分是静态的，之后根据 tls 的 alpn 结果
-，进行分支，两个子分支后面也是静态的，但这个判断是动态的
+比如, 一个 tcp 到一个 tls 监听 , 这部分是静态的, 之后根据 tls 的 alpn 结果
+, 进行分支, 两个子分支后面也是静态的, 但这个判断是动态的
 
-而完全动态链有最大的灵活性，能实现所有一般情况下无法实现的效果。它是图灵完备的
+而完全动态链有最大的灵活性, 能实现所有一般情况下无法实现的效果. 它是图灵完备的
 
 比如 分支, 多路复用, 负载均衡, 都可以用 完全动态链实现
 
@@ -64,29 +64,29 @@ Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是�
 ### 报错示例: socks5 client only support tcplike stream, got NoStream
 
 
-注意几乎所有的 outbound 都要先有一个 "流发生器", 如 Dialer, 如果直接是 socks5/trojan 的话，
+注意几乎所有的 outbound 都要先有一个 "流发生器", 如 Dialer, 如果直接是 socks5/trojan 的话, 
 没有流发生器, 是无法建立任何连接的
 
 也就是说, 要有一个拨号环节
 
 ## 与 verysimple 配置 (即 ruci中的 suit 模式, toml 格式配置文件) 的对比
 
-verysimple 有几个不清不楚的地方：
+verysimple 有几个不清不楚的地方: 
 1. trojan 的 password 写在了 uuid 里
-2. grpc 的 service name 填在了 path 中，然后没有 / 前缀; 但 ws写的path却要有 /, 
-3. vs 的 host 既用于 tls 的 sni，又用于 websocket/grpc 的 http 请求中的 host (其实是 uri 中的authority，包含端口号)，但实际上二者可以不同
+2. grpc 的 service name 填在了 path 中, 然后没有 / 前缀; 但 ws写的path却要有 /, 
+3. vs 的 host 既用于 tls 的 sni, 又用于 websocket/grpc 的 http 请求中的 host (其实是 uri 中的authority, 包含端口号), 但实际上二者可以不同
 
 
-这些方面 ruci 分得更清楚，因为用了链式架构
+这些方面 ruci 分得更清楚, 因为用了链式架构
 
-ruci chain 模式中， 
+ruci chain 模式中,  
 
 1. trojan 的 password 写在自己配置中的 password 项里
-2. grpc和 h2一样的，没有 service name 一说，path直接写为 /service1/Tun 即可
-3. tls 的 sni 写的 tls 的配置中，ws/grpc 的 authority 写在 它们自己的配置中
-4. vs 中的 ws server 要加 early = true 才能使持 earlydata, 而 ruci 中的 ws server 是默认支持的，只需要在 ws client 端打开use_early_data
+2. grpc和 h2一样的, 没有 service name 一说, path直接写为 /service1/Tun 即可
+3. tls 的 sni 写的 tls 的配置中, ws/grpc 的 authority 写在 它们自己的配置中
+4. vs 中的 ws server 要加 early = true 才能使持 earlydata, 而 ruci 中的 ws server 是默认支持的, 只需要在 ws client 端打开use_early_data
 
-在ruci 中，你可以： dial 一个由 host1 解析得的ip, 然后 tls 里的 sni 写 host2, 然后 ws/grpc 的请求 url 中 写 host3
+在ruci 中, 你可以:  dial 一个由 host1 解析得的ip, 然后 tls 里的 sni 写 host2, 然后 ws/grpc 的请求 url 中 写 host3
 
 
 # lib note
@@ -106,20 +106,20 @@ lua, lua54, route,geoip, tun, sockopt, use-native-tls, native-tls-vendored
 
 ## is_tail_of_chain
 
-链式模式的一个特点是，每一层都不知道上层和下层的确切信息，它只做自己层做的事
+链式模式的一个特点是, 每一层都不知道上层和下层的确切信息, 它只做自己层做的事
 
-这会有一个现象：无法直接在 ws,tls,trojan,vless 等协议的outbound中直接传递early data , 因为
+这会有一个现象: 无法直接在 ws,tls,trojan,vless 等协议的outbound中直接传递early data , 因为
 early data 必须由最末端的 outbound 传递
 
-不过，我们可以做些操作，给末端代理一个标记，这样就能使用 earydata 功能了.
+不过, 我们可以做些操作, 给末端代理一个标记, 这样就能使用 earydata 功能了.
 
 通过使用 MapperExt 和 NoMapperExt 这两个derive 宏, 可以分别给 struct 实现 common行为
 和默认行为.
 
 MapperExt 要 配合 mapper_ext_fields 宏一起使用
 
-用了 MapperExt 后，可以在方法内使用 self.is_tail_of_chain 判断是否在链尾，如果在，则可以发送ed, 
-如果不在，不可以发送，只能传递到下一级
+用了 MapperExt 后, 可以在方法内使用 self.is_tail_of_chain 判断是否在链尾, 如果在, 则可以发送ed, 
+如果不在, 不可以发送, 只能传递到下一级
 
 ## async
 
@@ -154,12 +154,12 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 
 ## MapResult 中的 "任意数据类型"
 
-在项目初期，对其实现做了多种尝试, 一开始使用 enum AnyData, 后来将 enum 分成
+在项目初期, 对其实现做了多种尝试, 一开始使用 enum AnyData, 后来将 enum 分成
 单体AnyData 和 Vec<AnyData> 两部分, 再后来尝试使用smallvec<[AnyData;1]>
 
 最终使用了 #[typetag::serde] 的 trait 方式
 
-最初是将动态数据 Arc<AtomicU64>也放在 enum 中，后来移出, 单独做处理, 因为
+最初是将动态数据 Arc<AtomicU64>也放在 enum 中, 后来移出, 单独做处理, 因为
 动态数据不能也不应该做序列化
 
 ## maxmind db 的 geoip
@@ -184,34 +184,34 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 
 ## "trace" feature
 
-在0.0.3，添加 "trace" feature, 对每条连接加以监视、记录, 其可能导处性能下降, 但
-又在另一些用例中有用，所以要做
+在0.0.3, 添加 "trace" feature, 对每条连接加以监视、记录, 其可能导处性能下降, 但
+又在另一些用例中有用, 所以要做
 
 trace 会将chain 中经过的每一个 Mapper的 name 记录下来, 放到 `Vec<String> ` 中. 它只对于动态链有用
 如果是静态链, 则记录一个 chain_tag 就能知道完整的 链信息
 
-trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来，这是最耗性能的
+trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来, 这是最耗性能的
 
 
 ## HttpFilter
 
-为了支持对 普通 http 请求的回落，加一个 叫 HttpFilter 的 Mapper
+为了支持对 普通 http 请求的回落, 加一个 叫 HttpFilter 的 Mapper
 
 这样可以同时在 grpc 和 ws 中使用
 
-因为 tungstenite (websocket包) 对错误请求是自行返回 http 响应的，而我们为了回落到其它 Mapper ，
+因为 tungstenite (websocket包) 对错误请求是自行返回 http 响应的, 而我们为了回落到其它 Mapper , 
 就要 绕过 tungstenite 的处理
 
 
 ## 其它
 
-使用 anyhow 的 context 会导致变慢，若有初始化开销 则要改用 with_context
+使用 anyhow 的 context 会导致变慢, 若有初始化开销 则要改用 with_context
 
-再比如，要用 ok_or_else, 而不是 ok_or
+再比如, 要用 ok_or_else, 而不是 ok_or
 
 使用 mlua 跨线程时要用 Mutex锁, 否则mac 上报错会类似 zsh: trace trap 
 
 上传和下载的缩写代码中使用了 ub, db, 而不是 tx, rx, 是为了简单地与 channel 的Sender和 Receiver的缩写加以区分,
 而且还能看出是以字节为单位
 
-链的发展顺序：静态链，有限动态链，无限动态链
+链的发展顺序: 静态链, 有限动态链, 无限动态链

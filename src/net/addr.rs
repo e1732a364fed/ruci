@@ -130,13 +130,13 @@ fn prefix_length_to_netmask(prefix_length: u8) -> (u8, u8, u8, u8) {
 /// Addr 结构是一个可表示多种网络地址的结构,
 /// 可以是 ip, ipv4, ipv6, unix domain socket, domain name
 ///
-/// 具体是哪一种由 network 决定。若 network 不为 unix,
+/// 具体是哪一种由 network 决定. 若 network 不为 unix,
 /// addr 可以为 Socket 或 Name (表示 domain name),
 /// 否则 addr 只能为 Name (表示 file name)
 ///
 /// port = 0 表示不用端口, 或表示让系统在拨号时使用系统分配的端口
 ///
-/// Addr实现 Eq和 Hash, 以支持作为Key存入 HashMap 等集合中。
+/// Addr实现 Eq和 Hash, 以支持作为Key存入 HashMap 等集合中.
 ///
 /// default is  tcp://0.0.0.0:0
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]

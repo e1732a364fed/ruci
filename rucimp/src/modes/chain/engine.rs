@@ -28,7 +28,7 @@ pub struct Engine {
     /// 存储关闭所有inbound 的 Sender
     ///
     ///  若有值说明 is running
-    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
+    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
     pub gtr: Arc<GlobalTrafficRecorder>,
 
     pub new_conn_recorder: OptNewInfoSender,
@@ -47,7 +47,7 @@ pub struct Engine {
 }
 
 impl Engine {
-    /// 清空配置。reset 后 可以 接着调用 init
+    /// 清空配置. reset 后 可以 接着调用 init
     pub async fn reset(&mut self) {
         let running = self.running.lock();
 
@@ -335,7 +335,7 @@ impl Engine {
         Arc::new(Box::new(s))
     }
 
-    /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
+    /// 停止所有的 server, 但并不清空配置. 意味着可以stop后接着调用 run
     pub async fn stop(&self) {
         info!("chain engine: stop called");
         let mut running = self.running.lock();

@@ -29,9 +29,9 @@ pub enum FallbackItem {
     Port(i64),
 }
 
-/// LDConfig 是 listen 和 dial 共用的 配置结构，配置是扁平化的
+/// LDConfig 是 listen 和 dial 共用的 配置结构, 配置是扁平化的
 ///
-/// tls 的最低版本号配置填在这里：
+/// tls 的最低版本号配置填在这里:
 ///extra = { tls_min_v = "1.2" }, 或 extra.tls_min_v = "1.2"
 ///
 ///
@@ -44,7 +44,7 @@ pub struct LDConfig {
     pub network: Option<String>, //默认为tcp
     pub extra: Option<HashMap<String, toml::Value>>,
     pub port: Option<u16>, //若Network不为 unix , 则port项必填
-    pub xver: Option<u8>,  //可选，只能为0/1/2. 若不为0, 则表示使用 pub PROXY protocol 协议头
+    pub xver: Option<u8>,  //可选, 只能为0/1/2. 若不为0, 则表示使用 pub PROXY protocol 协议头
     pub tls: Option<bool>,
     pub cert: Option<String>,   //tls server
     pub key: Option<String>,    //tls server
@@ -59,10 +59,10 @@ pub struct LDConfig {
     pub early_data: Option<bool>,
 
     /// listen part
-    //no_route 意味着 传入的数据 不会被分流，一定会被转发到默认的 dial
+    //no_route 意味着 传入的数据 不会被分流, 一定会被转发到默认的 dial
     // 这一项是针对 分流功能的. 如果不设 no_route, 则所有listen 得到的流量都会被 试图 进行分流
     pub no_route: Option<bool>,
-    pub fallback: Option<FallbackItem>, //默认回落的地址，一般可为 ip:port,数字port or unix socket的文件名
+    pub fallback: Option<FallbackItem>, //默认回落的地址, 一般可为 ip:port,数字port or unix socket的文件名
 
     pub users: Option<Vec<UserPass>>,
 

@@ -14,7 +14,7 @@ use std::{
 use tokio::io::ReadBuf;
 
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
-// 只是加了一个 Addr 参数. 这一部分比较难懂。
+// 只是加了一个 Addr 参数. 这一部分比较难懂.
 
 /// 每一次读都获取到一个 Addr,
 pub trait AsyncReadAddr: crate::Name {
@@ -276,9 +276,9 @@ pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: cha
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 
 /// 循环读写直到read错误发生. 不会认为 read错误为错误. 每一次read都会以
-/// CP_UDP_TIMEOUT 为 最长等待时间，一旦读不到，就会退出函数
+/// CP_UDP_TIMEOUT 为 最长等待时间, 一旦读不到, 就会退出函数
 ///
-/// 读到后，如果写超过了同样的时间，也退出函数
+/// 读到后, 如果写超过了同样的时间, 也退出函数
 pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut r1: R1,
     mut w1: W1,

@@ -130,7 +130,7 @@ async fn auth_tcp_in_mem_earlydata() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn udp() -> anyhow::Result<()> {
-    //写两遍，一遍错一遍对，然后在 另一端写一遍. same as test for socks5 udp
+    //写两遍, 一遍错一遍对, 然后在 另一端写一遍. same as test for socks5 udp
 
     let u = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let ula = u.local_addr()?;

@@ -4,11 +4,11 @@ rucimp 提供数个示例可执行文件, 若要全功能, 用 ruci-cmd
 suit, chain 分为以不同的代码运行 suit模式和 chain 模式
 
 还有 chain_trace 演示 单连接流量监控
-chain_infinite 演示 完全动态链，其与 chain 的运行方式一样，不再赘述
+chain_infinite 演示 完全动态链, 其与 chain 的运行方式一样, 不再赘述
 
 # 通用
 
-接受 一个 命令行参数，将其作为配置文件读取，未提供或者找不到时，会在工作目录, ruci_config/ , resource/ , ../resource 等 目录下找默认的配置文件.
+接受 一个 命令行参数, 将其作为配置文件读取, 未提供或者找不到时, 会在工作目录, ruci_config/ , resource/ , ../resource 等 目录下找默认的配置文件.
 
 ```sh
 # in folder rucimp, run:
@@ -25,7 +25,7 @@ cargo run --example suit -- local.suit.toml
 cargo run --example suit -- remote.suit.toml
 ```
 
-(h2 的代码实现所使用的 h2包 会在debug 下打印大量日志输出, 影响观察，故使用 RUST_LOG=none,ruci=debug 过滤掉非
+(h2 的代码实现所使用的 h2包 会在debug 下打印大量日志输出, 影响观察, 故使用 RUST_LOG=none,ruci=debug 过滤掉非
 ruci 的 日志)
 
 ## route
@@ -64,7 +64,7 @@ ping 10.0.0.2
 
 ### 全局代理路由
 
-如果您要将您个人电脑的全局网络流量全交由 ruci 代理, 则您需要自行配置系统的路由。
+如果您要将您个人电脑的全局网络流量全交由 ruci 代理, 则您需要自行配置系统的路由. 
 
 在未来的 ruci-cmd 项目中, 会添加 自动全局路由功能
 

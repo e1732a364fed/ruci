@@ -49,7 +49,7 @@ impl ToMapperBox for Config {
     }
 }
 
-/// Server  未实现bind 命令。
+/// Server  未实现bind 命令.
 ///  support_udp开关udp associate的支持
 ///
 /// 支持 AuthNone和 AuthUserPass
@@ -77,7 +77,7 @@ impl Server {
         }
 
         /*
-        // 上面可化简为如下形式，不过要用 join_all , 否则异步执行没完成就退出了,导致之后马上检查内容会得到空值。所以实际上没怎么化简
+        // 上面可化简为如下形式, 不过要用 join_all , 否则异步执行没完成就退出了,导致之后马上检查内容会得到空值. 所以实际上没怎么化简
         futures::future:: join_all(c.uuid
              .map(UserPass::from)
              .filter(|u| u.strict_valid())
@@ -108,13 +108,13 @@ impl Server {
     ) -> anyhow::Result<map::MapResult> {
         /*
            todo:
-           本段代码 通过了单元测试。
-           不过因为函数太长，不是很简洁的实现，可能需要 重构
-           使用 bytes 的 BytesMut 可以很好地重构，但因为 async_std中没有 read_buf 方法
+           本段代码 通过了单元测试.
+           不过因为函数太长, 不是很简洁的实现, 可能需要 重构
+           使用 bytes 的 BytesMut 可以很好地重构, 但因为 async_std中没有 read_buf 方法
            所以还是不方便
-           所以使用 read_buf 方法的重构要在 tokio 分支进行了。
+           所以使用 read_buf 方法的重构要在 tokio 分支进行了.
 
-           旧实现没有使用 bytes_to_addr 函数，代码显得很繁琐(不过代码效率没有区别)
+           旧实现没有使用 bytes_to_addr 函数, 代码显得很繁琐(不过代码效率没有区别)
         */
 
         let mut buf: BytesMut;
@@ -220,9 +220,9 @@ impl Server {
                         remain_n = n;
                     } else {
                         auth_bs = &buf[3..n];
-                        //如果 客户端是 把下一个回复连着第一个请求发来的，则
-                        // 一定是只指定了一个 auth方法，所以 第一个请求的长度一定为3 (5 1 2)
-                        // todo: 不过，不排除攻击者的行为
+                        //如果 客户端是 把下一个回复连着第一个请求发来的, 则
+                        // 一定是只指定了一个 auth方法, 所以 第一个请求的长度一定为3 (5 1 2)
+                        // todo: 不过, 不排除攻击者的行为
                     }
 
                     /*
@@ -324,7 +324,7 @@ impl Server {
         if remain_n > 0 {
             //客户端把下一条信息和第一条信息合在一起发了过来
 
-            //buf 为 BytesMut 时，直接advance
+            //buf 为 BytesMut 时, 直接advance
 
             buf.advance(n - remain_n);
             n = remain_n;
@@ -421,7 +421,7 @@ impl Server {
             debug!("socks5 server got earlydata,{}", remain);
         }
 
-        //如果name中实际是 123.123.123.123 这种值(或ipv6的样式)，这种情况很常见，
+        //如果name中实际是 123.123.123.123 这种值(或ipv6的样式), 这种情况很常见,
         //要尝试将其转成ip
         if let Some(name) = &name {
             use std::str::FromStr;

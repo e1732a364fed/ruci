@@ -22,7 +22,7 @@ use tokio::net::TcpListener;
 use ruci::map::*;
 use ruci::net::{self, Addr};
 
-/// SuitConfigHolder ：一套完整的代理配置, 如从tcp到tls一直到socks5
+/// SuitConfigHolder : 一套完整的代理配置, 如从tcp到tls一直到socks5
 ///
 /// 它定义了一个 rucimp::suit::config::LDConfig 持有者的应有的行为
 ///
@@ -152,7 +152,7 @@ impl MappersVec for SuitStruct {
         self.in_mappers.clone()
     }
 
-    /// 添加 mapper 到尾部。会自动推导出 whole_name.
+    /// 添加 mapper 到尾部. 会自动推导出 whole_name.
     ///
     /// 可多次调用, 每次都会更新 whole_name
     fn push_mapper(&mut self, mapper: Arc<MapperBox>) {

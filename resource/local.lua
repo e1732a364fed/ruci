@@ -1,7 +1,7 @@
 print("this is a lua config file")
 
--- lua 的好处有很多，你可以定义很多变量
--- 真正的配置块是 config 变量，可以用搜索快速找到它
+-- lua 的好处有很多, 你可以定义很多变量
+-- 真正的配置块是 config 变量, 可以用搜索快速找到它
 
 listen = {
     Listener = "0.0.0.0:10800"
@@ -89,7 +89,7 @@ stdio_socks5_chain = {{
     Socks5 = {}
 }}
 
--- stdin + 1 , 在命令行输入 a, 会得到b，输入1，得2，依此类推
+-- stdin + 1 , 在命令行输入 a, 会得到b, 输入1, 得2, 依此类推
 -- 设了 abc 为预先信息, 刚连上后就会发出abc 信号
 in_stdio_adder_chain = {{
     Stdio = {
@@ -323,13 +323,13 @@ config = {
     -- ]==]
 
     --[[
-这个 config 块是演示 多in多out的情况, 只要outbounds有多个，您就应该考虑使用路由配置
+这个 config 块是演示 多in多out的情况, 只要outbounds有多个, 您就应该考虑使用路由配置
 
 路由同时给出了 使用 tag_route + fallback_route 的 简单配置 和用 rule_route 的复杂配置
 
 这两种给出的配置在行为上是等价的
 
-该 路由 示例明确指出，l1将被路由到d1, l2 -> d2, l3 -> d2, 且 l1 的回落为 fallback_d
+该 路由 示例明确指出, l1将被路由到d1, l2 -> d2, l3 -> d2, 且 l1 的回落为 fallback_d
 
 --]]
 

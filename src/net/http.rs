@@ -200,7 +200,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     }
 
     //一般请求样式类似 GET /some_path.html HTTP/1.1
-    //所以找到第二个空格的位置即可，
+    //所以找到第二个空格的位置即可,
 
     let mut last = bs.len();
 
@@ -209,7 +209,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
             last = MAX_PARSE_URL_LEN
         }
     }
-    //如果是代理，则我们要判断整个请求，不能漏掉任何部分
+    //如果是代理, 则我们要判断整个请求, 不能漏掉任何部分
 
     for i in should_slash_index..last {
         let b = bs[i];
@@ -218,7 +218,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
             return request;
         }
         if b == b' ' {
-            // 空格后面至少还有 HTTP/1.1\r\n 这种字样，也就是说空格后长度至少为 10
+            // 空格后面至少还有 HTTP/1.1\r\n 这种字样, 也就是说空格后长度至少为 10
 
             if bs.len() - i - 1 < 10 {
                 request.parse_result = Err(ParseError::FirstLineLessThan10);

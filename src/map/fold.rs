@@ -107,7 +107,7 @@ pub struct FoldResult {
     pub d: Vec<Option<Box<dyn Data>>>,
     pub e: Option<anyhow::Error>,
 
-    /// 代表 迭代完成后，最终的 cid
+    /// 代表 迭代完成后, 最终的 cid
     pub id: CID,
 
     pub chain_tag: String,

@@ -149,8 +149,8 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
     );
 
     let se = &se;
-    //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future
-    // 刚退出就会执行 drop(se), 进而将其内部储存的tx drop掉，进而关闭监听，导致失败
+    //注意, 不用 借用的话, 下面的 move 会 转移所有权, 导致在非阻塞的 listen_future
+    // 刚退出就会执行 drop(se), 进而将其内部储存的tx drop掉, 进而关闭监听, 导致失败
 
     let listen_future = async move {
         info!("try start listen");
@@ -204,8 +204,8 @@ async fn suit_engine2_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
         load_out_mappers_by_str_and_ld_config,
     );
 
-    //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future
-    // 刚退出就会执行 drop(se), 进而将其内部储存的tx drop掉，进而关闭监听，导致失败
+    //注意, 不用 借用的话, 下面的 move 会 转移所有权, 导致在非阻塞的 listen_future
+    // 刚退出就会执行 drop(se), 进而将其内部储存的tx drop掉, 进而关闭监听, 导致失败
 
     let listen_future = async {
         info!("try start listen");

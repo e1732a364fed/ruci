@@ -14,13 +14,13 @@ use std::hash::Hash;
 /// 用于用户鉴权
 #[typetag::serde]
 pub trait UserTrait: Debug + Send + Sync {
-    /// 每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name. 用于在非敏感环境显示该用户
+    /// 每个user唯一, 通过比较这个string 即可 判断两个User 是否相等. 相当于 user name. 用于在非敏感环境显示该用户
     fn identity_str(&self) -> String;
 
     fn identity_bytes(&self) -> &[u8]; //与str类似; 对于程序来说,bytes更方便处理; 可以与str相同, 也可以不同.
 
-    /// auth_str 可以识别出该用户 并验证该User的真实性。相当于 user name + password.
-    /// 约定，每一种不同的 UserTrait 实现都要在 auth_str 前部加上 {type}: 这种形式, 如"plaintext:u0 p0" ,
+    /// auth_str 可以识别出该用户 并验证该User的真实性. 相当于 user name + password.
+    /// 约定, 每一种不同的 UserTrait 实现都要在 auth_str 前部加上 {type}: 这种形式, 如"plaintext:u0 p0" ,
     /// 以用于对不同的 实现 得到的 auth_str 加以区分. 也即 auth_str 须可用于 UserBox 的 Hash
     fn auth_str(&self) -> String;
 

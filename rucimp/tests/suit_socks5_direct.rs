@@ -1,5 +1,5 @@
 /*!
- * 集成测试 socks5 -> direct 的情况, 采用了随机端口，以百度为目标网页
+ * 集成测试 socks5 -> direct 的情况, 采用了随机端口, 以百度为目标网页
 测试了 earlydata 的情况
 测试了 同时监听三个端口 的情况
 测试了 不监视流量 的情况  (no_transmission_info)
@@ -374,7 +374,7 @@ async fn lisen_ser() -> anyhow::Result<(
     ))
 }
 
-/// 基本测试. 百度在遇到非http请求后会主动断开连接，其对于长挂起请求最多60秒后断开连接。
+/// 基本测试. 百度在遇到非http请求后会主动断开连接, 其对于长挂起请求最多60秒后断开连接.
 /// 其对请求中不含\n 时会视为挂起
 #[tokio::test]
 async fn socks5_direct_and_request() -> anyhow::Result<()> {
@@ -396,9 +396,9 @@ async fn socks5_direct_and_request() -> anyhow::Result<()> {
 
     /*
 
-    baidu应返回 ：HTTP/1.1 400 Bad Request\r\n\r\n
+    baidu应返回 : HTTP/1.1 400 Bad Request\r\n\r\n
 
-    copy 中的 half2 会先返回，即从 到百度的连接 到 到socks5的连接 的拷贝 会断开（到百度的连接 是 被百度自动断开的）
+    copy 中的 half2 会先返回, 即从 到百度的连接 到 到socks5的连接 的拷贝 会断开（到百度的连接 是 被百度自动断开的）
 
      */
 
@@ -459,7 +459,7 @@ async fn socks5_direct_and_outadder() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// 不监视原始流量，性能会高一些
+/// 不监视原始流量, 性能会高一些
 #[tokio::test]
 async fn socks5_direct_and_request_no_transmission_info() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
@@ -496,9 +496,9 @@ async fn socks5_direct_and_request_no_transmission_info() -> anyhow::Result<()> 
     Ok(())
 }
 
-/// 不监视原始流量但是监视实际流量，用 加一层 InCounter 实现。
+/// 不监视原始流量但是监视实际流量, 用 加一层 InCounter 实现.
 ///
-/// 注：这里就体现了链式代理的特点。可以里一层counter 外一层counter 如 counter - socks5 - counter 来分别记录原始流量
+/// 注: 这里就体现了链式代理的特点. 可以里一层counter 外一层counter 如 counter - socks5 - counter 来分别记录原始流量
 /// 和实际流量
 #[tokio::test]
 async fn socks5_direct_and_request_counter() -> anyhow::Result<()> {
@@ -605,7 +605,7 @@ async fn socks5_direct_and_request_earlydata() -> anyhow::Result<()> {
     Ok(())
 }
 
-//因为太耗时，所以test被注释掉
+//因为太耗时, 所以test被注释掉
 /// 每次write前等待 ruci::proxy::READ_HANDSHAKE_TIMEOUT + 2 秒
 #[tokio::test]
 #[should_panic]
@@ -686,7 +686,7 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
             let r = se.block_run().await;
             //let r = block_on(se.block_run());
             //let r = join!(se.block_run()) ;
-            //测试表明，只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常。
+            //测试表明, 只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常.
 
             info!("r {:?}", r);
         } else {
@@ -757,7 +757,7 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> anyhow::Resul
             let r = se.block_run().await;
             //let r = block_on(se.block_run());
             //let r = join!(se.block_run()) ;
-            //测试表明，只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常。
+            //测试表明, 只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常.
 
             info!("r {:?}", r);
         } else {
@@ -843,7 +843,7 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
         //     // let r = lo.block_run().await;
         //     //let r = block_on(se.block_run());
         //     //let r = join!(se.block_run()) ;
-        //     //测试表明，只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常。
+        //     //测试表明, 只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常.
         // } else {
         info!("try start  listen unblock run");
         let lo = se.lock();

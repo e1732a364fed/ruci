@@ -17,7 +17,7 @@ use crate::net::{
 
 use super::*;
 
-//Reader 包装 ReadHalf<net::Conn>，使其可以按trojan 格式读出 数据和Addr
+//Reader 包装 ReadHalf<net::Conn>, 使其可以按trojan 格式读出 数据和Addr
 pub struct Reader {
     pub base: Pin<Box<ReadHalf<net::Conn>>>,
 }
@@ -85,7 +85,7 @@ impl AsyncReadAddr for Reader {
     }
 }
 
-//Writer 包装 WriteHalf<net::Conn>，使其可以按trojan 格式写入 数据和Addr
+//Writer 包装 WriteHalf<net::Conn>, 使其可以按trojan 格式写入 数据和Addr
 pub struct Writer {
     pub base: Pin<Box<WriteHalf<net::Conn>>>,
 }

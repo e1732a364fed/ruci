@@ -1,6 +1,6 @@
 print("this is a lua config file")
 
--- lua 的好处有很多，你可以定义很多变量
+-- lua 的好处有很多, 你可以定义很多变量
 
 tcp = {
     Listener = "0.0.0.0:10801"

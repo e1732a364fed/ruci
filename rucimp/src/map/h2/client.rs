@@ -104,7 +104,7 @@ async fn new_stream_by_send_request(
 
     if let Some(connection) = connection {
         tokio::spawn(async move {
-            // 在连接被强制断开时，connection 就会 返回
+            // 在连接被强制断开时, connection 就会 返回
 
             if is_mux {
                 let r = connection.await;

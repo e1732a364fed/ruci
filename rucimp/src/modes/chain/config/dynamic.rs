@@ -14,8 +14,8 @@ Defines Dynamic Chain.
 Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是无限的,
 (即无限状态机)
 
-部分动态例子1: 一个 tcp 到一个 tls 监听 ，这部分是静态的，之后根据 tls 的 alpn 结果
-进行分支，两个子分支后面也是静态的，但这个判断是动态的
+部分动态例子1: 一个 tcp 到一个 tls 监听 , 这部分是静态的, 之后根据 tls 的 alpn 结果
+进行分支, 两个子分支后面也是静态的, 但这个判断是动态的
 
  */
 use std::{fmt::Debug, sync::Arc};

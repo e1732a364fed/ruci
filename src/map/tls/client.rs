@@ -76,8 +76,8 @@ impl rustls::client::danger::ServerCertVerifier for SuperDanVer {
         _now: UnixTime,
     ) -> Result<ServerCertVerified, rustls::Error> {
         debug!("superdanver called");
-        //if !server_name.eq(&self.domain) {}//server_name是client自己提供的，
-        //因为不验证cert，所以没有必要和自己比较
+        //if !server_name.eq(&self.domain) {}//server_name是client自己提供的,
+        //因为不验证cert, 所以没有必要和自己比较
 
         Ok(ServerCertVerified::assertion())
     }

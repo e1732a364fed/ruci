@@ -13,7 +13,7 @@ use std::{
 };
 use tokio::{io::ReadBuf, net::UdpSocket};
 
-/// 固定用同一个 udp socket 发送，到不同的远程地址也是如此
+/// 固定用同一个 udp socket 发送, 到不同的远程地址也是如此
 #[derive(Clone)]
 pub struct Conn {
     u: Arc<UdpSocket>,

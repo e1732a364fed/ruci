@@ -1,9 +1,9 @@
 /*！
-本测试文件中提供了大量纯手写的单元测试, 测试了各种可能的情况, 保证了 socks5 协议的实现的可靠性。
+本测试文件中提供了大量纯手写的单元测试, 测试了各种可能的情况, 保证了 socks5 协议的实现的可靠性.
 
 测试了 内存握手, 回环握手, 用户鉴权, ipv4,ipv6,domain, 和几种错误输入或攻击的情况
 
-因为系统不会立即释放端口, 所以连续运行test有可能会报错, 手动运行是没问题的. 测试代码里面已经使用了随机端口。
+因为系统不会立即释放端口, 所以连续运行test有可能会报错, 手动运行是没问题的. 测试代码里面已经使用了随机端口.
 */
 
 use bytes::{BufMut, BytesMut};
@@ -299,7 +299,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
-        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错：
+        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错:
         // An established connection was aborted by the software in your host machine.
 
         let n = cs.read(&mut readbuf[..]).await.expect("read1 ok");
@@ -409,7 +409,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
-        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错：
+        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错:
         // An established connection was aborted by the software in your host machine.
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
@@ -514,7 +514,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
-        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错：
+        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错:
         // An established connection was aborted by the software in your host machine.
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
@@ -574,7 +574,7 @@ async fn no_auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
 
     //因为我们无法再从 client_tcps 中取出数据了, 因为它放到Box后就属于Addr了
     // 所以要用Arc<Mutex<>> 结构
-    // 和 clone , 从clone的 指针中获取数据。
+    // 和 clone , 从clone的 指针中获取数据.
 
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();

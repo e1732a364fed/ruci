@@ -63,7 +63,7 @@ impl Server {
         ob: Option<BytesMut>,
     ) -> anyhow::Result<MapResult> {
         //根据 https://www.ihcblog.com/a-better-tls-obfs-proxy/
-        //trojan的 CRLF 是为了模拟http服务器的行为, 所以此时不要一次性Read，而是要Read到CRLF为止
+        //trojan的 CRLF 是为了模拟http服务器的行为, 所以此时不要一次性Read, 而是要Read到CRLF为止
 
         const CAP: usize = 1024;
         let mut previous_read_len: usize;
@@ -108,7 +108,7 @@ impl Server {
         }
 
         if previous_read_len < 17 {
-            //根据下面回答，HTTP的最小长度恰好是16字节，但是是0.9版本。1.0是18字节，1.1还要更长。总之 可以直接不回落
+            //根据下面回答, HTTP的最小长度恰好是16字节, 但是是0.9版本. 1.0是18字节, 1.1还要更长. 总之 可以直接不回落
             //https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089
 
             return Err(anyhow!(

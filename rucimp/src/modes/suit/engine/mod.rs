@@ -165,7 +165,7 @@ impl SuitEngine {
         Ok(tasks)
     }
 
-    /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
+    /// 停止所有的 server, 但并不清空配置. 意味着可以stop后接着调用 run
     pub async fn stop(&self) {
         info!("stop called");
         let mut running = self.running.lock();
@@ -212,7 +212,7 @@ pub async fn listen_ser(
     }
 }
 
-/// blocking loop listen ins tcp。calls handle_conn_clonable inside the loop.
+/// blocking loop listen ins tcp. calls handle_conn_clonable inside the loop.
 async fn listen_tcp(
     ins: Arc<Box<dyn Suit>>,
     out_c: Arc<Box<dyn Suit>>,

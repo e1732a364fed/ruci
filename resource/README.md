@@ -13,5 +13,5 @@ inspect.lua 是一个lua模块, 来自
 
 可以帮助在 lua中打印一个值的内容
 
-在ruci-cmd中，下载的 Country.mmdb 和 wintun.dll 也会放在这里
+在ruci-cmd中, 下载的 Country.mmdb 和 wintun.dll 也会放在这里
 

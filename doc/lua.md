@@ -1,9 +1,9 @@
 
-config 是 提供给 rucimp 的项，静态示例如下
+config 是 提供给 rucimp 的项, 静态示例如下
 
 # 静态链
 
-无论lua 中代码怎么写，对于静态链, 程序只会在lua 代码中找一个全局变量 "config"
+无论lua 中代码怎么写, 对于静态链, 程序只会在lua 代码中找一个全局变量 "config"
 
 ```lua
 tls = { TLS = {  cert = "test.cert", key = "test.key" } }
@@ -60,21 +60,21 @@ config = {
 
 要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 mapper (映射)
 
-rule_route 和 tag_route 同时出现时，程序只会采用 rule_route. 因为 rule_route 的内容涵盖了 tag_route 
+rule_route 和 tag_route 同时出现时, 程序只会采用 rule_route. 因为 rule_route 的内容涵盖了 tag_route 
 
 rule_route 的 mode 可为 WhiteList 或 BlackList
 
-WhiteList意思是，给出的规则必须完全匹配，才算通过。 
-BlackList 意思是，给出的规则有任意一项匹配就算通过.
-一般BlackList 用于 路由到 BlackHole, 故名。
+WhiteList意思是, 给出的规则必须完全匹配, 才算通过.  
+BlackList 意思是, 给出的规则有任意一项匹配就算通过.
+一般BlackList 用于 路由到 BlackHole, 故名. 
 
 # 动态链
 
-演示动态链的基本用法：
+演示动态链的基本用法: 
 
 ## 有限(局部)动态链
 
-有限动态链中，程序一样会读取 config 变量，和 静态链一样。但它还要读一个 dyn_selectors 全局函数
+有限动态链中, 程序一样会读取 config 变量, 和 静态链一样. 但它还要读一个 dyn_selectors 全局函数
 
 dyn_selectors, 对每一个tag 的inbound/outbound 都要有返回一个selector
 
@@ -83,7 +83,7 @@ selector 接受 this_index 和 data 作为输入, 返回一个新的index, index
     selector 在 "有限状态机" 里对应的是 "状态转移函数"
 
 
-示例：
+示例: 
 
 ```lua
 
