@@ -1,3 +1,7 @@
+/*!
+Provides some facilities to configure sockopt using packege `socket2`.
+ */
+
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
     time::Duration,

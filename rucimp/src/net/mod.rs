@@ -1,3 +1,7 @@
+/*!
+Provides some extra network related modules.
+ */
+
 #[cfg(feature = "sockopt")]
 pub mod so2;
 

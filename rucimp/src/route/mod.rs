@@ -1,11 +1,5 @@
 /*!
-Defines some [`ruci::relay::route::OutSelector`]
-
-route 模块中的定义的是 比 ruci::route中的 InboundInfoOutSelector 更实用的 OutSelector
-
-加了很多范围匹配
-
-有 WhiteList 和 BlackList 两种模式
+Defines a struct [`RuleSetOutSelector`] that uses [`RuleSet`].
 
 */
 
@@ -31,6 +25,9 @@ use ruci::{
     user::*,
 };
 
+/// This is a [`ruci::relay::route::OutSelector`] implementation which is more useful than the weaker one [`ruci::relay::route::InboundInfoOutSelector`].
+///
+/// 加了很多范围匹配, 有 WhiteList 和 BlackList 两种模式
 #[derive(Debug)]
 pub struct RuleSetOutSelector {
     pub outbounds_rules_vec: Vec<RuleSet>, // rule -> out_tag
@@ -85,7 +82,9 @@ pub enum Mode {
     WhiteList,
 }
 
-/// RuleSet 是一项 多个子规则的 集合
+/// RuleSet is a set of multiple routing rules.
+///
+/// A rule is a condition on which a connection is allowed or disallowed.
 ///
 /// ta 前缀 意思是 target_addr,
 #[derive(Clone, Default)]

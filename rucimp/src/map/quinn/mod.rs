@@ -1,5 +1,5 @@
 /*!
-Defines Maps for quic protocol. uses quinn.
+Defines [`ruci::map::Map`]s for quic protocol using `quinn`.
 
  */
 

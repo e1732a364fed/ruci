@@ -1,3 +1,6 @@
+/*!
+Provides some helper functions to read a certain resource file or to wait the shutdown signal.
+*/
 use std::{fs, path::PathBuf};
 
 use anyhow::anyhow;
@@ -45,6 +48,7 @@ pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyho
     }
 }
 
+/// wait for the close signal, then log and return OK.
 pub async fn wait_close_sig() -> anyhow::Result<()> {
     let ctrl_c = async {
         signal::ctrl_c()
@@ -85,6 +89,7 @@ pub async fn wait_close_sig() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// wait for the close signal, then log and return OK.
 pub async fn wait_close_sig_with_closer(
     mut c: tokio::sync::mpsc::Receiver<()>,
 ) -> anyhow::Result<()> {

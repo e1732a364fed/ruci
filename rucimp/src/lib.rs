@@ -1,8 +1,5 @@
 /*!
-
-定义了 一些 【模式】, 一些 配置格式, 以及以这些配置格式运行相应 【模式】的代理的方法
-
-以及一些对 ruci 的扩展
+Defines some `mode`s and some extension maps and related facilities for ruci.
 
 */
 pub mod map;

@@ -1,3 +1,6 @@
+/*!
+Provides some `user` related helper functions.
+ */
 use ruci::{
     map::trojan,
     user::{PlainText, UserBox},
@@ -9,7 +12,7 @@ fn test() {
     str_to_userbox("plaintext:u0\n p2");
 }
 
-/// convert string with certain prefix to [`ruci::user::UserBox`]
+/// Convert string with certain prefix to [`ruci::user::UserBox`]
 ///
 /// support plaintext:xxx, trojan:xxx
 ///

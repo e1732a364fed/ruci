@@ -1,3 +1,8 @@
+/*!
+Defines [`ruci::map::Map`]s for TLS using `tokio_native_tls`.
+
+ */
+
 use std::{fmt, fs::File, io::Read};
 
 use anyhow::Context;

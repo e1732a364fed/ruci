@@ -1,7 +1,8 @@
 /*!
-from (MIT) https://github.com/lazytiger/trojan-rs/blob/master/src/sys/unix/mod.rs
+Provides functions to set somark and to set and parse tproxy information from the rawfd.
 
-并加以修改
+edited based on (MIT) https://github.com/lazytiger/trojan-rs/blob/master/src/sys/unix/mod.rs
+
 */
 
 use std::{

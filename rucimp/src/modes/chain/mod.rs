@@ -1,10 +1,10 @@
 /*!
-Defines chain config format.
+Defines the chain config format.
 
 StaticConfig can use lua or toml as config file format.
  */
 
 pub mod config;
 
-/// actual runnable engine for chain mode
+/// Defines the actual runnable engine for chain mode
 pub mod engine;
