@@ -336,7 +336,7 @@ pub trait MappersVec {
 /// 不使用累加器。
 ///
 /// 一种统计正确流量的办法是，将 Tcp连接包装一层专门记录流量的层，见 counter 模块
-pub struct InAccumulator<'a> {
+pub struct Accumulator<'a> {
     phantom: std::marker::PhantomData<&'a i32>,
 }
 
@@ -348,27 +348,21 @@ pub struct AccumulateResult {
     pub e: Option<io::Error>,
 }
 
-impl<'a> InAccumulator<'a> {
+impl<'a> Accumulator<'a> {
     ///  accumulate 是一个作用很强的函数
     /// extra_data_vec 若不为空，其须与 inadders提供同数量的元素, 否则
     /// 将panic
-    pub async fn accumulate<IterInMapperBoxRef, IterOptData>(
+    pub async fn accumulate<IterMapperBoxRef, IterOptData>(
         cid: u32,
-        initial_conn: Stream,
-        mut mappers: IterInMapperBoxRef,
+        initial_state: MapResult,
+        mut mappers: IterMapperBoxRef,
         mut hyperparameter_vec: Option<IterOptData>,
     ) -> AccumulateResult
     where
-        IterInMapperBoxRef: Iterator<Item = &'a MapperBox>,
+        IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
         IterOptData: Iterator<Item = OptData>,
     {
-        let mut last_r: MapResult = MapResult {
-            a: None,
-            b: None,
-            c: Some(initial_conn),
-            d: None,
-            e: None,
-        };
+        let mut last_r: MapResult = initial_state;
 
         let mut calculated_output_vec = Vec::new();
 
@@ -436,27 +430,28 @@ impl<'a> InAccumulator<'a> {
         };
     }
 }
-
+/*
 /// 类似 TcpInAccumulator , 这是一个作用很强的累加器，
 ///
 /// 一般 【中同层是用不到 target_addr的，只有最后一层会用到，即，
 ///只有代理层会用到目标地址】
 ///
 
+
 pub struct OutAccumulator<'a> {
     phantom: std::marker::PhantomData<&'a i32>,
 }
 
 impl<'a> OutAccumulator<'a> {
-    pub async fn accumulate<IterOutMapperBoxRef>(
+    pub async fn accumulate<IterMapperBoxRef>(
         cid: u32,
         base: Stream,
-        mut outmappers: IterOutMapperBoxRef,
+        mut outmappers: IterMapperBoxRef,
         target_addr: Option<net::Addr>,
         early_data: Option<BytesMut>,
-    ) -> io::Result<(Stream, Option<net::Addr>, Vec<OptData>)>
+    ) -> io::Result<AccumulateResult>
     where
-        IterOutMapperBoxRef: Iterator<Item = &'a MapperBox>,
+        IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
     {
         let mut extra_data_vec = Vec::new();
 
@@ -486,7 +481,7 @@ impl<'a> OutAccumulator<'a> {
                     )
                     .await;
 
-                extra_data_vec.push(None);
+                extra_data_vec.push(last_r.d);
 
                 loop {
                     let oadder = outmappers.next();
@@ -504,7 +499,7 @@ impl<'a> OutAccumulator<'a> {
                                     },
                                 )
                                 .await;
-                            extra_data_vec.push(None);
+                            extra_data_vec.push(last_r.d);
                         }
                         None => {
                             return Ok((last_r.c.unwrap(), last_r.a, extra_data_vec));
@@ -513,18 +508,16 @@ impl<'a> OutAccumulator<'a> {
                 }
             }
             None => {
-                if let Some(ed) = last_r.b {
-                    use tokio::io::AsyncWriteExt;
-                    match last_r.c.as_mut().unwrap() {
-                        Stream::TCP(c) => {
-                            c.write(&ed).await?;
-                        }
-                        Stream::UDP(_) => unimplemented!(),
-                        Stream::None => unimplemented!(),
-                    }
-                }
-                return Ok((last_r.c.unwrap(), last_r.a, extra_data_vec));
+                return Ok(AccumulateResult {
+                    a: last_r.a,
+                    b: last_r.b,
+                    c: last_r.c,
+                    d: extra_data_vec,
+                    e: None,
+                });
             }
         }
     }
 }
+
+*/

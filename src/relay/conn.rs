@@ -41,11 +41,23 @@ pub async fn handle_conn<'a>(
 
     let cid = state.cid;
 
+    type T = std::vec::IntoIter<OptData>;
+
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            type T = std::vec::IntoIter<OptData>;
-            InAccumulator::accumulate::<_, T>(cid, net::Stream::TCP(in_conn), ins_iterator, None)
-                .await
+            Accumulator::accumulate::<_, T>(
+                cid,
+                MapResult {
+                    a: None,
+                    b: None,
+                    c: Some(net::Stream::TCP(in_conn)),
+                    d: None,
+                    e: None,
+                },
+                ins_iterator,
+                None,
+            )
+            .await
         })
         .await;
 
@@ -115,12 +127,17 @@ pub async fn handle_conn<'a>(
     } else {
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                OutAccumulator::accumulate(
+                Accumulator::accumulate::<_, T>(
                     cid,
-                    out_stream,
+                    MapResult {
+                        a: Some(target_addr),
+                        b: listen_result.b.take(),
+                        c: Some(out_stream),
+                        d: None,
+                        e: None,
+                    },
                     outc_iterator,
-                    Some(target_addr),
-                    listen_result.b.take(),
+                    None,
                 )
                 .await
             })
@@ -133,18 +150,29 @@ pub async fn handle_conn<'a>(
             return Err(e.into());
         }
         let dial_result = dial_result.unwrap();
-        if let Err(e) = dial_result {
+        if let Some(e) = dial_result.e {
             warn!("{state}, dial out client failed, {e}",);
             //let _ = in_conn.shutdown();
             //let _ = out_stream.try_shutdown();
             return Err(e);
+        } else if let None = dial_result.c {
+            info!("{state}, dial out client stream got consumed ",);
+
+            return Ok(());
         }
 
-        let (out_stream, remain_target_addr, _extra_out_data_vec) = dial_result.unwrap();
-        if let Some(rta) = remain_target_addr {
+        //let (out_stream, remain_target_addr, _extra_out_data_vec) = dial_result;
+        if let Some(rta) = dial_result.a {
             warn!("{state}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
         }
-        cp_stream(cid, listen_result.c.take().unwrap(), out_stream, None, ti).await;
+        cp_stream(
+            cid,
+            listen_result.c.take().unwrap(),
+            dial_result.c.unwrap(),
+            None,
+            ti,
+        )
+        .await;
     }
 
     Ok(())
