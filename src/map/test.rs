@@ -1,4 +1,4 @@
-use crate::map::acc::MIterBox;
+use crate::map::acc2::MIterBox;
 use crate::map::math::{AddDirection, Adder};
 use crate::map::network::Direct;
 use crate::map::{MapParams, Mapper, CID};
@@ -159,9 +159,8 @@ fn test_clone_box_and_iter() {
 
     assert_ne!(ac.get_chain_tag(), a.get_chain_tag());
 
-    let v = vec![a, ac];
-    let v = Box::leak(Box::new(v));
-    let mut m: MIterBox = Box::new(v.iter());
+    let v = vec![Arc::new(a), Arc::new(ac)];
+    let mut m: MIterBox = Box::new(v.into_iter());
     println!("{:?}", &m);
 
     m.next();
@@ -181,19 +180,8 @@ fn test_miter_and_drop() {
 
     let b = Adder::default();
 
-    let v = vec![a, Box::new(b)];
-    let v = Box::leak(Box::new(v));
-    let m: MIterBox = Box::new(v.iter());
+    let v = vec![Arc::new(a), Arc::new(Box::new(b))];
+    let m: MIterBox = Box::new(v.into_iter());
     println!("{:?}", m);
     assert!(m.count() == 2);
-
-    //drop the leaked mem
-
-    unsafe {
-        let boxed = Box::from_raw(v as *const Vec<MapperBox> as *mut Vec<MapperBox>);
-        std::mem::drop(boxed);
-    }
-    //after dropping , we can't access it any more
-    // println!("{:?}", m);
-    // assert!(m.count() == 2);
 }

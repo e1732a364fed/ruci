@@ -1,5 +1,9 @@
 /*!
-* 与 acc 相同, 但是 MIter 中是 Arc<MapperBox> 不是 &'static MapperBox
+* 提供一些累加方法
+
+struct AccumulateResult
+
+* function accumulate , accumulate_from_start
 */
 use super::*;
 
