@@ -165,9 +165,9 @@ o2node-.->collector
 - [x] 日志 (env_logger)
 - [x] 流量记录 (两种实现，分别用于记录原始流量与实际流量)
 - [x] Direct,Blackhole, TcpListener, TcpDialer, Stdio
-- [x] tls, socks5(including UDP ASSOCIATE,USERPASS), http proxy, socks5http, trojan
-- [x] Adder (按字节加法器), Counter (层流量计)
-- [ ] unix domain socket
+- [x] Tls, Socks5(including UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
+- [x] Adder (按字节加法器), Counter (层流量计), Echo
+- [x] unix domain socket
 - [x] 路由
 - [ ] 回落
 - [ ] DNS
