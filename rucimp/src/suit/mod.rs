@@ -233,16 +233,6 @@ async fn listen_tcp(
     let insc = move || ins.clone();
     let outcc = move || outc.clone();
 
-    // todo: 目前 async_std 中没有很好的关闭 tcp_listener 的办法
-    // 所以这里也没有关闭方法。
-    // const LIMIT: usize = 100; //todo: 修改这里
-    // listener
-    //     .incoming()
-    //     .for_each_concurrent(
-    //         LIMIT,
-    //         |tcpstream: Result<TcpStream, std::io::Error>|,
-    //     )
-    //     .await;
     loop {
         let (tcpstream, raddr) = listener.accept().await?;
 
