@@ -84,7 +84,7 @@ impl<T: AsyncConn> AsyncRead for WsStreamToConnWrapper<T> {
                         buf.put_slice(&binary);
                         return Poll::Ready(Ok(()));
                     } else {
-                        self.r_buf = Some(Bytes::from(binary));
+                        self.r_buf = Some(binary);
                         continue;
                     }
                 }
@@ -110,12 +110,13 @@ impl<T: AsyncConn> AsyncWrite for WsStreamToConnWrapper<T> {
     ) -> Poll<Result<usize, io::Error>> {
         ready!(self.ws.as_mut().poll_ready(cx)).map_err(ws_err_to_io_err)?;
 
-        let message = if let Some(ref mut b) = self.w_buf.take() {
+        let message = if let Some(mut b) = self.w_buf.take() {
             b.extend_from_slice(buf);
 
-            Message::Binary((&**b).into())
+            Message::Binary(b.into())
         } else {
-            Message::Binary(buf.into())
+            let v: Vec<u8> = buf.to_vec();
+            Message::Binary(v.into())
         };
 
         self.ws

@@ -49,7 +49,7 @@ smallvec = { version = "1.13", features = ["serde"] }
 dyn-clone = "1"
 tar = "0.4"
 axum = { version = "0.8", features = ["ws"] }
-tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
+tower-http = { version = "0.6", features = ["fs", "trace", "cors"] }
 
 data-source = { version = "0.1.5", features = ["file_server"] }
 utoipa = { version = "5", features = ["axum_extras"] }
