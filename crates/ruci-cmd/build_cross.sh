@@ -27,6 +27,6 @@ cross build --target ${target} --features "${TARGET_FEATURES}" --release
 
 mkdir -p dist
 cd ../../target/${target}/release && cp ruci-cmd ../../../crates/ruci-cmd/dist/
-cp -r ../../resource dist/
+cd ../../../crates/ruci-cmd && cp -r ../../resource dist/
 
 cd dist && tar -cJf ruci_cmd_${version}_${target}.tar.xz *
