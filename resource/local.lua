@@ -74,7 +74,7 @@ config = {
 
 
 
----[=[
+--[=[
 
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
@@ -154,6 +154,24 @@ config = {
 }
 
 --]]
+
+
+---[[
+
+
+config = {
+
+-- fileio -> trojan_out
+
+    inbounds = { 
+        {chain = { { Fileio={ i= "local.lua", o = "testfile.txt" } }  } , tag = "listen1"} ,
+    },
+
+    outbounds = { { tag="dial1", chain = dial_trojan_chain } }
+}
+
+--]]
+
 
 
 

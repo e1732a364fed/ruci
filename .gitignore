@@ -3,3 +3,4 @@ target/
 ruci_config/
 *.mmdb
 .DS_Store
+testfile.txt
