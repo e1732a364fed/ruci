@@ -21,7 +21,7 @@ debug = false
 strip = true
 debug-assertions = false
 incremental = false
-#opt-level = 'z' # use this and upx will get the smallest binary
+#opt-level = 'z' # use this and upx will get the smallest binary # default is 3
 
 [dependencies]
 macro_map = { path = "crates/macro_map" }

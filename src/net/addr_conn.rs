@@ -60,32 +60,25 @@ pub struct AddrConn {
     pub w: Box<dyn AddrWriteTrait>,
 
     pub default_write_to: Option<Addr>,
-    // pub cached_name: String,
 }
 impl Display for AddrConn {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "AddrConn")
+        write!(f, "AddrConn{{ r: {}, w: {} }}", self.r, self.w)
     }
 }
-impl Debug for AddrConn {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AddrConn")
-            .field("default_write_to", &self.default_write_to)
-            // .field("cached_name", &self.cached_name)
-            .finish()
-    }
-}
+// impl Debug for AddrConn {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         f.debug_struct("AddrConn")
+//             .field("default_write_to", &self.default_write_to)
+//             .finish()
+//     }
+// }
 impl AddrConn {
     pub fn new(r: Box<dyn AddrReadTrait>, w: Box<dyn AddrWriteTrait>) -> Self {
-        // let cached_name = match r.name() == w.name() {
-        //     true => String::from(r.name()),
-        //     false => format!("({}_{})", r.name(), w.name()),
-        // };
         AddrConn {
             r,
             w,
             default_write_to: None,
-            // cached_name,
         }
     }
 }
@@ -99,8 +92,8 @@ impl AddrConn {
 ////////////////////////////////////////////////////////////////////
 */
 
-pub trait AddrReadTrait: AsyncReadAddr + Unpin + Send + Sync {}
-impl<T: AsyncReadAddr + Unpin + Send + Sync> AddrReadTrait for T {}
+pub trait AddrReadTrait: AsyncReadAddr + Display + Unpin + Send + Sync {}
+impl<T: AsyncReadAddr + Display + Unpin + Send + Sync> AddrReadTrait for T {}
 
 macro_rules! deref_async_read_addr {
     () => {
@@ -166,8 +159,8 @@ impl<T: AsyncReadAddr + Unpin + ?Sized> futures::Future for ReadAddrFuture<'_, T
 ////////////////////////////////////////////////////////////////////
 */
 
-pub trait AddrWriteTrait: AsyncWriteAddr + Unpin + Send + Sync {}
-impl<T: AsyncWriteAddr + Unpin + Send + Sync> AddrWriteTrait for T {}
+pub trait AddrWriteTrait: AsyncWriteAddr + Display + Unpin + Send + Sync {}
+impl<T: AsyncWriteAddr + Display + Unpin + Send + Sync> AddrWriteTrait for T {}
 
 macro_rules! deref_async_write_addr {
     () => {
@@ -424,24 +417,25 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
     // 实测 用一个loop + 小 buf 的实现 比用 两个 spawn + mpsc 快很多. 后者非常卡顿几乎不可用
     // buf size 的选择也很重要, 太大太小都卡
 
+    // 就是这个函数 是 AddrReadTrait 和 AddrWriteTrait 需要 Display, 因为需要打印debug信息
+
     let mut whole_write = 0;
     let mut buf = Box::new([0u8; MTU]);
 
     loop {
         tokio::select! {
-            r = rw_once(&mut r, &mut w, buf.as_mut()) =>{
-                match r {
+            result = rw_once(&mut r, &mut w, buf.as_mut()) =>{
+                match result {
                     Ok(n) => whole_write+=n,
                     Err(e) => {
                         match e.kind(){
                             io::ErrorKind::Other => {
-                                debug!(cid = %cid, "cp_addr got other e, will continue: {e}");
+                                debug!(cid = %cid,rname = %r, wname = %w, "cp_addr got other e, will continue: {e}");
                                 continue;
                             },
                             _ => {
                                 // udp timeout 时常 会发生, 因此不能认为是错误
-                                debug!(cid = %cid, "cp_addr got e, will break: {e}");
-                                // debug!(cid = %cid,name = name,"cp_addr got e, will break: {e}");
+                                debug!(cid = %cid,rname = %r, wname = %w,"cp_addr got e at rw_once, will break: {e}");
                             },
                         }
 
@@ -456,13 +450,13 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
                     tokio::time::sleep(CP_UDP_TIMEOUT).await
                 }
             } =>{
-                debug!(cid = %cid,timeout = ?CP_UDP_TIMEOUT,"cp_addr got timeout, will break");
+                debug!(cid = %cid,timeout = ?CP_UDP_TIMEOUT,rname = %r, wname = %w,"cp_addr got timeout, will break");
 
                 break;
             }
 
             _ = &mut shutdown_rx =>{
-                debug!(cid = %cid,"cp_addr got shutdown_rx, will break");
+                debug!(cid = %cid,rname = %r, wname = %w,"cp_addr got shutdown_rx, will break");
 
                 break;
             }
@@ -497,9 +491,6 @@ pub async fn cp(
     shutdown_in_rx: Option<tokio::sync::oneshot::Receiver<()>>,
     shutdown_out_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<u64, Error> {
-    // let n1 = ac_in.cached_name.clone() + " to " + &ac_out.cached_name;
-    // let n2 = ac_out.cached_name.clone() + " to " + &ac_in.cached_name;
-
     let (shut_tx1, shut_rx1) = oneshot::channel();
     let (shut_tx2, shut_rx2) = oneshot::channel();
 
@@ -507,7 +498,6 @@ pub async fn cp(
         cid.clone(),
         ac_in.r,
         ac_out.w,
-        // n1,
         no_timeout,
         shut_rx1,
         false,
@@ -517,7 +507,6 @@ pub async fn cp(
         cid.clone(),
         ac_out.r,
         ac_in.w,
-        // n2,
         no_timeout,
         shut_rx2,
         true,

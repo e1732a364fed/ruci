@@ -18,6 +18,18 @@ pub(super) struct RecordAddrConnW {
     pub(super) record: Recorder,
 }
 
+impl Display for RecordAddrConnR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "recorder_ac_r")
+    }
+}
+
+impl Display for RecordAddrConnW {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "recorder_ac_w")
+    }
+}
+
 impl AsyncReadAddr for RecordAddrConnR {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,

@@ -228,6 +228,12 @@ mod test {
         pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
     }
 
+    impl Display for MockStream {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "mock_stream")
+        }
+    }
+
     impl AsyncWriteAddr for MockStream {
         fn poll_write_addr(
             mut self: Pin<&mut Self>,
