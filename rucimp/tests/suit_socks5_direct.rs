@@ -19,7 +19,7 @@ use log::{info, warn};
 use parking_lot::Mutex;
 use ruci::map::socks5;
 use ruci::map::socks5::*;
-use ruci::net::TrafficRecorder;
+use ruci::net::GlobalTrafficRecorder;
 use ruci::{map::Mapper, net, user::PlainText};
 use rucimp::modes::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
@@ -328,7 +328,7 @@ async fn get_socks5_mapper(lsuit: &SuitStruct) -> socks5::server::Server {
 async fn lisen_ser() -> anyhow::Result<(
     impl Future<Output = ()>,
     Sender<()>,
-    Arc<TrafficRecorder>,
+    Arc<GlobalTrafficRecorder>,
     LDConfig,
 )> {
     let mut c = get_config();
@@ -341,7 +341,7 @@ async fn lisen_ser() -> anyhow::Result<(
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
 
-    let ti = net::TrafficRecorder::default();
+    let ti = net::GlobalTrafficRecorder::default();
     let arc_ti = Arc::new(ti);
     let arc_tic = arc_ti.clone();
 

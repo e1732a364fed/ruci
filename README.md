@@ -151,7 +151,7 @@ o2node-.->collector
 
 - [x] 链式架构 
 - [x] tcp, udp, unix domain socket, ip (tun)([tun example](rucimp/examples/readme.md#tun))
-- [x] 流量记录 (两种实现，分别用于记录原始流量(TrafficRecorder)与实际流量(Counter))
+- [x] 流量记录 (两种实现，分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter))
 - [x] Direct, Blackhole, Listener, Dialer, Stdio, Fileio
 - [x] Tls, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
 - [x] Adder (按字节加法器), Counter, Echo

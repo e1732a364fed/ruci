@@ -7,7 +7,7 @@ use log::{debug, info};
 use parking_lot::Mutex;
 use ruci::{
     map::*,
-    net::{Stream, TrafficRecorder},
+    net::{GlobalTrafficRecorder, Stream},
     relay::{self, route::*},
 };
 
@@ -20,7 +20,7 @@ use super::config;
 
 pub struct SuitEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
-    pub ti: Arc<TrafficRecorder>,
+    pub ti: Arc<GlobalTrafficRecorder>,
 
     servers: Vec<Arc<Box<dyn Suit>>>,
     clients: Vec<Arc<Box<dyn Suit>>>,
@@ -30,7 +30,7 @@ pub struct SuitEngine {
 impl SuitEngine {
     pub fn new() -> Self {
         SuitEngine {
-            ti: Arc::new(TrafficRecorder::default()),
+            ti: Arc::new(GlobalTrafficRecorder::default()),
             servers: Vec::new(),
             clients: Vec::new(),
             default_c: None,
@@ -206,7 +206,7 @@ impl SuitEngine {
 pub async fn listen_ser(
     ins: Arc<Box<dyn Suit>>,
     outc: Arc<Box<dyn Suit>>,
-    oti: Option<Arc<net::TrafficRecorder>>,
+    oti: Option<Arc<net::GlobalTrafficRecorder>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
     let n = ins.network();
@@ -231,7 +231,7 @@ pub async fn listen_ser(
 async fn listen_tcp(
     ins: Arc<Box<dyn Suit>>,
     outc: Arc<Box<dyn Suit>>,
-    oti: Option<Arc<net::TrafficRecorder>>,
+    oti: Option<Arc<net::GlobalTrafficRecorder>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
     let laddr = ins.addr_str().to_string();

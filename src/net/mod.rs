@@ -1,14 +1,14 @@
 /*!
  * module net defines some important parts for proxy.
  *
- * important parts: CID, Network, Addr, ConnTrait, Conn, Stream, TrafficRecorder,
+ * important parts: CID, Network, Addr, ConnTrait, Conn, Stream, GlobalTrafficRecorder,
  *  and a cp function for copying data between Conn
 
  enums:
 CID, Network ,Addr ,Stream
 
  structs:
- CIDChain, TrafficRecorder,
+ CIDChain, GlobalTrafficRecorder,
 
 trait: ConnTrait
 
@@ -112,7 +112,7 @@ impl CID {
         CID::Unit(li)
     }
 
-    pub fn new_by_opti(oti: Option<Arc<TrafficRecorder>>) -> CID {
+    pub fn new_by_opti(oti: Option<Arc<GlobalTrafficRecorder>>) -> CID {
         match oti {
             Some(ti) => CID::new_ordered(&ti.last_connection_id),
             None => CID::new(),
@@ -124,9 +124,9 @@ impl CID {
     ///
     /// ```
     /// use ruci::net::CID;
-    /// use ruci::net::TrafficRecorder;
+    /// use ruci::net::GlobalTrafficRecorder;
     /// use std::sync::Arc;
-    /// let oti = Some(Arc::new(TrafficRecorder::default()));
+    /// let oti = Some(Arc::new(GlobalTrafficRecorder::default()));
     ///
     /// let mut x = CID::new_by_opti(oti.clone());
     /// assert!(matches!(x, CID::Unit(1)));
@@ -139,7 +139,7 @@ impl CID {
     /// );
     ///
     /// ```
-    pub fn push(&mut self, oti: Option<Arc<TrafficRecorder>>) {
+    pub fn push(&mut self, oti: Option<Arc<GlobalTrafficRecorder>>) {
         let newidnum = match oti.as_ref() {
             Some(ti) => new_ordered_cid(&ti.last_connection_id),
             None => new_rand_cid(),
@@ -159,7 +159,7 @@ impl CID {
             CID::Chain(c) => c.id_list.push(newidnum),
         };
     }
-    pub fn clone_push(&self, oti: Option<Arc<TrafficRecorder>>) -> Self {
+    pub fn clone_push(&self, oti: Option<Arc<GlobalTrafficRecorder>>) -> Self {
         let mut cid = self.clone();
         cid.push(oti);
         cid
@@ -851,7 +851,7 @@ use self::addr_conn::AsyncWriteAddrExt;
 ///
 /// ## About Real Data Traffic and Original Traffic
 ///
-/// 注意, 考虑在两个累加结果的Conn之间拷贝, 若用 ruci::net::cp 拷贝并给出 TrafficRecorder,
+/// 注意, 考虑在两个累加结果的Conn之间拷贝, 若用 ruci::net::cp 拷贝并给出 GlobalTrafficRecorder,
 /// 则它统计出的流量为 未经加密的原始流量, 实际流量一般会比原始流量大。要想用
 /// ruci::net::cp 统计真实流量, 只能有一种情况, 那就是 tcp到tcp的直接拷贝,
 /// 不使用累加器。
@@ -859,7 +859,7 @@ use self::addr_conn::AsyncWriteAddrExt;
 /// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 counter 模块
 ///
 #[derive(Debug, Default)]
-pub struct TrafficRecorder {
+pub struct GlobalTrafficRecorder {
     pub last_connection_id: AtomicU32,
 
     pub alive_connection_count: AtomicU32,
@@ -868,6 +868,16 @@ pub struct TrafficRecorder {
     pub db: AtomicU64,
 
     /// total uploaded bytes
+    pub ub: AtomicU64,
+}
+
+/// 单条连接的 上传下载流量
+#[derive(Debug, Default)]
+pub struct ConnectionTraffic {
+    /// downloaded bytes since start
+    pub db: AtomicU64,
+
+    /// uploaded bytes
     pub ub: AtomicU64,
 }
 
@@ -897,7 +907,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
     c1: C1,
     c2: C2,
     cid: &CID,
-    opt: Option<Arc<TrafficRecorder>>,
+    gtr: Option<Arc<GlobalTrafficRecorder>>,
 ) -> Result<u64, Error> {
     if log_enabled!(log::Level::Debug) {
         debug!("cp start, {} c1: {}, c2: {}", cid, c1.name(), c2.name());
@@ -917,7 +927,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
 
     futures::select! {
         r1 = c1_to_c2 => {
-            if let Some(ref tr) = opt {
+            if let Some(ref tr) = gtr {
                 if let Ok(n) = r1 {
                     let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
 
@@ -931,7 +941,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                 // during the tests we can prove it's dropped.
 
                 let r2 = c2_to_c1.await;
-                if let Some(ref tr) = opt {
+                if let Some(ref tr) = gtr {
                     if let Ok(n) = r2 {
                         let tt = tr.db.fetch_add(n, Ordering::Relaxed);
 
@@ -950,7 +960,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
             r1
         },
         r2 = c2_to_c1 => {
-            if let Some(ref tr) = opt {
+            if let Some(ref tr) = gtr {
                 if let Ok(n) = r2 {
                     let tt = tr.db.fetch_add(n, Ordering::Relaxed);
 
@@ -960,7 +970,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                 }
 
                 let r1 = c1_to_c2.await;
-                if let Some(ref tr) = opt {
+                if let Some(ref tr) = gtr {
                     if let Ok(n) = r1 {
                         let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
 

@@ -31,7 +31,7 @@ pub async fn handle_in_stream(
     in_conn: Stream,
     ins_iterator: MIterBox,
     out_selector: Arc<Box<dyn OutSelector>>,
-    ti: Option<Arc<net::TrafficRecorder>>,
+    ti: Option<Arc<net::GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
@@ -72,7 +72,7 @@ pub async fn handle_in_accumulate_result(
 
     out_selector: Arc<Box<dyn OutSelector>>,
 
-    ti: Option<Arc<net::TrafficRecorder>>,
+    ti: Option<Arc<net::GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
     let cid = listen_result.id;
     let target_addr = match listen_result.a.take() {
@@ -190,7 +190,7 @@ pub fn cp_stream(
     s2: Stream,
     ed: Option<BytesMut>,            //earlydata
     first_target: Option<net::Addr>, // 用于 udp
-    ti: Option<Arc<net::TrafficRecorder>>,
+    ti: Option<Arc<net::GlobalTrafficRecorder>>,
 ) {
     match (s1, s2) {
         (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti),
@@ -215,7 +215,7 @@ pub async fn cp_udp(
     mut out_conn: net::addr_conn::AddrConn,
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
-    ti: Option<Arc<net::TrafficRecorder>>,
+    ti: Option<Arc<net::GlobalTrafficRecorder>>,
 ) {
     info!("{cid}, relay udp start",);
 

@@ -171,7 +171,7 @@ pub async fn accumulate_from_start(
     shutdown_rx: oneshot::Receiver<()>,
 
     mut inmappers: MIterBox,
-    oti: Option<Arc<TrafficRecorder>>,
+    oti: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
     let first = inmappers.next().expect("first inmapper");
     let first_r = first
@@ -236,7 +236,7 @@ struct InIterAccumulateForeverParams {
     rx: tokio::sync::mpsc::Receiver<MapResult>,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     miter: MIterBox,
-    oti: Option<Arc<TrafficRecorder>>,
+    oti: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,
@@ -289,7 +289,7 @@ struct SpawnAccForeverParams {
     new_stream_info: MapResult,
     miter: Box<dyn MIter>,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
-    oti: Option<Arc<TrafficRecorder>>,
+    oti: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,

@@ -1,11 +1,11 @@
 /*!
- * cp_conn 包含4种情况, 对应有无earlydata 和 有无 Arc<TrafficRecorder>
+ * cp_conn 包含4种情况, 对应有无earlydata 和 有无 Arc<GlobalTrafficRecorder>
  *
  * （这是将两个条件判断转成状态机的做法）
 */
 
 use crate::net::CID;
-use crate::net::{self, TrafficRecorder};
+use crate::net::{self, GlobalTrafficRecorder};
 use log::Level::Debug;
 use log::{debug, log_enabled, warn};
 use scopeguard::defer;
@@ -19,7 +19,7 @@ pub fn cp_conn(
     in_conn: net::Conn,
     out_conn: net::Conn,
     pre_read_data: Option<bytes::BytesMut>,
-    ti: Option<Arc<net::TrafficRecorder>>,
+    ti: Option<Arc<net::GlobalTrafficRecorder>>,
 ) {
     match (pre_read_data, ti) {
         (None, None) => tokio::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
@@ -36,7 +36,12 @@ async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
     debug!("{cid}, relay end",);
 }
 
-async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TrafficRecorder>) {
+async fn ti_no_ed(
+    cid: CID,
+    in_conn: net::Conn,
+    out_conn: net::Conn,
+    ti: Arc<GlobalTrafficRecorder>,
+) {
     debug!("{cid}, relay start");
 
     ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
@@ -90,7 +95,7 @@ async fn ti_ed(
     cid: CID,
     mut in_conn: net::Conn,
     mut out_conn: net::Conn,
-    ti: Arc<TrafficRecorder>,
+    ti: Arc<GlobalTrafficRecorder>,
     earlydata: bytes::BytesMut,
 ) {
     if log_enabled!(Debug) {
