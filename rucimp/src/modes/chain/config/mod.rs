@@ -255,6 +255,40 @@ impl ToMapBox for BindDialerConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct StackConfig {
+    bind_addr: Option<String>,
+
+    dns_client: Option<dns::ClientConfig>,
+
+    #[cfg(feature = "tun")]
+    in_auto_route: Option<ruci::net::tun::route::InAutoRouteParams>,
+
+    ext: Option<Ext>,
+}
+impl ToMapBox for StackConfig {
+    fn to_map_box(&self) -> MapBox {
+        let opt_bind_a = self
+            .bind_addr
+            .clone()
+            .map(|a| net::Addr::from_name_network_addr_url(&a).expect("network_ip_addr is valid"));
+
+        let d = crate::map::tcp_ip_stack_lwip::Stack {
+            addr: opt_bind_a.unwrap(),
+            in_auto_route: self.in_auto_route.clone(),
+            auto_route_state: Default::default(),
+            ext_fields: self.ext.as_ref().map(|e| e.to_ext_fields()),
+        };
+
+        // d.opt_dns_client = self
+        //     .dns_client
+        //     .as_ref()
+        //     .map(|dc| Arc::new(dns::AsyncClient::new(dc.clone())));
+
+        Box::new(d)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct StdioConfig {
     pub write_mode: Option<ruci::map::stdio::WriteMode>,
     pub ext: Option<Ext>,
@@ -331,6 +365,8 @@ pub enum InMapConfig {
     /// tcp/ip stack
     #[cfg(feature = "smoltcp")]
     Stack,
+
+    StackLwip(StackConfig),
 
     #[cfg(feature = "steganography")]
     SPE1 {
@@ -630,9 +666,10 @@ impl ToMapBox for InMapConfig {
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
                     }),
-                    Err(_) => todo!(),
+                    Err(e) => panic!("get lua file content err {e}"),
                 }
             }
+            InMapConfig::StackLwip(stack_config) => stack_config.to_map_box(),
         }
     }
 }

@@ -8,25 +8,38 @@ It also has a submodule 'route' for system level auto routing for the tun device
 pub mod route;
 
 use anyhow::Context;
+use futures::stream::{SplitSink, SplitStream};
+use tokio_util::codec::Framed;
 use tracing::debug;
 
-use tun2::{AsyncDevice, IntoAddress};
-
-use crate::Name;
+use tun2::{AsyncDevice, IntoAddress, TunPacketCodec};
 
 use super::Conn;
 
-impl Name for AsyncDevice {
-    fn name(&self) -> &str {
-        "tun_conn"
-    }
-}
-
-pub async fn create_bind<A1, A2>(
+pub async fn create_bind_sink_stream<A1, A2>(
     tun_name: Option<String>,
     bind_addr: A1,
     netmask: A2,
-) -> anyhow::Result<Conn>
+) -> anyhow::Result<(
+    SplitSink<Framed<AsyncDevice, TunPacketCodec>, Vec<u8>>,
+    SplitStream<Framed<AsyncDevice, TunPacketCodec>>,
+)>
+where
+    A1: IntoAddress,
+    A2: IntoAddress,
+{
+    let device = create_bind_device(tun_name, bind_addr, netmask).await?;
+    let stream = device.into_framed();
+
+    let (writer, reader) = futures::StreamExt::split(stream);
+    Ok((writer, reader))
+}
+
+pub async fn create_bind_device<A1, A2>(
+    tun_name: Option<String>,
+    bind_addr: A1,
+    netmask: A2,
+) -> anyhow::Result<Box<AsyncDevice>>
 where
     A1: IntoAddress,
     A2: IntoAddress,
@@ -46,7 +59,7 @@ where
         config.ensure_root_privileges(true);
     });
 
-    let dev = tun2::create_as_async(&config).context("create tun device failed")?;
+    let device = tun2::create_as_async(&config).context("create tun device failed")?;
 
     debug!(
         tun_name = tun_name,
@@ -54,7 +67,21 @@ where
         "tun: create_bind succeed"
     );
 
-    Ok(Box::new(dev))
+    Ok(Box::new(device))
+}
+
+pub async fn create_bind<A1, A2>(
+    tun_name: Option<String>,
+    bind_addr: A1,
+    netmask: A2,
+) -> anyhow::Result<Conn>
+where
+    A1: IntoAddress,
+    A2: IntoAddress,
+{
+    let device = create_bind_device(tun_name, bind_addr, netmask).await?;
+
+    Ok(device)
 }
 
 #[cfg(test)]

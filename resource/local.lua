@@ -844,7 +844,44 @@ local config_22_lua_example2 = {
 }
 
 
-Config = config_20_spe1
+---[[
+local config_23_tcp_ip_stack_lwip = {
+
+    inbounds = {
+        {
+            chain = { {
+                StackLwip = {
+                    bind_addr = "ip://10.0.0.1:24#utun321",
+
+                    in_auto_route = {
+                        tun_dev_name = "utun321",
+                        tun_gateway = "10.0.0.1",
+                        router_ip = "192.168.0.1",
+                        original_dev_name = "en0",
+                        dns_list = { "114.114.114.114" }
+                    }
+                }
+            } },
+            tag = "listen1"
+        },
+    },
+
+    outbounds = { {
+        tag = "dial1",
+        chain = { {
+            OptDialer = {
+                dial_addr = "tcp://192.168.0.10:10801",
+                sockopt = {
+                    bind_to_device = "en0"
+                }
+            }
+        }, tlsout, trojan_out }
+    } }
+}
+--]]
+
+
+Config = config_23_tcp_ip_stack_lwip
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)
