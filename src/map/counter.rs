@@ -27,7 +27,7 @@ pub struct CounterConn {
 
 impl Name for CounterConn {
     fn name(&self) -> &str {
-        "counter conn"
+        "counter"
     }
 }
 
@@ -101,7 +101,7 @@ impl AsyncWrite for CounterConn {
     }
 }
 
-/// 通过 add 给 base 添加 上传和下载的流量计数
+/// 通过 maps 给 base 添加 上传和下载的流量计数
 #[derive(Debug)]
 pub struct Counter;
 
@@ -113,7 +113,7 @@ impl Name for Counter {
 
 #[async_trait]
 impl Mapper for Counter {
-    /// 生成的 AddResult 中的 d 为  Box<CounterConn>
+    /// 生成的 MapResult 中的 d 为  Box<CounterData>
     ///
     /// 不分 behavior
     async fn maps(
