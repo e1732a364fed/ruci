@@ -60,14 +60,14 @@ jobs:
           fi
 
           cd crates/ruci-cmd
-          ./build_cross.sh -v=${{ inputs.tag || github.ref_name }} -t=${{ matrix.target }} $compile_features
+          ./build_cross.sh -v ${{ inputs.tag || github.ref_name }} -t ${{ matrix.target }} $compile_features
 
       - name: Upload Github Assets
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: rucimp/dist/*.tar.xz
+          files: crates/ruci-cmd/dist/*.tar.xz
           tag_name: ${{ inputs.tag || github.ref_name }}    
 
 
