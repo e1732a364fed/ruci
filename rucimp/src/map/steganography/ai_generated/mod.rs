@@ -21,6 +21,71 @@ mod tests;
 use conn::AIConn;
 use tracing::debug;
 
+/// 写序列状态
+#[derive(Debug)]
+pub struct WriteStep {
+    pub is_write: bool, // true: 执行 w* 操作, false: 执行 r* 操作
+    pub index: usize,   // 对应 write_packets 或 read_lengths 的索引
+}
+
+#[derive(Debug)]
+pub struct WriteSequence {
+    pub write_packets: Vec<Vec<u8>>, // 改为 Vec
+    pub read_lengths: Vec<usize>,    // 改为 Vec
+    pub current_step: WriteStep,
+}
+
+/// 读序列状态
+#[derive(Debug)]
+pub struct ReadStep {
+    pub is_read: bool, // true: 执行 r* 操作, false: 执行 w* 操作
+    pub index: usize,  // 对应 read_packets 或 write_packets 的索引
+}
+
+#[derive(Debug)]
+pub struct ReadSequence {
+    pub write_packets: Vec<Vec<u8>>, // 改为 Vec
+    pub read_lengths: Vec<usize>,    // 已经是 Vec
+    pub read_packets: Vec<Vec<u8>>,  // 保持不变
+    pub current_step: ReadStep,
+}
+
+impl ReadSequence {
+    fn advance_to_next_write(&mut self) {
+        self.current_step.is_read = false;
+    }
+
+    fn advance_to_next_read(&mut self) {
+        self.current_step.is_read = true;
+        self.current_step.index += 1;
+    }
+}
+
+impl WriteSequence {
+    fn advance_to_next_read(&mut self) {
+        self.current_step.is_write = false;
+    }
+
+    fn advance_to_next_write(&mut self) {
+        self.current_step.is_write = true;
+        self.current_step.index += 1;
+    }
+}
+
+/// AI处理结果
+#[derive(Debug)]
+pub enum AIResult {
+    Write(WriteSequence),
+    Read {
+        sequence: ReadSequence,
+        addr: Option<net::Addr>,
+    },
+}
+
+fn no_proxy_client() -> reqwest::Client {
+    reqwest::ClientBuilder::new().no_proxy().build().unwrap()
+}
+
 /// AI生成的协议的参数，包含算法描述和OpenAI API配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AIProtocolConfig {
@@ -482,69 +547,4 @@ impl Map for AIGeneratedMap {
             }
         }
     }
-}
-
-/// 写序列状态
-#[derive(Debug)]
-pub struct WriteStep {
-    pub is_write: bool, // true: 执行 w* 操作, false: 执行 r* 操作
-    pub index: usize,   // 对应 write_packets 或 read_lengths 的索引
-}
-
-#[derive(Debug)]
-pub struct WriteSequence {
-    pub write_packets: Vec<Vec<u8>>, // 改为 Vec
-    pub read_lengths: Vec<usize>,    // 改为 Vec
-    pub current_step: WriteStep,
-}
-
-/// 读序列状态
-#[derive(Debug)]
-pub struct ReadStep {
-    pub is_read: bool, // true: 执行 r* 操作, false: 执行 w* 操作
-    pub index: usize,  // 对应 read_packets 或 write_packets 的索引
-}
-
-#[derive(Debug)]
-pub struct ReadSequence {
-    pub write_packets: Vec<Vec<u8>>, // 改为 Vec
-    pub read_lengths: Vec<usize>,    // 已经是 Vec
-    pub read_packets: Vec<Vec<u8>>,  // 保持不变
-    pub current_step: ReadStep,
-}
-
-impl ReadSequence {
-    fn advance_to_next_write(&mut self) {
-        self.current_step.is_read = false;
-    }
-
-    fn advance_to_next_read(&mut self) {
-        self.current_step.is_read = true;
-        self.current_step.index += 1;
-    }
-}
-
-impl WriteSequence {
-    fn advance_to_next_read(&mut self) {
-        self.current_step.is_write = false;
-    }
-
-    fn advance_to_next_write(&mut self) {
-        self.current_step.is_write = true;
-        self.current_step.index += 1;
-    }
-}
-
-/// AI处理结果
-#[derive(Debug)]
-pub enum AIResult {
-    Write(WriteSequence),
-    Read {
-        sequence: ReadSequence,
-        addr: Option<net::Addr>,
-    },
-}
-
-pub fn no_proxy_client() -> reqwest::Client {
-    reqwest::ClientBuilder::new().no_proxy().build().unwrap()
 }

@@ -11,7 +11,7 @@ fn init_tracing() {
     let _subscriber = tracing_subscriber::FmtSubscriber::builder()
         .with_max_level(tracing::Level::DEBUG)
         .with_test_writer()
-        .init();
+        .try_init();
 }
 
 #[tokio::test]

@@ -15,7 +15,6 @@ use self::map::helpers::MAX_LEN_SOCKS5_BYTES;
 use super::*;
 use crate::{
     net::{
-        self,
         addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr},
         *,
     },
@@ -96,6 +95,7 @@ impl AsyncReadAddr for Conn {
                 if !eq_socket_addr(&so, &self.peer_soa) {
                     // 读到不来自peer的信息时不报错, 直接舍弃
                     info!("socks5 udp got msg not from peer, will ignore discard it. is: {:?}, should be: {:?}", so, self.peer_soa);
+                    cx.waker().wake_by_ref();
                     return Poll::Pending;
                 }
 
@@ -103,8 +103,8 @@ impl AsyncReadAddr for Conn {
 
                 let r = decode_read(bs);
 
-                match r {
-                    Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
+                Poll::Ready(match r {
+                    Err(e) => Err(io::Error::other(e.to_string())),
 
                     Ok((actual_buf, a)) => {
                         let w_len = min(buf.len(), actual_buf.len());
@@ -118,9 +118,9 @@ impl AsyncReadAddr for Conn {
                         //     debug!("socks5 udp got msg,{w_len} {soa}, {:?}", &buf[..w_len])
                         // }
 
-                        Poll::Ready(Ok::<(usize, net::Addr), io::Error>((w_len, a)))
+                        Ok((w_len, a))
                     }
-                }
+                })
             }
         }
     }
