@@ -35,22 +35,21 @@ use crate::map::socks5::{
     self, ATYP_DOMAIN, ATYP_IP4, ATYP_IP6, AUTH_NONE, AUTH_PASSWORD, CMD_CONNECT, VERSION5,
 };
 
-async fn new_3user_socks5_inadder() -> Server {
+fn new_3user_socks5_inadder() -> Server {
     Server::new(Config {
         support_udp: false,
         user_whitespace_pass: Some("u0 p0".to_string()),
         user_passes: Some(vec![PlainText::new("u1".to_string(), "p1".to_string())]),
     })
-    .await
 }
 
-async fn new_noauth_socks5_inadder() -> Server {
-    Server::new(Config::default()).await
+fn new_noauth_socks5_inadder() -> Server {
+    Server::new(Config::default())
 }
 
 #[tokio::test]
 async fn auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
-    let a = new_3user_socks5_inadder().await;
+    let a = new_3user_socks5_inadder();
 
     assert!(
         a.um.as_ref()
@@ -141,7 +140,7 @@ async fn auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
 /// 从earlydata中读
 #[tokio::test]
 async fn auth_tcp_handshake_in_mem_earlydata() -> anyhow::Result<()> {
-    let a = new_3user_socks5_inadder().await;
+    let a = new_3user_socks5_inadder();
 
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();
@@ -222,7 +221,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> anyhow::Result<()> {
 async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
     let ps = net::gen_random_higher_port();
 
-    let a = new_3user_socks5_inadder().await;
+    let a = new_3user_socks5_inadder();
     let listen_host = "127.0.0.1".to_string();
     let listen_port = ps;
 
@@ -354,7 +353,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
 async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::Result<()> {
     let ps = net::gen_random_higher_port();
 
-    let a = new_3user_socks5_inadder().await;
+    let a = new_3user_socks5_inadder();
 
     let listen_host = "127.0.0.1".to_string();
     let listen_port = ps;
@@ -464,7 +463,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
 async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::Result<()> {
     let ps = net::gen_random_higher_port();
 
-    let a = new_3user_socks5_inadder().await;
+    let a = new_3user_socks5_inadder();
 
     let listen_host = "127.0.0.1".to_string();
     let listen_port = ps;
@@ -570,7 +569,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::
 
 #[tokio::test]
 async fn no_auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
-    let a = new_noauth_socks5_inadder().await;
+    let a = new_noauth_socks5_inadder();
 
     //因为我们无法再从 client_tcps 中取出数据了, 因为它放到Box后就属于Addr了
     // 所以要用Arc<Mutex<>> 结构
@@ -641,7 +640,7 @@ async fn no_auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
 /// 在握手数据后连上一个客户数据hello一起发送(earlydata)
 #[tokio::test]
 async fn no_auth_tcp_handshake_in_mem_stick_hello() -> anyhow::Result<()> {
-    let a = new_noauth_socks5_inadder().await;
+    let a = new_noauth_socks5_inadder();
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();
 
@@ -713,7 +712,7 @@ async fn wrong0_no_auth_tcp_handshake_in_mem() {
     //在下面客户端write的数据中, version不为5, server理应返回error
     std::env::set_var("RUST_BACKTRACE", "0");
 
-    let a = new_noauth_socks5_inadder().await;
+    let a = new_noauth_socks5_inadder();
     const WRONG_V: u8 = 8;
     let name = "www.b";
     let client_tcps = MockTcpStream {
@@ -760,7 +759,7 @@ async fn wrong1_no_auth_tcp_handshake_in_mem() {
     //在下面客户端write的数据中, 没有给出port, 服务端理应返回error
     std::env::set_var("RUST_BACKTRACE", "0");
 
-    let a = new_noauth_socks5_inadder().await;
+    let a = new_noauth_socks5_inadder();
 
     let name = "www.b";
     let client_tcps = MockTcpStream {
@@ -825,7 +824,7 @@ async fn random_bytes_request_no_auth_tcp_handshake_in_mem() -> anyhow::Result<(
     //在下面客户端write的数据中, 使用随机字节发送给服务端, 服务端理应返回error
     //不过第一位设为5, 因为我们已知第一位不为5时肯定报错了(在 wrong0_no_auth_tcp_handshake_in_mem 中测了)
 
-    let a = new_noauth_socks5_inadder().await;
+    let a = new_noauth_socks5_inadder();
 
     use rand::rngs::SmallRng;
     use rand::{Rng, SeedableRng};
@@ -881,7 +880,7 @@ async fn random_bytes_request_auth_userpass_tcp_handshake_in_mem() -> anyhow::Re
     //在下面客户端write的数据中, 使用随机字节发送给服务端, 服务端理应返回error
     //不过第一位设为5, 因为我们已知第一位不为5时肯定报错了
 
-    let a = new_3user_socks5_inadder().await;
+    let a = new_3user_socks5_inadder();
 
     use rand::rngs::SmallRng;
     use rand::{Rng, SeedableRng};

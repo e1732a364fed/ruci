@@ -84,6 +84,12 @@ impl DynIterator for DynMIterWrapper {
 #[derive(Debug, Clone)]
 pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapBox>>);
 
+impl From<Vec<Arc<MapBox>>> for DynVecIterWrapper {
+    fn from(v: Vec<Arc<MapBox>>) -> Self {
+        Self(v.into_iter())
+    }
+}
+
 impl DynIterator for DynVecIterWrapper {
     fn next_with_data(&mut self, _cid: CID, _data: OVOD) -> Option<Arc<MapBox>> {
         self.0.next()

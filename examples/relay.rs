@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use ruci::{
     map::{
+        fold::DynVecIterWrapper,
         socks5http::{self, Config},
-        MapBox,
     },
     relay::{route::FixedOutSelector, HandleInStreamOptions},
 };
@@ -19,21 +19,13 @@ async fn main() -> anyhow::Result<()> {
 
     let stream = ruci::net::Stream::c(Box::new(conn));
 
-    let socks5hmap = socks5http::Server::new(Config::default()).await;
+    let socks5box = socks5http::Server::boxed(Config::default());
 
-    let socks5box: MapBox = Box::new(socks5hmap);
+    let inbounds: DynVecIterWrapper = vec![Arc::new(socks5box)].into();
 
-    let vec = vec![Arc::new(socks5box)];
+    let direct = ruci::map::network::Direct::boxed();
 
-    let inbounds = ruci::map::fold::DynVecIterWrapper(vec.into_iter());
-
-    let direct = ruci::map::network::Direct::default();
-
-    let direct_box: MapBox = Box::new(direct);
-
-    let outbounds_vec = vec![Arc::new(direct_box)];
-
-    let outbounds = ruci::map::fold::DynVecIterWrapper(outbounds_vec.into_iter());
+    let outbounds: DynVecIterWrapper = vec![Arc::new(direct)].into();
 
     ruci::relay::handle_in_stream(
         stream,

@@ -6,7 +6,6 @@ It will try socks5 first . If not socks5, fallbacks to http proxy
 
 use std::fmt::Display;
 
-use futures::executor::block_on;
 use macro_map::*;
 use map::Stream;
 use tracing::debug;
@@ -25,7 +24,7 @@ pub struct Config {
 
 impl From<Config> for MapBox {
     fn from(value: Config) -> Self {
-        let a = block_on(Server::new(value.clone()));
+        let a = Server::new(value.clone());
         Box::new(a)
     }
 }
@@ -44,7 +43,11 @@ impl Display for Server {
 }
 
 impl Server {
-    pub async fn new(option: Config) -> Self {
+    pub fn boxed(option: Config) -> MapBox {
+        Box::new(Self::new(option))
+    }
+
+    pub fn new(option: Config) -> Self {
         let mut um = UsersMap::default();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {

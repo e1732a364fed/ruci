@@ -12,7 +12,6 @@ use std::fmt::Display;
 use anyhow::{anyhow, bail};
 use base64::prelude::*;
 use bytes::BytesMut;
-use futures::executor::block_on;
 use macro_map::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
@@ -53,13 +52,13 @@ pub struct ServerConfig {
 
 impl From<ServerConfig> for MapBox {
     fn from(value: ServerConfig) -> Self {
-        let a = block_on(Server::new(value.clone()));
+        let a = Server::new(value.clone());
         Box::new(a)
     }
 }
 
 impl Server {
-    pub async fn new(option: ServerConfig) -> Self {
+    pub fn new(option: ServerConfig) -> Self {
         let mut um = UsersMap::default();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {

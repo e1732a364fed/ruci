@@ -14,7 +14,6 @@ use crate::{
 };
 use anyhow::Context;
 use bytes::{Buf, BytesMut};
-use futures::executor::block_on;
 use macro_map::*;
 use map::Stream;
 use std::{
@@ -37,7 +36,7 @@ pub struct Config {
 
 impl From<Config> for MapBox {
     fn from(value: Config) -> Self {
-        let a = block_on(Server::new(value.clone()));
+        let a = Server::new(value.clone());
         Box::new(a)
     }
 }
@@ -65,7 +64,7 @@ impl Display for Server {
 }
 
 impl Server {
-    pub async fn new(option: Config) -> Self {
+    pub fn new(option: Config) -> Self {
         let mut um = UsersMap::default();
 
         if let Some(user_whitespace_pass) = option.user_whitespace_pass {

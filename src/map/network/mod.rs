@@ -59,6 +59,12 @@ impl Display for Direct {
     }
 }
 
+impl Direct {
+    pub fn boxed() -> MapBox {
+        Box::<Direct>::default()
+    }
+}
+
 #[async_trait]
 impl Map for Direct {
     /// dial params.a.
