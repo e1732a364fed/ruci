@@ -478,7 +478,7 @@ impl Stream {
         if let Stream::UDP(t) = self {
             return Ok(t);
         }
-        Err(io::Error::other("not tcp"))
+        Err(io::Error::other("not udp"))
     }
 }
 
