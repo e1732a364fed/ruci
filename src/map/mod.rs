@@ -296,7 +296,7 @@ pub struct MapperExtFields {
 ///
 /// or #[derive(NoMapperExt)]
 /// ```
-/// to auto impl MapperExt
+/// to auto impl MapperExt that doesn't do anything.
 ///
 /// See crates/macro_mapper.
 ///
