@@ -8,7 +8,7 @@ use super::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct ServerOptions {
-    pub addr: String,
+    // pub addr: String,
     pub cert: PathBuf,
     pub key: PathBuf,
     pub alpn: Option<Vec<String>>,

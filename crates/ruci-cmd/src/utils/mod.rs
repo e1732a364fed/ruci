@@ -44,7 +44,7 @@ pub enum Commands {
     ///
     /// default listen is "0.0.0.0:18143"
     #[cfg(feature = "file_server")]
-    ServeFolder { addr: Option<String> }, // Test,
+    ServeFolder { addr: Option<String> },
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -92,7 +92,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             folder_serve::serve_static(addr).await;
 
             let _ = rucimp::utils::wait_close_sig().await;
-        } // Commands::Test => {}
+        }
     };
     Ok(())
 }

@@ -114,7 +114,7 @@ mod test {
         path2.push("test.key");
 
         let r = load_ser_config(&ServerOptions {
-            addr: "todo!()".to_string(),
+            // addr: "addr".to_string(),
             cert: path,
             key: path2,
             ..Default::default()

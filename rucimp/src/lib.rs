@@ -12,6 +12,7 @@ pub mod utils;
 #[cfg(feature = "route")]
 pub mod route;
 
+#[cfg(feature = "toml")]
 pub use toml;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

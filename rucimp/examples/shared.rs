@@ -19,7 +19,7 @@ pub fn print_env_version_and_init_log(name: &str) {
     let l = env::var(RL).unwrap_or_else(|_| "info".to_string());
 
     if l == "warn" {
-        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";rucimp \n shell like so: RUST_LOG=info ./rucimp")
+        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";.\\rucimp \n shell like so: RUST_LOG=info ./rucimp")
     }
 
     set_var(RL, l);

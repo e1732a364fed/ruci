@@ -495,7 +495,6 @@ impl ToMapBox for InMapConfig {
             InMapConfig::Recorder(c) => Box::new(RecorderMap::new(c.clone())),
 
             InMapConfig::TLS(c) => tls::server::ServerOptions {
-                addr: "todo!()".to_string(),
                 cert: PathBuf::from(c.cert.clone()),
                 key: PathBuf::from(c.key.clone()),
                 alpn: c.alpn.clone(),

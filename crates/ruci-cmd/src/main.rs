@@ -108,9 +108,8 @@ enum SubCommands {
         #[command(subcommand)]
         command: Option<utils::Commands>,
     },
-
-    /// Configure system route table
-    Route,
+    // Configure system route table
+    // Route,
 }
 
 #[tokio::main]
@@ -152,8 +151,7 @@ async fn main() -> anyhow::Result<()> {
             #[cfg(feature = "utils")]
             SubCommands::Utils { command } => {
                 utils::deal_cmds(command).await?;
-            }
-            SubCommands::Route => todo!(),
+            } // SubCommands::Route => todo!(),
         },
     }
     Ok(())
@@ -187,7 +185,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     });
 
     if not_given_flag && not_given_env {
-        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";ruci-cmd \n shell like so: RUST_LOG=info ./ruci-cmd\n");
+        println!("Set env var RUST_LOG to info or debug to see more log.\n powershell like so: $env:RUST_LOG=\"info\";.\\ruci-cmd \n shell like so: RUST_LOG=info ./ruci-cmd\n");
 
         println!("You can also set -l or --log-level flag, but RUST_LOG has the highest priority\n")
     }

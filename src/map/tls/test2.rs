@@ -70,7 +70,7 @@ async fn listen_future(
     path2.push("test.key");
 
     let a = super::server::Server::new(super::server::ServerOptions {
-        addr: "todo!()".to_string(),
+        // addr: "addr".to_string(),
         cert: path,
         key: path2,
         ..Default::default()
