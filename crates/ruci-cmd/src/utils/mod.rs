@@ -30,6 +30,9 @@ pub enum Commands {
 
     /// generate self signed root certificate and key
     GenCer { subject_alt_names: Vec<String> },
+
+    //CA证书一定是自签名的
+    /// generate CA certificate and key
     GenCA {
         organization_name: Option<String>,
 

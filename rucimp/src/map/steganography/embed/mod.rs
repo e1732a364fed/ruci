@@ -79,8 +79,10 @@ impl Map for Embedder {
         let file = self.file.clone();
         let invert = matches!(behavior, ProxyBehavior::DECODE);
 
-        let mut map_result = MapResult::default();
-        map_result.a = params.a;
+        let mut map_result = ruci::map::MapResult {
+            a: params.a,
+            ..Default::default()
+        };
 
         match behavior {
             ProxyBehavior::UNSPECIFIED => panic!("can't happen "),
@@ -121,18 +123,19 @@ impl Map for Embedder {
         tokio::spawn(async move {
             let (mut r, mut w) = tokio::io::split(c);
 
-            play_file(
+            let mut player = Player {
                 file,
-                &mut r,
-                &mut w,
-                &mut write_rx,
+                reader: &mut r,
+                writer: &mut w,
+                write_rx: &mut write_rx,
                 write_info_tx,
-                ready_rx,
+                write_info_ready_rx: ready_rx,
                 read_tx,
                 invert,
-                shut_atom,
-            )
-            .await
+                shutdown_atom: shut_atom.clone(),
+            };
+
+            player.play_file().await;
         });
 
         map_result.c = ruci::net::Stream::Conn(Box::new(conn));
@@ -310,7 +313,7 @@ impl AsyncWrite for EmbedConn {
         let r = self.write_info_rx.poll_recv(cx);
 
         match ready!(r) {
-            None => return Poll::Ready(Err(io::Error::other("write_info_rx got None"))),
+            None => Poll::Ready(Err(io::Error::other("write_info_rx got None"))),
 
             Some(length) => {
                 let r2 = self.ready_tx.send(false);
@@ -326,22 +329,20 @@ impl AsyncWrite for EmbedConn {
 
                         debug!("poll_write Ready {}", buf.len());
 
-                        let written_len;
-
                         let left_space = length - 3;
 
                         bs_to_send.put_u16(buf.len().min(left_space) as u16);
 
-                        if buf.len() <= left_space {
+                        let written_len = if buf.len() <= left_space {
                             bs_to_send.put_slice(buf);
                             bs_to_send.resize(length, 1);
 
-                            written_len = buf.len();
+                            buf.len()
                         } else {
                             bs_to_send.put_slice(&buf[..left_space]);
 
-                            written_len = left_space;
-                        }
+                            left_space
+                        };
 
                         let txc = self.write_tx.clone();
 
@@ -353,13 +354,13 @@ impl AsyncWrite for EmbedConn {
                         match r {
                             Poll::Ready(_) => {
                                 debug!("poll_write write_tx ok, {written_len}");
-                                return Poll::Ready(Ok(written_len));
+                                Poll::Ready(Ok(written_len))
                             }
                             Poll::Pending => {
                                 debug!("poll_write write_tx pending, {written_len}");
 
                                 self.write_state = WriteState::WriteTxPending(written_len, f);
-                                return Poll::Pending;
+                                Poll::Pending
                             }
                         }
                     }
@@ -390,139 +391,151 @@ impl AsyncWrite for EmbedConn {
 
 const MAX_PACKET_LEN: usize = 64 * 1024;
 
-/// blocking. 内部 不断地调用 read_once 和 write_once，将 读到的包去掉1字节包头后用 read_tx 发送出去。
-/// 用 write_rx 接收 要写入的真实信息
-pub async fn play_file<R, W>(
-    file: Arc<Vec<PayloadInfo>>,
-    reader: &mut R,
-    writer: &mut W,
-    write_rx: &mut Receiver<BytesMut>,
-    write_info_tx: Sender<usize>,
-    mut write_info_ready_rx: tokio::sync::watch::Receiver<bool>,
-    read_tx: Sender<BytesMut>,
-    invert: bool,
-    shutdown_atom: Arc<AtomicBool>,
-    // shutdown_rx: tokio::sync::oneshot::Receiver<()>, //todo: allow shutdown
-) where
+pub struct Player<'a, R, W>
+where
     R: AsyncRead + Unpin + ?Sized,
     W: AsyncWrite + Unpin + ?Sized,
 {
-    let mut index = 0;
+    file: Arc<Vec<PayloadInfo>>,
+    reader: &'a mut R,
+    writer: &'a mut W,
+    write_rx: &'a mut Receiver<BytesMut>,
+    write_info_tx: Sender<usize>,
+    write_info_ready_rx: tokio::sync::watch::Receiver<bool>,
+    read_tx: Sender<BytesMut>,
+    invert: bool,
+    shutdown_atom: Arc<AtomicBool>,
+    // shutdown_rx: tokio::sync::oneshot::Receiver<()>,
+}
 
-    let mut lst_rbuf = BytesMut::new();
-    loop {
-        if shutdown_atom.load(std::sync::atomic::Ordering::Relaxed) {
-            debug!("play_file got shutdown_atom");
-            break;
-        }
+impl<'a, R, W> Player<'a, R, W>
+where
+    R: AsyncRead + Unpin + ?Sized,
+    W: AsyncWrite + Unpin + ?Sized,
+{
+    /// blocking. 内部 不断地调用 read_once 和 write_once，将 读到的包去掉1字节包头后用 read_tx 发送出去。
+    /// 用 write_rx 接收 要写入的真实信息
+    pub async fn play_file(&mut self) {
+        let mut index = 0;
 
-        let cur_info = file.get(index).unwrap();
-        let length = cur_info.length;
-
-        let direction = if invert {
-            -cur_info.direction
-        } else {
-            cur_info.direction
-        };
-        match direction {
-            WRITE_DIRECTION => {
-                let ready = write_info_ready_rx.has_changed();
-
-                write_info_ready_rx.mark_unchanged();
-
-                let ready = match ready {
-                    Ok(r) => r,
-                    Err(e) => {
-                        debug!("write_info_ready_rx got e {e}");
-                        break;
-                    }
-                };
-                if ready {
-                    debug!("write_once, send write_info_tx, ready");
-
-                    let permit = write_info_tx.try_reserve();
-
-                    match permit {
-                        Ok(permit) => {
-                            permit.send(length);
-
-                            let r = write_once(writer, length, write_rx).await;
-
-                            match r {
-                                Ok(_) => debug!("write_once got ok"),
-                                Err(_) => break,
-                            }
-                        }
-                        Err(e) => {
-                            debug!("write_once,  write_info_tx got ERR {e}, will keep calling");
-
-                            let r = write_once(writer, length, write_rx).await;
-
-                            match r {
-                                Ok(_) => debug!("write_once got ok"),
-                                Err(_) => break,
-                            }
-                        }
-                    }
-                } else {
-                    debug!("write_once, send write_info_tx, not ready");
-
-                    let r = write_once(writer, length, write_rx).await;
-
-                    match r {
-                        Ok(_) => debug!("write_once got ok"),
-                        Err(_) => break,
-                    }
-                }
+        let mut lst_rbuf = BytesMut::new();
+        loop {
+            if self
+                .shutdown_atom
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                debug!("play_file got shutdown_atom");
+                break;
             }
-            READ_DIRECTION => {
-                let r = read_once(reader, length, lst_rbuf).await;
 
-                match r {
-                    Err(_) => break,
+            let cur_info = self.file.get(index).unwrap();
+            let length = cur_info.length;
 
-                    Ok(mut result_buf) => {
-                        let rlen = result_buf.len();
+            let direction = if self.invert {
+                -cur_info.direction
+            } else {
+                cur_info.direction
+            };
+            match direction {
+                WRITE_DIRECTION => {
+                    let ready = self.write_info_ready_rx.has_changed();
 
-                        assert!(rlen >= length);
+                    self.write_info_ready_rx.mark_unchanged();
 
-                        let mut cur_read_packet = if rlen > length {
-                            let real = result_buf.split_to(length);
+                    let ready = match ready {
+                        Ok(r) => r,
+                        Err(e) => {
+                            debug!("write_info_ready_rx got e {e}");
+                            break;
+                        }
+                    };
+                    if ready {
+                        debug!("write_once, send write_info_tx, ready");
 
-                            lst_rbuf = result_buf;
-                            real
-                        } else {
-                            lst_rbuf = BytesMut::new();
-                            result_buf
-                        };
+                        let permit = self.write_info_tx.try_reserve();
 
-                        let b = cur_read_packet.get_u8();
+                        match permit {
+                            Ok(permit) => {
+                                permit.send(length);
 
-                        match b {
-                            WRTIE_IS_STEGO => {
-                                debug!("read_once got stego, {:?}", rlen);
-                            }
-                            WRTIE_IS_REAL => {
-                                debug!("read_once got real, {:?}", rlen);
+                                let r = write_once(self.writer, length, self.write_rx).await;
 
-                                // 此时已知是 数据包了，但是还不确定是 首包还是续包，因此交给rx端处理
-                                let r = read_tx.send(cur_read_packet).await;
-                                if let Err(e) = r {
-                                    info!("play got err {e}");
-                                    break;
+                                match r {
+                                    Ok(_) => debug!("write_once got ok"),
+                                    Err(_) => break,
                                 }
                             }
-                            _ => panic!("can't happen"),
+                            Err(e) => {
+                                debug!("write_once,  write_info_tx got ERR {e}, will keep calling");
+
+                                let r = write_once(self.writer, length, self.write_rx).await;
+
+                                match r {
+                                    Ok(_) => debug!("write_once got ok"),
+                                    Err(_) => break,
+                                }
+                            }
+                        }
+                    } else {
+                        debug!("write_once, send write_info_tx, not ready");
+
+                        let r = write_once(self.writer, length, self.write_rx).await;
+
+                        match r {
+                            Ok(_) => debug!("write_once got ok"),
+                            Err(_) => break,
                         }
                     }
                 }
-            }
-            _ => panic!("can't happen"),
-        }
+                READ_DIRECTION => {
+                    let r = read_once(self.reader, length, lst_rbuf).await;
 
-        index += 1;
-        if index == file.len() {
-            index = 0;
+                    match r {
+                        Err(_) => break,
+
+                        Ok(mut result_buf) => {
+                            let rlen = result_buf.len();
+
+                            assert!(rlen >= length);
+
+                            let mut cur_read_packet = if rlen > length {
+                                let real = result_buf.split_to(length);
+
+                                lst_rbuf = result_buf;
+                                real
+                            } else {
+                                lst_rbuf = BytesMut::new();
+                                result_buf
+                            };
+
+                            let b = cur_read_packet.get_u8();
+
+                            match b {
+                                WRTIE_IS_STEGO => {
+                                    debug!("read_once got stego, {:?}", rlen);
+                                }
+                                WRTIE_IS_REAL => {
+                                    debug!("read_once got real, {:?}", rlen);
+
+                                    // 此时已知是 数据包了，但是还不确定是 首包还是续包，因此交给rx端处理
+                                    let r = self.read_tx.send(cur_read_packet).await;
+                                    if let Err(e) = r {
+                                        info!("play got err {e}");
+                                        break;
+                                    }
+                                }
+                                _ => panic!("can't happen"),
+                            }
+                        }
+                    }
+                }
+                _ => panic!("can't happen"),
+            }
+
+            index += 1;
+            if index == self.file.len() {
+                index = 0;
+            }
         }
     }
 }
@@ -588,20 +601,20 @@ where
             v.resize(length, 0);
 
             debug!("write_once, writing fake {length}");
-           return writer.write_all(&v).await;
+            writer.write_all(&v).await
         }
         op = write_rx.recv() =>{
             match op{
                 Some(v) => {
 
-                    debug!("write_once, writing new, {}",v.escape_ascii());
+                    debug!("write_once, writing new, {}",v.len());//v.escape_ascii()
 
                     let r = writer.write_all(&v).await;
                     match r {
-                        Ok(_) => return Ok(()),
+                        Ok(_) => Ok(()),
                         Err(e) => {
                             info!("mpsc_transmit, write got e: {e}");
-                            return Err(e);
+                            Err(e)
                         },
                     }
                 },
@@ -609,7 +622,7 @@ where
                     debug!("mpsc_transmit write got none, will shutdown");
                     let _ =  writer.write(&[]).await;
                     let _ = writer.shutdown().await;
-                    return Ok(())
+                    Ok(())
                 },
             }
 

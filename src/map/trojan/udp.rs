@@ -190,10 +190,7 @@ pub fn from(c: net::Conn) -> net::addr_conn::AddrConn {
     let ar = Reader::new(r);
     let aw = Writer::new(w);
 
-    let ac = net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw));
-
-    // ac.cached_name = String::from("trojan_udp");
-    ac
+    net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw))
 }
 
 #[cfg(test)]

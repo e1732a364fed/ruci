@@ -175,9 +175,7 @@ fn new(
         src,
         conn_map,
     };
-    let ac = AddrConn::new(Box::new(r), Box::new(w));
-    // ac.cached_name = String::from("udp_fixed");
-    ac
+    AddrConn::new(Box::new(r), Box::new(w))
 }
 
 /// write 时会 舍弃 addr. 且直接向内置的 src:Addr 写入数据

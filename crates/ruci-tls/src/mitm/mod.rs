@@ -50,7 +50,7 @@ pub fn check_data_type(b: &[u8]) -> DataType {
         return DataType::Other;
     }
     if b[..2] == *b"\x16\x03" {
-        let host = crate::extract_host_from_client_hello(&b);
+        let host = crate::extract_host_from_client_hello(b);
         match host {
             Some(host) => return DataType::TlsClientHello(host),
             None => return DataType::Other,

@@ -1029,7 +1029,7 @@ local config_27_embedder = {
                     alpn = { "h2", "http/1.1" }
                 }
             },
-            { Embedder = { file_name = "record_dir1/1-2_mitm_ruci_info.json" } },
+            { Embedder = { file_name = "test_mitm_ruci_info.json" } },
             { Trojan = { password = "mypassword", do_not_use_early_data = false } }
         }
     } }

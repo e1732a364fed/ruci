@@ -109,6 +109,18 @@ ruci-cmd 提供了一些很方便的命令，可以执行一些辅助功能。
 
     ./ruci-cmd utils wintun
 
+## 配置文件格式转换：
+
+ruci-cmd utils convert-format <INPUT_FILE> <OUTPUT_FORMAT>
+如
+ruci-cmd utils convert-format local.lua toml
+
+(json, yaml, lua, toml) 几种格式在静态链下是可以互相转换的
+
+转后就会生成 local.toml. 如果同名文件存在，就会自动用一个新的名称，不会覆盖。
+
+而且也可以  转换为同格式 ，相当于把 注释删掉然后 标准化一下
+
 ## 简易文件服务器
 
     ./ruci-cmd utils serve-folder

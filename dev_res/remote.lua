@@ -55,7 +55,7 @@ local trojans_chain = { tcp, tls, trojan_in }
 
 local embedder_in = {
     Embedder = {
-        file_name = "record_dir1/1-2_mitm_ruci_info.json"
+        file_name = "test_mitm_ruci_info.json"
     }
 }
 

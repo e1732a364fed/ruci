@@ -58,9 +58,7 @@ pub fn new(
         h,
         local,
     };
-    let ac = AddrConn::new(Box::new(c1), Box::new(c2));
-    // ac.cached_name = "smoltcp_udp".to_string();
-    ac
+    AddrConn::new(Box::new(c1), Box::new(c2))
 }
 
 fn addr2_ip_end_point(a: &Addr) -> IpEndpoint {
