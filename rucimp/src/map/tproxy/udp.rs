@@ -177,9 +177,9 @@ impl Listener {
 
                         let b = unsafe {
                             if i == 0 {
-                                &mut BUF1
+                                &mut *std::ptr::addr_of_mut!(BUF1)
                             } else {
-                                &mut BUF2
+                                &mut *std::ptr::addr_of_mut!(BUF2)
                             }
                         };
                         let buf = &b[lb..rb];
