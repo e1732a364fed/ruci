@@ -1,3 +1,7 @@
+/*!
+Defines a [`new`] function to create an AddrConn that consists of channel based [`W`] and [`R`].
+*/
+
 use std::{
     cmp::min,
     io,
@@ -22,7 +26,6 @@ use tokio_util::sync::PollSender;
 pub struct W {
     tx: PollSender<(SocketHandle, IpEndpoint, BytesMut)>,
     h: SocketHandle,
-    // default_from: Addr,
     local: Addr,
 }
 pub struct R {
@@ -41,8 +44,8 @@ impl<'a> ruci::Name for W {
     }
 }
 
+/// used by [`super::SmoltcpDevice`]
 pub fn new(
-    // default_from: Addr,
     local: Addr,
     h: SocketHandle,
     rx: Receiver<(IpEndpoint, BytesMut)>,
@@ -52,7 +55,6 @@ pub fn new(
     let c2 = W {
         tx: PollSender::new(tx),
         h,
-        // default_from,
         local,
     };
     let mut ac = AddrConn::new(Box::new(c1), Box::new(c2));

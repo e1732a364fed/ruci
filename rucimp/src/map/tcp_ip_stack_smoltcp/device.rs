@@ -1,3 +1,7 @@
+/*!
+Defines the [`SmoltcpDevice`] which is a [`Device`] required in [`smoltcp::iface::Interface`].
+ */
+
 use bytes::{Buf,   BytesMut};
 use parking_lot::Mutex;
 use smoltcp::iface::SocketHandle;

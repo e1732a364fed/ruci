@@ -1,5 +1,5 @@
 /*!
-[`IpPacket`]
+Wrap Ipv4Packet and Ipv6Packet into an enum [`IpPacket`].
  */
 use smoltcp::wire::{IpProtocol, IpVersion, Ipv4Packet, Ipv6Packet};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};

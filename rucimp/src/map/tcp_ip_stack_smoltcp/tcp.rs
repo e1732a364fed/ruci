@@ -1,3 +1,6 @@
+/*!
+Defines a channel based [`TcpStream`] created by [`super::SmoltcpDevice`]
+*/
 use std::{
     io::Error,
     net::SocketAddr,

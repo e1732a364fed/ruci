@@ -1,9 +1,7 @@
 /*!
-为 UdpSocket 实现 net::addr_conn 中的trait
+Defines a [`Conn`] that impls traits in [`net::addr_conn`] and holds a [`Socket`].
 
-然而我们不采用 "tcp 和 udp 分两个 tun "的方式，又根据smoltcp 的原理, 单tun只能对所有
-的socket 遍历，而不能分socket, 导致本模块暂时没有被用到.
-
+本模块暂时没有被用到.
 */
 
 use super::addr_conn::{AsyncReadAddr, AsyncWriteAddr};

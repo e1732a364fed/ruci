@@ -25,7 +25,7 @@ pub struct Stack {}
 
 impl Name for Stack {
     fn name(&self) -> &'static str {
-        "smoltcp"
+        "smoltcp_stack"
     }
 }
 
