@@ -127,7 +127,7 @@ websocket_out = {
 }
 
 dial_trojan_chain = {dial, tlsout, trojan_out}
-opt_dial_trojan_chain = {opt_dial, tlsout, trojan_out}
+opt_dial_trojan_chain = {opt_dial, trojan_out}
 dial_ws_trojan_chain = {dial, tlsout, websocket_out, trojan_out}
 
 h2_single_out = {

@@ -294,13 +294,14 @@ impl AsyncWriteAddr for UdpW {
         let x = self.established_map.get(&k);
         //debug!("self.established_map {}", self.established_map.len());
 
+        const LIMIT: usize = 200;
         match x {
             Some(us) => {
                 let r = us.send(buf);
 
                 // prevent too many open files
-                if self.established_map.len() > 100 {
-                    debug!("self.established_map.clear()");
+                if self.established_map.len() > LIMIT {
+                    //debug!("self.established_map.clear()");
                     self.established_map.clear()
                 }
                 Poll::Ready(r)
@@ -310,8 +311,8 @@ impl AsyncWriteAddr for UdpW {
 
                 let r = us.send(buf);
 
-                if self.established_map.len() > 100 {
-                    debug!("self.established_map.clear()");
+                if self.established_map.len() > LIMIT {
+                    //debug!("self.established_map.clear() 2");
 
                     self.established_map.clear()
                 }

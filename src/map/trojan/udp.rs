@@ -1,4 +1,5 @@
 use std::{
+    cmp::max,
     io,
     pin::Pin,
     task::{Context, Poll},
@@ -56,8 +57,21 @@ impl Reader {
     fn poll_r(&mut self, cx: &mut Context<'_>) -> (Poll<io::Result<()>>, usize) {
         let mut tmp_rbuf = {
             let buffer = &mut self.buf;
-            buffer.clear();
-            buffer.resize(MAX_DATAGRAM_SIZE, 0);
+            //buffer.clear();
+
+            const TARGET_LEN: usize = MAX_DATAGRAM_SIZE / 2;
+            // 每次 使用 buffer 都会 advance 导致 capcity 变小一部分
+            // 如果每次都 resize 到最大, 则失去了使用同一个 缓存的意义
+            // 故使用 一半最大. 这样 buffer 消耗到 一半之前是不会有 新 alloc 的
+
+            if buffer.capacity() > TARGET_LEN {
+                unsafe {
+                    buffer.set_len(TARGET_LEN);
+                }
+            } else {
+                buffer.resize(TARGET_LEN, 0)
+            }
+
             ReadBuf::new(&mut buffer[..])
         };
         (
@@ -259,12 +273,12 @@ impl AsyncWriteAddr for Writer {
         let mut buf2 = if let Some(mut b) = self.last_buf.take() {
             let c = b.capacity();
             if c < supposed_cap {
-                b.reserve(supposed_cap);
+                b.reserve(max(MAX_DATAGRAM_SIZE, supposed_cap));
             }
 
             b
         } else {
-            BytesMut::with_capacity(supposed_cap)
+            BytesMut::with_capacity(MAX_DATAGRAM_SIZE)
         };
 
         helpers::addr_to_socks5_bytes(addr, &mut buf2);
