@@ -1,3 +1,4 @@
+use anyhow::Context;
 use tracing::debug;
 
 use tun2::{AsyncDevice, IntoAddress};
@@ -34,9 +35,13 @@ where
         config.ensure_root_privileges(true);
     });
 
-    let dev = tun2::create_as_async(&config).unwrap();
+    let dev = tun2::create_as_async(&config).context("create tun device failed")?;
 
-    debug!("tun: create_bind succeed");
+    debug!(
+        tun_name = tun_name,
+        dial_addr = ?config,
+        "tun: create_bind succeed"
+    );
 
     Ok(Box::new(dev))
 }

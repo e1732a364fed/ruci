@@ -194,6 +194,31 @@ ruci chain 模式中,
 
 在ruci 中, 你可以:  dial 一个由 host1 解析得的ip, 然后 tls 里的 sni 写 host2, 然后 ws/grpc 的请求 url 中 写 host3
 
+## tun 模式的一些实测信息
+
+tun 是用 如下配置启用
+
+```lua
+ inbounds = { 
+
+        --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
+        -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
+
+        {chain = { { BindDialer= { bind_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
+    },
+```
+
+详见 local.lua 中对应示例
+
+windows 上需要 wintun.dll. 可用ruci-cmd `ruci-cmd utils wintun` 来自动下载 wintun.zip
+
+在windows上, 可以在控制面板中找到所建立的虚拟网卡
+
+
+实测, 在 windows 上, 就算不配置任何路由, 系统也会识别到它建立的虚拟网卡, 并向其发送一些信息
+
+在 linux 和 macos 上, 也会收到少量信息
+
 
 # lib note
 
