@@ -41,6 +41,15 @@ pub fn buf_to_ob(b: BytesMut) -> Option<BytesMut> {
         Some(b)
     }
 }
+
+pub fn ob_to_buf(b: Option<BytesMut>) -> BytesMut {
+    if let Some(b) = b {
+        b
+    } else {
+        BytesMut::new()
+    }
+}
+
 pub fn run_command(cmd: &str, args: &str) -> anyhow::Result<()> {
     trace!(cmd = cmd, args = ?args, "running command",);
 

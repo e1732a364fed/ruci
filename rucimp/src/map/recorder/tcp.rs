@@ -78,6 +78,9 @@ impl AsyncRead for RecorderConn {
                     match r {
                         Ok(_) => {
                             let l = buf.filled().len();
+
+                            self.record.record_read(buf.filled()); // 为0时也要记录, 因为这是EOF标志
+
                             if l == 0 {
                                 let cid = self.record.cid().to_string();
                                 info!(
@@ -85,8 +88,6 @@ impl AsyncRead for RecorderConn {
                                     "recorder read got EOF(len=0), Saving to file",
                                 );
                                 self.as_mut().start_save();
-                            } else {
-                                self.record.record_d(buf.filled())
                             }
                         }
                         Err(e) => {
@@ -119,7 +120,7 @@ impl AsyncWrite for RecorderConn {
                 let r = self.as_mut().project().base.poll_write(cx, buf);
 
                 if let Poll::Ready(Ok(u)) = &r {
-                    self.record.record_u(&buf[..*u]);
+                    self.record.record_write(&buf[..*u]);
                 }
                 r
             }
@@ -150,7 +151,7 @@ impl AsyncWrite for RecorderConn {
                     info!(
                         cid = %self.record.cid(),
                         label = %self.record.label(),
-                        "recorder got shutdown, Saving to file",
+                        "recorder got shutdown call, Saving to file",
                     );
 
                     self.as_mut().start_save();
@@ -159,7 +160,7 @@ impl AsyncWrite for RecorderConn {
                 }
                 State::SavingToFile => match ready!(self.as_mut().poll_save_future(cx)) {
                     Ok(_) => {
-                        debug!("recorder save ready");
+                        // trace!("recorder save ready");
 
                         continue;
                     }

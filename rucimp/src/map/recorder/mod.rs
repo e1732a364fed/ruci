@@ -16,10 +16,10 @@ use ruci::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt;
-use tracing::debug;
+use tracing::{debug, trace};
 
-pub const UPLOAD_DIRECTION: i8 = 1;
-pub const DOWNLOAD_DIRECTION: i8 = -1;
+pub const READ_DIRECTION: i8 = 1;
+pub const WRITE_DIRECTION: i8 = -1;
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum OutputFileExtension {
@@ -92,19 +92,19 @@ impl Recorder {
         }
     }
 
-    pub fn record_u(&mut self, data: &[u8]) {
+    pub fn record_read(&mut self, data: &[u8]) {
         match self {
-            Recorder::Full(r) => r.record_u(data),
-            Recorder::Simplified(r) => r.record_u(data),
-            Recorder::Info(r) => r.record_u(data),
+            Recorder::Full(r) => r.record_read(data),
+            Recorder::Simplified(r) => r.record_read(data),
+            Recorder::Info(r) => r.record_read(data),
         }
     }
 
-    pub fn record_d(&mut self, data: &[u8]) {
+    pub fn record_write(&mut self, data: &[u8]) {
         match self {
-            Recorder::Full(r) => r.record_d(data),
-            Recorder::Simplified(r) => r.record_d(data),
-            Recorder::Info(r) => r.record_d(data),
+            Recorder::Full(r) => r.record_write(data),
+            Recorder::Simplified(r) => r.record_write(data),
+            Recorder::Info(r) => r.record_write(data),
         }
     }
 
@@ -166,8 +166,8 @@ pub struct FullData {
 
     pub global_data: Option<SerializableGlobalData>,
 
-    pub upload_data: Vec<FullPayloadData>,
-    pub download_data: Vec<FullPayloadData>,
+    pub read_data: Vec<FullPayloadData>,
+    pub write_data: Vec<FullPayloadData>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -262,21 +262,21 @@ pub struct PayloadInfo {
 }
 
 impl InfoRecorder {
-    pub fn record_u(&mut self, data: &[u8]) {
+    pub fn record_read(&mut self, data: &[u8]) {
         let d = self.since(self.start);
         self.data.payload.push(PayloadInfo {
             timestamp: d,
-            direction: UPLOAD_DIRECTION,
+            direction: READ_DIRECTION,
             length: data.len(),
             opt_addr: None,
         });
     }
 
-    pub fn record_d(&mut self, data: &[u8]) {
+    pub fn record_write(&mut self, data: &[u8]) {
         let d = self.since(self.start);
         self.data.payload.push(PayloadInfo {
             timestamp: d,
-            direction: DOWNLOAD_DIRECTION,
+            direction: WRITE_DIRECTION,
             length: data.len(),
             opt_addr: None,
         });
@@ -284,27 +284,27 @@ impl InfoRecorder {
 }
 
 impl SimplifiedRecorder {
-    pub fn record_u(&mut self, data: &[u8]) {
-        self.data.data.push((UPLOAD_DIRECTION, data.to_vec()));
+    pub fn record_read(&mut self, data: &[u8]) {
+        self.data.data.push((READ_DIRECTION, data.to_vec()));
     }
 
-    pub fn record_d(&mut self, data: &[u8]) {
-        self.data.data.push((DOWNLOAD_DIRECTION, data.to_vec()));
+    pub fn record_write(&mut self, data: &[u8]) {
+        self.data.data.push((WRITE_DIRECTION, data.to_vec()));
     }
 }
 
 impl FullRecorder {
-    pub fn record_u(&mut self, data: &[u8]) {
+    pub fn record_read(&mut self, data: &[u8]) {
         let d = self.since(self.start);
         self.data
-            .upload_data
+            .read_data
             .push(FullPayloadData::Tcp(d, data.to_vec()));
     }
 
-    pub fn record_d(&mut self, data: &[u8]) {
+    pub fn record_write(&mut self, data: &[u8]) {
         let d = self.since(self.start);
         self.data
-            .download_data
+            .write_data
             .push(FullPayloadData::Tcp(d, data.to_vec()));
     }
 }
@@ -385,7 +385,7 @@ async fn async_save_to_file<T: serde::Serialize + Data + Send + 'static + Clone>
             "empty data".to_string(),
         ));
     } else {
-        debug!(
+        trace!(
             "serde got data: {}, file: {}",
             buf.len(),
             file_path.display()
@@ -394,7 +394,7 @@ async fn async_save_to_file<T: serde::Serialize + Data + Send + 'static + Clone>
 
     let mut file = tokio::fs::File::create(&file_path).await?;
 
-    debug!("file created: {}", file_path.display());
+    trace!("file created: {}", file_path.display());
 
     file.write_all(&buf).await?;
     file.sync_all().await?;
@@ -501,7 +501,7 @@ impl From<Config> for MapBox {
 #[async_trait]
 impl Map for RecorderMap {
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        let r = match self.config.record_mode {
+        let mut r = match self.config.record_mode {
             RecordMode::Full => {
                 let mut r = FullRecorder {
                     config: self.config.clone(),
@@ -543,6 +543,10 @@ impl Map for RecorderMap {
                 Recorder::Info(r)
             }
         };
+
+        if params.b.is_some() && !params.b.as_ref().unwrap().is_empty() {
+            r.record_read(params.b.as_ref().unwrap());
+        }
 
         match params.c {
             Stream::Conn(c) => {
