@@ -5,6 +5,9 @@
 #[cfg(feature = "lua")]
 pub mod lua;
 
+#[cfg(feature = "lua")]
+pub mod dynamic;
+
 use std::path::PathBuf;
 
 use ruci::{

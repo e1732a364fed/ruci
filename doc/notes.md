@@ -1,5 +1,7 @@
 # dev note
 
+## is_tail_of_chain
+
 链式模式的一个特点是，每一层都不知道上层和下层的确切信息，它只做自己层做的事
 
 这会有一个现象：无法直接在 ws,tls,trojan,vless 等协议的outbound中直接传递early data , 因为
@@ -11,3 +13,7 @@ early data 必须由最末端的 outbound 传递
 和默认行为.
 
 CommonMapperExt 要 配合 common_mapper_field 宏一起使用
+
+用了 CommonMapperExt 后，可以在方法内使用 self.is_tail_of_chain 判断是否在链尾，如果在，则可以发送ed, 
+如果不在，不可以发送，只能传递到下一级
+

@@ -18,7 +18,7 @@ toml = "0.8.1"
 serde = { version = "1", features = ["derive"] }
 
 
-mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lot","luau"] , optional = true }
+mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lot","luau","macros"] , optional = true }
 
 [features]
 default = ["lua"]
