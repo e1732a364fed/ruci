@@ -208,3 +208,143 @@ pub async fn cp_udp(
 
     let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, ti).await;
 }
+
+pub trait OutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox>,
+{
+    fn select(&self, params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>);
+}
+
+pub struct FixedOutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox>,
+{
+    pub mappers: T,
+    pub addr: Option<net::Addr>,
+}
+
+impl<'a, T> OutSelector<'a, T> for FixedOutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox> + Clone,
+{
+    fn select(&self, _params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>) {
+        (self.mappers.clone(), self.addr.clone())
+    }
+}
+
+pub async fn handle_in_accumulate_result<'a, T, IterMapperBoxRef>(
+    mut listen_result: AccumulateResult<'static, IterMapperBoxRef>,
+
+    out_selector: Box<dyn OutSelector<'a, T>>,
+
+    ti: Option<Arc<net::TransmissionInfo>>,
+) -> io::Result<()>
+where
+    T: Iterator<Item = &'a MapperBox>,
+    IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
+{
+    let cid = &listen_result.id.unwrap();
+    let target_addr = match listen_result.a.take() {
+        Some(ta) => ta,
+        None => {
+            warn!(
+                "{}, handshake in server succeed but got no target_addr",
+                cid
+            );
+            let _ = listen_result.c.try_shutdown().await;
+            return Err(io::Error::other(
+                "handshake in server succeed but got no target_addr",
+            ));
+        }
+    };
+    if log_enabled!(log::Level::Info) {
+        info!(
+            "{cid}, handshake in server succeed, target_addr: {}",
+            &target_addr
+        )
+    }
+
+    let (outc_iterator, outc_addr) = out_selector.select(listen_result.d);
+
+    let is_direct: bool;
+
+    let real_target_addr = if outc_addr.is_some() {
+        is_direct = false;
+        outc_addr.unwrap()
+    } else {
+        is_direct = true;
+        target_addr.clone()
+    };
+
+    //todo: DNS 功能
+
+    let out_stream = match real_target_addr.try_dial().await {
+        Ok(t) => t,
+        Err(e) => {
+            warn!("{cid}, parse target addr failed, {real_target_addr} , {e}",);
+            let _ = listen_result.c.try_shutdown().await;
+            return Err(e);
+        }
+    };
+
+    if is_direct {
+        cp_stream(
+            cid.clone(),
+            listen_result.c,
+            out_stream,
+            listen_result.b.take(),
+            ti,
+        )
+        .await;
+    } else {
+        let cidc = cid.clone();
+        let dial_result =
+            tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
+                type ExtraDataIterType = std::vec::IntoIter<OptData>;
+
+                map::accumulate::<_, ExtraDataIterType>(
+                    cidc,
+                    ProxyBehavior::ENCODE,
+                    MapResult {
+                        a: Some(target_addr),
+                        b: listen_result.b.take(),
+                        c: out_stream,
+                        d: None,
+                        e: None,
+                        id: None,
+                    },
+                    outc_iterator,
+                    None,
+                )
+                .await
+            })
+            .await;
+
+        if let Err(e) = dial_result {
+            warn!("{cid}, dial out client timeout, {e}",);
+            //let _ = in_conn.shutdown();
+            //let _ = out_stream.try_shutdown();
+            return Err(e.into());
+        }
+        let dial_result = dial_result.unwrap();
+        if let Some(e) = dial_result.e {
+            warn!("{cid}, dial out client failed, {e}",);
+            //let _ = in_conn.shutdown();
+            //let _ = out_stream.try_shutdown();
+            return Err(e);
+        } else if let Stream::None = dial_result.c {
+            info!("{cid}, dial out client stream got consumed ",);
+
+            return Ok(());
+        }
+
+        //let (out_stream, remain_target_addr, _extra_out_data_vec) = dial_result;
+        if let Some(rta) = dial_result.a {
+            warn!("{cid}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
+        }
+        cp_stream(cid.clone(), listen_result.c, dial_result.c, None, ti).await;
+    }
+
+    Ok(())
+}

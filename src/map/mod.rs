@@ -506,7 +506,10 @@ where
                 };
                 last_r = adder
                     .maps(
-                        cid.clone(),
+                        match last_r.id {
+                            Some(id) => id,
+                            None => cid.clone(),
+                        },
                         behavior,
                         MapParams {
                             c: last_r.c,
@@ -542,7 +545,11 @@ where
         c: last_r.c,
         d: calculated_output_vec,
         e: last_r.e,
-        id: last_r.id,
+        id: if last_r.id.is_some() {
+            last_r.id
+        } else {
+            Some(cid)
+        },
         left_mappers_iter: mappers,
     };
 }
