@@ -652,7 +652,6 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
         "quinn",
         // #[cfg(feature = "quic")]
         // "quic",
-        #[cfg(feature = "tun")]
         "tun",
         #[cfg(feature = "smoltcp")]
         "smoltcp",

@@ -142,7 +142,6 @@ file_server = ["axum", "tower-http"]
 # quic = ["s2n-quic", "s2n-quic-rustls", "ruci-rustls21"]
 quinn = ["ruci-rustls21", "dep:quinn"]
 
-tun = ["ruci/tun"]
 trace = ["ruci/trace"]
 
 lua = ["mlua/luau", "serde-lua-table", "rustyline"]

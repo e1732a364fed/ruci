@@ -135,7 +135,6 @@ impl Map for Direct {
     }
 }
 
-#[cfg(feature = "tun")]
 #[derive(Clone, Debug, Default)]
 enum AutoRouteState {
     #[default]
@@ -153,13 +152,10 @@ pub struct BindDialer {
     pub bind_addr: Option<net::Addr>,
     pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 
-    #[cfg(feature = "tun")]
     pub in_auto_route: Option<tun::route::InAutoRouteParams>,
 
-    #[cfg(feature = "tun")]
     pub out_auto_route: Option<tun::route::OutAutoRouteParams>,
 
-    #[cfg(feature = "tun")]
     auto_route_state: Arc<parking_lot::Mutex<AutoRouteState>>,
 }
 
@@ -169,7 +165,6 @@ impl Display for BindDialer {
     }
 }
 
-#[cfg(feature = "tun")]
 impl Drop for BindDialer {
     fn drop(&mut self) {
         self.down_route();
@@ -181,7 +176,6 @@ impl BindDialer {
         Self::default()
     }
 
-    #[cfg(feature = "tun")]
     pub fn down_route(&mut self) {
         let mut mg = self.auto_route_state.lock();
         match &*mg {
@@ -230,7 +224,6 @@ impl BindDialer {
 
         match r {
             Ok(c) => {
-                #[cfg(feature = "tun")]
                 if let Some(a) = &bind_a {
                     if let Network::IP = a.network {
                         if let Some(c) = &self.in_auto_route {

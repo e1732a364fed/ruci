@@ -63,7 +63,6 @@ default = ["api_server", "utils"]
 lua = ["rucimp/lua"]
 lua54 = ["rucimp/lua54"]
 
-tun = ["rucimp/tun"]
 
 # quic = ["rucimp/quic"]
 quinn = ["rucimp/quinn"]

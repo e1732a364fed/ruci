@@ -93,11 +93,10 @@ sha2 = "0.10"          #for trojan
 hickory-resolver = { version = "0.24", features = ["serde-config"] }
 
 
-tun = { version = "0.7", features = ["async"], optional = true }
+tun = { version = "0.7", features = ["async"] }
 
 [features]
 
-default = ["tun"]
 
 trace = []
 

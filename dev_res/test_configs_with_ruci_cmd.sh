@@ -22,7 +22,7 @@ test_config_file() {
     echo "Testing $file..."
     
     # 运行命令
-    RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography lwip smoltcp" -- --log-file "" -c "$file" &
+    RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn steganography lwip smoltcp" -- --log-file "" -c "$file" &
     local pid=$!
     
     sleep 2
@@ -152,7 +152,7 @@ fi
 echo "Starting test with ruci-cmd for ${selected_type} files in $(basename "$selected_dir")..."
 echo "----------------------------------------"
 
-RUST_LOG=none,ruci=debug cargo build --features "lua utils use-native-tls quinn tun steganography lwip smoltcp"
+RUST_LOG=none,ruci=debug cargo build --features "lua utils use-native-tls quinn steganography lwip smoltcp"
 
 # 测试每个文件
 for file in "${config_files[@]}"; do

@@ -20,7 +20,6 @@ pub mod cp;
 pub use addr::*;
 pub use cp::*;
 
-#[cfg(feature = "tun")]
 pub mod tun;
 
 #[cfg(test)]

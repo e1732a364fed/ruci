@@ -18,16 +18,16 @@ run_h2_trojans_recorder_pair.sh 同时运行h2 的 local 和 remote端用于测�
 ```sh
 # in folder rucimp, run:
 
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun lwip smoltcp use-native-tls steganography" --example lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn lwip smoltcp use-native-tls steganography" --example lua
 RUST_LOG=none,ruci=debug cargo run --features "lua steganography" --example lua
 
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun lwip smoltcp use-native-tls steganography" --example lua -- remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn lwip smoltcp use-native-tls steganography" --example lua -- remote.lua
 RUST_LOG=none,ruci=debug cargo run --features "lua steganography" --example lua -- remote.lua
 
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example lua_infinite -- local_mux_h2.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn" --example lua_infinite -- local_mux_h2.lua
 
 # linux
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun sockopt" --example lua
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn sockopt" --example lua
 
 ```
 
@@ -46,16 +46,7 @@ to use rule_route,
 download Country.mmdb from https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb
 
 then put it to resource folder
-
-## tun
-
-need to enable rucimp's tun feature (which enables ruci's tun feature):
-
-```sh
-sudo RUST_LOG=debug cargo run --example lua -F tun -F lua
-```
-
-（这里的 -F 与上文的 --features 用处相同，只不过 对于参数 一个适合少量 一个适合大量)
+ 
 
 ### macos test
 

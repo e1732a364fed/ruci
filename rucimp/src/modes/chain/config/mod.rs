@@ -271,11 +271,9 @@ pub struct BindDialerConfig {
 
     pub dns_client: Option<dns::ClientConfig>,
 
-    #[cfg(feature = "tun")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub in_auto_route: Option<ruci::net::tun::route::InAutoRouteParams>,
 
-    #[cfg(feature = "tun")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub out_auto_route: Option<ruci::net::tun::route::OutAutoRouteParams>,
 
@@ -306,7 +304,6 @@ impl TryFrom<Box<BindDialerConfig>> for MapBox {
 
         d.dial_addr = opt_dial_a;
         d.bind_addr = opt_bind_a;
-        #[cfg(feature = "tun")]
         {
             d.in_auto_route = value.in_auto_route;
             d.out_auto_route = value.out_auto_route;

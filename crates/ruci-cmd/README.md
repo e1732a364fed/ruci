@@ -17,19 +17,19 @@ debug:
 ```sh
 
 # 指定不生成 log 
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography lwip smoltcp" -- --log-file ""
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn  steganography lwip smoltcp" -- --log-file ""
 
 # 指定lua配置
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography lwip"  -- --log-file "" -c remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn  steganography lwip"  -- --log-file "" -c remote.lua
 
 # powershell
-$Env:RUST_LOG="none,ruci=debug";cargo run --features "lua utils use-native-tls quinn tun" -- --log-file ""
+$Env:RUST_LOG="none,ruci=debug";cargo run --features "lua utils use-native-tls quinn " -- --log-file ""
 
 # 运行 grpc 的 lua 配置. 注意要加 --infinite
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun"  -- --log-file "" -c local_mux2_h2.lua --infinite
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn "  -- --log-file "" -c local_mux2_h2.lua --infinite
 
 # 开启所有功能并启用 trace
-RUST_LOG=debug cargo run --features "api_server api_client trace lua utils use-native-tls quinn tun" -- -a --trace
+RUST_LOG=debug cargo run --features "api_server api_client trace lua utils use-native-tls quinn " -- -a --trace
 ```
 
 make:
@@ -56,7 +56,7 @@ CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android32-clang cargo buil
 
 # features
 
-features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn, tun, smoltcp, lwip
+features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn, , smoltcp, lwip
 default enables api_server,utils.
 
 api_server, trace 这两个feature都会少许降低 performance. 

@@ -124,7 +124,7 @@ mod test {
 
     use super::create_bind;
 
-    //sudo -E cargo test --package ruci --lib --features tun -- net::tun::test::test --exact --nocapture
+    //sudo -E cargo test --package ruci --lib -- net::tun::test::test --exact --nocapture
     //#[tokio::test]
     async fn test() {
         let a = Addr::from_strs("ip", "utun432", "10.0.0.1", 24).unwrap();

@@ -113,11 +113,9 @@ BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中至少�
 
     dns_client= {..} --optional
 
-    --#[cfg(feature = "tun")]
-    in_auto_route= {..}, 
+    in_auto_route= {..},  --optional
 
-    --#[cfg(feature = "tun")]
-    out_auto_route = {..}, 
+    out_auto_route = {..},  --optional
 
     ext= {..}, --optional
 }

@@ -454,7 +454,7 @@ impl Addr {
         }
     }
 
-    /// dial tcp/udp/unix_domain_socket and `ip` if feature "tun" is enabled
+    /// dial tcp/udp/unix_domain_socket and `ip`(by tun)
     ///
     /// ## udp
     ///
@@ -462,7 +462,6 @@ impl Addr {
     ///
     pub async fn try_dial(&self, oc: Option<Arc<dns::AsyncClient>>) -> Result<Stream> {
         match self.network {
-            #[cfg(feature = "tun")]
             Network::IP => {
                 debug!("Addr dialing IP {}", self);
                 let c = match &self.addr {
@@ -498,9 +497,7 @@ impl Addr {
             Network::Unix => {
                 let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
                 Ok(Stream::Conn(Box::new(u)))
-            }
-            #[cfg(not(feature = "tun"))]
-            _ => bail!("try_dial failed, not supported network: {}", self.network),
+            } // _ => bail!("try_dial failed, not supported network: {}", self.network),
         }
     }
 
@@ -541,7 +538,6 @@ impl Addr {
             .unwrap();
 
         match network {
-            #[cfg(feature = "tun")]
             Network::IP => {
                 let bind_addr = match &bind_a {
                     Some(a) => a,
@@ -629,9 +625,7 @@ impl Addr {
 
                 let u = UnixStream::connect(dial_a.get_name().unwrap_or_default()).await?;
                 Ok(Stream::Conn(Box::new(u)))
-            }
-            #[cfg(not(feature = "tun"))]
-            _ => bail!("bind_dial failed, not supported network: {:?}", network),
+            } // _ => bail!("bind_dial failed, not supported network: {:?}", network),
         }
     }
 

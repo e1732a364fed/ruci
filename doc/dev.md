@@ -1,9 +1,9 @@
 Clippy:
 ruci-cmd 目录下
-cargo clippy --all-targets --no-default-features --features "steganography lua file_server api_server api_client utils quinn use-native-tls tun lwip smoltcp"
+cargo clippy --all-targets --no-default-features --features "steganography lua file_server api_server api_client utils quinn use-native-tls lwip smoltcp"
 
 在 rucimp 目录下
-cargo clippy --all-targets --no-default-features --features "tun lwip smoltcp quinn lua sockopt use-native-tls ruci-rustls21 trace steganography"
+cargo clippy --all-targets --no-default-features --features "lwip smoltcp quinn lua sockopt use-native-tls ruci-rustls21 trace steganography"
 
 或在ruci目录下直接
 
@@ -45,3 +45,4 @@ macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关
 又发现 windows 上开启tun 后，存在大量的组播请求，占用大量资源。这里有问题
 
 新的 netstack-lwip 代码已可以在 windows 上编译通过。
+使用了 netstack-smoltcp 包解决 自实现的 smoltcp 的 bug.
