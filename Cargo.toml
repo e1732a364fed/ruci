@@ -59,6 +59,9 @@ reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",
 ] }
 
+toml = "0.8"
+
+
 [dependencies]
 macro_map = { path = "crates/macro_map" }
 tracing = { workspace = true }

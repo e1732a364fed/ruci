@@ -12,6 +12,7 @@ use tracing::info;
 use tracing_subscriber::fmt::MakeWriter;
 
 const LOG_CHANNEL_SIZE: usize = 1024;
+pub const DEFAULT_ADDR: &str = "127.0.0.1:40682";
 
 pub struct WebsocketLogger {
     tx: broadcast::Sender<String>,

@@ -15,6 +15,7 @@ mod utils;
 
 mod mode;
 
+use anyhow::Context;
 pub use rucimp;
 use serde::{Deserialize, Serialize};
 
@@ -116,6 +117,13 @@ pub struct Args {
     #[arg(long)]
     pub api_addr: Option<String>,
 
+    /// if not given, will use default websocket log addr, which is 127.0.0.1:40682;
+    ///
+    /// if set to empty string, no websocket log will be generated
+    #[cfg(feature = "api_server")]
+    #[arg(long)]
+    pub ws_log_addr: Option<String>,
+
     #[cfg(feature = "file_server")]
     #[arg(short)]
     #[serde(default)]
@@ -162,14 +170,39 @@ pub enum SubCommands {
     },
 }
 
-/// blocking
+/// blocking, main entry point for desktop platforms
 pub async fn run_main() -> anyhow::Result<()> {
-    let args = Args::parse();
+    let args = {
+        let args: Vec<String> = env::args().collect();
+        let oi = args.iter().position(|s| *s == "--cmd-config");
+        match oi {
+            Some(i) => {
+                if i + 1 >= args.len() {
+                    return Err(anyhow::anyhow!(
+                        "--cmd-config must be followed by a file name"
+                    ));
+                }
+                let file_name = args[i + 1].as_str();
+                let file_content = rucimp::utils::default_file_source()
+                    .read_to_string(&file_name)
+                    .context(format!("read --cmd-config {} failed", file_name))?;
+
+                if file_name.ends_with(".toml") {
+                    toml::from_str(&file_content)
+                        .context(format!("parse --cmd-config {} as toml failed", file_name))?
+                } else {
+                    rucimp::serde_json::from_str(&file_content)
+                        .context(format!("parse --cmd-config {} as json failed", file_name))?
+                }
+            }
+            None => Args::parse(),
+        }
+    };
     run_main_with_args(args).await
 }
 /// blocking
 
-pub async fn run_main_with_json_args(json: &str) -> anyhow::Result<()> {
+pub async fn run_main_with_json_str_args(json: &str) -> anyhow::Result<()> {
     let args = rucimp::serde_json::from_str(&json)?;
     run_main_with_args(args).await
 }
@@ -461,7 +494,7 @@ pub async fn run_main_with_args(mut args: Args) -> anyhow::Result<()> {
     Ok(())
 }
 
-// 注：返回的 gaurd 超出作用域(被回收)后，log 结束
+// 注：返回的 gaurd 超出作用域(被drop)后，log 结束
 fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> {
     println!("ruci-cmd");
     let c_dir = std::env::current_dir().expect("has current directory");
@@ -513,18 +546,16 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     #[cfg(feature = "api_server")]
     let ws_logger = {
-        let logger = log_ws::WebsocketLogger::new();
-        let ws_writer = logger.get_writer();
-        logger.serve("127.0.0.1:40682");
+        let addr: &str = args.ws_log_addr.as_deref().unwrap_or(log_ws::DEFAULT_ADDR);
+        if addr.is_empty() {
+            None
+        } else {
+            let logger = log_ws::WebsocketLogger::new();
+            let ws_writer = logger.get_writer();
+            logger.serve(addr);
 
-        // tokio::spawn(async {
-        //     loop {
-        //         tokio::time::sleep(Duration::from_secs(1)).await;
-        //         info!("test")
-        //     }
-        // });
-
-        Some(ws_writer)
+            Some(ws_writer)
+        }
     };
 
     let guard = if !no_file {
