@@ -3,8 +3,8 @@ pub mod deprecated;
 use super::*;
 
 use crate::{
-    net::{self, Addr, Conn},
     map::{self, MapResult, ProxyBehavior},
+    net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, UserPass, UsersMap},
 };
 use async_std::{io::ReadExt, net::UdpSocket, sync::Mutex, task};
