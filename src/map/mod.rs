@@ -1,7 +1,7 @@
 /*!
 module map defines some important traits for proxy
 
-几个关键部分: [`Data`], [`FoldParams`], [`FoldResult`], [`Mapper`], 和 [`mod@fold`] 模块
+几个关键部分: [`Data`], [`MapParams`], [`MapResult`], [`Mapper`], 和 [`mod@fold`] 模块
 
 ruci 将任意代理行为分割成若干个不可再分的
 流映射函数, function map(stream1, args...)-> (stream2, useful_data...)

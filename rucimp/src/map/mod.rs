@@ -5,6 +5,6 @@ pub mod opt_net;
 pub mod tproxy;
 
 pub mod h2;
-#[cfg(feature = "tokio-native-tls")]
+#[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
 pub mod native_tls;
 pub mod ws;

@@ -81,7 +81,7 @@ ruci中有三种 route 实现 fixed, tag, info; 而 rucimp 有一种完整的 ro
 
 rucimp 中有很多feature :
 
-"lua", "route","geoip", "tun", "sockopt", "tokio-native-tls"
+lua, lua54, route,geoip, tun, sockopt, use-native-tls, native-tls-vendored
 
 
 
@@ -92,7 +92,7 @@ rucimp 中有很多feature :
 这会有一个现象：无法直接在 ws,tls,trojan,vless 等协议的outbound中直接传递early data , 因为
 early data 必须由最末端的 outbound 传递
 
-不过，我们可以在静态配置情况下做些操作，给末端代理一个标记，这样就能使用 earydata 功能了.
+不过，我们可以做些操作，给末端代理一个标记，这样就能使用 earydata 功能了.
 
 通过使用 MapperExt 和 NoMapperExt 这两个derive 宏, 可以分别给 struct 实现 common行为
 和默认行为.
@@ -102,8 +102,6 @@ MapperExt 要 配合 mapper_ext_fields 宏一起使用
 用了 MapperExt 后，可以在方法内使用 self.is_tail_of_chain 判断是否在链尾，如果在，则可以发送ed, 
 如果不在，不可以发送，只能传递到下一级
 
-而作为最高级抽象的动态链则做不到. 静态链是动态链的一种具体的固定的形态
-
 ## async
 
 
@@ -112,9 +110,8 @@ async_std的 UdpSocket 少了 poll 方法 (until 24.2.18)
 
 ## Cargo.lock
 
-本来作为类库是不应该有 Cargo.lock 的, 但我们同时也发布 examples, 为保证其能正常编译, 还是提
-供了 lock 文件
-
+本来作为类库是不应该有 Cargo.lock 的, 但我们同时也发布 examples, 
+为保证其能正常编译, 还是提供了 lock 文件
 
 
 ## 移除 static 借用的办法

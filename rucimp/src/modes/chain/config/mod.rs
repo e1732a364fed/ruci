@@ -1,8 +1,13 @@
 /*!
- * 定义了静态链式配置 StaticConfig
- * 静态链是Mapper组成是运行前即知晓且依次按排列顺序执行的链, 因此可以用 Vec 表示
- *
- * 有限动态链的Mapper组成也可用 StaticConfig 定义, 但其状态转移函数在dynamic模块中定义
+定义了静态链式配置 StaticConfig
+
+静态链是Mapper组成是运行前即知晓且依次按排列顺序执行的链,
+因此可以用 Vec 表示
+
+有限动态链的Mapper组成也可用 StaticConfig 定义, 但其状态转移函数在
+dynamic模块中定义
+
+完全动态链在 dynamic 模块中定义
  */
 
 #[cfg(any(feature = "lua", feature = "lua54"))]
@@ -195,7 +200,7 @@ pub enum InMapperConfig {
     Counter,
     TLS(TlsIn),
 
-    #[cfg(feature = "tokio-native-tls")]
+    #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
     NativeTLS(TlsIn),
     H2 {
         is_grpc: Option<bool>,
@@ -223,7 +228,7 @@ pub enum OutMapperConfig {
     Counter,
     TLS(TlsOut),
 
-    #[cfg(feature = "tokio-native-tls")]
+    #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
     NativeTLS(TlsOut),
 
     Socks5(Socks5Out),
@@ -345,7 +350,7 @@ impl ToMapperBox for InMapperConfig {
             }
             .to_mapper_box(),
 
-            #[cfg(feature = "tokio-native-tls")]
+            #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             InMapperConfig::NativeTLS(c) => Box::new(
                 crate::map::native_tls::ServerOptions {
                     cert_f_path: c.cert.clone(),
@@ -460,7 +465,7 @@ impl ToMapperBox for OutMapperConfig {
                 Box::new(a)
             }
 
-            #[cfg(feature = "tokio-native-tls")]
+            #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             OutMapperConfig::NativeTLS(c) => Box::new(crate::map::native_tls::Client {
                 domain: c.host.clone(),
                 in_secure: c.insecure.unwrap_or_default(),

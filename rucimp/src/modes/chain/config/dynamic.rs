@@ -1,20 +1,21 @@
 /*!
- * 这里定义了动态链。动态链的 iter 每次调用时, 会动态地返回一种Mapper
- * 只有运行时才能知晓一条链是由哪些 Mapper 所组成, 所以无法用 Vec等类型表示,
- * 只能用 Iterator 表示
- *
- * 不过, 有时会有这种情况: 动态链由几部分 静态链组成, 其中两个静态链之间的连接
- * 是动态的
- *
- * 这里将这种链叫做 "Partial/Finite Dynamic Chain", 把完全动态的链叫做
- * "Complete/Infinite Dynamic Chain"
- *
- * Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是无限的,
- * (即无限状态机)
- *
- * 部分动态例子1: 一个 tcp 到一个 tls 监听 ，这部分是静态的，之后根据 tls 的 alpn 结果
- * 进行分支，两个子分支后面也是静态的，但这个判断是动态的
- *
+
+这里定义了动态链。动态链的 iter 每次调用时, 会动态地返回一种Mapper
+只有运行时才能知晓一条链是由哪些 Mapper 所组成, 所以无法用 Vec等类型表示,
+只能用 Iterator 表示
+
+不过, 有时会有这种情况: 动态链由几部分 静态链组成, 其中两个静态链之间的连接
+是动态的
+
+这里将这种链叫做 "Partial/Finite Dynamic Chain", 把完全动态的链叫做
+"Complete/Infinite Dynamic Chain"
+
+Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是无限的,
+(即无限状态机)
+
+部分动态例子1: 一个 tcp 到一个 tls 监听 ，这部分是静态的，之后根据 tls 的 alpn 结果
+进行分支，两个子分支后面也是静态的，但这个判断是动态的
+
  */
 use std::{fmt::Debug, sync::Arc};
 

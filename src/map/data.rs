@@ -1,3 +1,8 @@
+/*
+定义 Mapper 所返回的数据类型
+
+*/
+
 use std::mem;
 
 use super::*;

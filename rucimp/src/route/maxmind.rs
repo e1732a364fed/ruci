@@ -1,19 +1,17 @@
 /*!
- *
 使用 maxmind 提供 的 免费数据 作为ip国别判断的数据库
 
-https://www.maxmind.com/en/geoip-databases
+<https://www.maxmind.com/en/geoip-databases>
 
-https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
+<https://dev.maxmind.com/geoip/geolite2-free-geolocation-data>
 
-https://www.maxmind.com/en/accounts/current/geoip/downloads
+<https://www.maxmind.com/en/accounts/current/geoip/downloads>
 
-https://github.com/oschwald/maxminddb-rust
+<https://github.com/oschwald/maxminddb-rust>
 
-https://docs.rs/maxminddb/latest/maxminddb/struct.Reader.html
+<https://docs.rs/maxminddb/latest/maxminddb/struct.Reader.html>
 
-https://github.com/Loyalsoldier/geoip
-
+<https://github.com/Loyalsoldier/geoip>
  */
 use std::net::IpAddr;
 
@@ -50,7 +48,7 @@ pub fn open_mmdb(
 
 /// get iso 3166 string
 ///
-/// https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
+/// <https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes>
 pub fn get_ip_iso_by_reader(ip: IpAddr, reader: &maxminddb::Reader<Vec<u8>>) -> String {
     let r = reader.lookup(ip);
     let c: geoip2::Country = match r {

@@ -1,3 +1,8 @@
+/*!
+lua defines functions to load static, partial(finite) dynamic and complete(infinite) dynamic chain configs.
+
+ */
+
 #[cfg(test)]
 #[allow(unused)]
 #[cfg(any(feature = "lua", feature = "lua54"))]

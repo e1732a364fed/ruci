@@ -1,7 +1,11 @@
 /*!
-provide facilities for accumulating dynamic chain
+provide facilities for folding dynamic chain
 
-the mod won't store dynamic data during accumulating.
+fold 模块是整个 ruci 链式架构的最核心部分
+
+the mod won't store dynamic data during folding.
+
+几个关键部分: [`MIter`],  [`DynIterator`],  [`DMIterBox`], [`FoldParams`], [`FoldResult`], [`fold`], [`fold_from_start`],
 
 */
 
@@ -246,7 +250,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
 
 /// blocking.
 ///
-/// 先调用第一个 mapper 生成 流发生器, 然后调用 [`in_iter_accumulate_forever`]
+/// 先调用第一个 mapper 生成 流发生器, 然后调用 [`in_iter_fold_forever`]
 ///
 /// 但如果 第一个 mapper 生成的不是流发生器而是普通的流, 则会调用 普通的
 /// fold, 累加结束后就会返回
