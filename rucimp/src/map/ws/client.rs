@@ -1,6 +1,8 @@
-use anyhow::Context;
+use ::http::HeaderValue;
+use anyhow::{bail, Context};
 use async_trait::async_trait;
 use bytes::BytesMut;
+use futures::Future;
 use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, *},
@@ -10,6 +12,7 @@ use tokio_tungstenite::{
     client_async,
     tungstenite::http::{Request, StatusCode},
 };
+use tracing::debug;
 
 use super::*;
 
@@ -53,6 +56,41 @@ impl Client {
             use_early_data: c.use_early_data.unwrap_or_default(),
         }
     }
+
+    async fn get_conn_by_req(
+        b: Option<BytesMut>,
+        mut req: Request<()>,
+        conn: net::Conn,
+    ) -> anyhow::Result<net::Conn> {
+        if let Some(ref b) = b {
+            debug!("ws client will use earlydata {}", b.len());
+            use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+
+            let str = URL_SAFE_NO_PAD.encode(b);
+            req.headers_mut().insert(
+                EARLY_DATA_HEADER_KEY,
+                HeaderValue::from_str(&str).expect("ok"),
+            );
+        }
+
+        let (c, resp) = client_async(req, conn)
+            .await
+            .with_context(|| "websocket client handshake failed")?;
+
+        if resp.status() != StatusCode::SWITCHING_PROTOCOLS {
+            bail!(
+                "websocket client handshake got resp status not SWITCHING_PROTOCOLS: {}",
+                resp.status()
+            );
+        }
+
+        Ok(Box::new(WsStreamToConnWrapper {
+            ws: Box::pin(c),
+            r_buf: None,
+            w_buf: None,
+        }))
+    }
+
     async fn handshake(
         &self,
         _cid: CID,
@@ -62,36 +100,21 @@ impl Client {
     ) -> anyhow::Result<map::MapResult> {
         let req = self.request.clone();
         if self.use_early_data {
-            // if let Some(ref b) = b {
-            //     debug!("will use earlydata {}", b.len());
-            //     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-
-            //     let str = URL_SAFE_NO_PAD.encode(b);
-            //     req.headers_mut().insert(
-            //         EARLY_DATA_HEADER_KEY,
-            //         HeaderValue::from_str(&str).expect("ok"),
-            //     );
-            // }
+            return Ok(MapResult::new_c(Box::new(EarlyConn {
+                request: req,
+                real_c: None,
+                base_c: Some(conn),
+                dial_f: None,
+                first_data_len: 0,
+            }))
+            .a(a)
+            .b(b)
+            .build());
         }
 
-        let (c, resp) = client_async(req, conn)
-            .await
-            .with_context(|| "websocket client handshake failed")?;
+        let c = Client::get_conn_by_req(None, req, conn).await?;
 
-        if resp.status() != StatusCode::SWITCHING_PROTOCOLS {
-            return Err(anyhow::anyhow!(
-                "websocket client handshake got resp status not SWITCHING_PROTOCOLS: {}",
-                resp.status()
-            ));
-        }
-        Ok(MapResult::new_c(Box::new(WsStreamToConnWrapper {
-            ws: Box::pin(c),
-            r_buf: None,
-            w_buf: None,
-        }))
-        .a(a)
-        .b(b)
-        .build())
+        Ok(MapResult::new_c(c).a(a).b(b).build())
     }
 }
 
@@ -112,6 +135,96 @@ impl Mapper for Client {
             }
         } else {
             MapResult::err_str("websocket_client only support tcplike stream")
+        }
+    }
+}
+
+struct EarlyConn {
+    request: Request<()>,
+    real_c: Option<Pin<net::Conn>>,
+    base_c: Option<net::Conn>,
+
+    dial_f: Option<Pin<Box<dyn Future<Output = anyhow::Result<Box<dyn ConnTrait>>> + Send + Sync>>>,
+    first_data_len: usize,
+}
+
+impl ruci::Name for EarlyConn {
+    fn name(&self) -> &str {
+        "websocket_ed_conn"
+    }
+}
+
+impl AsyncRead for EarlyConn {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut core::task::Context,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        match &mut self.real_c {
+            Some(c) => c.as_mut().poll_read(cx, buf),
+            None => Poll::Ready(Err(io_error("can't poll_read when not established"))),
+        }
+    }
+}
+
+impl AsyncWrite for EarlyConn {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut core::task::Context,
+        buf: &[u8],
+    ) -> Poll<Result<usize, io::Error>> {
+        loop {
+            match &mut self.as_mut().dial_f {
+                Some(f) => {
+                    return match ready!(f.as_mut().poll(cx)) {
+                        Ok(c) => {
+                            self.real_c = Some(Box::pin(c));
+                            self.dial_f = None;
+                            Poll::Ready(Ok(self.first_data_len))
+                        }
+                        Err(e) => Poll::Ready(Err(io_error(e))),
+                    };
+                }
+                None => match &mut self.real_c {
+                    Some(c) => return c.as_mut().poll_write(cx, buf),
+                    None => {
+                        self.first_data_len = buf.len();
+
+                        let f = Client::get_conn_by_req(
+                            Some(BytesMut::from(buf)),
+                            std::mem::take(&mut self.request),
+                            self.base_c.take().expect("base_c ok"),
+                        );
+
+                        // Must store the future in struct, can't poll here directly using ready! .
+                        // As when got pending, as the function returns, the future
+                        // will be dropped, resulting the dropping of the base conn,
+                        // resulting the disconnection
+
+                        self.dial_f = Some(Box::pin(f));
+                    }
+                },
+            }
+        }
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut core::task::Context,
+    ) -> Poll<Result<(), io::Error>> {
+        match &mut self.real_c {
+            Some(c) => c.as_mut().poll_flush(cx),
+            None => Poll::Ready(Err(io_error("can't flush when not established"))),
+        }
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut core::task::Context,
+    ) -> Poll<Result<(), io::Error>> {
+        match &mut self.real_c {
+            Some(c) => c.as_mut().poll_shutdown(cx),
+            None => Poll::Ready(Err(io_error("can't poll_shutdown when not established"))),
         }
     }
 }

@@ -5,7 +5,7 @@ use crate::{
     user::{AsyncUserAuthenticator, UsersMap},
     utils, Name,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
@@ -52,28 +52,42 @@ impl Server {
         Server { um }
     }
 
-    pub async fn handshake(&self, _cid: CID, mut base: net::Conn) -> anyhow::Result<MapResult> {
+    pub async fn handshake(
+        &self,
+        _cid: CID,
+        mut base: net::Conn,
+        ob: Option<BytesMut>,
+    ) -> anyhow::Result<MapResult> {
         //根据 https://www.ihcblog.com/a-better-tls-obfs-proxy/
         //trojan的 CRLF 是为了模拟http服务器的行为, 所以此时不要一次性Read，而是要Read到CRLF为止
 
         const CAP: usize = 1024;
-        let mut buf = BytesMut::zeroed(CAP);
-        let mut previous_read_len: usize = 0;
-        loop {
-            let n = base.read(&mut buf[previous_read_len..]).await?;
+        let mut buf = match ob {
+            Some(b) => b,
+            None => BytesMut::zeroed(CAP),
+        };
+        let mut previous_read_len: usize = buf.len();
 
-            let mut index_crlf = -1;
-            let new_len = previous_read_len + n;
-            for i in previous_read_len..new_len {
-                if buf[i..].starts_with(&[CR, LF]) {
-                    index_crlf = i as i16;
+        if previous_read_len == 0 {
+            loop {
+                let n = base
+                    .read(&mut buf[previous_read_len..])
+                    .await
+                    .with_context(|| "trojan server read failed")?;
+
+                let mut index_crlf = -1;
+                let new_len = previous_read_len + n;
+                for i in previous_read_len..new_len {
+                    if buf[i..].starts_with(&[CR, LF]) {
+                        index_crlf = i as i16;
+                        break;
+                    }
+                }
+                previous_read_len = new_len;
+
+                if new_len >= CAP || index_crlf > 0 {
                     break;
                 }
-            }
-            previous_read_len = new_len;
-
-            if new_len >= CAP || index_crlf > 0 {
-                break;
             }
         }
 
@@ -197,7 +211,7 @@ impl Mapper for Server {
     ) -> MapResult {
         match params.c {
             map::Stream::Conn(c) => {
-                let r = self.handshake(cid, c).await;
+                let r = self.handshake(cid, c, params.b).await;
                 MapResult::from_result(r)
             }
             _ => MapResult::err_str("trojan only support tcplike stream"),

@@ -172,20 +172,20 @@ pub async fn handle_in_fold_result(
     let dial_result = match dial_result {
         Ok(d) => d,
         Err(e) => {
-            warn!(cid = %cid, "dial out client timeout, {e}",);
+            warn!(cid = %cid, "fold outbound timeout, {e}",);
             return Err(e.into());
         }
     };
     let cid = dial_result.id;
 
     if let Some(e) = dial_result.e {
-        warn!(cid = %cid, "dial out client failed, {:#}", e);
+        warn!(cid = %cid, "fold outbound failed, {:#}", e);
         return Err(e);
     }
     if let Stream::None = dial_result.c {
         warn!(
             cid = %cid,
-            "dial out client stream got consumed ",
+            "fold outbound stream got consumed ",
         );
 
         return Ok(());
@@ -195,12 +195,14 @@ pub async fn handle_in_fold_result(
         if rta.eq(&Addr::default()) {
             debug!(
                 cid = %cid,
-                "dial out client succeed with empty target_addr left",
+                "fold outbound succeed with empty target_addr left",
             );
         } else {
             debug!( cid = %cid,
-            "dial out client succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
+            "fold outbound succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
         }
+    } else {
+        info!(cid = %cid,"fold outbound succeed, will start relay");
     }
 
     if let Some(r) = newc_recorder {
