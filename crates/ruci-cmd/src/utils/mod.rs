@@ -173,7 +173,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             mut input_file,
             output_format,
         } => {
-            let (contents, data_source) = mode::get_config_file(&mut input_file, false)
+            let (contents, data_source) = mode::chain::get_config_file(&mut input_file, false)
                 .await
                 .context(format!("failed to read file: {}", input_file))?;
 
