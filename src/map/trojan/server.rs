@@ -147,11 +147,11 @@ impl Server {
         }
 
         if is_udp {
+            let u = udp::split_conn_to_trojan_udp_rw(base);
+            Ok(MapResult::udp_abc(ta, buf, u))
         } else {
-            return Ok(MapResult::abc(ta, buf, base));
+            Ok(MapResult::abc(ta, buf, base))
         }
-
-        unimplemented!()
     }
 }
 impl Name for Server {

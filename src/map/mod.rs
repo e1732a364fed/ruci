@@ -207,6 +207,16 @@ impl MapResult {
         }
     }
 
+    pub fn udp_abc(a: net::Addr, b: BytesMut, c: AddrConn) -> Self {
+        MapResult {
+            a: Some(a),
+            b: if b.len() > 0 { Some(b) } else { None },
+            c: Some(Stream::UDP(c)),
+            d: None,
+            e: None,
+        }
+    }
+
     pub fn c(c: net::Conn) -> Self {
         MapResult {
             a: None,
