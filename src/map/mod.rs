@@ -46,17 +46,63 @@ use std::{
     sync::Arc,
 };
 
-/// 描述一条代理连接, 其可能来自一个 父连接
-///
-/// 考虑inner-mux 的情况
-///
-pub trait State: Display {
-    fn cid(&self) -> u32;
-    fn parent(&self) -> Option<Box<dyn State>>;
+pub trait StateID: Ord + Eq + Display {}
+impl<T: Ord + Eq + Display> StateID for T {}
+
+fn new_rand_state_id() -> u32 {
+    use rand::Rng;
+    const ID_RANGE_START: u32 = 100_000;
+
+    rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
+}
+
+pub struct SubStateID(u32, u32);
+impl Display for SubStateID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[ cid: {}, parent_cid: {}, ]  ", self.0, self.1)
+    }
+}
+
+impl PartialEq for SubStateID {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1
+    }
+}
+
+impl Eq for SubStateID {}
+
+impl PartialOrd for SubStateID {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self.0.partial_cmp(&other.0) {
+            Some(core::cmp::Ordering::Equal) => self.1.partial_cmp(&other.1),
+            _ => self.1.partial_cmp(&other.1),
+        }
+    }
+}
+impl Ord for SubStateID {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self.0.cmp(&other.0) {
+            std::cmp::Ordering::Less => std::cmp::Ordering::Less,
+            std::cmp::Ordering::Equal => self.1.cmp(&other.1),
+            std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
+        }
+    }
+}
+
+/// 描述一条代理连接
+pub trait State<T>
+where
+    T: StateID,
+{
+    fn cid(&self) -> T;
     fn network(&self) -> &'static str;
     fn ins_name(&self) -> String; // 入口名称
+    fn set_ins_name(&mut self, str: String);
     fn outc_name(&self) -> String; // 出口名称
+    fn set_outc_name(&mut self, str: String);
+
     fn cached_in_raddr(&self) -> String; // 进入程序时的 连接 的远端地址
+    fn set_cached_in_raddr(&mut self, str: String);
 }
 
 /// 实现 State, 其没有 parent
@@ -71,22 +117,41 @@ pub struct RootState {
 
 impl RootState {
     pub fn new(network: &'static str) -> RootState {
-        use rand::Rng;
-        const ID_RANGE_START: u32 = 100_000;
-
         let mut s = RootState::default();
-        s.cid = rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1);
+        s.cid = new_rand_state_id();
         s.network = network;
         s
     }
 }
-impl State for RootState {
+
+impl Display for RootState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.outc_name() == "" {
+            write!(
+                f,
+                "[ cid: {}, {}://{}, listener: {}, ]  ",
+                self.cid(),
+                self.network(),
+                self.cached_in_raddr(),
+                self.ins_name()
+            )
+        } else {
+            write!(
+                f,
+                "[ cid: {}, {}://{}, route from: {}, to: {} ]  ",
+                self.cid(),
+                self.network(),
+                self.cached_in_raddr(),
+                self.ins_name(),
+                self.outc_name(),
+            )
+        }
+    }
+}
+
+impl State<u32> for RootState {
     fn cid(&self) -> u32 {
         self.cid
-    }
-
-    fn parent(&self) -> Option<Box<dyn State>> {
-        None
     }
 
     fn network(&self) -> &'static str {
@@ -104,23 +169,17 @@ impl State for RootState {
     fn cached_in_raddr(&self) -> String {
         self.cached_in_raddr.clone()
     }
-}
 
-impl Display for RootState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.outc_name == "" {
-            write!(
-                f,
-                "[ cid: {}, {}://{}, listener: {}, ]  ",
-                self.cid, self.network, self.cached_in_raddr, self.ins_name
-            )
-        } else {
-            write!(
-                f,
-                "[ cid: {}, {}://{}, route from: {}, to: {} ]  ",
-                self.cid, self.network, self.cached_in_raddr, self.ins_name, self.outc_name,
-            )
-        }
+    fn set_ins_name(&mut self, str: String) {
+        self.ins_name = str
+    }
+
+    fn set_outc_name(&mut self, str: String) {
+        self.outc_name = str
+    }
+
+    fn set_cached_in_raddr(&mut self, str: String) {
+        self.cached_in_raddr = str
     }
 }
 

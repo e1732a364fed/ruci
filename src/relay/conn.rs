@@ -37,10 +37,10 @@ pub async fn handle_conn<'a>(
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
     let mut state = RootState::new(network_str);
-    state.ins_name = ins_name.to_string();
-    state.cached_in_raddr = in_raddr;
+    state.set_ins_name(ins_name.to_string());
+    state.set_cached_in_raddr(in_raddr);
 
-    let cid = state.cid;
+    let cid = state.cid();
 
     type ExtraDataIterType = std::vec::IntoIter<OptData>;
 
@@ -94,7 +94,7 @@ pub async fn handle_conn<'a>(
         is_direct = true;
         target_addr.clone()
     };
-    state.outc_name = outc_name.to_string();
+    state.set_outc_name(outc_name.to_string());
 
     //todo: DNS 功能
 
