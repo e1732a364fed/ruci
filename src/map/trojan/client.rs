@@ -13,6 +13,7 @@ use crate::{
 
 use super::*;
 
+/// trojan udp won't timeout
 #[mapper_ext_fields]
 #[derive(Debug, Clone, MapperExt, Default)]
 pub struct Client {

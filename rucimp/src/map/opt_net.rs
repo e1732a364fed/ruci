@@ -92,7 +92,7 @@ impl Mapper for TcpOptListener {
 /// Dial the given addr and optionaly set sockopt
 ///
 /// Note:
-/// dial udp by OptDirect won't timeout
+/// dial udp by OptDirect won't ever timeout
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
 pub struct OptDirect {

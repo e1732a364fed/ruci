@@ -353,7 +353,7 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     mut r1: R1,
     mut w1: W1,
     name: String,
-    _no_timeout: bool,
+    no_timeout: bool,
     mut shutdown_rx: broadcast::Receiver<()>,
     is_d: bool,
     opt: Option<Arc<GlobalTrafficRecorder>>,
@@ -364,37 +364,77 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     let mut whole_write = 0;
     let mut buf = Box::new([0u8; 1400]);
 
-    loop {
-        let rf = read_once(&mut r1, &mut w1, buf.as_mut());
+    if no_timeout {
+        loop {
+            let rf = read_once(&mut r1, &mut w1, buf.as_mut());
 
-        tokio::select! {
-            r = rf =>{
-                match r {
-                    Ok(n) => whole_write+=n,
-                    Err(e) => {
-                        match e.kind(){
-                            io::ErrorKind::Other => {
-                                debug!("cp_addr got other e, will continue. {e}");
-                                continue;
-                            },
-                            _ => {
-                                warn!(name = name,"cp_addr got e, will break {e}");
-                            },
-                        }
+            tokio::select! {
+                r = rf =>{
+                    match r {
+                        Ok(n) => whole_write+=n,
+                        Err(e) => {
+                            match e.kind(){
+                                io::ErrorKind::Other => {
+                                    debug!("cp_addr got other e, will continue. {e}");
+                                    continue;
+                                },
+                                _ => {
+                                    warn!(name = name,"cp_addr got e, will break {e}");
+                                },
+                            }
 
-                        break
-                    },
+                            break
+                        },
+                    }
+                }
+
+                _ = shutdown_rx.recv() =>{
+                    info!("cp_addr got shutdown_rx, will break");
+
+                    break;
                 }
             }
+            tokio::task::yield_now().await; //necessary, or it is likely to cause stuck issue
+        } //loop
+    } else {
+        loop {
+            let rf = read_once(&mut r1, &mut w1, buf.as_mut());
+            let timeout_f = tokio::time::sleep(CP_UDP_TIMEOUT);
 
-            _ = shutdown_rx.recv() =>{
-                info!("cp_addr got shutdown_rx, will break");
+            tokio::select! {
+                r = rf =>{
+                    match r {
+                        Ok(n) => whole_write+=n,
+                        Err(e) => {
+                            match e.kind(){
+                                io::ErrorKind::Other => {
+                                    debug!("cp_addr got other e, will continue. {e}");
+                                    continue;
+                                },
+                                _ => {
+                                    warn!(name = name,"cp_addr got e, will break {e}");
+                                },
+                            }
 
-                break;
+                            break
+                        },
+                    }
+                }
+                _ = timeout_f =>{
+                    info!(timeout = ?CP_UDP_TIMEOUT,"cp_addr got timeout, will break");
+
+                    break;
+                }
+
+                _ = shutdown_rx.recv() =>{
+                    info!("cp_addr got shutdown_rx, will break");
+
+                    break;
+                }
             }
-        }
-        tokio::task::yield_now().await; //necessary, or it is likely to cause stuck issue
-    } //loop
+            tokio::task::yield_now().await; //necessary, or it is likely to cause stuck issue
+        } //loop
+    }
 
     let l = whole_write as u64;
     if let Some(a) = opt {
