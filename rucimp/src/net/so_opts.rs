@@ -91,6 +91,11 @@ pub fn tproxy_udp_recv_from_with_destination<T: AsRawFd>(
 
         msg.msg_control = control_buf.as_mut_ptr() as *mut _;
         // Note: some platform define msg_controllen as size_t, some define as u32
+
+        #[cfg(target_env = "musl")]
+        msg.msg_controllen = control_buf.len() as u32;
+
+        #[cfg(target_env = "gnu")]
         msg.msg_controllen = control_buf.len();
 
         let fd = socket.as_raw_fd();

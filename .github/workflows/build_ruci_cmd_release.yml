@@ -37,12 +37,14 @@ jobs:
         rustup override set stable
         rustup target add --toolchain stable ${{ matrix.target }}
 
+# when building with -Ctarget-feature=+crt-static, it must follows --target. Can not use default target.
+# https://github.com/rust-lang/rust/issues/78210
     - name: Build ${{ matrix.target }}
       env:
         RUSTFLAGS: -Ctarget-feature=+crt-static
       run: |
         cd crates/ruci-cmd
-        make default_target BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+        make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
 
     - name: Upload Github Assets
       uses: softprops/action-gh-release@v1
