@@ -6,52 +6,9 @@
 
 use ruci::map::tls::server::TlsServerOptions;
 use rucimp::{
-    modes::chain::{
-        config::{
-            BindDialerConfig, DirectConfig, InMapConfig, InMapConfigChain, OutMapConfig,
-            OutMapConfigChain, PlainTextSet, StaticConfig, TrojanPassSet,
-        },
-        engine::Engine,
-    },
+    modes::chain::{config::*, engine::Engine},
     utils::FileSource,
 };
-
-async fn run_engine_server_end(file_source: Option<FileSource>) -> anyhow::Result<()> {
-    let sc = StaticConfig {
-        inbounds: vec![InMapConfigChain {
-            tag: None,
-            chain: vec![
-                InMapConfig::Listener {
-                    listen_addr: "127.0.0.1:10801".to_string(),
-                    ext: None,
-                },
-                InMapConfig::TLS(TlsServerOptions {
-                    cert: "resource/test_ca_cert.pem".into(),
-                    key: "resource/test_ca_key.pem".into(),
-                    alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
-                }),
-                InMapConfig::Trojan(TrojanPassSet::default()),
-            ],
-        }],
-        outbounds: vec![OutMapConfigChain {
-            tag: "direct_tls".to_string(),
-            chain: vec![
-                OutMapConfig::Direct(DirectConfig {
-                    leak_target_addr: Some(true),
-                    ..Default::default()
-                }),
-                OutMapConfig::TLS(ruci::map::tls::client::TlsClientOptions {
-                    alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
-                    ..Default::default()
-                }),
-            ],
-        }],
-        tag_route: None,
-        fallback_route: None,
-        rule_route: None,
-    };
-    Engine::run_static_engine(sc, file_source).await
-}
 
 mod shared;
 #[tokio::main]
@@ -99,4 +56,41 @@ async fn main() -> anyhow::Result<()> {
     };
 
     Engine::run_static_engine(sc, fs.clone()).await
+}
+
+async fn run_engine_server_end(file_source: Option<FileSource>) -> anyhow::Result<()> {
+    let sc = StaticConfig {
+        inbounds: vec![InMapConfigChain {
+            tag: None,
+            chain: vec![
+                InMapConfig::Listener {
+                    listen_addr: "127.0.0.1:10801".to_string(),
+                    ext: None,
+                },
+                InMapConfig::TLS(TlsServerOptions {
+                    cert: "resource/test_ca_cert.pem".into(),
+                    key: "resource/test_ca_key.pem".into(),
+                    alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
+                }),
+                InMapConfig::Trojan(TrojanPassSet::default()),
+            ],
+        }],
+        outbounds: vec![OutMapConfigChain {
+            tag: "direct_tls".to_string(),
+            chain: vec![
+                OutMapConfig::Direct(DirectConfig {
+                    leak_target_addr: Some(true),
+                    ..Default::default()
+                }),
+                OutMapConfig::TLS(ruci::map::tls::client::TlsClientOptions {
+                    alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
+                    ..Default::default()
+                }),
+            ],
+        }],
+        tag_route: None,
+        fallback_route: None,
+        rule_route: None,
+    };
+    Engine::run_static_engine(sc, file_source).await
 }

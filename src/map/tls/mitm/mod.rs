@@ -1,11 +1,15 @@
 /*!
  * Define a MITM map, which unwrap tls stream at server.
  *
- * 原理是，解析用户的 tls 请求，对每一个 client_hello 中的 host 都生成一个 证书，然后用这个证书和私钥对用户的请求进行 tls 握手。
+ * 原理是，解析用户的数据，若为 tls client hello, 则 对每一个 client_hello 中的 host 都生成一个 证书，
+ * 该证书 是一个 用预定义的 根证书 CA 签名的
+ * 然后用这个证书和私钥对用户的请求进行 tls 握手。
  *
  * 这样就可以在中间解析用户的请求，然后再转发给真正的服务器。
  *
  * 前提是，用户的 tls 请求 程序（如浏览器、系统） 是 信任我们的 CA 证书的。
+ *
+ * 如果 用户数据不是 tls client hello, 则原样传递下去。
  */
 
 use crate::map::*;
@@ -20,7 +24,7 @@ use bytes::BytesMut;
 use macro_map::{map_ext_fields, MapExt};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
@@ -42,40 +46,50 @@ impl Map for MITM {
             ProxyBehavior::DECODE | ProxyBehavior::UNSPECIFIED => {
                 //把 用户的 params.c 中的 tls 连接 用 rustls 解包，返回解包后的 链接
 
-                let mut c = params.c.try_unwrap_tcp().unwrap();
+                let mut c = match params.c.try_unwrap_tcp() {
+                    Ok(c) => c,
+                    Err(e) => return MapResult::from_e(e),
+                };
 
-                let b = if params.b.is_some() && !params.b.as_ref().unwrap().is_empty() {
+                let b = if params.b.is_some() && params.b.as_ref().unwrap().len() >= 4 {
                     params.b.unwrap()
                 } else {
                     let mut b = [0u8; MTU];
 
-                    let r = c.read(&mut b).await;
+                    let r = tokio::time::timeout(std::time::Duration::from_secs(5), c.read(&mut b))
+                        .await;
 
                     match r {
-                        Ok(n) => {
-                            if n == 0 {
-                                return MapResult::from_e(anyhow!(
-                                    "MITM: no data read from client, ta: {:?}",
-                                    params.a
-                                ));
+                        Ok(r) => match r {
+                            Ok(n) => {
+                                if n == 0 {
+                                    return MapResult::from_e(anyhow!(
+                                        "MITM: no data read from client, ta: {:?}",
+                                        params.a
+                                    ));
+                                }
+                                if n < 2 {
+                                    return MapResult::from_err_str(
+                                        "MITM: only read less than 4 bytes, too short",
+                                    );
+                                }
+                                BytesMut::from(&b[..n])
                             }
-                            if n < 2 {
-                                return MapResult::from_err_str(
-                                    "MITM: only read less than 4 bytes, too short",
-                                );
+                            Err(e) => {
+                                return MapResult::from_e(
+                                    anyhow::Error::from(e)
+                                        .context(format!("MITM: ta {:?} read failed", params.a)),
+                                )
                             }
-                            BytesMut::from(&b[..n])
-                        }
-                        Err(e) => {
-                            return MapResult::from_e(
-                                anyhow::Error::from(e)
-                                    .context(format!("MITM: ta {:?} read failed", params.a)),
-                            )
+                        },
+                        Err(_) => {
+                            info!("MITM: read client first data timeout, passing as is");
+                            return MapResult::new_c(c).a(params.a).build();
                         }
                     }
                 };
 
-                assert!(b.len() >= 2);
+                debug_assert!(b.len() >= 4);
 
                 if b[..2] == *b"\x16\x03" {
                     let authority = if let Some(host) = tls::extract_host_from_client_hello(&b) {
@@ -195,7 +209,7 @@ impl Map for MITM {
                 }
             }
             ProxyBehavior::ENCODE => {
-                // 拿到的是 被 MITM client 脱掉 的 裸链接，这里要把它重新包装一层 tls 连接, 直接使用 tls/naive_tls 就行
+                // 拿到的是 被 MITM client 脱掉 的 裸链接，这里要把它重新包装一层 tls 连接, 直接使用 direct+ tls/naive_tls 就行
 
                 MapResult::from_err_str(
                     "ENCODE used in MITM map, use Direct with leak_target_addr + TLS instead",
