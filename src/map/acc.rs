@@ -5,6 +5,8 @@ struct AccumulateResult
 
 * function accumulate , accumulate_from_start
 */
+use log::debug;
+
 use super::*;
 
 pub trait MIter: Iterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug {}
@@ -25,7 +27,7 @@ pub struct AccumulateResult {
 
     pub chain_tag: String,
     // 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
-    //pub left_mappers_iter: MIterBox,
+    pub left_mappers_iter: MIterBox,
 }
 
 impl Debug for AccumulateResult {
@@ -146,7 +148,7 @@ pub async fn accumulate(
         } else {
             Some(cid)
         },
-        //left_mappers_iter: mappers,
+        left_mappers_iter: mappers,
         chain_tag: tag,
     }
 }
@@ -273,9 +275,7 @@ pub async fn in_iter_accumulate_forever(
             info!("{cid}, new accepted stream");
         }
 
-        let inmappers2 = inmappers.clone();
-
-        spawn_acc_forever(cid, new_stream_info, mc, txc, inmappers2, oti);
+        spawn_acc_forever(cid, new_stream_info, mc, txc, oti);
     }
 }
 
@@ -285,16 +285,17 @@ pub async fn in_iter_accumulate_forever(
 fn spawn_acc_forever(
     cid: CID,
     new_stream_info: MapResult,
-    mc: Box<dyn MIter>,
+    miter: Box<dyn MIter>,
     txc: tokio::sync::mpsc::Sender<AccumulateResult>,
-    inmappers2: Box<dyn MIter>,
     oti: Option<Arc<TransmissionInfo>>,
 ) {
     tokio::spawn(async move {
-        let r = accumulate(cid.clone(), ProxyBehavior::DECODE, new_stream_info, mc).await;
+        let r = accumulate(cid.clone(), ProxyBehavior::DECODE, new_stream_info, miter).await;
 
         if let Stream::Generator(rx) = r.c {
-            in_iter_accumulate_forever(cid.clone(), rx, txc, inmappers2, oti).await;
+            debug!("{cid} spawn_acc_forever recursive");
+            in_iter_accumulate_forever(cid.clone(), rx, txc, r.left_mappers_iter.clone(), oti)
+                .await;
         } else {
             let _ = txc.send(r).await;
         }
