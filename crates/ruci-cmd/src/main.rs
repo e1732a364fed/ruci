@@ -25,9 +25,8 @@ enum Mode {
     /// Chain mode, which uses lua file
     #[default]
     C,
-
-    /// Suit mode, which uses toml file
-    S,
+    // Suit mode, which uses toml file
+    // S,
 }
 
 /// ruci command line parameters:
@@ -304,8 +303,7 @@ async fn start_engine(
                 opts,
             )
             .await?;
-        }
-        Mode::S => todo!(),
+        } //Mode::S => todo!(),
     }
     Ok(())
 }

@@ -2,8 +2,6 @@
 
 local*.lua, remote.lua 为 chain 模式的示例配置文件
 
-local.suit.toml, remote.suit.toml 为 suit 模式的示例配置文件
-
 test.crt, test.key 用于测试用于tls的自签名证书
 
 test.crt 为 pem 格式的 x509 证书, test.key 为 pem 格式的 EC key

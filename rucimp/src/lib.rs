@@ -14,10 +14,11 @@ pub mod route;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub const COMMON_DIRS: [&str; 5] = [
+pub const COMMON_DIRS: [&str; 6] = [
     "./",
     "ruci_config/",
     "resource/",
+    "dev_res/",
     "../resource/",
     "../../resource/",
 ];

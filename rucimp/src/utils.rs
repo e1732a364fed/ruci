@@ -9,7 +9,7 @@ use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
 
-/// try current folder and ruci_config, resource, ../resource folder
+/// try folders in COMMON_DIRS
 ///
 /// try the default_file given or the first cmd argument
 ///
