@@ -38,7 +38,7 @@ infinite = {
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = "0.0.0.0:10800"
+                        Listener = { listen_addr = "0.0.0.0:10800"}
                     },
                     new_thread_fn = function(cid, state_index, data)
 

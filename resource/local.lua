@@ -4,13 +4,13 @@ print("this is a lua config file")
 -- 真正的配置块是 config 变量, 可以用搜索快速找到它
 
 listen = {
-    Listener = "0.0.0.0:10800"
+    Listener = { listen_addr = "0.0.0.0:10800"}
 }
 l2 = {
-    Listener = "0.0.0.0:20800"
+    Listener = { listen_addr = "0.0.0.0:20800"}
 }
 l3 = {
-    Listener = "0.0.0.0:30800"
+    Listener = { listen_addr = "0.0.0.0:30800"}
 }
 
 tproxy_tcp_listen = {
@@ -591,7 +591,7 @@ infinite = {
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = "0.0.0.0:10800"
+                        Listener = { listen_addr = "0.0.0.0:10800"}
                     },
                     new_thread_fn = function(cid, state_index, data)
                         -- print("lua: cid",inspect(cid))

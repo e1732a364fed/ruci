@@ -3,10 +3,10 @@ print("this is a lua config file")
 -- lua 的好处有很多, 你可以定义很多变量
 
 tcp = {
-    Listener = "0.0.0.0:10801"
+    Listener = { listen_addr = "0.0.0.0:10801"}
 }
 unix = {
-    Listener = "unix://file1"
+    Listener = { listen_addr = "unix://file1"}
 }
 
 opt_direct_chain = {{

@@ -207,7 +207,10 @@ pub enum InMapperConfig {
         dial_addr: String,
         ext: Option<Ext>,
     }, //单流发生器
-    Listener(String), //多流发生器
+    Listener {
+        listen_addr: String,
+        ext: Option<Ext>,
+    }, //多流发生器
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
     TcpOptListener {
@@ -382,10 +385,12 @@ impl ToMapperBox for InMapperConfig {
                 d.ext_fields = ext.as_ref().map(|e| e.to_ext_fields());
                 Box::new(d)
             }
-            InMapperConfig::Listener(l_str) => {
-                let a = net::Addr::from_network_addr_str(l_str).expect("network_addr is valid");
+            InMapperConfig::Listener { listen_addr, ext } => {
+                let a =
+                    net::Addr::from_network_addr_str(listen_addr).expect("network_addr is valid");
                 let mut g = ruci::map::network::Listener::default();
-                g.set_configured_target_addr(Some(a));
+                g.listen_addr = a;
+                g.ext_fields = ext.as_ref().map(|e| e.to_ext_fields());
                 Box::new(g)
             }
             InMapperConfig::Adder(i) => i.to_mapper_box(),
@@ -635,7 +640,10 @@ mod test {
             inbounds: vec![InMapperConfigChain {
                 tag: None,
                 chain: vec![
-                    InMapperConfig::Listener("0.0.0.0:1080".to_string()),
+                    InMapperConfig::Listener {
+                        listen_addr: "0.0.0.0:1080".to_string(),
+                        ext: None,
+                    },
                     InMapperConfig::Counter,
                     InMapperConfig::Socks5(PlainTextSet {
                         userpass: None,

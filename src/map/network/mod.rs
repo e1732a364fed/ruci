@@ -178,7 +178,9 @@ impl Mapper for Dialer {
 /// Listener can listen tcp and unix domain socket
 #[mapper_ext_fields]
 #[derive(MapperExt, Clone, Debug, Default)]
-pub struct Listener {}
+pub struct Listener {
+    pub listen_addr: net::Addr,
+}
 
 impl Name for Listener {
     fn name(&self) -> &'static str {
@@ -215,10 +217,7 @@ impl Mapper for Listener {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
-            None => self
-                .configured_target_addr()
-                .as_ref()
-                .expect("Listener always has a fixed_target_addr"),
+            None => &self.listen_addr,
         };
 
         if tracing::enabled!(tracing::Level::DEBUG) {

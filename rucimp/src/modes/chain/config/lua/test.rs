@@ -11,7 +11,7 @@ fn test_in() -> mlua::Result<()> {
     let text = r#"
     
         tls = { TLS = {  cert = "test.cert", key = "test.key" } }
-        listen = { Listener =  "0.0.0.0:1080"  }
+        listen = { Listener =  { listen_addr = "0.0.0.0:1080"}  }
         c = "Counter"
         chain1 = {
             listen,
@@ -47,11 +47,20 @@ fn test_in() -> mlua::Result<()> {
 
     let first_m = first_listen_group.chain.first().unwrap();
     let str = "0.0.0.0:1080".to_string();
-    assert!(matches!(first_m, InMapperConfig::Listener(str)));
+    assert!(matches!(
+        first_m,
+        InMapperConfig::Listener {
+            listen_addr: str,
+            ext: None
+        }
+    ));
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        InMapperConfig::Listener(str2) //won't match inner fields
+        InMapperConfig::Listener {
+            listen_addr: str2,
+            ext: None
+        } //won't match inner fields
     ));
     assert!(!matches!(first_m, InMapperConfig::Counter));
     Ok(())
@@ -121,7 +130,7 @@ fn test_out() -> mlua::Result<()> {
 #[test]
 fn test_out2() -> mlua::Result<()> {
     let text = r#"
-        listen = { Listener =  "0.0.0.0:1080"   }
+        listen = { Listener =   { listen_addr = "0.0.0.0:1080"}   }
         chain1 = {
             listen,
             { Socks5 = {   } },
@@ -214,7 +223,7 @@ fn test_out3() -> mlua::Result<()> {
 #[test]
 fn test_tag_route() -> mlua::Result<()> {
     let text = r#"
-        listen = { Listener =   "0.0.0.0:1080"   }
+        listen = { Listener =    { listen_addr = "0.0.0.0:1080"}  }
         chain1 = {
             listen,
             { Socks5 = {   } },
@@ -257,7 +266,7 @@ fn test_tag_route() -> mlua::Result<()> {
 #[test]
 fn test_rule_route() -> mlua::Result<()> {
     let text = r#"
-        listen = { Listener =   "0.0.0.0:1080"   }
+        listen = { Listener =    { listen_addr = "0.0.0.0:1080"}   }
         chain1 = {
             listen,
             { Socks5 = {   } },
@@ -425,7 +434,7 @@ infinite = {
             if this_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = "0.0.0.0:10800"
+                        Listener =  { listen_addr = "0.0.0.0:10800"}
                     },
                     new_thread_fn = function(this_index, data)
                         local new_i, new_data = coroutine.yield(1, {

@@ -7,7 +7,7 @@ config 是 提供给 rucimp 的项, 静态示例如下
 
 ```lua
 tls = { TLS = {  cert = "test.cert", key = "test.key" } }
-listen = { Listener   "0.0.0.0:1080" }
+listen = { Listener  = { listen_addr = "0.0.0.0:10800"} }
 c = "Counter"
 chain1 = {
     listen,
@@ -147,7 +147,7 @@ infinite = {
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = "0.0.0.0:10800"
+                        Listener = { listen_addr = "0.0.0.0:10800"}
                     },
                     new_thread_fn = function(cid, state_index, data)
                         -- print("lua: cid",inspect(cid))
