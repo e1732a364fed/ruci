@@ -88,7 +88,7 @@ local tlsout = {
     TLS = {
         host = "www.1234.com",
         insecure = true
-        -- alpn = {"http"}
+        -- alpn = {"http/1.1"}
 
     }
 }
@@ -771,7 +771,7 @@ local config_19_recorder_trojans = {
                     TLS = {
                         cert = "test.crt",
                         key = "test.key",
-                        alpn = { "h2", "http" }
+                        alpn = { "h2", "http/1.1" }
 
                     }
                 },
@@ -801,7 +801,7 @@ local config_19_recorder_trojans = {
                         --TLS = {
                         host = random_host(), --"www.1234.com",
                         insecure = true,
-                        alpn = { "http" }
+                        alpn = { "http/1.1" }
 
                     }
                 },
@@ -887,8 +887,39 @@ local config_23_tcp_ip_stack_lwip = {
 }
 --]]
 
+local config_24_chain_mitm = {
+    inbounds = { {
+        chain = {
+            { Listener = { listen_addr = "0.0.0.0:10800" } },
+            { Socks5Http = {} },
+            {
+                MITM = {
+                    cert = "test_ca_cert.pem",
+                    key = "test_ca_key.pem",
+                    alpn = { "h2", "http/1.1" }
+                }
+            },
+        },
+        tag = "listen1"
+    } },
+    outbounds = { {
+        tag = "dial1",
+        chain = {
+            { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
+            {
+                TLS = {
+                    host = "www.google.com",
+                    insecure = true,
+                    alpn = { "h2", "http/1.1" }
+                }
+            },
+            { Trojan = "mypassword" }
+        }
+    } }
+}
 
-Config = config_2_tproxy1
+
+Config = config_24_chain_mitm
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)

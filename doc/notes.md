@@ -65,6 +65,8 @@ Which ALPN protocols we include in our client hello. If empty, no ALPN extension
 
 native-tls 的 server 不支持手动设置 alpn
 
+注意 http/1.1 不要写成 http1.1 或 http
+
 ## tproxy
 
 使用 tproxy 时, 确保是 linux 系统, 并 安装了 iptables (`apt install iptables`)

@@ -73,7 +73,6 @@ impl Recorder {
         })
     }
 }
-/// takes ownership of base Conn
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct Config {
@@ -116,11 +115,10 @@ impl Name for RecorderMap {
 #[async_trait]
 impl Map for RecorderMap {
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        let now = time::Instant::now();
         let sgd = params.g.as_ref().map(data::SerializableGlobalData::from);
 
         let r = Recorder {
-            start: now,
+            start: time::Instant::now(),
             data: data::RecordData {
                 cid: cid.to_string(),
                 behavior,
@@ -140,7 +138,7 @@ impl Map for RecorderMap {
 
         match params.c {
             Stream::Conn(c) => {
-                let cc = tcp::RecorderConn {
+                let rc = tcp::RecorderConn {
                     base: Box::pin(c),
                     record: r,
                 };
@@ -148,7 +146,7 @@ impl Map for RecorderMap {
                 MapResult::builder()
                     .a(params.a)
                     .b(params.b)
-                    .c(Stream::c(Box::new(cc)))
+                    .c(Stream::c(Box::new(rc)))
                     .build()
             }
             Stream::AddrConn(ac) => {
@@ -179,7 +177,10 @@ impl Map for RecorderMap {
                     .build()
             }
             Stream::None => MapResult::from_err_str("recorder: can't init without a stream"),
-            _ => MapResult::from_err_str("recorder: can't init with a stream generator"),
+            _ => MapResult::from_err_str(&format!(
+                "recorder: can't init with type of {:?}",
+                params.c
+            )),
         }
     }
 }

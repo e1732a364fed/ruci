@@ -8,7 +8,7 @@ use ruci::user::PlainText;
 pub const INSPECT: &str = include_str!("../../../../../../resource/inspect.lua");
 
 #[test]
-fn test_in() -> mlua::Result<()> {
+fn test_in() -> anyhow::Result<()> {
     let text = r#"
     
         tls = { TLS = {  cert = "test.cert", key = "test.key" } }
@@ -81,7 +81,7 @@ fn test_in() -> mlua::Result<()> {
 }
 
 #[test]
-fn test_out() -> mlua::Result<()> {
+fn test_out() -> anyhow::Result<()> {
     let text = r#"
     
             tls = { TLS = {  host = "my.com", insecure = true } }
@@ -144,7 +144,7 @@ fn test_out() -> mlua::Result<()> {
 }
 
 #[test]
-fn test_out2() -> mlua::Result<()> {
+fn test_out2() -> anyhow::Result<()> {
     let text = r#"
         listen = { Listener =   { listen_addr = "0.0.0.0:1080"}   }
         chain1 = {
@@ -200,7 +200,7 @@ fn test_out2() -> mlua::Result<()> {
 }
 
 #[test]
-fn test_out3() -> mlua::Result<()> {
+fn test_out3() -> anyhow::Result<()> {
     let text = r#"
 
         ic = { { Stdio={ fixed_target_addr= "udp://127.0.0.1:20800", pre_defined_early_data = "abc" } } , { Adder = 1 } } 
@@ -241,7 +241,7 @@ fn test_out3() -> mlua::Result<()> {
 }
 
 #[test]
-fn test_tag_route() -> mlua::Result<()> {
+fn test_tag_route() -> anyhow::Result<()> {
     let text = r#"
         listen = { Listener =    { listen_addr = "0.0.0.0:1080"}  }
         chain1 = {
@@ -291,7 +291,7 @@ fn test_tag_route() -> mlua::Result<()> {
 }
 
 #[test]
-fn test_config1() -> mlua::Result<()> {
+fn test_config1() -> anyhow::Result<()> {
     let sa = std::net::SocketAddr::V4("114.114.114.114:53".parse().unwrap());
 
     let c = StaticConfig {
@@ -336,7 +336,7 @@ fn test_config1() -> mlua::Result<()> {
 }
 
 #[test]
-fn test_rule_route() -> mlua::Result<()> {
+fn test_rule_route() -> anyhow::Result<()> {
     let text = r#"
         listen = { Listener =    { listen_addr = "0.0.0.0:1080"}   }
         chain1 = {

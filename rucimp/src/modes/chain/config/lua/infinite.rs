@@ -72,7 +72,7 @@ fn get_g_map_from(
     let t: LuaTable = lua
         .globals()
         .get(INFINITE_CONFIG_FIELD)
-        .context("get Infinite failed")?;
+        .context("get Infinite Global field failed")?;
 
     let t_key = match behavior {
         ProxyBehavior::UNSPECIFIED => todo!(),
@@ -81,13 +81,18 @@ fn get_g_map_from(
     };
 
     let len = {
-        let t: LuaTable = t.get(t_key)?;
+        let t: LuaTable = t
+            .get(t_key)
+            .context(format!("get '{}' field failed", t_key))?;
         t.len()?
     };
     // lua 的 index 是从 1 算起
     for i in 1..len + 1 {
         let lua = Lua::new();
-        lua.load(lua_text).exec().context("eval lua failed")?;
+        lua.load(lua_text)
+            .exec()
+            .context(format!("eval lua for {}'s {} item failed", t_key, i))?;
+
         set_lua_create_in_map_func(&lua)?;
         set_lua_create_out_map_func(&lua)?;
 
@@ -96,8 +101,10 @@ fn get_g_map_from(
             let t: LuaTable = t.get(t_key)?;
 
             let chain: LuaTable = t.get(i)?;
-            let tag: String = chain.get("tag")?;
-            let g: LuaFunction = chain.get(GENERATOR_FIELD)?;
+            let tag: String = chain.get("tag").context("get 'tag' field failed")?;
+            let g: LuaFunction = chain
+                .get(GENERATOR_FIELD)
+                .context("get 'generator' field failed")?;
 
             let key = lua.create_registry_value(g).expect("ok");
 

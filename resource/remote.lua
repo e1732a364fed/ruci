@@ -39,8 +39,8 @@ local tls = {
     TLS = {
         cert = "test2.crt",
         key = "test2.key",
-        alpn = { "h2", "http" }
-
+        alpn = { "h2", "http/1.1" },
+        insecure = true
     }
 }
 
@@ -164,7 +164,7 @@ Config = {
         -- { chain = lua_example2, tag = "listen1" },
     },
 
-    ---[[
+    --[[
     -- 一般情况下 的 outbound 配置
 
     outbounds = { {
@@ -179,6 +179,38 @@ Config = {
         } }
     } },
     -- ]]
+
+    ---[[
+    -- 对应 客户端使用 mitm 时，服务端的 outboud 配置。
+    -- 注意 direct 后面要加上 TLS 来重新包装数据，否则隐私信息会明文传递在 服务器 与 目标地址 的网络链路上
+    -- 而且这里的 TLS 最好使用的是 NativeTLS, 以增强真实性
+
+    outbounds = { {
+        tag = "dial1",
+        chain = { {
+            Direct = {
+                leak_target_addr = true
+            }
+        },
+            {
+                TLS = {
+                    alpn = { "h2", "http/1.1" },
+                    insecure = false
+                }
+            }
+        }
+    }, {
+        tag = "fallback_d",
+        chain = { {
+            BindDialer = {
+                dial_addr = "tcp://0.0.0.0:80"
+            }
+        },
+        }
+    },
+    },
+
+    --]]
 
 
     --[[

@@ -28,18 +28,30 @@ const CONFIG_KEY: &str = "Config";
 pub fn load_static(
     lua_text: &str,
     file_source: Arc<Option<crate::utils::FileSource>>,
-) -> mlua::Result<StaticConfig> {
+) -> anyhow::Result<StaticConfig> {
     let lua = Lua::new();
-
+    use anyhow::Context;
     if let Some(file_source) = file_source.as_ref() {
         crate::map::lua::create_load_file_func(&lua, file_source)
     }
 
-    lua.load(lua_text).exec()?;
+    lua.load(lua_text)
+        .exec()
+        .map_err(|e| anyhow::anyhow!("run and load lua failed: {}", e))?;
 
-    let ct: LuaTable = lua.globals().get(CONFIG_KEY)?;
+    let ct: LuaTable = lua
+        .globals()
+        .get(CONFIG_KEY)
+        .map_err(|e| anyhow::anyhow!("get lua global Config failed: {}", e))?;
 
-    let c: StaticConfig = lua.from_value(Value::Table(ct))?;
+    let dr = mlua::serde::de::Deserializer::new(Value::Table(ct));
+
+    let c: StaticConfig =
+        serde_path_to_error::deserialize(dr).context("Config to StaticConfig failed")?;
+
+    // let c: StaticConfig = lua
+    //     .from_value(Value::Table(ct))
+    //     .context("Config to StaticConfig failed")?;
 
     Ok(c)
 }

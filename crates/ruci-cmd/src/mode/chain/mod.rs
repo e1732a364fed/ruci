@@ -23,11 +23,13 @@ pub(crate) async fn run(
         Arc<ruci::net::GlobalTrafficRecorder>,
     )>,
 ) -> anyhow::Result<()> {
-    info!("try to start rucimp chain engine");
+    info!("starting rucimp chain engine...");
 
     let mut e = rucimp::modes::chain::engine::Engine::default();
 
     let (contents, file_source) = crate::mode::get_file(&mut file_name, args.in_memory).await?;
+
+    use anyhow::Context;
 
     if file_name.ends_with(".lua") {
         #[cfg(any(feature = "lua", feature = "lua54"))]
@@ -39,11 +41,21 @@ pub(crate) async fn run(
             }
         }
     } else if file_name.ends_with(".toml") {
-        let config: StaticConfig = toml::from_str(&contents)?;
-        e.init_static(config);
+        let dr = toml::Deserializer::new(&contents);
+
+        let c: StaticConfig =
+            serde_path_to_error::deserialize(dr).context("toml to StaticConfig failed")?;
+
+        e.init_static(c);
     } else if file_name.ends_with(".yml") || file_name.ends_with(".yaml") {
-        let config: StaticConfig = serde_yaml::from_str(&contents)?;
-        e.init_static(config);
+        let dr = serde_yaml::Deserializer::from_str(&contents);
+
+        let c: StaticConfig =
+            serde_path_to_error::deserialize(dr).context("yaml to StaticConfig failed")?;
+
+        e.init_static(c);
+    } else {
+        anyhow::bail!("unsupported file extension: {}", file_name);
     }
 
     #[cfg(feature = "api_server")]

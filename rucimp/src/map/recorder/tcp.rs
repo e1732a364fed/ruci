@@ -7,6 +7,7 @@ use tracing::info;
 
 use super::Recorder;
 
+/// takes ownership of base Conn
 pub(super) struct RecorderConn {
     pub(super) base: Pin<ruci::net::Conn>,
     pub(super) record: Recorder,
