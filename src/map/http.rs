@@ -91,6 +91,7 @@ impl Server {
         } else {
             buf = BytesMut::zeroed(1024);
             n = base.read(&mut buf).await?;
+            buf.truncate(n);
         }
 
         let r = net::http::parse_h1_request(&buf[..n], true);

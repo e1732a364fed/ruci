@@ -7,6 +7,6 @@ listen_chain1 = { listen, { Socks5 = {} }, }
 listen_http = { listen, { Http = {} }, }
 
 config = {
-    listen = { {chain = listen_http, tag = "listen1"} },
+    listen = { {chain = listen_chain1, tag = "listen1"} },
     dial = { { tag="dial1", chain = { "Direct" } } }
 }

@@ -9,6 +9,7 @@ rust上就好了
 
 const MAX_PARSE_URL_LEN: usize = 3000;
 const HEADER_ENDING_BYTES: &[u8] = b"\r\n\r\n";
+const HEADER_ENDING_STR: &str = "\r\n\r\n";
 const HEADER_ENDING_BYTES_LEN: usize = HEADER_ENDING_BYTES.len();
 
 #[derive(Default, Debug)]
@@ -205,7 +206,8 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                 let header_bytes = &left_bs[..index_of_ending];
 
                 let header_string = String::from_utf8_lossy(header_bytes);
-                let header_str_list: Vec<&str> = header_string.split("\r\n\r\n").collect();
+
+                let header_str_list: Vec<&str> = header_string.split(HEADER_ENDING_STR).collect();
 
                 for header in header_str_list {
                     let hs = header.to_string();
@@ -234,6 +236,22 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn split() {
+        let header_string = "1234\r\n\r\n2345\r\n\r\n7890\n\r\n\r1234\n\n\r\raabb".to_string();
+        let header_str_list: Vec<&str> = header_string.split("\r\n\r\n").collect();
+        println!("{:?}", header_str_list);
+
+        assert_eq!(header_str_list.len(), 3);
+
+        unsafe {
+            assert_eq!(
+                std::str::from_utf8_unchecked(HEADER_ENDING_BYTES),
+                HEADER_ENDING_STR
+            );
+        }
+    }
 
     #[test]
     fn test_invalid_too_short() {
