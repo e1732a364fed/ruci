@@ -74,8 +74,9 @@ impl Server {
                 let r = match r {
                     Ok(r) => r,
                     Err(e) => {
-                        warn!(cid = %cid, "accept h2 got error, will continue: {}", e);
-                        continue;
+                        // 这里不能 continue, 一定要 break, 否则在有错误时会无限循环
+                        warn!(cid = %cid, "accept h2 got error, will break: {}", e);
+                        break;
                     }
                 };
                 let (req, mut resp) = r;

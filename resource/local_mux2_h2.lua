@@ -1,10 +1,7 @@
 -- 演示了 用完全动态链实现 h2 mux outbound 的配置
--- 关注 outbounds 的 generator 部分, 它实现了 至少 supposed_max_num 条 主h2连接的多路复用
+-- 关注 outbounds 的 generator 部分, 它实现了 max_num 条 主h2连接的多路复用
 
-supposed_max_num = 4
-
--- 注意，因为非预建立连接，实际使用时很可能一次性建立了超过 supposed_max_num 条连接
--- 但代码检查到数量超了之后，就不会继续生成主连接
+max_num = 12
 
 dial_config = {
     Dialer = "tcp://0.0.0.0:10801"
@@ -33,7 +30,7 @@ h2_out_config = {
 }
 
 h2_out_pool = {}
-local inspect = require("inspect")
+--local inspect = require("inspect")
 infinite = {
 
     inbounds = {{
@@ -67,8 +64,9 @@ infinite = {
             if state_index == -1 then
 
                 local pool_n = table.getn(h2_out_pool)
+                --print("-1 pooln",pool_n, max_num)
 
-                if pool_n >= supposed_max_num then
+                if pool_n >= max_num then
                     local i = math.random(1,pool_n)
 
                     return 2, h2_out_pool[i]:clone()
@@ -87,11 +85,21 @@ infinite = {
 
                 return 1, tlsout:clone()
             elseif state_index == 1 then
-                local h2_out = create_out_mapper(h2_out_config)
 
-                table.insert(h2_out_pool,h2_out)
+                local pool_n = table.getn(h2_out_pool)
 
-                return 2, h2_out:clone()
+                --print("1 pooln",pool_n, max_num)
+
+                if pool_n < max_num then
+                    local h2_out = create_out_mapper(h2_out_config)
+
+                    table.insert(h2_out_pool,h2_out)
+                    return 2, h2_out:clone()
+                end
+
+                local i = math.random(1,pool_n)
+                return 2, h2_out_pool[i]:clone()
+
             elseif state_index == 2 then
                 if trojan_out == nil then
                     trojan_out = create_out_mapper(trojan_out_config)

@@ -66,8 +66,10 @@ async fn new_stream_by_send_request(
 
     if let Some(connection) = connection {
         tokio::spawn(async move {
-            connection.await.expect("connection failed");
-            debug!(cid = %cid, "h2 await end");
+            // 在连接被强制断开时，这里就会 返回
+            let r = connection.await;
+
+            debug!(cid = %cid, r=?r, "h2 await end");
         });
     }
 
