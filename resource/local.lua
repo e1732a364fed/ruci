@@ -99,6 +99,17 @@ dial = {
     Dialer = "tcp://0.0.0.0:10801"
 }
 
+opt_dial = {
+    OptDialer ={
+        dial_addr = "tcp://0.0.0.0:10801", -- 不能为 127.0.0.1, 须为 0.0.0.0
+        sockopt = {
+            so_mark = 255,
+            bind_to_device = "enp0s1"
+        }
+    }
+}
+
+
 trojan_out = {
     Trojan = "mypassword"
 }
@@ -116,6 +127,7 @@ websocket_out = {
 }
 
 dial_trojan_chain = {dial, tlsout, trojan_out}
+opt_dial_trojan_chain = {opt_dial, trojan_out}
 dial_ws_trojan_chain = {dial, tlsout, websocket_out, trojan_out}
 
 h2_single_out = {
@@ -195,7 +207,7 @@ config = {
 
 
 
----[=[
+--[=[
 
 config = {
     inbounds = {{
@@ -216,6 +228,35 @@ config = {
 
     --[[
 这个 config 块是演示 inbound 是 socks5http, outbound 是 direct 的情况
+
+但是用了 透明代理功能. 其只能在 linux 上使用.
+--]]
+
+}
+
+-- ]=]
+
+---[=[
+
+config = {
+    inbounds = {{
+        chain = tproxy_listen_tcp_chain,
+        tag = "listen1"
+    },
+    {
+        chain = {tproxy_udp_listen},
+        tag = "listen_udp1"
+    }
+    },
+    outbounds = {{
+        tag = "out",
+        chain = opt_dial_trojan_chain
+    }},
+
+    tag_route = {{"listen1", "out"}, {"listen_udp1", "out"}},
+
+    --[[
+这个 config 块是演示 inbound 是 socks5http, outbound 是  
 
 但是用了 透明代理功能. 其只能在 linux 上使用.
 --]]

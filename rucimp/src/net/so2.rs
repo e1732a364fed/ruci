@@ -6,6 +6,7 @@ use tokio::net::{TcpListener, TcpStream, UdpSocket};
 
 use ruci::net::{self, Network, Stream};
 use socket2::{Domain, Protocol, Socket, Type};
+use tracing::debug;
 
 use super::so_opts;
 
@@ -60,6 +61,7 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
         // can't set_nonblocking for dial, or we will get
         // Operation now in progress (os error 115) when calling connect
     }
+
     socket.set_reuse_address(true)?;
 
     if is_listen {
@@ -73,7 +75,9 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
         socket.bind(&zeroa.into()).context("bind failed")?;
 
         if na.network == Network::TCP {
+            debug!("connecting tcp {}", a);
             socket.connect(&a.into()).context("connect failed")?;
+            debug!("connected tcp");
         }
     }
 

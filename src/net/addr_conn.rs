@@ -280,26 +280,27 @@ async fn read_once_notimeout<R1: AddrReadTrait, W1: AddrWriteTrait>(
     r1: &mut R1,
     w1: &mut W1,
     buf: &mut [u8],
-) -> bool {
+) -> anyhow::Result<usize> {
     match r1.read(buf).await {
         Err(e) => {
-            debug!("read addrconn GOT ERROR {e}");
-
-            return false;
+            bail!("read addrconn GOT ERROR {e}");
         }
         Ok((m, ad)) => {
             if m > 0 {
                 let r = w1.write(&buf[..m], &ad).await;
                 match r {
-                    Ok(_) => return true,
+                    Ok(n) => {
+                        if n < m {
+                            debug!("read_once n<m {n} {m}")
+                        }
+                        return Ok(r?);
+                    }
                     Err(e) => {
-                        debug!("write addrconn err {e}");
-
-                        return false;
+                        bail!("write addrconn err {e}");
                     }
                 }
             }
-            return false;
+            bail!("read <=0 {m}");
         }
     }
 }
@@ -309,46 +310,46 @@ async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
     w1: &mut W1,
     no_timeout: bool,
     buf: &mut [u8],
-) -> bool {
+) -> anyhow::Result<usize> {
     if no_timeout {
         return read_once_notimeout(r1, w1, buf).await;
     }
 
     tokio::select! {
         _ = tokio::time::sleep(CP_UDP_TIMEOUT) =>{
-            debug!("read addrconn timeout");
-
-            return false ;
+            bail!("read addrconn timeout");
         }
 
         r = r1.read(buf) =>{
             match r {
                 Err(e) => {
-                    debug!("read addrconn GOT ERROR {e}");
+                    bail!("read addrconn GOT ERROR {e}");
 
-                    return false
                 },
                 Ok((m, ad)) => {
                     if m > 0 {
                         //写udp 是不会卡住的, 但addr_conn底层可能不是 udp
 
-                        let sleep_f2 = tokio::time::timeout(Duration::from_secs(1),w1.write(&buf[..m], &ad)).await;
-                        match sleep_f2{
+                        let fut = tokio::time::timeout(Duration::from_secs(1),w1.write(&buf[..m], &ad)).await;
+                        match fut{
                             Ok(r) => match r {
-                                Ok(_) => return true,
+                                Ok(n) => {
+                                    if n < m {
+                                        debug!("read_once n<m {n} {m}")
+                                    }
+                                    return Ok(r?)},
                                 Err(e) => {
-                                    debug!("write addrconn err {e}");
-
-                                    return false},
+                                    bail!("write addrconn err {e}");
+                                },
                             },
                             Err(_) => {
                                 debug!("write addrconn timeout");
-                                return true;
+                                return Ok(0);
                             },
                         }
 
                     }
-                    return false ;
+                    bail!("read <=0 {m}") ;
                 }
             }
         }
@@ -365,15 +366,20 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     _name: String,
     no_timeout: bool,
     mut shutdown_rx: broadcast::Receiver<()>,
+    is_d: bool,
+    opt: Option<Arc<GlobalTrafficRecorder>>,
 ) -> Result<u64, Error> {
-    //let mut whole_write = 0;
-    let mut buf0 = Box::new([0u8; 1400]);
+    let mut whole_write = 0;
+    let mut buf = Box::new([0u8; 1400]);
 
     loop {
         tokio::select! {
-            r = read_once(&mut r1, &mut w1, no_timeout,buf0.as_mut()) =>{
-                if !r {
-                    break;
+            r = read_once(&mut r1, &mut w1, no_timeout,buf.as_mut()) =>{
+                match r {
+                    Ok(n) => whole_write+=n,
+                    Err(e) => {
+                        debug!("cp_addr got e {e}");
+                        break},
                 }
             }
             _ = shutdown_rx.recv() =>{
@@ -385,50 +391,20 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     // 实测 用一个loop + 小 buf 的实现 比用 两个 spawn + mpsc 快很多. 后者非常卡顿几乎不可用
     // buf size 的选择也很重要, 太大太小都卡
 
-    // let (tx, mut rx) = mpsc::channel(1000);
+    let l = whole_write as u64;
+    if let Some(a) = opt {
+        if is_d {
+            a.db.fetch_add(l, Ordering::Relaxed);
+        } else {
+            a.ub.fetch_add(l, Ordering::Relaxed);
+        }
+    }
 
-    // let jh1 = tokio::spawn(async move {
-    //     loop {
-    //         let mut buf = BytesMut::zeroed(1500);
-    //         let r = r1.read(buf.as_mut()).await;
-    //         match r {
-    //             Ok((u, a)) => {
-    //                 buf.truncate(u);
-    //                 let r = tx.send((buf, a)).await;
-    //                 if r.is_err() {
-    //                     break;
-    //                 }
-    //             }
-    //             Err(_e) => {
-    //                 break;
-    //             }
-    //         }
-    //     }
-    // });
-
-    // let jh2 = tokio::spawn(async move {
-    //     loop {
-    //         let r = rx.recv().await;
-    //         match r {
-    //             Some((buf, a)) => {
-    //                 let r = w1.write(&buf, &a).await;
-    //                 if r.is_err() {
-    //                     break;
-    //                 }
-    //             }
-    //             None => break,
-    //         }
-    //     }
-    // });
-
-    // let _ = join!(jh1, jh2);
-
-    // debug!("CP ADDR exit {name}  {whole_write}");
-    // Ok(whole_write as u64)
-    Ok(0)
+    Ok(l)
 }
 
 /// copy data between two AddrConn struct
+#[inline]
 pub async fn cp(
     cid: CID,
     c1: AddrConn,
@@ -454,6 +430,7 @@ pub async fn cp(
     .await
 }
 
+#[inline]
 pub async fn cp_between<
     R1: AddrReadTrait + 'static,
     R2: AddrReadTrait + 'static,
@@ -468,13 +445,11 @@ pub async fn cp_between<
 
     r2: R2,
     w2: W2,
-    _opt: Option<Arc<GlobalTrafficRecorder>>,
+    opt: Option<Arc<GlobalTrafficRecorder>>,
     no_timeout: bool,
     shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
     shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<u64, Error> {
-    //let (tx1, rx1) = oneshot::channel();
-    //let (tx2, rx2) = oneshot::channel();
     let (tx1, rx1) = broadcast::channel(10);
     let (tx2, rx2) = broadcast::channel(10);
 
@@ -498,8 +473,10 @@ pub async fn cp_between<
     let n1 = name1.clone() + " to " + &name2;
     let n2 = name2 + " to " + &name1;
 
-    let cp1 = tokio::spawn(cp_addr(r1, w2, n1, no_timeout, rx1));
-    let cp2 = tokio::spawn(cp_addr(r2, w1, n2, no_timeout, rx2));
+    let o1 = opt.clone();
+    let o2 = opt.clone();
+    let cp1 = tokio::spawn(cp_addr(r1, w2, n1, no_timeout, rx1, false, o1));
+    let cp2 = tokio::spawn(cp_addr(r2, w1, n2, no_timeout, rx2, true, o2));
 
     let r = tokio::select! {
         r = cp1 =>{
@@ -542,8 +519,6 @@ pub async fn cp_between<
             let _ = tx1c.send(());
             let _ = tx2c.send(());
 
-             debug!("shutdown1 ended");
-            // rst2
             0
         }
 
@@ -553,129 +528,11 @@ pub async fn cp_between<
             let _ = tx1c.send(());
             let _ = tx2c.send(());
 
-             debug!("shutdown2 ended");
-            // rst2
             0
         }
     };
 
     Ok(r)
-
-    // unimplemented!()
-
-    // let (c1_to_c2, c2_to_c1) = (
-    //     cp_addr(r1, w2, no_timeout, rx1).fuse(),
-    //     cp_addr(r2, w1, no_timeout, rx2).fuse(),
-    // );
-    // pin_mut!(c1_to_c2, c2_to_c1, shutdown_rx1, shutdown_rx2);
-
-    // futures::select! {
-    //     _ = shutdown_rx1 =>{
-    //         debug!("addrconn cp_between got shutdown1 signal");
-
-    //         let _ = tx1.send(());
-    //         let _ = tx2.send(());
-
-    //         let _rst1 = c1_to_c2.await;
-    //         let rst2 = c2_to_c1.await;
-
-    //         debug!("addrconn cp_between ended");
-    //         rst2
-    //     }
-
-    //     _ = shutdown_rx2 =>{
-    //         debug!("addrconn cp_between got shutdown2 signal");
-
-    //         let _ = tx1.send(());
-    //         let _ = tx2.send(());
-
-    //         let _rst1 = c1_to_c2.await;
-    //         let rst2 = c2_to_c1.await;
-
-    //         debug!("addrconn cp_between ended");
-    //         rst2
-    //     }
-    //     rst1 = c1_to_c2 =>{
-
-    //         if tracing::enabled!(tracing::Level::DEBUG)  {
-    //             debug!( cid = %cid,"cp_addr end, u");
-    //         }
-
-    //         if let Some(gtr) = opt.as_ref(){
-    //             match &rst1{
-    //                 Ok(n) => {
-    //                     let tt = gtr.ub.fetch_add(*n, Ordering::Relaxed);
-    //                     debug!(cid = %cid,"cp_addr_end, u, ub, {},{}",n,tt+n);
-    //                 },
-    //                 Err(e) => {
-    //                     debug!(cid = %cid,"cp_addr_end with err, u, {}",e);
-
-    //                 },
-    //             }
-
-    //         }
-    //         let _ = tx2.send(());
-
-    //         let rst2 = c2_to_c1.await;
-
-    //         if tracing::enabled!(tracing::Level::DEBUG)  {
-    //             debug!(cid = %cid,"cp_addr end, d");
-    //         }
-
-    //         if let Some(gtr) = opt{
-    //             match &rst2{
-    //                 Ok(n) => {
-    //                     let tt = gtr.db.fetch_add(*n, Ordering::Relaxed);
-    //                     debug!(cid = %cid,"cp_addr_end, u ,db, {},{}",n,tt+n);
-    //                 },
-    //                 Err(e) => {
-    //                     debug!(cid = %cid,"cp_addr_end with err, u, d, {}",e);
-
-    //                 },
-    //             }
-    //         }
-
-    //         rst1
-    //     }
-    //     rst2 = c2_to_c1 =>{
-    //         if tracing::enabled!(tracing::Level::DEBUG)  {
-    //             debug!(cid = %cid,"cp_addr end, d");
-    //         }
-    //         if let Some(gtr) = opt.as_ref(){
-    //             match &rst2{
-    //                 Ok(n) => {
-    //                     let tt = gtr.db.fetch_add(*n, Ordering::Relaxed);
-    //                     debug!(cid = %cid,"cp_addr_end, d, db, {},{}",n,tt+n);
-    //                 },
-    //                 Err(e) => {
-    //                     debug!(cid = %cid,"cp_addr_end with err, d, d, {}",e);
-
-    //                 },
-    //             }
-
-    //         }
-    //         let _ = tx1.send(());
-
-    //         let rst1 = c1_to_c2.await;
-    //         if tracing::enabled!(tracing::Level::DEBUG)  {
-    //             debug!(cid = %cid,"cp_addr end, u, ");
-    //         }
-    //         if let Some(gtr) = opt{
-
-    //             match &rst1{
-    //                 Ok(n) => {
-    //                     let tt = gtr.ub.fetch_add(*n, Ordering::Relaxed);
-    //                     debug!(cid = %cid,"cp_addr_end, d, ub, {},{}",n,tt+n);
-    //                 },
-    //                 Err(e) => {
-    //                     debug!(cid = %cid,"cp_addr_end with err, d, u, {}",e);
-
-    //                 },
-    //             }
-    //         }
-    //         rst2
-    //     }
-    // }
 }
 
 #[cfg(test)]

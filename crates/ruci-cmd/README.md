@@ -25,6 +25,9 @@ RUST_LOG=debug cargo run -F lua -F api_server -F api_client -F utils -F trace --
 # with tproxy:
 
 RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn -F tproxy -- --log-file ""
+
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn -F tproxy -- --log-file "" -c remote.lua
+
 ```
 
 make:
