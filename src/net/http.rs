@@ -29,11 +29,17 @@ const HEADER_ENDING_STR: &str = "\r\n\r\n";
 const HEADER_ENDING_BYTES_LEN: usize = HEADER_ENDING_BYTES.len();
 
 #[derive(Debug)]
+pub struct Header {
+    pub head: String,
+    pub value: String,
+}
+
+#[derive(Debug)]
 pub struct ParsedHttpRequest {
     pub version: String,
     pub method: Method,
     pub path: String,
-    pub headers: Vec<RawHeader>,
+    pub headers: Vec<Header>,
     pub parse_result: Result<(), ParseError>,
     pub last_checked_index: usize,
 }
@@ -47,6 +53,17 @@ impl Default for ParsedHttpRequest {
             parse_result: Ok(()),
             last_checked_index: Default::default(),
         }
+    }
+}
+
+impl ParsedHttpRequest {
+    pub fn get_first_header_by(&self, key: &str) -> &str {
+        for h in &self.headers {
+            if h.head == key {
+                return &h.value;
+            }
+        }
+        return "";
     }
 }
 
@@ -82,12 +99,6 @@ pub enum Method {
     OPTIONS,
     CONNECT,
     Other(String),
-}
-
-#[derive(Debug)]
-pub struct RawHeader {
-    pub head: String,
-    pub value: String,
 }
 
 ///  <https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089>
@@ -241,7 +252,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                         request.parse_result = Err(ParseError::HeaderNoColon);
                         return request;
                     }
-                    request.headers.push(RawHeader {
+                    request.headers.push(Header {
                         head: ss[0].to_string(),
                         value: ss[1].to_string(),
                     });

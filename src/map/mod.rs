@@ -31,6 +31,7 @@ pub use data::*;
 
 pub mod counter;
 pub mod fileio;
+pub mod http_filter;
 pub mod http_proxy;
 pub mod math;
 pub mod network;
@@ -120,6 +121,9 @@ impl MapParams {
 }
 
 /// Mapper::maps  return type
+///
+/// MapResult has basic fields : a,b,c,d,e which are
+/// massively used in ruci.
 ///
 #[derive(TypedBuilder, Default)]
 pub struct MapResult {

@@ -148,11 +148,10 @@ config = {
 
 --]=]
 
---[=[
+---[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
-    outbounds = { { tag="dial1", chain = dial_trojan_ws_chain } }
-
+    outbounds = { { tag="dial1", chain = dial_trojan_ws_chain } },
 --[[
 这个 config 块是演示 inbound 是 socks5http, outbound 是 trojan+tls+ws 的情况
 --]]
@@ -242,7 +241,7 @@ config = {
 
 --]]
 
----[=[
+--[=[
 
 config = {
     inbounds = {{

@@ -64,6 +64,10 @@ rule_route 和 tag_route 同时出现时，程序只会采用 rule_route. 因为
 
 rule_route 的 mode 可为 WhiteList 或 BlackList
 
+WhiteList意思是，给出的规则必须完全匹配，才算通过。 
+BlackList 意思是，给出的规则有任意一项匹配就算通过.
+一般BlackList 用于 路由到 BlackHole, 故名。
+
 # 动态链
 
 演示动态链的基本用法：

@@ -34,14 +34,35 @@ trojan_in = {
 
 trojan_chain = {tcp, tls, trojan_in}
 
-ws = {
-    WebSocket = {
+http_filter = {
+    HttpFilter = {
         host = "myhost",
         path = "/path1",
     }
 }
 
-trojan_ws_chain = {tcp, tls, ws, trojan_in}
+
+basic_ws = {
+    WebSocket = {}
+}
+
+ws = {
+    WebSocket ={
+        http_config =  {
+            host = "myhost",
+            path = "/path1",
+        }
+    }
+}
+
+-- use http_filter to support fallback. 
+
+-- if http_filter is used, 
+-- http_config field in WebSocket can be omitted.
+
+trojan_ws_chain = {tcp, tls,http_filter,  basic_ws, trojan_in}
+
+--trojan_ws_chain = {tcp, tls, ws, trojan_in}
 
 dial = {
     Dialer = "tcp://0.0.0.0:10801"
@@ -70,7 +91,14 @@ config = {
     outbounds = {{
         tag = "dial1",
         chain = direct_out_chain
-    }}
-    -- outbounds = { { tag="dial1", chain = out_stdio_chain  } } --以命令行为出口
+    }, {
+        tag = "fallback_d",
+        chain = {{
+            Dialer = "tcp://0.0.0.0:80"
+        }}
+    }},
+    -- outbounds = { { tag="dial1", chain = out_stdio_chain  } }, --以命令行为出口
+
+    fallback_route = {{"listen1", "fallback_d"}}
 }
 

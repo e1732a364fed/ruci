@@ -97,9 +97,9 @@ impl OutSelector for FixedOutSelector {
 
 #[derive(Debug, Clone, Default)]
 pub struct TagOutSelector {
-    pub outbounds_tag_route_map: HashMap<String, String>, // in_tag -> out_tag
-    pub fallback_tag_route_map: Option<HashMap<String, String>>, // in_tag -> out_tag
-    pub outbounds_map: Arc<HashMap<String, DMIterBox>>,   //out_tag -> outbound
+    pub outbounds_tag_route_map: Option<HashMap<String, String>>, // in_tag -> out_tag
+    pub fallback_tag_route_map: Option<HashMap<String, String>>,  // in_tag -> out_tag
+    pub outbounds_map: Arc<HashMap<String, DMIterBox>>,           //out_tag -> outbound
     pub ok_default: Option<DMIterBox>,
     pub fb_default: Option<DMIterBox>,
 }
@@ -120,7 +120,11 @@ impl OutSelector for TagOutSelector {
                 None
             }
         } else {
-            self.outbounds_tag_route_map.get(in_chain_tag)
+            if let Some(fm) = &self.outbounds_tag_route_map {
+                fm.get(in_chain_tag)
+            } else {
+                None
+            }
         };
         let r = match ov {
             Some(out_k) => {
@@ -288,7 +292,7 @@ mod test {
         let outbounds_map = Arc::new(outbounds_map);
 
         let t = TagOutSelector {
-            outbounds_tag_route_map: outbounds_route_map,
+            outbounds_tag_route_map: Some(outbounds_route_map),
             outbounds_map,
             ok_default: Some(m2),
             ..Default::default()

@@ -104,6 +104,8 @@ pub fn addr_to_socks5_bytes(ta: &Addr, buf: &mut BytesMut) {
     }
 }
 
+/// wrap base connection with an early data buffer, read from
+/// the buffer first.
 pub struct EarlyDataWrapper {
     ed: Option<BytesMut>,
     base: Pin<Conn>,

@@ -198,7 +198,8 @@ pub enum InMapperConfig {
     Socks5(PlainTextSet),
     Socks5Http(PlainTextSet),
     Trojan(TrojanPassSet),
-    WebSocket(Option<CommonConfig>),
+    HttpFilter(Option<CommonConfig>),
+    WebSocket { http_config: Option<CommonConfig> },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -366,8 +367,13 @@ impl ToMapperBox for InMapperConfig {
 
                 so.to_mapper_box()
             }
-            InMapperConfig::WebSocket(c) => {
-                Box::new(crate::map::ws::server::Server { config: c.clone() })
+            InMapperConfig::WebSocket {
+                http_config: config,
+            } => Box::new(crate::map::ws::server::Server {
+                config: config.clone(),
+            }),
+            InMapperConfig::HttpFilter(c) => {
+                Box::new(ruci::map::http_filter::Server { config: c.clone() })
             }
         }
     }

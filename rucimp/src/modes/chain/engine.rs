@@ -289,7 +289,7 @@ impl Engine {
         {
             if self.rule_sets.is_some() {
                 self.get_rule_sets_out_selector()
-            } else if self.tag_routes.is_some() {
+            } else if self.tag_routes.is_some() || self.fallback_routes.is_some() {
                 self.get_tag_route_out_selector()
             } else {
                 self.get_fixed_out_selector()
@@ -318,7 +318,7 @@ impl Engine {
 
     fn get_tag_route_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
         let s = TagOutSelector {
-            outbounds_tag_route_map: self.tag_routes.clone().expect("has tag_routes"),
+            outbounds_tag_route_map: self.tag_routes.clone(),
             fallback_tag_route_map: self.fallback_routes.clone(),
             outbounds_map: self.outbounds.clone(),
             ok_default: Some(self.default_outbound.clone().expect("has default_outbound")),

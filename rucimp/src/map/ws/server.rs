@@ -3,7 +3,7 @@ use bytes::BytesMut;
 use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
-    net::{self, http::CommonConfig},
+    net::{self, helpers::EarlyDataWrapper, http::CommonConfig},
 };
 use tokio_tungstenite::{
     accept_hdr_async,
@@ -36,10 +36,11 @@ impl Server {
     async fn handshake(
         &self,
         cid: net::CID,
-        conn: net::Conn,
+        mut conn: net::Conn,
         a: Option<net::Addr>,
+        early_data: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
-        let mut early_data: Option<BytesMut> = None;
+        let mut real_early_data: Option<BytesMut> = None;
 
         let func = |r: &Request, response: Response| -> Result<Response, ErrorResponse> {
             use http::Response;
@@ -102,7 +103,7 @@ impl Server {
                         match r {
                             Ok(v) => {
                                 debug!("ws got early data {}", v.len());
-                                early_data = Some(BytesMut::from(v.as_slice()))
+                                real_early_data = Some(BytesMut::from(v.as_slice()))
                             }
                             Err(e) => {
                                 warn!(
@@ -116,6 +117,12 @@ impl Server {
 
             Ok(response)
         };
+        if let Some(b) = early_data {
+            if !b.is_empty() {
+                debug!("wrap with earlydata_conn, {}", b.len());
+                conn = Box::new(EarlyDataWrapper::from(b, conn));
+            }
+        }
 
         let c = accept_hdr_async(conn, func).await?;
 
@@ -125,7 +132,7 @@ impl Server {
             w_buf: None,
         }))
         .a(a)
-        .b(early_data)
+        .b(real_early_data)
         .build())
     }
 }
@@ -140,7 +147,7 @@ impl Mapper for Server {
     ) -> map::MapResult {
         let conn = params.c;
         if let net::Stream::Conn(conn) = conn {
-            let r = self.handshake(cid, conn, params.a).await;
+            let r = self.handshake(cid, conn, params.a, params.b).await;
             match r {
                 anyhow::Result::Ok(r) => r,
                 Err(e) => MapResult::from_e(e.context("websocket_server handshake failed")),
