@@ -16,8 +16,6 @@ use macro_map::*;
 use tokio::sync::mpsc;
 use tracing::debug;
 
-use self::device::SmoltcpDevice;
-
 /// decompose the incomming ip stream into multiple tcp/udp stream.
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
@@ -53,7 +51,7 @@ impl Map for Stack {
                         mut tcp_rx,
                         mut udp_rx,
                         mut device_write_rx,
-                    } = SmoltcpDevice::create(cid, base_conn, new_stream_tx);
+                    } = device::create(cid, base_conn, new_stream_tx);
 
                     let mut iface = device::create_interface(&mut device);
 
