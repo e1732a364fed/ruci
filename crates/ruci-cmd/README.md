@@ -11,7 +11,7 @@ trace feature 就算启用了,
 
 utils feature 可用于下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.dll
 
-用 --dyn-config 来启用 完全动态链
+用 --infinite 来启用 完全动态链
 
 run with api server:
 

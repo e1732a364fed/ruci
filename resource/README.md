@@ -1,6 +1,6 @@
 此文件夹包含若干ruci运行需要的文件
 
-local.lua, remote.lua 为 chain 模式的示例配置文件
+local*.lua, remote.lua 为 chain 模式的示例配置文件
 
 local.suit.toml, remote.suit.toml 为 suit 模式的示例配置文件
 
