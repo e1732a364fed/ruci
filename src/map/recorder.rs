@@ -22,7 +22,7 @@ use tracing::info;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct RecordData {
-    pub cid: CID,
+    pub cid: String,
     pub behavior: ProxyBehavior,
     pub global_data: Option<GlobalData>,
 
@@ -35,7 +35,7 @@ pub struct RecordData {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct DataPiece {
     /// duration since the start of the connection
-    pub time: std::time::Duration,
+    pub time: u32,
 
     /// data send/recv at this instant
     pub data: PayloadData,
@@ -80,8 +80,10 @@ impl Name for RecorderConn {
     }
 }
 impl RecorderConn {
-    fn since(&self) -> time::Duration {
-        time::Instant::now().duration_since(self.start)
+    fn since(&self) -> u32 {
+        time::Instant::now()
+            .duration_since(self.start)
+            .subsec_nanos()
     }
 }
 
@@ -161,8 +163,10 @@ struct RecordAddrConnR {
     record_buffer: RecordData,
 }
 impl RecordAddrConnR {
-    fn since(&self) -> time::Duration {
-        time::Instant::now().duration_since(self.start)
+    fn since(&self) -> u32 {
+        time::Instant::now()
+            .duration_since(self.start)
+            .subsec_nanos()
     }
 }
 
@@ -178,8 +182,10 @@ struct RecordAddrConnW {
     record_buffer: RecordData,
 }
 impl RecordAddrConnW {
-    fn since(&self) -> time::Duration {
-        time::Instant::now().duration_since(self.start)
+    fn since(&self) -> u32 {
+        time::Instant::now()
+            .duration_since(self.start)
+            .subsec_nanos()
     }
 }
 
@@ -268,7 +274,7 @@ impl Map for Recorder {
                     base: Box::pin(c),
                     start: now,
                     record_buffer: RecordData {
-                        cid: cid.clone(),
+                        cid: cid.to_string(),
                         behavior,
                         global_data: params.g,
                         custom_str: self.custom_str.clone(),
@@ -288,7 +294,7 @@ impl Map for Recorder {
                         base: Box::pin(ac.r),
                         start: now,
                         record_buffer: RecordData {
-                            cid: cid.clone(),
+                            cid: cid.to_string(),
                             behavior,
                             global_data: params.g.clone(),
 
@@ -301,7 +307,7 @@ impl Map for Recorder {
                         base: Box::pin(ac.w),
                         start: now,
                         record_buffer: RecordData {
-                            cid: cid.clone(),
+                            cid: cid.to_string(),
                             behavior,
                             global_data: params.g,
 
