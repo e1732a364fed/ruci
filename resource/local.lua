@@ -341,38 +341,39 @@ dyn_config = {
 
     inbounds = {{
         tag = "listen1",
-        generator = function(this_index, cache_len, data)
+
+        generator = function(this_index, data)
             if this_index == -1 then
                 return 0, {
-                    Listener = "0.0.0.0:10800"
+                    stream_generator = {
+                        Listener = "0.0.0.0:10800"
+                    },
+                    new_thread_fn = function(this_index, data)
+                        local newi, new_data = coroutine.yield(1, {
+                            Socks5 = {}
+                        })
+                        return -1, {}
+                    end
                 }
-
-            elseif this_index == 0 then
-                return 1, {
-                    Socks5 = {}
-                }
-            else
-                return -1, {}
-
             end
         end
     }, {
         tag = "listen2",
-        generator = function(this_index, cache_len, data)
+        generator = function(this_indexache_len, data)
             return -1, {}
         end
     }},
 
     outbounds = {{
         tag = "dial1",
-        generator = function(this_index, cache_len, data)
+        generator = function(this_index, data)
             if this_index == -1 then
-                return "Direct"
+                return -1, "Direct"
             end
         end
     }, {
         tag = "dial2",
-        generator = function(this_index, cache_len, data)
+        generator = function(this_index, data)
             return -1, {}
         end
     }}

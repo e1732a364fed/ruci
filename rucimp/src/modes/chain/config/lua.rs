@@ -202,70 +202,165 @@ impl NextSelector for LuaNextSelector {
 
 #[derive(Debug, Clone)]
 pub struct LuaNextGenerator {
-    lua: Arc<Mutex<(Lua, LuaRegistryKey)>>,
+    inner: Arc<Mutex<InnerLuaNextGenerator>>,
+}
+impl LuaNextGenerator {
+    pub fn new(lua: Lua, key: LuaRegistryKey, behavior: ProxyBehavior) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(InnerLuaNextGenerator::new(lua, key, behavior))),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct InnerLuaNextGenerator {
+    lua: Lua,
+    key: LuaRegistryKey,
     behavior: ProxyBehavior,
+    thread_map: HashMap<CID, LuaOwnedThread>,
+    create_thread_func_map: HashMap<CID, LuaOwnedFunction>,
 }
 
 unsafe impl Send for LuaNextGenerator {}
 unsafe impl Sync for LuaNextGenerator {}
 
+fn get_result<T: for<'de> Deserialize<'de> + ruci::map::ToMapperBox>(
+    lua: &Lua,
+    i: i64,
+    t: LuaTable,
+) -> Option<dynamic::IndexMapperBox> {
+    let ic: LuaResult<T> = lua.from_value(Value::Table(t));
+    match ic {
+        Ok(ic) => {
+            let mb = ic.to_mapper_box();
+            Some((i, Some(Arc::new(mb))))
+        }
+        Err(e) => {
+            warn!("expect an inmapper config, got error: {e}");
+            None
+        }
+    }
+}
+
+impl InnerLuaNextGenerator {
+    pub fn new(lua: Lua, key: LuaRegistryKey, behavior: ProxyBehavior) -> Self {
+        Self {
+            lua,
+            key,
+            behavior,
+            thread_map: HashMap::new(),
+            create_thread_func_map: HashMap::new(),
+        }
+    }
+    fn get_result(&self, i: i64, t: LuaTable<'_>) -> Option<dynamic::IndexMapperBox> {
+        match self.behavior {
+            ProxyBehavior::UNSPECIFIED => todo!(),
+            ProxyBehavior::ENCODE => get_result::<InMapperConfig>(&self.lua, i, t),
+            ProxyBehavior::DECODE => get_result::<OutMapperConfig>(&self.lua, i, t),
+        }
+    }
+    fn get_from_result(
+        &mut self,
+        cid: CID,
+        cache_len: usize,
+        rst: (i64, LuaOwnedTable),
+    ) -> Option<dynamic::IndexMapperBox> {
+        let i = rst.0;
+
+        if i < 0 {
+            return None;
+        }
+        if (i as usize) < cache_len {
+            return Some((i, None));
+        }
+
+        if let Ok(g) = rst.1.to_ref().get::<_, LuaTable>("stream_generator") {
+            let r = self.get_result(i, g);
+
+            if let Ok(f) = rst.1.to_ref().get::<_, LuaFunction>("new_thread_fn") {
+                let of = f.into_owned();
+                self.create_thread_func_map.insert(cid, of);
+            }
+
+            r
+        } else {
+            self.get_result(i, rst.1.to_ref())
+        }
+    }
+}
+
 impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
     fn next_mapper(
-        &self,
+        &mut self,
         cid: CID,
         this_index: i64,
         cache_len: usize,
         data: OVOD,
     ) -> Option<dynamic::IndexMapperBox> {
-        let mg = self.lua.lock();
-        let lua = &mg.0;
+        let mut mg = self.inner.lock();
 
-        let f: LuaFunction = lua
-            .registry_value(&mg.1)
-            .expect("must get generator from lua");
+        let parent = cid.clone_pop();
 
-        let cid_lua: LuaValue<'_> = lua.to_value(&cid).ok()?;
+        if !parent.is_zero() {
+            if mg.thread_map.contains_key(&cid) {
+                let r = {
+                    let t = mg.thread_map.get(&cid).expect("ok");
+                    if let LuaThreadStatus::Resumable = t.status() {
+                        let r =
+                            t.resume::<_, (i64, LuaTable)>((this_index, mg.lua.to_value(&data)));
 
-        let r = f.call::<_, (i64, LuaTable)>((cid_lua, this_index, cache_len, lua.to_value(&data)));
-
-        match r {
-            Ok(rst) => {
-                if rst.0 < 0 {
-                    return None;
-                }
-                if (rst.0 as usize) < cache_len {
-                    return Some((rst.0, None));
-                }
-
-                fn get_result<T: for<'de> Deserialize<'de> + ruci::map::ToMapperBox>(
-                    lua: &Lua,
-                    i: i64,
-                    t: LuaTable,
-                ) -> Option<dynamic::IndexMapperBox> {
-                    let ic: LuaResult<T> = lua.from_value(Value::Table(t));
-                    match ic {
-                        Ok(ic) => {
-                            let mb = ic.to_mapper_box();
-                            Some((i, Some(Arc::new(mb))))
-                        }
-                        Err(e) => {
-                            warn!("expect an inmapper config, got error: {e}");
-                            None
-                        }
+                        let r = r.ok()?;
+                        Some((r.0, r.1.into_owned()))
+                    } else {
+                        None
                     }
-                }
+                };
 
-                match self.behavior {
-                    ProxyBehavior::UNSPECIFIED => todo!(),
-                    ProxyBehavior::ENCODE => get_result::<InMapperConfig>(lua, rst.0, rst.1),
-                    ProxyBehavior::DECODE => get_result::<OutMapperConfig>(lua, rst.0, rst.1),
-                }
+                match r {
+                    Some(r) => return mg.get_from_result(cid, cache_len, r),
+                    None => {
+                        mg.thread_map.remove(&cid);
+                        return None;
+                    }
+                };
             }
-            Err(err) => {
-                warn!("getting lua generator failed: {}", err);
-                None
+
+            if let Some(f) = mg.create_thread_func_map.get(&parent) {
+                let (t, r) = {
+                    let r = {
+                        let l = &mg.lua;
+                        let t = l.create_thread(f.to_ref()).ok()?;
+                        let r = t.resume::<_, (i64, LuaTable)>((this_index, l.to_value(&data)));
+
+                        let r = r.ok()?;
+                        let r = (r.0, r.1.into_owned());
+                        (t.into_owned(), r)
+                    };
+
+                    let new_r = mg.get_from_result(cid.clone(), cache_len, r.1);
+                    (r.0, new_r)
+                };
+
+                if let LuaThreadStatus::Resumable = t.status() {
+                    mg.thread_map.insert(cid, t);
+                }
+                return r;
             }
         }
+
+        //https://docs.rs/mlua/latest/mlua/struct.Thread.html
+
+        let r = {
+            let l = &mg.lua;
+            let r = l
+                .registry_value::<LuaFunction>(&mg.key)
+                .expect("must get generator from lua")
+                .call::<_, (i64, LuaTable)>((this_index, l.to_value(&data)));
+            let r = r.ok()?;
+            (r.0, r.1.into_owned())
+        };
+
+        mg.get_from_result(cid, cache_len, r)
     }
 }
 

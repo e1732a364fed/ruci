@@ -44,8 +44,6 @@ pub struct IndexInfinite {
     /// 生成的 新 MapperBox 会存储在 cache 中
     pub cache: Vec<Arc<MapperBox>>,
 
-    pub history: Vec<usize>,
-
     pub current_index: i64,
 }
 
@@ -55,7 +53,6 @@ impl IndexInfinite {
             tag,
             generator,
             cache: Vec::new(),
-            history: Vec::new(),
             current_index: -1,
         }
     }
@@ -74,7 +71,7 @@ pub type IndexMapperBox = (i64, Option<Arc<MapperBox>>); //MapperBox 和它的 �
 ///
 pub trait IndexNextMapperGenerator: DynClone + Send + Sync {
     fn next_mapper(
-        &self,
+        &mut self,
         cid: CID,
         this_index: i64,
         cache_len: usize,
@@ -99,7 +96,6 @@ impl DynIterator for IndexInfinite {
                 self.current_index = i;
                 let i = i as usize;
 
-                self.history.push(i);
                 if i == cl {
                     let mb = ib.1.expect("should have a mapperbox");
                     self.cache.push(mb.clone());

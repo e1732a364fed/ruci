@@ -307,7 +307,7 @@ pub async fn accumulate_from_start(
 
         tokio::spawn(async move {
             let r = accumulate(AccumulateParams {
-                cid: CID::new_by_opti(oti),
+                cid: CID::new_by_ogtr(oti),
                 behavior: ProxyBehavior::DECODE,
                 initial_state: first_r,
                 mappers: inmappers,

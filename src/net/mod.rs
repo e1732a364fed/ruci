@@ -123,6 +123,21 @@ pub enum CID {
     Chain(CIDChain),
 }
 
+impl Default for CID {
+    fn default() -> Self {
+        CID::Unit(0)
+    }
+}
+
+impl Display for CID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CID::Unit(u) => write!(f, "[ cid: {u} ]"),
+            CID::Chain(c) => Display::fmt(c, f),
+        }
+    }
+}
+
 impl std::str::FromStr for CID {
     fn from_str(s: &str) -> anyhow::Result<Self> {
         let u = s.parse::<u32>();
@@ -146,13 +161,26 @@ impl CID {
         CID::Unit(li)
     }
 
-    pub fn new_by_opti(oti: Option<Arc<GlobalTrafficRecorder>>) -> CID {
+    pub fn new_by_ogtr(oti: Option<Arc<GlobalTrafficRecorder>>) -> CID {
         match oti {
             Some(ti) => CID::new_ordered(&ti.last_connection_id),
             None => CID::new_random(),
         }
     }
 
+    /// is Unit(0) or can collapse to it
+    pub fn is_zero(&self) -> bool {
+        match self {
+            CID::Unit(u) => *u == 0,
+            CID::Chain(chain) => match chain.id_list.len() {
+                0 => true,
+                1 => chain.id_list[0] == 0,
+                _ => false,
+            },
+        }
+    }
+
+    /// change self
     ///
     /// # Example
     ///
@@ -162,7 +190,7 @@ impl CID {
     /// use std::sync::Arc;
     /// let oti = Some(Arc::new(GlobalTrafficRecorder::default()));
     ///
-    /// let mut x = CID::new_by_opti(oti.clone());
+    /// let mut x = CID::new_by_ogtr(oti.clone());
     /// assert!(matches!(x, CID::Unit(1)));
     /// x.push(oti.clone());
     /// assert!(matches!(x.clone(), CID::Chain(chain) if chain.id_list[0] == 1));
@@ -193,24 +221,47 @@ impl CID {
             CID::Chain(c) => c.id_list.push(newidnum),
         };
     }
+    /// won't change self
     pub fn clone_push(&self, oti: Option<Arc<GlobalTrafficRecorder>>) -> Self {
         let mut cid = self.clone();
         cid.push(oti);
         cid
     }
-}
 
-impl Default for CID {
-    fn default() -> Self {
-        CID::Unit(0)
+    /// won't change self
+    pub fn clone_pop(&self) -> CID {
+        let mut cid = self.clone();
+        cid.pop()
     }
-}
 
-impl Display for CID {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    /// change self, collapse to Unit if the chain lenth=1 after pop
+    pub fn pop(&mut self) -> CID {
         match self {
-            CID::Unit(u) => write!(f, "[ cid: {u} ]"),
-            CID::Chain(c) => Display::fmt(c, f),
+            CID::Unit(u) => {
+                let u = *u;
+                *self = CID::Unit(0);
+                CID::Unit(u)
+            }
+            CID::Chain(chain) => {
+                let last = chain.id_list.pop();
+                match last {
+                    Some(last) => {
+                        match chain.id_list.len() {
+                            0 => {
+                                *self = CID::Unit(0);
+                            }
+                            1 => {
+                                let l = chain.id_list.pop().expect("ok");
+                                *self = CID::Unit(l)
+                            }
+                            _ => {}
+                        }
+
+                        CID::Unit(last)
+                    }
+                    None => CID::Unit(0),
+                }
+            }
         }
     }
 }
