@@ -340,10 +340,13 @@ impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
 
-pub struct AccumulateResult<'a, IterMapperBoxRef>
-where
-    IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
-{
+pub trait MIter: Iterator<Item = &'static MapperBox> + DynClone + Send + Sync + Debug {}
+impl<T: Iterator<Item = &'static MapperBox> + DynClone + Send + Sync + Debug> MIter for T {}
+dyn_clone::clone_trait_object!(MIter);
+
+pub type MIterBox = Box<dyn MIter>;
+
+pub struct AccumulateResult {
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
     pub c: Stream,
@@ -354,13 +357,10 @@ where
     pub id: Option<CID>,
 
     /// 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
-    pub left_mappers_iter: IterMapperBoxRef,
+    pub left_mappers_iter: MIterBox,
 }
 
-impl<'a, IterMapperBoxRef> Debug for AccumulateResult<'a, IterMapperBoxRef>
-where
-    IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
-{
+impl Debug for AccumulateResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AccumulateResult")
             .field("a", &self.a)
@@ -397,15 +397,12 @@ where
 ///
 /// 能生成 Stream::Generator 说明其 behavior 为 DECODE
 ///
-pub async fn accumulate<'a, IterMapperBoxRef>(
+pub async fn accumulate(
     cid: CID,
     behavior: ProxyBehavior,
     initial_state: MapResult,
-    mut mappers: IterMapperBoxRef,
-) -> AccumulateResult<'a, IterMapperBoxRef>
-where
-    IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
-{
+    mut mappers: MIterBox,
+) -> AccumulateResult {
     let mut last_r: MapResult = initial_state;
 
     let mut calculated_output_vec = Vec::new();
@@ -475,15 +472,13 @@ where
 
 /// blocking.
 /// 先调用第一个 mapper 生成 流, 然后调用 in_iter_accumulate_forever
-pub async fn accumulate_from_start<IterMapperBoxRef>(
-    tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
+pub async fn accumulate_from_start(
+    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
-    mut inmappers: IterMapperBoxRef,
+    mut inmappers: MIterBox,
     oti: Option<Arc<TransmissionInfo>>,
-) where
-    IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
-{
+) {
     let first = inmappers.next().unwrap();
     let r = first
         .maps(
@@ -504,8 +499,7 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
         return;
     }
     if let Stream::Generator(rx) = r.c {
-        in_iter_accumulate_forever::<IterMapperBoxRef>(CID::default(), rx, tx, inmappers, oti)
-            .await;
+        in_iter_accumulate_forever(CID::default(), rx, tx, inmappers, oti).await;
     } else {
         warn!("accumulate_from_start, not a stream generator, {}", r.c);
     }
@@ -524,12 +518,10 @@ pub async fn accumulate_from_start<IterMapperBoxRef>(
 pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
     cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
-    tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
-    inmappers: IterMapperBoxRef,
+    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
+    inmappers: MIterBox,
     oti: Option<Arc<TransmissionInfo>>,
-) where
-    IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
-{
+) {
     loop {
         let opt_stream = rx.recv().await;
 
@@ -573,13 +565,7 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
         }
 
         tokio::spawn(async move {
-            let r = accumulate::<IterMapperBoxRef>(
-                cid,
-                ProxyBehavior::DECODE,
-                MapResult::s(stream),
-                mc,
-            )
-            .await;
+            let r = accumulate(cid, ProxyBehavior::DECODE, MapResult::s(stream), mc).await;
             if r.e.is_none() {
                 if let Stream::Generator(_s_rx) = r.c {
                     //todo: solve
