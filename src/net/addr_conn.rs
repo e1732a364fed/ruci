@@ -360,6 +360,7 @@ async fn rw_once<R: AddrReadTrait, W: AddrWriteTrait>(
 /// CP_UDP_TIMEOUT 为 最长等待时间, 一旦超时, 就会退出函数
 ///
 pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
+    cid: CID,
     mut r: R,
     mut w: W,
     name: String,
@@ -382,12 +383,12 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
                     Err(e) => {
                         match e.kind(){
                             io::ErrorKind::Other => {
-                                debug!("cp_addr got other e, will continue: {e}");
+                                debug!(cid = %cid, "cp_addr got other e, will continue: {e}");
                                 continue;
                             },
                             _ => {
                                 // udp timeout 时常 会发生, 因此不能认为是错误
-                                debug!(name = name,"cp_addr got e, will break: {e}");
+                                debug!(cid = %cid,name = name,"cp_addr got e, will break: {e}");
                             },
                         }
 
@@ -402,13 +403,13 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
                     tokio::time::sleep(CP_UDP_TIMEOUT).await
                 }
             } =>{
-                debug!(timeout = ?CP_UDP_TIMEOUT,"cp_addr got timeout, will break");
+                debug!(cid = %cid,timeout = ?CP_UDP_TIMEOUT,"cp_addr got timeout, will break");
 
                 break;
             }
 
             _ = &mut shutdown_rx =>{
-                debug!("cp_addr got shutdown_rx, will break");
+                debug!(cid = %cid,"cp_addr got shutdown_rx, will break");
 
                 break;
             }
@@ -449,6 +450,7 @@ pub async fn cp(
     let (tx2, rx2) = oneshot::channel();
 
     let cp1 = tokio::spawn(cp_addr(
+        cid.clone(),
         ac_in.r,
         ac_out.w,
         n1,
@@ -458,6 +460,7 @@ pub async fn cp(
         opt.clone(),
     ));
     let cp2 = tokio::spawn(cp_addr(
+        cid.clone(),
         ac_out.r,
         ac_in.w,
         n2,
@@ -473,28 +476,36 @@ pub async fn cp(
 
     let r = tokio::select! {
         r = cp1 =>{
-            if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!( cid = %cid,"addr_conn::cp end, u");
-            }
+
             let _ = tx1.send(());
             let _ = tx2.send(());
 
-            match r{
+            let count  =match r{
                 Ok(r) => r.unwrap_or(0),
                 Err(_) => 0,
+            };
+
+            if tracing::enabled!(tracing::Level::DEBUG)  {
+                debug!( cid = %cid, b=%count, "addr_conn::cp end, u");
             }
+
+            count
         }
         r = cp2 =>{
-            if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!( cid = %cid,"addr_conn::cp end, d");
-            }
+
             let _ = tx1.send(());
             let _ = tx2.send(());
 
-            match r{
+            let count  = match r{
                 Ok(r) => r.unwrap_or(0),
                 Err(_) => 0,
+            };
+
+            if tracing::enabled!(tracing::Level::DEBUG)  {
+                debug!( cid = %cid, b=%count, "addr_conn::cp end, d");
             }
+
+            count
         }
         _ = async{
             if let Some(shutdown_in_rx) = shutdown_in_rx{

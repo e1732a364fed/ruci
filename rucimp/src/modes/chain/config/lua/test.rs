@@ -3,7 +3,6 @@ use mlua::{Error, Lua, LuaSerdeExt};
 use ruci::map;
 use ruci::user::PlainText;
 //https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua
-
 pub const INSPECT: &str = include_str!("../../../../../../resource/inspect.lua");
 
 #[test]
@@ -38,9 +37,22 @@ fn test_in() -> mlua::Result<()> {
         }
     "#;
 
-    let c: StaticConfig = load_static(text)?;
+    let mut c: StaticConfig = load_static(text)?;
 
     println!("{:#?}", c);
+
+    let lua = save_static(&c)?;
+    let inspect: LuaTable = lua.load(INSPECT).eval()?;
+    lua.globals().set("inspect", inspect)?;
+    lua.load(
+        r#"
+        print(inspect(config))
+    "#,
+    )
+    .exec()?;
+
+    c = load_static(text)?;
+
     let first_listen_group = c.inbounds.first().unwrap();
     let last_m = first_listen_group.chain.last().unwrap();
     assert!(matches!(InMapConfig::Counter, last_m));
@@ -110,7 +122,7 @@ fn test_out() -> mlua::Result<()> {
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        OutMapConfig::BindDialer(DialerConfig {
+        OutMapConfig::BindDialer(BindDialerConfig {
             bind_addr: None,
             dial_addr: str,
             ..
@@ -119,7 +131,7 @@ fn test_out() -> mlua::Result<()> {
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        OutMapConfig::BindDialer(DialerConfig {
+        OutMapConfig::BindDialer(BindDialerConfig {
             bind_addr: None,
             dial_addr: str2,
             ..
@@ -164,7 +176,7 @@ fn test_out2() -> mlua::Result<()> {
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        OutMapConfig::BindDialer(DialerConfig {
+        OutMapConfig::BindDialer(BindDialerConfig {
             bind_addr: None,
             dial_addr: str,
             ext: None,
@@ -174,7 +186,7 @@ fn test_out2() -> mlua::Result<()> {
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        OutMapConfig::BindDialer(DialerConfig {
+        OutMapConfig::BindDialer(BindDialerConfig {
             bind_addr: None,
             dial_addr: str2,
             ext: None,
@@ -270,6 +282,53 @@ fn test_tag_route() -> mlua::Result<()> {
 }
 
 #[test]
+fn test_config1() -> mlua::Result<()> {
+    let sa = std::net::SocketAddr::V4("114.114.114.114:53".parse().unwrap());
+
+    let c = StaticConfig {
+        inbounds: vec![InMapConfigChain {
+            tag: None,
+            chain: vec![
+                InMapConfig::Listener {
+                    listen_addr: "0.0.0.0:1080".to_string(),
+                    ext: None,
+                },
+                InMapConfig::Counter,
+                InMapConfig::Socks5(PlainTextSet {
+                    userpass: None,
+                    more: None,
+                }),
+            ],
+        }],
+        outbounds: vec![OutMapConfigChain {
+            tag: String::from("todo!()"),
+            chain: vec![
+                OutMapConfig::Direct(DirectConfig { dns_client: None }),
+                OutMapConfig::Direct(DirectConfig {
+                    dns_client: Some(dns::ClientConfig {
+                        dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
+                        ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
+                        static_pairs: HashMap::new(),
+                    }),
+                }),
+            ],
+        }],
+        ..Default::default()
+    };
+
+    let lua = save_static(&c)?;
+    let inspect: LuaTable = lua.load(INSPECT).eval()?;
+    lua.globals().set("inspect", inspect)?;
+    lua.load(
+        r#"
+        print(inspect(config))
+    "#,
+    )
+    .exec()?;
+    Ok(())
+}
+
+#[test]
 fn test_rule_route() -> mlua::Result<()> {
     let text = r#"
         listen = { Listener =    { listen_addr = "0.0.0.0:1080"}   }
@@ -289,10 +348,29 @@ fn test_rule_route() -> mlua::Result<()> {
                         { BindDialer =  { dial_addr = "0.0.0.0:1080" }   }
                     }
                 },
-
                 { 
                     tag="dial2", chain = {
-                        "Direct"
+                        {
+                            Direct = {}
+                        }
+                    }
+                },
+                { 
+                    tag="dial3", chain = {
+                         {
+                            Direct = {
+                                dns_client = {
+                                    dns_server_list = {
+                                        {SocketAddr = {},
+                                        Protocol = "Udp"}
+                                    },
+                                    ip_strategy = "Ipv4Only",
+                                    static_pairs = {
+                                        ['www.baidu.com'] = "103.235.47.188"
+                                    }
+                                }
+                            }
+                         }
                     }
                 }
             },

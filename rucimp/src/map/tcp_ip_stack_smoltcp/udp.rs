@@ -104,10 +104,14 @@ impl<'a> AsyncWriteAddr for Conn<'a> {
                         None => Addr::default().get_socket_addr().unwrap(),
                     }
                 } else {
-                    let sor = addr.get_socket_addr_or_resolve();
-                    match sor {
-                        Ok(so) => so,
-                        Err(e) => return Poll::Ready(Err(io::Error::other(e))),
+                    let sor_f = addr.get_socket_addr_or_resolve(None);
+                    let pr = std::future::Future::poll(std::pin::pin!(sor_f), cx);
+                    match pr {
+                        Poll::Ready(sor) => match sor {
+                            Ok(so) => so,
+                            Err(e) => return Poll::Ready(Err(io::Error::other(e))),
+                        },
+                        Poll::Pending => return Poll::Pending,
                     }
                 };
                 let ed = smoltcp::wire::IpEndpoint::from(addr);

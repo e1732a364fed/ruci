@@ -75,6 +75,13 @@ pub fn load_static(lua_text: &str) -> mlua::Result<StaticConfig> {
     Ok(c)
 }
 
+/// return a `Lua` with `config` set to c.
+pub fn save_static(c: &StaticConfig) -> mlua::Result<Lua> {
+    let lua = Lua::new();
+    lua.globals().set("config", lua.to_value(c)?)?;
+    Ok(lua)
+}
+
 const DYN_SELECTORS_STR: &str = "Dyn_Selectors";
 
 /// test if the lua text is ok for finite dynamic

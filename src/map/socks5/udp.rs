@@ -57,24 +57,12 @@ impl AsyncWriteAddr for Conn {
         buf: &[u8],
         addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        let sor = addr.get_socket_addr_or_resolve();
-        match sor {
-            std::result::Result::Ok(so) => {
-                let mut bf = BytesMut::with_capacity(buf.len() + MAX_LEN_SOCKS5_BYTES);
+        let mut bf = BytesMut::with_capacity(buf.len() + MAX_LEN_SOCKS5_BYTES);
 
-                encode_udp_diagram(
-                    &net::Addr {
-                        addr: net::NetAddr::Socket(so),
-                        network: net::Network::UDP,
-                    },
-                    &mut bf,
-                );
-                bf.extend_from_slice(buf);
+        encode_udp_diagram(addr, &mut bf);
+        bf.extend_from_slice(buf);
 
-                self.base.poll_send_to(cx, &bf, self.peer_soa)
-            }
-            Err(e) => Poll::Ready(Err(io::Error::other(e))),
-        }
+        self.base.poll_send_to(cx, &bf, self.peer_soa)
     }
 
     fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -86,14 +74,12 @@ impl AsyncWriteAddr for Conn {
     }
 }
 
-fn decode_read(bs: &[u8]) -> anyhow::Result<(BytesMut, SocketAddr)> {
+fn decode_read(bs: &[u8]) -> anyhow::Result<(BytesMut, Addr)> {
     let mut bf = BytesMut::from(bs);
 
     let a = decode_udp_diagram(&mut bf)?;
 
-    let soa = a.get_socket_addr_or_resolve()?;
-
-    Ok((bf, soa))
+    Ok((bf, a))
 }
 
 impl AsyncReadAddr for Conn {
@@ -126,7 +112,7 @@ impl AsyncReadAddr for Conn {
                         match r {
                             Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
 
-                            Ok((mut actual_buf, soa)) => {
+                            Ok((mut actual_buf, a)) => {
                                 let w_len = min(buf.len(), actual_buf.len());
                                 actual_buf.copy_to_slice(&mut buf[..w_len]);
 
@@ -134,13 +120,7 @@ impl AsyncReadAddr for Conn {
                                 //     debug!("socks5 udp got msg,{w_len} {soa}, {:?}", &buf[..w_len])
                                 // }
 
-                                Poll::Ready(Ok::<(usize, net::Addr), io::Error>((
-                                    w_len,
-                                    crate::net::Addr {
-                                        addr: NetAddr::Socket(soa),
-                                        network: Network::UDP,
-                                    },
-                                )))
+                                Poll::Ready(Ok::<(usize, net::Addr), io::Error>((w_len, a)))
                             }
                         }
                     }

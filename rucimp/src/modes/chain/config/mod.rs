@@ -31,7 +31,7 @@ use ruci::{
         network::{echo::Echo, BlackHole, Direct},
         *,
     },
-    net::{self, http::CommonConfig},
+    net::{self, dns, http::CommonConfig},
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -200,9 +200,16 @@ pub struct OutMapConfigChain {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct DialerConfig {
+pub struct DirectConfig {
+    dns_client: Option<dns::ClientConfig>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct BindDialerConfig {
     bind_addr: Option<String>,
     dial_addr: Option<String>,
+
+    dns_client: Option<dns::ClientConfig>,
 
     #[cfg(feature = "tun")]
     in_auto_route: Option<ruci::net::tun::route::InAutoRouteParams>,
@@ -212,7 +219,7 @@ pub struct DialerConfig {
 
     ext: Option<Ext>,
 }
-impl ToMapBox for DialerConfig {
+impl ToMapBox for BindDialerConfig {
     fn to_map_box(&self) -> MapBox {
         let opt_bind_a = self
             .bind_addr
@@ -233,6 +240,11 @@ impl ToMapBox for DialerConfig {
             d.out_auto_route = self.out_auto_route.clone();
         }
         d.ext_fields = self.ext.as_ref().map(|e| e.to_ext_fields());
+
+        d.opt_dns_client = self
+            .dns_client
+            .as_ref()
+            .map(|dc| Arc::new(dns::AsyncClient::new(dc.clone())));
 
         Box::new(d)
     }
@@ -263,10 +275,10 @@ impl ToMapBox for StdioConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapConfig {
-    Echo,                     //单流消耗器
-    Stdio(StdioConfig),       //单流发生器
-    Fileio(FileConfig),       //单流发生器
-    BindDialer(DialerConfig), //单流发生器
+    Echo,                         //单流消耗器
+    Stdio(StdioConfig),           //单流发生器
+    Fileio(FileConfig),           //单流发生器
+    BindDialer(BindDialerConfig), //单流发生器
     Listener {
         listen_addr: String,
         ext: Option<Ext>,
@@ -318,11 +330,11 @@ pub enum InMapConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapConfig {
-    Blackhole,                //单流消耗器
-    Direct,                   //单流发生器
-    Stdio(StdioConfig),       //单流发生器
-    Fileio(FileConfig),       //单流发生器
-    BindDialer(DialerConfig), //单流发生器
+    Blackhole,                    //单流消耗器
+    Direct(DirectConfig),         //单流发生器
+    Stdio(StdioConfig),           //单流发生器
+    Fileio(FileConfig),           //单流发生器
+    BindDialer(BindDialerConfig), //单流发生器
     Adder(i8),
     Counter,
     TLS(TlsOut),
@@ -331,6 +343,7 @@ pub enum OutMapConfig {
     OptDirect {
         sockopt: crate::net::so2::SockOpt,
         more_num_of_files: Option<bool>,
+        dns_client: Option<dns::ClientConfig>,
     },
 
     #[cfg(feature = "sockopt")]
@@ -583,7 +596,13 @@ impl ToMapBox for OutMapConfig {
             }
             OutMapConfig::Blackhole => Box::<BlackHole>::default(),
 
-            OutMapConfig::Direct => Box::<Direct>::default(),
+            OutMapConfig::Direct(dc) => {
+                let mut m = Box::<Direct>::default();
+                if let Some(dc) = &dc.dns_client {
+                    m.opt_dns_client = Some(Arc::new(dns::AsyncClient::new(dc.clone())));
+                }
+                m
+            }
             OutMapConfig::BindDialer(dc) => dc.to_map_box(),
             OutMapConfig::Adder(i) => i.to_map_box(),
             OutMapConfig::Counter => Box::<counter::Counter>::default(),
@@ -662,9 +681,16 @@ impl ToMapBox for OutMapConfig {
             OutMapConfig::OptDirect {
                 sockopt,
                 more_num_of_files,
+                dns_client,
             } => Box::new(
-                crate::map::opt_net::OptDirect::new(sockopt.clone(), *more_num_of_files)
-                    .expect("ok"),
+                crate::map::opt_net::OptDirect::new(
+                    sockopt.clone(),
+                    *more_num_of_files,
+                    dns_client
+                        .as_ref()
+                        .map(|c| Arc::new(dns::AsyncClient::new(c.clone()))),
+                )
+                .expect("ok"),
             ),
             #[cfg(feature = "sockopt")]
             OutMapConfig::OptDialer(sopt) => {
@@ -677,9 +703,12 @@ impl ToMapBox for OutMapConfig {
 #[cfg(test)]
 mod test {
 
+    use dns::ClientConfig;
+
     use super::*;
     #[test]
     fn serialize_toml() {
+        let sa = std::net::SocketAddr::V4("114.114.114.114:53".parse().unwrap());
         let sc = StaticConfig {
             inbounds: vec![InMapConfigChain {
                 tag: None,
@@ -697,7 +726,16 @@ mod test {
             }],
             outbounds: vec![OutMapConfigChain {
                 tag: String::from("todo!()"),
-                chain: vec![OutMapConfig::Direct],
+                chain: vec![
+                    OutMapConfig::Direct(DirectConfig { dns_client: None }),
+                    OutMapConfig::Direct(DirectConfig {
+                        dns_client: Some(ClientConfig {
+                            dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
+                            ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
+                            static_pairs: HashMap::new(),
+                        }),
+                    }),
+                ],
             }],
             ..Default::default()
         };

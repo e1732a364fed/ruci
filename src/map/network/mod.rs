@@ -44,7 +44,9 @@ impl Map for BlackHole {
 /// if you want to set configured_target_addr, maybe you should use TcpDialer
 #[map_ext_fields]
 #[derive(Clone, Debug, Default, MapExt)]
-pub struct Direct {}
+pub struct Direct {
+    pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
+}
 impl Name for Direct {
     fn name(&self) -> &'static str {
         "direct"
@@ -76,10 +78,10 @@ impl Map for Direct {
 
         let dial_r = match behavior {
             ProxyBehavior::ENCODE => match dial_a.network {
-                Network::UDP => dial_a.try_dial_udp().await,
-                _ => dial_a.try_dial().await,
+                Network::UDP => dial_a.try_dial_udp(self.opt_dns_client.clone()).await,
+                _ => dial_a.try_dial(self.opt_dns_client.clone()).await,
             },
-            _ => dial_a.try_dial().await,
+            _ => dial_a.try_dial(self.opt_dns_client.clone()).await,
         };
         match dial_r {
             Ok(mut stream) => {
@@ -122,6 +124,7 @@ enum AutoRouteState {
 pub struct BindDialer {
     pub dial_addr: Option<net::Addr>,
     pub bind_addr: Option<net::Addr>,
+    pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 
     #[cfg(feature = "tun")]
     pub in_auto_route: Option<tun::route::InAutoRouteParams>,
@@ -191,7 +194,13 @@ impl BindDialer {
 
         pass_shutdown_rx: Option<tokio::sync::oneshot::Receiver<()>>,
     ) -> MapResult {
-        let r = net::Addr::bind_dial(bind_a, dial_a, udp_fix_target_listen).await;
+        let r = net::Addr::bind_dial(
+            bind_a,
+            dial_a,
+            udp_fix_target_listen,
+            self.opt_dns_client.clone(),
+        )
+        .await;
 
         match r {
             Ok(c) => {

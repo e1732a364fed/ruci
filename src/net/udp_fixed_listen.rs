@@ -37,7 +37,7 @@ pub struct FixedTargetAddrUDPListener {
 
 impl FixedTargetAddrUDPListener {
     pub async fn new(laddr: Addr, dst: Addr) -> anyhow::Result<Self> {
-        let bind_so = laddr.get_socket_addr_or_resolve()?;
+        let bind_so = laddr.get_socket_addr_or_resolve(None).await?;
 
         let u = UdpSocket::bind(bind_so).await?;
         let udp = Arc::new(u);
@@ -200,10 +200,14 @@ impl AsyncWriteAddr for Writer {
     ) -> Poll<io::Result<usize>> {
         //debug!("udp fixed write called {} {addr} {}", buf.len(), self.src);
 
-        let sor = self.src.get_socket_addr_or_resolve();
-        match sor {
-            Ok(so) => self.u.poll_send_to(cx, buf, so),
-            Err(e) => Poll::Ready(Err(io::Error::other(e))),
+        let sor_f = self.src.get_socket_addr_or_resolve(None);
+        let pr = Future::poll(std::pin::pin!(sor_f), cx);
+        match pr {
+            Poll::Ready(sor) => match sor {
+                Ok(so) => self.u.poll_send_to(cx, buf, so),
+                Err(e) => Poll::Ready(Err(io::Error::other(e))),
+            },
+            Poll::Pending => return Poll::Pending,
         }
     }
 
@@ -212,10 +216,10 @@ impl AsyncWriteAddr for Writer {
     }
 
     fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        let x = &self.conn_map;
-        let f = x.lock();
-        let x = Future::poll(std::pin::pin!(f), cx);
-        match x {
+        let cm = &self.conn_map;
+        let f = cm.lock();
+        let pr = Future::poll(std::pin::pin!(f), cx);
+        match pr {
             Poll::Ready(mut map) => {
                 map.remove(&self.src);
                 //debug!("udp_fixed_w got closed, removed from conn map {}", self.src);

@@ -6,7 +6,7 @@ print("this is a lua local config file")
 local listen = {
     Listener = { listen_addr = "0.0.0.0:10800" }
 }
-local l2 = {
+local listen_fixed_target = {
     Listener = {
         listen_addr = "udp://0.0.0.0:20800",
 
@@ -24,7 +24,7 @@ local l2 = {
         --]]
     }
 }
-local l3 = {
+local listen_ipv6 = {
     Listener = { listen_addr = "[::1]:30800" }
 }
 
@@ -211,14 +211,29 @@ local out_stdio_show_bytes_chain = { {
     }
 } }
 
-local config_1_direct = {
+local direct = { Direct = {} }
+
+-- 该配置 和 listen_fixed_target 联动 (0.0.0.0:20800)
+local direct_with_dns = {
+    Direct = {
+        dns_client = {
+            dns_server_list = { { "0.0.0.0:20800", "udp" } }, -- 8.8.8.8:53
+            ip_strategy = "Ipv4Only",
+            static_pairs = {
+                ['www.baidu.com'] = "103.235.47.188"
+            }
+        }
+    }
+}
+
+local config_0_direct = {
     inbounds = { {
         chain = listen_socks5http,
         tag = "listen1"
     } },
     outbounds = { {
         tag = "dial1",
-        chain = { "Direct" }
+        chain = { direct }
     } }
 
     --[[
@@ -226,6 +241,23 @@ local config_1_direct = {
 
 它是一个基本的本地代理示例. 运行它, 设置您的系统代理为相应端口, 看看能不能正常访问网络吧
 --]]
+
+}
+
+local config_1_direct_dns = {
+    inbounds = { {
+        chain = listen_socks5http,
+        tag = "listen1"
+    },
+    {
+        chain = { listen_fixed_target},
+        tag = "listen2"
+    },
+},
+    outbounds = { {
+        tag = "dial1",
+        chain = { direct_with_dns }
+    } }
 
 }
 
@@ -418,10 +450,10 @@ local config_13_route = {
             -- 测试: dig @127.0.0.1 -p 20800 www.baidu.com
 
             chain = {
-                l2, -- 多客户端连接的情况
+                listen_fixed_target, -- fixed_target_addr udp 为 将被多客户端连接 的情况
                 --[[
             {
-                -- 只允许单客户端连接的情况
+                -- 只允许单客户端连接 该 fixed_target_addr udp 的情况(仅供测试使用)
 
                 BindDialer = {
                     bind_addr = "udp://127.0.0.1:20800",
@@ -435,12 +467,12 @@ local config_13_route = {
             },
             tag = "l2"
         }, {
-        chain = { l3, tlsin },
+        chain = { listen_ipv6, tlsin },
         tag = "l3"
     } },
     outbounds = { {
         tag = "d1",
-        chain = { "Direct" }
+        chain = { direct }
     }, {
         tag = "d2",
         chain = dial_trojan_chain
@@ -618,7 +650,7 @@ local config_16_tun = {
 
 }
 
-
+--[[
 local config_17_tcp_ip_stack = {
 
     inbounds = {
@@ -642,7 +674,7 @@ local config_17_tcp_ip_stack = {
     --outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
     -- outbounds = { {
     --     tag = "dial1",
-    --     chain = { "Direct" }
+    --     chain = direct
     -- } }
 
     outbounds = { {
@@ -657,9 +689,9 @@ local config_17_tcp_ip_stack = {
         }, tlsout, trojan_out }
     } }
 }
+--]]
 
-
-Config = config_17_tcp_ip_stack
+Config = config_1_direct_dns
 
 --[[
 
@@ -724,7 +756,7 @@ Infinite = {
         tag = "dial1",
         generator = function(cid, state_index, data)
             if state_index == -1 then
-                return 0, "Direct"
+                return 0, direct
             else
                 return -1, {}
             end

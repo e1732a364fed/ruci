@@ -4,35 +4,30 @@ Defines a Map for socks5 server.
 */
 
 /// udp 模块中, 使用同一端口监听 来自 user 和 others 的 信息
-pub mod udp;
+// pub mod udp;
 pub mod udp2;
 
 use super::*;
 
 use crate::{
     map::{self, MapBox, MapExtFields, MapResult, ProxyBehavior, ToMapBox, CID},
-    net::{self, Addr, Conn},
+    net::{Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
     utils::{buf_to_ob, io_error},
     Name,
 };
 use anyhow::Context;
 use bytes::{Buf, BytesMut};
-use futures::{executor::block_on, select};
+use futures::executor::block_on;
 use macro_map::*;
 use map::Stream;
 use std::{
     cmp::min,
     io::{self, Error},
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
-    sync::Arc,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
     time::Duration,
 };
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::UdpSocket,
-    task,
-};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::debug;
 
 #[derive(Default, Clone)]

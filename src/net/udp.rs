@@ -30,6 +30,8 @@ pub struct Conn {
 
     pub mode: Mode,
 
+    pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
+
     u: Arc<UdpSocket>,
     peer_addr: Option<Addr>,
 }
@@ -57,6 +59,7 @@ impl Conn {
             peer_addr,
             last_laddr: None,
             mode,
+            opt_dns_client: None,
         }
     }
 }
@@ -66,7 +69,12 @@ impl Conn {
 /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
 /// 以及用 send 而不是 send_to
 ///
-pub fn new(u: UdpSocket, peer_addr: Option<Addr>, fix_target_listen: bool) -> AddrConn {
+pub fn new(
+    u: UdpSocket,
+    peer_addr: Option<Addr>,
+    fix_target_listen: bool,
+    oc: Option<Arc<dns::AsyncClient>>,
+) -> AddrConn {
     let a = Arc::new(u);
     let b = a.clone();
     let mode = if fix_target_listen {
@@ -85,12 +93,14 @@ pub fn new(u: UdpSocket, peer_addr: Option<Addr>, fix_target_listen: bool) -> Ad
         mode,
         u: a,
         peer_addr: peer_addr.clone(),
+        opt_dns_client: oc.clone(),
     };
     let c2 = Conn {
         u: b,
         peer_addr,
         last_laddr,
         mode,
+        opt_dns_client: oc.clone(),
     };
     AddrConn::new(Box::new(c1), Box::new(c2))
 }
@@ -105,12 +115,14 @@ pub fn duplicate(u: UdpSocket) -> (Conn, Conn) {
             peer_addr: None,
             last_laddr: None,
             mode: Mode::Dial,
+            opt_dns_client: None,
         },
         Conn {
             u: b,
             peer_addr: None,
             last_laddr: None,
             mode: Mode::Dial,
+            opt_dns_client: None,
         },
     )
 }
@@ -126,24 +138,28 @@ impl AsyncWriteAddr for Conn {
         if self.peer_addr.is_some() || addr.eq(&Addr::default()) {
             self.u.poll_send(cx, buf)
         } else {
-            let sor = addr.get_socket_addr_or_resolve();
-            match sor {
-                Ok(so) => {
-                    if let Mode::FixTargetListen = self.mode {
-                        let laddr = match &self.last_laddr {
-                            Some(a) => a.read().get_socket_addr().unwrap(),
-                            None => {
-                                return Poll::Ready(Err(io_error(
-                                    "udp write mode FixTargetListen, no last_laddr",
-                                )))
-                            }
-                        };
-                        self.u.poll_send_to(cx, buf, laddr)
-                    } else {
-                        self.u.poll_send_to(cx, buf, so)
+            let sor_f = addr.get_socket_addr_or_resolve(self.opt_dns_client.as_deref());
+            let pr = std::future::Future::poll(std::pin::pin!(sor_f), cx);
+            match pr {
+                Poll::Ready(sor) => match sor {
+                    Ok(so) => {
+                        if let Mode::FixTargetListen = self.mode {
+                            let laddr = match &self.last_laddr {
+                                Some(a) => a.read().get_socket_addr().unwrap(),
+                                None => {
+                                    return Poll::Ready(Err(io_error(
+                                        "udp write mode FixTargetListen, no last_laddr",
+                                    )))
+                                }
+                            };
+                            self.u.poll_send_to(cx, buf, laddr)
+                        } else {
+                            self.u.poll_send_to(cx, buf, so)
+                        }
                     }
-                }
-                Err(e) => Poll::Ready(Err(io::Error::other(e))),
+                    Err(e) => Poll::Ready(Err(io::Error::other(e))),
+                },
+                Poll::Pending => return Poll::Pending,
             }
         }
     }
@@ -407,8 +423,17 @@ mod test {
         });
         let (_tx, rx) = oneshot::channel();
 
-        let _ =
-            crate::net::addr_conn::cp_addr(r2, ms, "".to_string(), false, rx, false, None).await;
+        let _ = crate::net::addr_conn::cp_addr(
+            CID::default(),
+            r2,
+            ms,
+            "".to_string(),
+            false,
+            rx,
+            false,
+            None,
+        )
+        .await;
 
         let nv = buf_to_write.repeat(5);
 

@@ -383,7 +383,10 @@ impl Addr {
     //todo: DNS 功能
     /// 如果没法从已有的 SocketAddr 转, 则尝试用系统方法解析域名, 并使用第一个值.
     /// 不适用于 UDS
-    pub fn get_socket_addr_or_resolve(&self) -> Result<SocketAddr> {
+    pub async fn get_socket_addr_or_resolve(
+        &self,
+        oc: Option<&dns::AsyncClient>,
+    ) -> Result<SocketAddr> {
         use std::net::ToSocketAddrs;
 
         if let NetAddr::Socket(s) = self.addr {
@@ -391,9 +394,24 @@ impl Addr {
         } else if let NetAddr::NameAndSocket(_, so, _) = &self.addr {
             Ok(*so)
         } else if let NetAddr::Name(n, port) = &self.addr {
-            let so = (format!("{}:{}", n, port)).to_socket_addrs();
-            so?.next()
-                .ok_or(anyhow!("resolve to empty socket_addr from {}", self))
+            let so = if let Some(ac) = oc {
+                return ac
+                    .lookup(n)
+                    .await
+                    .map(|x| SocketAddr::new(x, *port))
+                    .ok_or(anyhow!("resolve to empty socket_addr from {}", self));
+            } else {
+                if tracing::enabled!(tracing::Level::DEBUG) {
+                    tracing::debug!(
+                        name = %n,
+                        "resolve by system",
+                    );
+                }
+
+                (format!("{}:{}", n, port)).to_socket_addrs()?.next()
+            };
+
+            so.ok_or(anyhow!("resolve to empty socket_addr from {}", self))
         } else {
             Err(anyhow!("not possible convert to socket_addr from {}", self))
         }
@@ -401,14 +419,14 @@ impl Addr {
 
     /// only for udp. Unlike try_dial, it will bind to 0.0.0.0:0
     /// to get a random port, then connect to the target addr.
-    pub async fn try_dial_udp(&self) -> Result<Stream> {
+    pub async fn try_dial_udp(&self, oc: Option<Arc<dns::AsyncClient>>) -> Result<Stream> {
         match self.network {
             Network::UDP => {
-                let so = self.get_socket_addr_or_resolve()?;
+                let so = self.get_socket_addr_or_resolve(oc.as_deref()).await?;
 
                 let u = UdpSocket::bind("0.0.0.0:0").await?;
                 u.connect(so).await?;
-                let mut u = udp::new(u, Some(self.clone()), false);
+                let mut u = udp::new(u, Some(self.clone()), false, oc);
                 u.default_write_to = Some(self.clone());
                 Ok(Stream::AddrConn(u))
             }
@@ -426,7 +444,7 @@ impl Addr {
     ///
     /// 本函数对 udp 的作用 其实是 listen, 它会bind到Addr
     ///
-    pub async fn try_dial(&self) -> Result<Stream> {
+    pub async fn try_dial(&self, oc: Option<Arc<dns::AsyncClient>>) -> Result<Stream> {
         match self.network {
             #[cfg(feature = "tun")]
             Network::IP => {
@@ -440,16 +458,16 @@ impl Addr {
                 Ok(Stream::Conn(Box::new(c)))
             }
             Network::TCP => {
-                let so = self.get_socket_addr_or_resolve()?;
+                let so = self.get_socket_addr_or_resolve(oc.as_deref()).await?;
 
                 let c = TcpStream::connect(so).await?;
                 Ok(Stream::Conn(Box::new(c)))
             }
             Network::UDP => {
-                let so = self.get_socket_addr_or_resolve()?;
+                let so = self.get_socket_addr_or_resolve(oc.as_deref()).await?;
 
                 let u = UdpSocket::bind(so).await?;
-                let u = udp::new(u, None, false);
+                let u = udp::new(u, None, false, oc);
                 Ok(Stream::AddrConn(u))
             }
             #[cfg(unix)]
@@ -487,6 +505,7 @@ impl Addr {
         bind_a: Option<&Self>,
         dial_a: Option<&Self>,
         udp_fix_target_listen: Option<bool>,
+        oc: Option<Arc<dns::AsyncClient>>,
     ) -> Result<Stream> {
         if bind_a.is_none() && dial_a.is_none() {
             bail!("bind_dial: bind_a and dial_a are both none");
@@ -520,7 +539,7 @@ impl Addr {
                 };
                 let c = match bind_a {
                     Some(bind_a) => {
-                        let bind_so = bind_a.get_socket_addr_or_resolve()?;
+                        let bind_so = bind_a.get_socket_addr_or_resolve(oc.as_deref()).await?;
                         let socket = if bind_so.is_ipv4() {
                             TcpSocket::new_v4()?
                         } else {
@@ -528,12 +547,12 @@ impl Addr {
                         };
                         socket.bind(bind_so)?;
 
-                        let dial_so = dial_a.get_socket_addr_or_resolve()?;
+                        let dial_so = dial_a.get_socket_addr_or_resolve(oc.as_deref()).await?;
 
                         socket.connect(dial_so).await?
                     }
                     None => {
-                        let dial_so = dial_a.get_socket_addr_or_resolve()?;
+                        let dial_so = dial_a.get_socket_addr_or_resolve(oc.as_deref()).await?;
 
                         TcpStream::connect(dial_so).await?
                     }
@@ -542,16 +561,20 @@ impl Addr {
             }
             Network::UDP => {
                 let bind_so = match bind_a {
-                    Some(a) => a.get_socket_addr_or_resolve()?,
-                    None => Self::default().get_socket_addr_or_resolve()?,
+                    Some(a) => a.get_socket_addr_or_resolve(oc.as_deref()).await?,
+                    None => {
+                        Self::default()
+                            .get_socket_addr_or_resolve(oc.as_deref())
+                            .await?
+                    }
                 };
 
                 let u = UdpSocket::bind(bind_so).await?;
                 let u = match dial_a {
-                    None => udp::new(u, None, udp_fix_target_listen.unwrap_or_default()),
+                    None => udp::new(u, None, udp_fix_target_listen.unwrap_or_default(), oc),
 
                     Some(dial_a) => {
-                        let dial_so = dial_a.get_socket_addr_or_resolve()?;
+                        let dial_so = dial_a.get_socket_addr_or_resolve(oc.as_deref()).await?;
 
                         u.connect(dial_so).await?;
 
@@ -559,6 +582,7 @@ impl Addr {
                             u,
                             Some(dial_a.clone()),
                             udp_fix_target_listen.unwrap_or_default(),
+                            oc,
                         )
                     }
                 };

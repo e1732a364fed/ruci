@@ -8,7 +8,7 @@
 
 (或者直接下载release后运行, 运行参数为 [crates/ruci-cmd/README.md](../crates/ruci-cmd/README.md) 文件中 的 cargo run 中后面的 `--` 后面的参数, 不包含 `--`)
 
-先将 local.lua 中 `Config = `的地方设为 `Config = config_1_direct`
+先将 local.lua 中 `Config = `的地方设为 `Config = config_0_direct`
 
 之后进入 [crates/ruci-cmd](../crates/ruci-cmd), 运行 [crates/ruci-cmd/README.md](../crates/ruci-cmd/README.md) 中的 标着 “指定不生成 log “ 的那个命令，即可编译+运行（自动运行）
 

@@ -7,6 +7,9 @@ use hickory_resolver::config::*;
 use hickory_resolver::Resolver;
 use hickory_resolver::TokioAsyncResolver;
 
+pub type TheLookupIpStrategy = LookupIpStrategy;
+pub type TheProtocol = Protocol;
+
 pub fn get_config(dns_server_list: Vec<(SocketAddr, Protocol)>) -> ResolverConfig {
     let mut cf = if dns_server_list.is_empty() {
         ResolverConfig::default()
@@ -46,30 +49,45 @@ pub fn create_async_resolver(
     }
 
     // https://docs.rs/hickory-resolver/0.24.1/hickory_resolver/
-    let io_loop = tokio::runtime::Runtime::new().unwrap();
-    io_loop.block_on(async { TokioAsyncResolver::tokio(cf, ro) })
+    block_on(async { TokioAsyncResolver::tokio(cf, ro) })
 }
 
-pub struct NamePortAndClient<'a>(&'a str, u16, &'a AsyncClient);
+// pub struct NamePortAndClient<'a>(pub &'a str, pub u16, pub &'a AsyncClient);
 
-// https://internals.rust-lang.org/t/custom-global-dns-resolver/18667/5
-impl std::net::ToSocketAddrs for NamePortAndClient<'_> {
-    type Iter = std::option::IntoIter<SocketAddr>;
+// // https://internals.rust-lang.org/t/custom-global-dns-resolver/18667/5
+// impl std::net::ToSocketAddrs for NamePortAndClient<'_> {
+//     type Iter = std::option::IntoIter<SocketAddr>;
 
-    fn to_socket_addrs(&self) -> std::io::Result<Self::Iter> {
-        let x = block_on(self.2.lookup(self.0)).map(|ip| SocketAddr::new(ip, self.1));
-        let x = x.into_iter();
-        Ok(x)
-    }
-}
+//     fn to_socket_addrs(&self) -> std::io::Result<Self::Iter> {
+//         let x = block_on(self.2.lookup(self.0)).map(|ip| SocketAddr::new(ip, self.1));
+//         let x = x.into_iter();
+//         Ok(x)
+//     }
+// }
 
+#[derive(Debug, Clone)]
 pub struct AsyncClient {
     pub r: TokioAsyncResolver,
 
     pub static_pairs: HashMap<String, IpAddr>,
 }
 
+#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ClientConfig {
+    pub dns_server_list: Vec<(SocketAddr, Protocol)>,
+    pub ip_strategy: Option<LookupIpStrategy>,
+    pub static_pairs: HashMap<String, IpAddr>,
+}
+
 impl AsyncClient {
+    pub fn new(c: ClientConfig) -> Self {
+        let r = create_async_resolver(c.dns_server_list, c.ip_strategy);
+        Self {
+            r,
+            static_pairs: c.static_pairs,
+        }
+    }
+
     pub fn check_cache(&self, name: &str) -> Option<IpAddr> {
         self.static_pairs.get(name).copied()
     }
@@ -77,7 +95,22 @@ impl AsyncClient {
     /// better passin fully-qualified-domain-name, FQDN, which ends in a final `.`.
     pub async fn lookup(&self, name: &str) -> Option<IpAddr> {
         if let Some(ip) = self.check_cache(name) {
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                tracing::debug!(
+                    name = %name,
+                    ip = %ip,
+                    "resolved by static",
+                );
+            }
+
             return Some(ip);
+        }
+
+        if tracing::enabled!(tracing::Level::DEBUG) {
+            tracing::debug!(
+                name = %name,
+                "resolving",
+            );
         }
 
         let mut n = name;
@@ -93,8 +126,22 @@ impl AsyncClient {
 
         let address: Vec<_> = response.iter().collect();
         if address.is_empty() {
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                tracing::debug!(
+                    name = %name,
+                    "resolved to empty",
+                );
+            }
             None
         } else {
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                tracing::debug!(
+                    name = %name,
+                    address = ?address,
+                    "resolved",
+                );
+            }
+
             address.into_iter().next()
         }
     }
@@ -140,4 +187,20 @@ impl AsyncClient {
 
         address.map(|ip| IpAddr::V6(ip.0))
     }
+}
+
+// #[tokio::test]
+#[allow(dead_code)]
+async fn test() {
+    let sa = std::net::SocketAddr::V4("0.0.0.0:20800".parse().unwrap());
+
+    let cc = ClientConfig {
+        dns_server_list: vec![(sa, TheProtocol::Udp)],
+        ip_strategy: Some(TheLookupIpStrategy::Ipv4Only),
+        static_pairs: HashMap::new(),
+    };
+
+    let ac = AsyncClient::new(cc);
+
+    println!("{:?}", ac.lookup("www.baidu.com").await);
 }

@@ -1,6 +1,8 @@
 /*!
 similar to [`ruci::map::network`], but with [`SockOpt`].
  */
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use bytes::BytesMut;
 use macro_map::*;
@@ -95,6 +97,8 @@ impl Map for TcpOptListener {
 #[derive(Clone, Debug, Default, MapExt)]
 pub struct OptDirect {
     pub sopt: SockOpt,
+
+    pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
 impl Name for OptDirect {
     fn name(&self) -> &'static str {
@@ -103,7 +107,11 @@ impl Name for OptDirect {
 }
 impl OptDirect {
     #[allow(unused)]
-    pub fn new(sopt: SockOpt, more_num_of_files: Option<bool>) -> anyhow::Result<Self> {
+    pub fn new(
+        sopt: SockOpt,
+        more_num_of_files: Option<bool>,
+        opt_dns_client: Option<Arc<dns::AsyncClient>>,
+    ) -> anyhow::Result<Self> {
         #[cfg(target_os = "linux")]
         if more_num_of_files.unwrap_or_default() {
             tracing::info!("calls rlimit::prlimit");
@@ -122,6 +130,7 @@ impl OptDirect {
         Ok(Self {
             sopt,
             ext_fields: Some(MapExtFields::default()),
+            opt_dns_client,
         })
     }
 }
@@ -151,8 +160,14 @@ impl Map for OptDirect {
 
         let dial_r: anyhow::Result<Stream> = match behavior {
             ProxyBehavior::ENCODE => match a.network {
-                Network::UDP => so2::dial_udp(&a, &self.sopt)
-                    .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None, false))),
+                Network::UDP => so2::dial_udp(&a, &self.sopt).map(|s| {
+                    Stream::AddrConn(ruci::net::udp::new(
+                        s,
+                        None,
+                        false,
+                        self.opt_dns_client.clone(),
+                    ))
+                }),
                 Network::TCP => so2::dial_tcp(&a, &self.sopt).map(|s| Stream::Conn(Box::new(s))),
                 _ => todo!(),
             },
@@ -196,6 +211,7 @@ impl Map for OptDirect {
 pub struct OptDialerOption {
     pub dial_addr: String,
     pub sockopt: crate::net::so2::SockOpt,
+    pub dns_client: Option<dns::ClientConfig>,
 }
 
 /// Dial the pre-set addr and optionaly set sockopt,
@@ -205,6 +221,7 @@ pub struct OptDialerOption {
 pub struct OptDialer {
     pub sockopt: SockOpt,
     pub dial_addr: net::Addr,
+    pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
 
 impl Name for OptDialer {
@@ -219,6 +236,7 @@ impl OptDialer {
             dial_addr: net::Addr::from_network_addr_url(&opt.dial_addr)?,
             sockopt: opt.sockopt,
             ext_fields: Some(MapExtFields::default()),
+            opt_dns_client: opt.dns_client.map(|c| Arc::new(dns::AsyncClient::new(c))),
         })
     }
     pub async fn dial_addr(
@@ -228,8 +246,14 @@ impl OptDialer {
         pass_b: Option<BytesMut>,
     ) -> MapResult {
         let r = match dial_a.network {
-            Network::UDP => so2::dial_udp(dial_a, &self.sockopt)
-                .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None, false))),
+            Network::UDP => so2::dial_udp(dial_a, &self.sockopt).map(|s| {
+                Stream::AddrConn(ruci::net::udp::new(
+                    s,
+                    None,
+                    false,
+                    self.opt_dns_client.clone(),
+                ))
+            }),
             Network::TCP => so2::dial_tcp(dial_a, &self.sockopt).map(|s| Stream::Conn(Box::new(s))),
             _ => todo!(),
         };
