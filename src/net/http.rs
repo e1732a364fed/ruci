@@ -290,6 +290,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
 
             let left_bs = &bs[i + 11..];
 
+            //\r\n\r\n
             if let Some(index_of_ending) = left_bs
                 .windows(HEADER_ENDING_BYTES_LEN)
                 .position(|x| x == HEADER_ENDING_BYTES)
@@ -314,7 +315,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
                         value: ss[1].to_string(),
                     });
                 }
-                request.body_start_index = index_of_ending + HEADER_ENDING_BYTES_LEN;
+                request.body_start_index = i + 11 + index_of_ending + HEADER_ENDING_BYTES_LEN;
             } else {
                 request.parse_result = Err(ParseError::NoEndMark2);
             }
