@@ -300,6 +300,8 @@ impl Addr {
 
     ///可为 www.baidu.com:80 或 127.0.0.1:1234 这种形式,
     /// 如果 name和ip都给出了，首选ip
+    ///
+    /// 如果为 UDS, 则不会打印 port
     pub fn get_addr_str(&self) -> String {
         match self.network {
             Network::IP => match &self.addr {
@@ -317,8 +319,7 @@ impl Addr {
                 NetAddr::Socket(_) => {
                     panic!("network is unix but addr in Addr is SocketAddr rather than Name")
                 }
-                NetAddr::Name(n, p) => format!("{}:{}", n, p),
-                NetAddr::NameAndSocket(_, n, p) => format!("{}:{}", n, p),
+                NetAddr::Name(n, _) | NetAddr::NameAndSocket(n, _, _) => n.to_string(),
             },
         }
     }
