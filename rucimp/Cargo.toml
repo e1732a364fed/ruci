@@ -35,7 +35,7 @@ mlua = { version = "0.9.5" , features = ["serialize","async","parking_lot","macr
 libc = { version = "0.2", optional = true }
 
 socket2 ={ version = "0.5.6", optional = true } 
-
+rlimit = { version = "0.10.1", optional = true } 
 # terminate-thread = {version = "0.3.1",optional = true}
 
 native-tls = {version = "0.2.11",features = ["alpn"], optional = true}
@@ -80,7 +80,7 @@ route = ["ipnet" ,"iprange" ,"regex"]
 
 geoip = ["maxminddb", "route"]
 
-sockopt = ["libc", "socket2"]
+sockopt = ["libc", "socket2","rlimit"]
 
 use-native-tls = ["native-tls","tokio-native-tls"]
 

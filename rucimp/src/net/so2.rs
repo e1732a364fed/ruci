@@ -89,12 +89,10 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
             if tracing::enabled!(tracing::Level::TRACE) {
                 tracing::trace!("so2 connected tcp {}", a);
             }
-            //socket.set_nonblocking(true)?;
-
-            // 实测 tcp dial 对 set_nonblocking 设与不设效果没区别
+            socket.set_nonblocking(true)?;
 
             // 至此, 总结:
-            // tcp dial 不要设为 nonblocking, udp dial 要设为 nonblocking
+            // tcp dial 要设为 nonblocking, udp dial 要设为 nonblocking
             // tcp listen 要设为 nonblocking, udp listen 不要设为 nonblocking (用于tproxy)
         }
     }
@@ -167,7 +165,11 @@ pub fn new_socket2_udp_tproxy_dial(laddr: &net::Addr) -> anyhow::Result<Socket> 
     Ok(socket)
 }
 
+/// 伪装成 laddr 对 raddr 发数据.
+///
 /// bind to laddr
+///
+///
 pub fn connect_tproxy_udp(laddr: &net::Addr, raddr: &net::Addr) -> anyhow::Result<Socket> {
     let socket = new_socket2_udp_tproxy_dial(laddr)?;
     let ra = raddr
@@ -177,6 +179,7 @@ pub fn connect_tproxy_udp(laddr: &net::Addr, raddr: &net::Addr) -> anyhow::Resul
     socket
         .connect_timeout(&ra.into(), Duration::from_secs(1))
         .context("connect failed")?;
+    //socket.set_nonblocking(true);
 
     Ok(socket)
 }

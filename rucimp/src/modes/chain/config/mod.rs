@@ -288,7 +288,10 @@ pub enum OutMapConfig {
     TLS(TlsOut),
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
-    OptDirect(crate::net::so2::SockOpt),
+    OptDirect {
+        sockopt: crate::net::so2::SockOpt,
+        more_num_of_files: Option<bool>,
+    },
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
     OptDialer(crate::map::opt_net::OptDialerOption),
@@ -627,10 +630,13 @@ impl ToMapBox for OutMapConfig {
             ),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            OutMapConfig::OptDirect(sopt) => Box::new(crate::map::opt_net::OptDirect {
-                sopt: sopt.clone(),
-                ext_fields: Some(MapExtFields::default()),
-            }),
+            OutMapConfig::OptDirect {
+                sockopt,
+                more_num_of_files,
+            } => Box::new(
+                crate::map::opt_net::OptDirect::new(sockopt.clone(), more_num_of_files.clone())
+                    .expect("ok"),
+            ),
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
             OutMapConfig::OptDialer(sopt) => {
                 Box::new(crate::map::opt_net::OptDialer::new(sopt.clone()).expect("ok"))

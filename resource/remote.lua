@@ -15,8 +15,11 @@ local unix = {
 
 local opt_direct_chain = { {
     OptDirect = {
-        so_mark = 255,
-        bind_to_device = "enp0s1"
+        sockopt = {
+            so_mark = 255,
+            bind_to_device = "enp0s1"
+        },
+        more_num_of_files = true, -- run system call to increase NOFILE to prevent Too many of files
     }
 } }
 

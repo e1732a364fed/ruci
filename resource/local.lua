@@ -75,8 +75,10 @@ local tproxy_listen_tcp_chain = {
 local opt_direct_chain = {
     {
         OptDirect = {
-            so_mark = 255,
-            bind_to_device = "enp0s1"
+            sockopt = {
+                so_mark = 255,
+                bind_to_device = "enp0s1"
+            }
         }
     }
 }
@@ -219,7 +221,7 @@ local config_1_direct = {
 
 }
 
-local tproxy_listen_inbounds =  { {
+local tproxy_listen_inbounds = { {
     chain = tproxy_listen_tcp_chain,
     tag = "listen1"
 },

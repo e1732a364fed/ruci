@@ -66,6 +66,14 @@ iptables -t mangle -A rucimp -d {local_net4} -p tcp -j RETURN"#,
                 more_str
             ),
         )?;
+
+        //run ulimit -a to see. run ulimit -n 10000 to set
+
+        // prevent too many open files for udp
+        //rlimit::setrlimit(rlimit::Resource::NOFILE, rlimit::INFINITY, rlimit::INFINITY)
+        //rlimit::increase_nofile_limit(u64::MAX).context("run rlimit::setrlimit failed")?;
+
+        //println!("My pid is {}", std::process::id());
     }
 
     run_command(

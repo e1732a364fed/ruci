@@ -91,8 +91,6 @@ impl Map for TcpOptListener {
 
 /// Dial the given addr and optionaly set sockopt
 ///
-/// Note:
-/// dial udp by OptDirect won't ever timeout
 #[map_ext_fields]
 #[derive(Clone, Debug, Default, MapExt)]
 pub struct OptDirect {
@@ -101,6 +99,28 @@ pub struct OptDirect {
 impl Name for OptDirect {
     fn name(&self) -> &'static str {
         "opt_direct"
+    }
+}
+impl OptDirect {
+    pub fn new(sopt: SockOpt, more_num_of_files: Option<bool>) -> anyhow::Result<Self> {
+        use anyhow::Context;
+
+        if more_num_of_files.unwrap_or_default() {
+            tracing::info!("calls rlimit::prlimit");
+
+            rlimit::prlimit(
+                std::process::id().try_into().unwrap(),
+                rlimit::Resource::NOFILE,
+                Some((1024000, 1024000)),
+                None,
+            )
+            .context("run rlimit::prlimit failed")?;
+        }
+
+        Ok(Self {
+            sopt,
+            ext_fields: Some(MapExtFields::default()),
+        })
     }
 }
 
@@ -159,8 +179,8 @@ impl Map for OptDirect {
                             .c(stream)
                             .b(params.b)
                             .a(Some(a))
-                            .no_timeout(true)
-                            .build()
+                            //.no_timeout(true)
+                            .build();
                     }
                     Stream::Generator(_) => todo!(),
                     Stream::None => todo!(),

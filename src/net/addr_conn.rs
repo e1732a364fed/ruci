@@ -326,7 +326,8 @@ where
 ////////////////////////////////////////////////////////////////////
 */
 
-pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: adjust this
+// quic uses 30 secs, so we use a little more
+pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(40); //todo: adjust this
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 pub const MTU: usize = 1400;
 
@@ -378,7 +379,7 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
                             },
                             _ => {
                                 // udp timeout 时 常会发生, 因此不能认为是错误
-                                info!(name = name,"cp_addr got e, will break: {e}");
+                                debug!(name = name,"cp_addr got e, will break: {e}");
                             },
                         }
 
@@ -393,13 +394,13 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
                     tokio::time::sleep(CP_UDP_TIMEOUT).await
                 }
             } =>{
-                info!(timeout = ?CP_UDP_TIMEOUT,"cp_addr got timeout, will break");
+                debug!(timeout = ?CP_UDP_TIMEOUT,"cp_addr got timeout, will break");
 
                 break;
             }
 
             _ = &mut shutdown_rx =>{
-                info!("cp_addr got shutdown_rx, will break");
+                debug!("cp_addr got shutdown_rx, will break");
 
                 break;
             }
