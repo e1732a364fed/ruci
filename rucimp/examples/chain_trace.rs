@@ -7,7 +7,7 @@ use std::env;
 
 use chrono::{DateTime, Utc};
 use ruci::relay::*;
-use rucimp::{modes::chain::engine::Engine, utils::*, DEFAULT_CONFIG_FILE_NAME};
+use rucimp::{modes::chain::engine::Engine, utils::*, DEFAULT_LUA_CONFIG_FILE_NAME};
 use tokio::{
     fs::{File, OpenOptions},
     io::AsyncWriteExt,
@@ -19,7 +19,7 @@ mod shared;
 async fn main() -> anyhow::Result<()> {
     shared::print_env_version_and_init_log("example: chain_trace_and_record_new_conn");
 
-    let default_fn = DEFAULT_CONFIG_FILE_NAME.to_string();
+    let default_fn = DEFAULT_LUA_CONFIG_FILE_NAME.to_string();
 
     let args: Vec<String> = env::args().collect();
 

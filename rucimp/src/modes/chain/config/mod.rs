@@ -791,6 +791,7 @@ mod test {
 
     use super::*;
     #[test]
+    #[cfg(feature = "toml")]
     fn serialize_toml() {
         let sa = std::net::SocketAddr::V4("114.114.114.114:53".parse().unwrap());
         let sc = StaticConfig {

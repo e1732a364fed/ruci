@@ -426,7 +426,7 @@ local config_12_fileio_trojan = {
             chain = {
                 {
                     Fileio = {
-                        i = "local.suit.toml",
+                        i = "test.crt",
                         o = "testfile.txt",
                         sleep_interval = 500,
                         bytes_per_turn = 10,

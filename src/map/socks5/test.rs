@@ -34,11 +34,6 @@ use crate::map::socks5::{
     self, ATYP_DOMAIN, ATYP_IP4, ATYP_IP6, AUTH_NONE, AUTH_PASSWORD, CMD_CONNECT, VERSION5,
 };
 
-// let toml_str = r#"
-//     protocol = "socks5"
-//     uuid = "u0 p0"
-//     users = [ { user = "u1", pass = "p1"},  { user = "u2", pass = "p2"}, ]
-//     "#;
 async fn new_3user_socks5_inadder() -> Server {
     Server::new(Config {
         support_udp: false,
@@ -52,7 +47,6 @@ async fn new_noauth_socks5_inadder() -> Server {
     Server::new(Config::default()).await
 }
 
-/// 从toml配置创建socks5的adder后, 在内存中模拟连接 socks5 服务
 #[tokio::test]
 async fn auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
     let a = new_3user_socks5_inadder().await;

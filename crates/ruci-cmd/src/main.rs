@@ -1,10 +1,10 @@
 /*!
 具有综合功能的命令行程序
 
-可选功能 api_client, api_server, utils
+可选功能 file_server, api_client, api_server, utils
 
 针对 rucimp 核心的 可选功能:
-trace, quic, quinn, lua, lua54, use-native-tls, native-tls-vendored
+trace, quic, quinn, lua, lua54, use-native-tls, native-tls-vendored, steganography
 
  */
 #[cfg(any(feature = "api_client", feature = "api_server"))]
@@ -18,16 +18,14 @@ mod mode;
 use std::env::{self, set_var};
 
 use clap::{Parser, Subcommand, ValueEnum};
-use rucimp::DEFAULT_CONFIG_FILE_NAME;
+use rucimp::DEFAULT_LUA_CONFIG_FILE_NAME;
 use tracing::info;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
-    /// Chain mode, which uses lua file
+    /// Chain mode, which uses lua/toml file
     #[default]
     C,
-    // Suit mode, which uses toml file
-    // S,
 }
 
 /// ruci command line parameters:
@@ -42,7 +40,7 @@ struct Args {
     /// basic config file.
     ///
     /// If the given string is a url, then the app will try to download the file first.
-    #[arg(short, long, value_name = "FILE", default_value = DEFAULT_CONFIG_FILE_NAME)]
+    #[arg(short, long, value_name = "FILE", default_value = DEFAULT_LUA_CONFIG_FILE_NAME)]
     config: String,
 
     /// if this arg is given, and the "config" arg is a url, then the app will try to download
@@ -315,7 +313,7 @@ async fn start_engine(
                 opts,
             )
             .await?;
-        } //Mode::S => todo!(),
+        }
     }
     Ok(())
 }

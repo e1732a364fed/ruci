@@ -12,6 +12,8 @@ pub mod utils;
 #[cfg(feature = "route")]
 pub mod route;
 
+pub use toml;
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const COMMON_DIRS: [&str; 6] = [
@@ -23,4 +25,4 @@ pub const COMMON_DIRS: [&str; 6] = [
     "../../resource/",
 ];
 
-pub const DEFAULT_CONFIG_FILE_NAME: &str = "local.lua";
+pub const DEFAULT_LUA_CONFIG_FILE_NAME: &str = "local.lua";

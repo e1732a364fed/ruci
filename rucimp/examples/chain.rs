@@ -5,14 +5,14 @@
 
 use std::{env, time::Duration};
 
-use rucimp::{modes::chain::engine::Engine, utils::*, DEFAULT_CONFIG_FILE_NAME};
+use rucimp::{modes::chain::engine::Engine, utils::*, DEFAULT_LUA_CONFIG_FILE_NAME};
 use tracing::debug;
 mod shared;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     shared::print_env_version_and_init_log("example: chain");
 
-    let default_fn = DEFAULT_CONFIG_FILE_NAME.to_string();
+    let default_fn = DEFAULT_LUA_CONFIG_FILE_NAME.to_string();
 
     let args: Vec<String> = env::args().collect();
 
