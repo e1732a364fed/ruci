@@ -297,9 +297,9 @@ fn get_config_str() -> String {
     "#;
 
     let ps = net::gen_random_higher_port().to_string();
-    let toml_str = toml_str.replace("12345", &ps);
+    
 
-    toml_str
+    toml_str.replace("12345", &ps)
 }
 
 fn get_config() -> Config {
@@ -725,9 +725,7 @@ async fn suit_engine_socks5_direct_and_request() -> std::io::Result<()> {
 
     for i in 0..2 {
         let r = suit_engine_socks5_direct_and_request_block_or_non_block(i % 2 == 0).await;
-        if let Err(e) = r {
-            return Err(e);
-        }
+        r?
     }
     Ok(())
 }
@@ -768,7 +766,7 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
         }
     };
 
-    let cl = cc.listen.get(0).unwrap();
+    let cl = cc.listen.first().unwrap();
     let listen_host = cl.host.clone().unwrap();
     let listen_port = cl.port.unwrap();
 
@@ -838,7 +836,7 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
         }
     };
 
-    let cl = cc.listen.get(0).unwrap();
+    let cl = cc.listen.first().unwrap();
     let listen_host = cl.host.clone().unwrap();
     let listen_port = cl.port.unwrap();
 
@@ -905,7 +903,7 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> std::io::Res
         }
     };
 
-    let cl = cc.listen.get(0).unwrap();
+    let cl = cc.listen.first().unwrap();
     let listen_host = cl.host.clone().unwrap();
     let listen_port = cl.port.unwrap();
 

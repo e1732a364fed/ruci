@@ -86,7 +86,7 @@ pub fn load_out_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mapp
         "socks5" => {
             let u = c.uuid.unwrap_or_default();
             let a = socks5::client::Client {
-                up: if u == "" {
+                up: if u.is_empty() {
                     None
                 } else {
                     Some(ruci::user::UserPass::from(u))
@@ -109,13 +109,9 @@ pub fn load_out_mappers_by_str_and_ldconfig(s: &str, c: LDConfig) -> Option<Mapp
 pub fn get_socks5_server_option_from_ldconfig(c: LDConfig) -> socks5::server::Config {
     let mut so = socks5::server::Config::default();
     so.user_whitespace_pass = c.uuid;
-    let ruci_userpass = c.users.map_or(None, |up_v| {
-        Some(
-            up_v.iter()
+    let ruci_userpass = c.users.map(|up_v| up_v.iter()
                 .map(|up| ruci::user::UserPass::new(up.user.clone(), up.pass.clone()))
-                .collect::<Vec<_>>(),
-        )
-    });
+                .collect::<Vec<_>>());
     so.user_passes = ruci_userpass;
     so
 }
@@ -128,13 +124,9 @@ pub fn get_socks5_server_option_from_toml_config_str(toml_str: &str) -> socks5::
 pub fn get_http_server_option_from_ldconfig(c: LDConfig) -> http::Config {
     let mut so = http::Config::default();
     so.user_whitespace_pass = c.uuid;
-    let ruci_userpass = c.users.map_or(None, |up_v| {
-        Some(
-            up_v.iter()
+    let ruci_userpass = c.users.map(|up_v| up_v.iter()
                 .map(|up| ruci::user::UserPass::new(up.user.clone(), up.pass.clone()))
-                .collect::<Vec<_>>(),
-        )
-    });
+                .collect::<Vec<_>>());
     so.user_passes = ruci_userpass;
     so
 }
@@ -142,13 +134,9 @@ pub fn get_http_server_option_from_ldconfig(c: LDConfig) -> http::Config {
 pub fn get_socks5http_server_option_from_ldconfig(c: LDConfig) -> socks5http::Config {
     let mut so = socks5http::Config::default();
     so.user_whitespace_pass = c.uuid;
-    let ruci_userpass = c.users.map_or(None, |up_v| {
-        Some(
-            up_v.iter()
+    let ruci_userpass = c.users.map(|up_v| up_v.iter()
                 .map(|up| ruci::user::UserPass::new(up.user.clone(), up.pass.clone()))
-                .collect::<Vec<_>>(),
-        )
-    });
+                .collect::<Vec<_>>());
     so.user_passes = ruci_userpass;
     so
 }
@@ -156,19 +144,15 @@ pub fn get_socks5http_server_option_from_ldconfig(c: LDConfig) -> socks5http::Co
 pub fn get_trojan_server_option_from_ldconfig(c: LDConfig) -> trojan::server::Config {
     let mut so = trojan::server::Config::default();
     so.pass = c.uuid;
-    let ruci_userpass = c.users.map_or(None, |up_v| {
-        Some(
-            up_v.iter()
+    let ruci_userpass = c.users.map(|up_v| up_v.iter()
                 .map(|up| {
-                    if up.user == "" {
+                    if up.user.is_empty() {
                         up.pass.clone()
                     } else {
                         up.user.clone()
                     }
                 })
-                .collect::<Vec<_>>(),
-        )
-    });
+                .collect::<Vec<_>>());
     so.passes = ruci_userpass;
     so
 }

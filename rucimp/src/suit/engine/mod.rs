@@ -81,7 +81,7 @@ where
             })
             .collect();
 
-        if self.clients.len() == 0 {
+        if self.clients.is_empty() {
             let d = Arc::new(direct_suit());
             self.clients.push(d);
         }
@@ -168,7 +168,7 @@ where
         debug!("engine will run with {} listens", tasks.len());
 
         *running = Some(shutdown_tx_vec);
-        return Ok(tasks);
+        Ok(tasks)
     }
 
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run

@@ -76,7 +76,7 @@ mod test {
             first_m,
             InMapperConfig::Listener(Listener::TcpListener(str2)) //won't match inner fields
         ));
-        assert!(false == matches!(first_m, InMapperConfig::Counter));
+        assert!(!matches!(first_m, InMapperConfig::Counter));
         Ok(())
     }
 
@@ -134,7 +134,7 @@ mod test {
             first_m,
             OutMapperConfig::Dialer(Dialer::TcpDialer(str2)) //won't match inner fields
         ));
-        assert!(false == matches!(first_m, OutMapperConfig::Counter));
+        assert!(!matches!(first_m, OutMapperConfig::Counter));
         Ok(())
     }
 
@@ -183,7 +183,7 @@ mod test {
             first_m,
             OutMapperConfig::Dialer(Dialer::TcpDialer(str2)) //won't match inner fields
         ));
-        assert!(false == matches!(first_m, OutMapperConfig::Counter));
+        assert!(!matches!(first_m, OutMapperConfig::Counter));
         Ok(())
     }
 }

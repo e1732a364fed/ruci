@@ -160,48 +160,34 @@ impl ToMapper for InMapperConfig {
             InMapperConfig::Http(c) => {
                 let mut so = http::Config::default();
                 so.user_whitespace_pass = c.userpass.clone();
-                so.user_passes = c.more.as_ref().map_or(None, |up_v| {
-                    Some(
-                        up_v.iter()
+                so.user_passes = c.more.as_ref().map(|up_v| up_v.iter()
                             .map(|up| ruci::user::UserPass::from(up.to_string()))
-                            .collect::<Vec<_>>(),
-                    )
-                });
+                            .collect::<Vec<_>>());
 
                 so.to_mapper()
             }
             InMapperConfig::Socks5(c) => {
                 let mut so = socks5::server::Config::default();
                 so.user_whitespace_pass = c.userpass.clone();
-                so.user_passes = c.more.as_ref().map_or(None, |up_v| {
-                    Some(
-                        up_v.iter()
+                so.user_passes = c.more.as_ref().map(|up_v| up_v.iter()
                             .map(|up| ruci::user::UserPass::from(up.to_string()))
-                            .collect::<Vec<_>>(),
-                    )
-                });
+                            .collect::<Vec<_>>());
 
                 so.to_mapper()
             }
             InMapperConfig::Socks5Http(c) => {
                 let mut so = socks5http::Config::default();
                 so.user_whitespace_pass = c.userpass.clone();
-                so.user_passes = c.more.as_ref().map_or(None, |up_v| {
-                    Some(
-                        up_v.iter()
+                so.user_passes = c.more.as_ref().map(|up_v| up_v.iter()
                             .map(|up| ruci::user::UserPass::from(up.to_string()))
-                            .collect::<Vec<_>>(),
-                    )
-                });
+                            .collect::<Vec<_>>());
 
                 so.to_mapper()
             }
             InMapperConfig::Trojan(c) => {
                 let mut so = trojan::server::Config::default();
                 so.pass = c.password.clone();
-                so.passes = c.more.as_ref().map_or(None, |up_v| {
-                    Some(up_v.iter().map(|up| up.clone()).collect::<Vec<_>>())
-                });
+                so.passes = c.more.as_ref().map(|up_v| up_v.to_vec());
 
                 so.to_mapper()
             }
@@ -230,7 +216,7 @@ impl ToMapper for OutMapperConfig {
             OutMapperConfig::Socks5(c) => {
                 let u = c.userpass.clone();
                 let a = socks5::client::Client {
-                    up: if u == "" {
+                    up: if u.is_empty() {
                         None
                     } else {
                         Some(ruci::user::UserPass::from(u))
@@ -240,7 +226,7 @@ impl ToMapper for OutMapperConfig {
                 Box::new(a)
             }
             OutMapperConfig::Trojan(pass) => {
-                let a = trojan::client::Client::new(&pass);
+                let a = trojan::client::Client::new(pass);
                 Box::new(a)
             }
         }
