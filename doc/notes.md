@@ -69,6 +69,25 @@ Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是�
 
 也就是说, 要有一个拨号环节
 
+## 与 verysimple 配置 (即 ruci中的 suit 模式, toml 格式配置文件) 的对比
+
+verysimple 有几个不清不楚的地方：
+1. trojan 的 password 写在了 uuid 里
+2. grpc 的 service name 填在了 path 中，然后没有 / 前缀; 但 ws写的path却要有 /, 
+3. vs 的 host 既用于 tls 的 sni，又用于 websocket/grpc 的 http 请求中的 host (其实是 uri 中的authority，包含端口号)，但实际上二者可以不同
+
+
+这些方面 ruci 分得更清楚，因为用了链式架构
+
+ruci chain 模式中， 
+
+1. trojan 的 password 写在自己配置中的 password 项里
+2. grpc和 h2一样的，没有 service name 一说，path直接写为 /service1/Tun 即可
+3. tls 的 sni 写的 tls 的配置中，ws/grpc 的 Host 写在 它们自己的配置中
+4. vs 中的 ws server 要加 early = true 才能使持 earlydata, 而 ruci 中的 ws server 是默认支持的，只需要在 ws client 端打开use_early_data
+
+在ruci 中，你可以： dial 一个由 host1 解析得的ip, 然后 tls 里的 sni 写 host2, 然后 ws/grpc 的请求 url 中 写 host3, 然后其 http请求Header 中的 Host 项写 host4
+
 
 # lib note
 
