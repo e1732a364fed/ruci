@@ -19,11 +19,11 @@ use ruci::map::fold::OVOD;
 use ruci::net::CID;
 
 #[derive(Clone)]
-pub struct LuaMapperWrapper(Arc<MapperBox>);
+pub struct LuaMapWrapper(Arc<MapBox>);
 
 use mlua::UserData;
 
-impl<'lua> FromLua<'lua> for LuaMapperWrapper {
+impl<'lua> FromLua<'lua> for LuaMapWrapper {
     fn from_lua(value: Value<'lua>, _: &'lua Lua) -> LuaResult<Self> {
         match value {
             Value::UserData(ud) => Ok(ud.take::<Self>()?),
@@ -32,33 +32,33 @@ impl<'lua> FromLua<'lua> for LuaMapperWrapper {
     }
 }
 use mlua::UserDataMethods;
-impl UserData for LuaMapperWrapper {
+impl UserData for LuaMapWrapper {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method("clone", |_, m, ()| Ok(m.clone()));
     }
 }
 
-/// set global func create_in_mapper for lua
-pub fn set_lua_create_in_mapper_func(lua: &Lua) -> anyhow::Result<()> {
+/// set global func create_in_map for lua
+pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
-        let c = lua.from_value::<InMapperConfig>(v)?;
-        let m = c.to_mapper_box();
-        let m = LuaMapperWrapper(Arc::new(m));
+        let c = lua.from_value::<InMapConfig>(v)?;
+        let m = c.to_map_box();
+        let m = LuaMapWrapper(Arc::new(m));
         Ok(m)
     })?;
-    lua.globals().set("create_in_mapper", f)?;
+    lua.globals().set("create_in_map", f)?;
     Ok(())
 }
 
-/// set global func create_out_mapper for lua
-pub fn set_lua_create_out_mapper_func(lua: &Lua) -> anyhow::Result<()> {
+/// set global func create_out_map for lua
+pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
-        let c = lua.from_value::<OutMapperConfig>(v)?;
-        let m = c.to_mapper_box();
-        let m = LuaMapperWrapper(Arc::new(m));
+        let c = lua.from_value::<OutMapConfig>(v)?;
+        let m = c.to_map_box();
+        let m = LuaMapWrapper(Arc::new(m));
         Ok(m)
     })?;
-    lua.globals().set("create_out_mapper", f)?;
+    lua.globals().set("create_out_map", f)?;
     Ok(())
 }
 
@@ -158,7 +158,7 @@ fn get_io_bounds_by_config_and_selector_map(
     let v: Vec<DMIterBox> = ibs
         .into_iter()
         .map(|v| {
-            // 这里要求所有的 Mapper 的 get_chain_tag 均不为空
+            // 这里要求所有的 Map 的 get_chain_tag 均不为空
             let tag = v.last().unwrap().get_chain_tag().to_string();
             let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
 
@@ -184,7 +184,7 @@ fn get_io_bounds_by_config_and_selector_map(
         .map(|outbound| {
             let tag = outbound
                 .first()
-                .expect("outbound should has at least one mapper ")
+                .expect("outbound should has at least one map ")
                 .get_chain_tag();
 
             let ts = tag.to_string();
@@ -256,8 +256,8 @@ fn get_infinite_g_map_from(text: &str, behavior: ProxyBehavior) -> anyhow::Resul
             let g: LuaFunction = chain.get("generator")?;
 
             let key = lua.create_registry_value(g).expect("ok");
-            set_lua_create_in_mapper_func(&lua)?;
-            set_lua_create_out_mapper_func(&lua)?;
+            set_lua_create_in_map_func(&lua)?;
+            set_lua_create_out_map_func(&lua)?;
 
             (key, tag)
         };
@@ -321,7 +321,7 @@ impl NextSelector for LuaNextSelector {
     }
 }
 
-/// implements dynamic::IndexNextMapperGenerator
+/// implements dynamic::IndexNextMapGenerator
 #[derive(Debug, Clone)]
 pub struct LuaNextGenerator {
     inner: Arc<Mutex<InnerLuaNextGenerator>>,
@@ -360,28 +360,28 @@ impl InnerLuaNextGenerator {
             create_thread_func_map: HashMap::new(),
         }
     }
-    fn get_result_by_value(&self, i: i64, t: Value) -> Option<dynamic::IndexMapperBox> {
+    fn get_result_by_value(&self, i: i64, t: Value) -> Option<dynamic::IndexMapBox> {
         match self.behavior {
             ProxyBehavior::UNSPECIFIED => todo!(),
-            ProxyBehavior::DECODE => self.lua_value_to_oim::<InMapperConfig>(i, t),
-            ProxyBehavior::ENCODE => self.lua_value_to_oim::<OutMapperConfig>(i, t),
+            ProxyBehavior::DECODE => self.lua_value_to_oim::<InMapConfig>(i, t),
+            ProxyBehavior::ENCODE => self.lua_value_to_oim::<OutMapConfig>(i, t),
         }
     }
 
-    fn lua_value_to_oim<T: for<'de> Deserialize<'de> + ruci::map::ToMapperBox>(
+    fn lua_value_to_oim<T: for<'de> Deserialize<'de> + ruci::map::ToMapBox>(
         &self,
         i: i64,
         v: Value,
-    ) -> Option<dynamic::IndexMapperBox> {
+    ) -> Option<dynamic::IndexMapBox> {
         let ic: LuaResult<T> = self.lua.from_value(v);
         match ic {
             Ok(ic) => {
-                let mut mb = ic.to_mapper_box();
+                let mut mb = ic.to_map_box();
                 mb.set_chain_tag(&self.tag);
                 Some((i, Some(Arc::new(mb))))
             }
             Err(e) => {
-                warn!("expect an mapper config, got error: {e}");
+                warn!("expect an map config, got error: {e}");
                 None
             }
         }
@@ -392,8 +392,8 @@ impl InnerLuaNextGenerator {
     fn get_result(
         &mut self,
         cid: CID,
-        rst: (i64, LuaMapperRepresentation),
-    ) -> Option<dynamic::IndexMapperBox> {
+        rst: (i64, LuaMapRepresentation),
+    ) -> Option<dynamic::IndexMapBox> {
         let i = rst.0;
 
         if i < 0 {
@@ -401,7 +401,7 @@ impl InnerLuaNextGenerator {
         }
 
         match rst.1 {
-            LuaMapperRepresentation::OT(t) => {
+            LuaMapRepresentation::OT(t) => {
                 if let Ok(g) = t.to_ref().get::<_, Value>("stream_generator") {
                     if let Value::Nil = g {
                         self.get_result_by_value(i, Value::Table(t.to_ref()))
@@ -421,32 +421,30 @@ impl InnerLuaNextGenerator {
                     self.get_result_by_value(i, Value::Table(t.to_ref()))
                 }
             }
-            LuaMapperRepresentation::OS(s) => {
-                self.get_result_by_value(i, Value::String(s.to_ref()))
-            }
-            LuaMapperRepresentation::OU(ud) => {
-                let m = ud.take::<LuaMapperWrapper>().expect("ok");
+            LuaMapRepresentation::OS(s) => self.get_result_by_value(i, Value::String(s.to_ref())),
+            LuaMapRepresentation::OU(ud) => {
+                let m = ud.take::<LuaMapWrapper>().expect("ok");
                 Some((i, Some(m.0)))
             }
         }
     }
 }
 
-enum LuaMapperRepresentation {
+enum LuaMapRepresentation {
     OT(LuaOwnedTable),
     OS(LuaOwnedString),
     OU(LuaOwnedAnyUserData),
 }
 
-impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
-    fn next_mapper(
+impl dynamic::IndexNextMapGenerator for LuaNextGenerator {
+    fn next_map(
         &mut self,
         cid: CID,
         this_state_index: i64,
         data: OVOD,
-    ) -> Option<dynamic::IndexMapperBox> {
+    ) -> Option<dynamic::IndexMapBox> {
         let mut mg = self.inner.lock();
-        //debug!(cid = %cid,"IndexNextMapperGenerator called ,{:?}", mg.behavior);
+        //debug!(cid = %cid,"IndexNextMapGenerator called ,{:?}", mg.behavior);
 
         let mut parent = cid.clone();
         parent.pop();
@@ -470,13 +468,13 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                         let r = r.ok()?;
                         match r.1 {
                             LuaValue::String(t) => {
-                                Some((r.0, LuaMapperRepresentation::OS(t.into_owned())))
+                                Some((r.0, LuaMapRepresentation::OS(t.into_owned())))
                             }
                             LuaValue::Table(t) => {
-                                Some((r.0, LuaMapperRepresentation::OT(t.into_owned())))
+                                Some((r.0, LuaMapRepresentation::OT(t.into_owned())))
                             }
                             LuaValue::UserData(t) => {
-                                Some((r.0, LuaMapperRepresentation::OU(t.into_owned())))
+                                Some((r.0, LuaMapRepresentation::OU(t.into_owned())))
                             }
 
                             _ => None,
@@ -513,12 +511,12 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                         let r = r.ok()?;
 
                         let v = match r.1 {
-                            LuaValue::String(t) => LuaMapperRepresentation::OS(t.into_owned()),
+                            LuaValue::String(t) => LuaMapRepresentation::OS(t.into_owned()),
                             LuaValue::Table(t) => {
                                 // debug!("thread resume got table");
-                                LuaMapperRepresentation::OT(t.into_owned())
+                                LuaMapRepresentation::OT(t.into_owned())
                             }
-                            LuaValue::UserData(t) => LuaMapperRepresentation::OU(t.into_owned()),
+                            LuaValue::UserData(t) => LuaMapRepresentation::OU(t.into_owned()),
                             _ => panic!("get lua value not string or table"),
                         };
 
@@ -551,9 +549,9 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
             let r = r.ok()?;
 
             let v = match r.1 {
-                LuaValue::String(t) => LuaMapperRepresentation::OS(t.into_owned()),
-                LuaValue::Table(t) => LuaMapperRepresentation::OT(t.into_owned()),
-                LuaValue::UserData(t) => LuaMapperRepresentation::OU(t.into_owned()),
+                LuaValue::String(t) => LuaMapRepresentation::OS(t.into_owned()),
+                LuaValue::Table(t) => LuaMapRepresentation::OT(t.into_owned()),
+                LuaValue::UserData(t) => LuaMapRepresentation::OU(t.into_owned()),
 
                 _ => panic!("get lua value not string or table"),
             };

@@ -3,7 +3,7 @@ similar to ruci::map::network, but with SockOpt
  */
 use async_trait::async_trait;
 use bytes::BytesMut;
-use macro_mapper::*;
+use macro_map::*;
 use ruci::map::network::accept;
 use ruci::map::{self, *};
 use ruci::net::*;
@@ -16,8 +16,8 @@ use tracing::debug;
 use crate::net::so2::{self, SockOpt};
 
 /// Listener can listen tcp, with sock_opt
-#[mapper_ext_fields]
-#[derive(MapperExt, Clone, Debug, Default)]
+#[map_ext_fields]
+#[derive(MapExt, Clone, Debug, Default)]
 pub struct TcpOptListener {
     pub listen_addr: net::Addr,
     pub sopt: SockOpt,
@@ -63,7 +63,7 @@ impl TcpOptListener {
 }
 
 #[async_trait]
-impl Mapper for TcpOptListener {
+impl Map for TcpOptListener {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
@@ -93,8 +93,8 @@ impl Mapper for TcpOptListener {
 ///
 /// Note:
 /// dial udp by OptDirect won't ever timeout
-#[mapper_ext_fields]
-#[derive(Clone, Debug, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, Default, MapExt)]
 pub struct OptDirect {
     pub sopt: SockOpt,
 }
@@ -105,7 +105,7 @@ impl Name for OptDirect {
 }
 
 #[async_trait]
-impl Mapper for OptDirect {
+impl Map for OptDirect {
     /// dial params.a.
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a {
@@ -179,8 +179,8 @@ pub struct OptDialerOption {
 
 /// Dial the pre-set addr and optionaly set sockopt,
 /// pass on the params.a
-#[mapper_ext_fields]
-#[derive(Clone, Debug, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, Default, MapExt)]
 pub struct OptDialer {
     pub sockopt: SockOpt,
     pub dial_addr: net::Addr,
@@ -197,7 +197,7 @@ impl OptDialer {
         Ok(Self {
             dial_addr: net::Addr::from_network_addr_url(&opt.dial_addr)?,
             sockopt: opt.sockopt,
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         })
     }
     pub async fn dial_addr(
@@ -226,7 +226,7 @@ impl OptDialer {
 }
 
 #[async_trait]
-impl Mapper for OptDialer {
+impl Map for OptDialer {
     /// use configured addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {

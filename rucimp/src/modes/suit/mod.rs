@@ -1,5 +1,5 @@
 /*!
-Defines a struct that impl SuitConfigHolder+ MappersVec
+Defines a struct that impl SuitConfigHolder+ MapsVec
 
 通过套装, 我们得以将一串固定套路的代理传播链的配置扁平化
 
@@ -52,19 +52,19 @@ pub trait SuitConfigHolder: Send + Sync {
     }
 }
 
-/// 一种 Mapper 的容器
-pub trait MappersVec {
-    fn get_mappers_vec(&self) -> Vec<Arc<MapperBox>>;
+/// 一种 Map 的容器
+pub trait MapsVec {
+    fn get_maps_vec(&self) -> Vec<Arc<MapBox>>;
 
-    fn push_mapper(&mut self, mapper: Arc<MapperBox>);
+    fn push_map(&mut self, map: Arc<MapBox>);
 }
 
 #[async_trait]
-pub trait Suit: SuitConfigHolder + MappersVec {
+pub trait Suit: SuitConfigHolder + MapsVec {
     /// stop 停止监听, 同时移除一切因用户登录而生成的动态数据, 恢复到运行前的状态
     fn stop(&self) {}
 
-    fn generate_upper_mappers(&mut self);
+    fn generate_upper_maps(&mut self);
 }
 
 #[derive(Default, Debug)]
@@ -75,8 +75,8 @@ pub struct SuitStruct {
 
     pub config: config::LDConfig,
 
-    pub in_mappers: Vec<Arc<MapperBox>>,
-    pub out_mappers: Vec<Arc<MapperBox>>,
+    pub in_maps: Vec<Arc<MapBox>>,
+    pub out_maps: Vec<Arc<MapBox>>,
 
     addr: Option<Addr>,
     protocol_str: String,
@@ -147,18 +147,18 @@ impl SuitConfigHolder for SuitStruct {
     }
 }
 
-impl MappersVec for SuitStruct {
-    fn get_mappers_vec(&self) -> Vec<Arc<MapperBox>> {
-        self.in_mappers.clone()
+impl MapsVec for SuitStruct {
+    fn get_maps_vec(&self) -> Vec<Arc<MapBox>> {
+        self.in_maps.clone()
     }
 
-    /// 添加 mapper 到尾部. 会自动推导出 whole_name.
+    /// 添加 map 到尾部. 会自动推导出 whole_name.
     ///
     /// 可多次调用, 每次都会更新 whole_name
-    fn push_mapper(&mut self, mapper: Arc<MapperBox>) {
-        self.in_mappers.push(mapper);
+    fn push_map(&mut self, map: Arc<MapBox>) {
+        self.in_maps.push(map);
         self.whole_name = self
-            .in_mappers
+            .in_maps
             .iter()
             .map(|a| a.name())
             .collect::<Vec<_>>()
@@ -168,7 +168,7 @@ impl MappersVec for SuitStruct {
 
 #[async_trait]
 impl Suit for SuitStruct {
-    fn generate_upper_mappers(&mut self) {
+    fn generate_upper_maps(&mut self) {
         let c = self.get_config().expect("has valid config").clone();
 
         match self.get_behavior() {
@@ -180,7 +180,7 @@ impl Suit for SuitStruct {
                         dial_addr: Some(a),
                         ..Default::default()
                     };
-                    self.push_mapper(Arc::new(Box::new(dialer)));
+                    self.push_map(Arc::new(Box::new(dialer)));
                 }
                 if self.has_tls() {
                     let a = tls::client::Client::new(tls::client::ClientOptions {
@@ -188,7 +188,7 @@ impl Suit for SuitStruct {
                         is_insecure: c.insecure.unwrap_or_default(),
                         alpn: c.alpn,
                     });
-                    self.push_mapper(Arc::new(Box::new(a)));
+                    self.push_map(Arc::new(Box::new(a)));
                 }
             }
             ProxyBehavior::DECODE => {
@@ -200,7 +200,7 @@ impl Suit for SuitStruct {
                         alpn: c.alpn,
                     };
                     let sa = tls::server::Server::new(so);
-                    self.in_mappers.push(Arc::new(Box::new(sa)));
+                    self.in_maps.push(Arc::new(Box::new(sa)));
                 }
             }
             ProxyBehavior::UNSPECIFIED => {}

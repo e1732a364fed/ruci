@@ -1,8 +1,8 @@
-use macro_mapper::*;
+use macro_map::*;
 
-use crate::map::{MapperBox, ToMapperBox};
+use crate::map::{MapBox, ToMapBox};
 
-use self::map::{MapperExtFields, CID};
+use self::map::{MapExtFields, CID};
 
 use super::*;
 
@@ -14,16 +14,16 @@ pub struct ServerOptions {
     pub alpn: Option<Vec<String>>,
 }
 
-impl ToMapperBox for ServerOptions {
-    fn to_mapper_box(&self) -> MapperBox {
+impl ToMapBox for ServerOptions {
+    fn to_map_box(&self) -> MapBox {
         let a = Server::new(self.clone());
         Box::new(a)
     }
 }
 
 // todo: 添加 alpn 和 tls_min_v
-#[mapper_ext_fields]
-#[derive(Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, MapExt)]
 pub struct Server {
     pub option_cache: ServerOptions,
     ta: TlsAcceptor,
@@ -46,7 +46,7 @@ impl Server {
         Server {
             ta: TlsAcceptor::from(Arc::new(config)),
             option_cache: c.clone(),
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         }
     }
 
@@ -79,7 +79,7 @@ impl Name for Server {
     }
 }
 #[async_trait]
-impl map::Mapper for Server {
+impl map::Map for Server {
     async fn maps(
         &self,
         cid: CID,

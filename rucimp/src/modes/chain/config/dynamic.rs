@@ -1,8 +1,8 @@
 /*!
 Defines Dynamic Chain.
 
-动态链的 iter 每次调用时, 会动态地返回一种Mapper
-只有运行时才能知晓一条链是由哪些 Mapper 所组成, 所以无法用 Vec等类型表示,
+动态链的 iter 每次调用时, 会动态地返回一种Map
+只有运行时才能知晓一条链是由哪些 Map 所组成, 所以无法用 Vec等类型表示,
 只能用 Iterator 表示
 
 不过, 有时会有这种情况: 动态链由几部分 静态链组成, 其中两个静态链之间的连接
@@ -24,7 +24,7 @@ use dyn_clone::DynClone;
 use ruci::{
     map::{
         fold::{DynIterator, OVOD},
-        MapperBox,
+        MapBox,
     },
     net::CID,
 };
@@ -34,7 +34,7 @@ use ruci::{
 pub struct IndexInfinite {
     pub tag: String,
 
-    pub generator: Box<dyn IndexNextMapperGenerator>,
+    pub generator: Box<dyn IndexNextMapGenerator>,
 
     /// current_state_index 是当前状态的指示
     ///
@@ -45,7 +45,7 @@ pub struct IndexInfinite {
 }
 
 impl IndexInfinite {
-    pub fn new(tag: String, generator: Box<dyn IndexNextMapperGenerator>) -> Self {
+    pub fn new(tag: String, generator: Box<dyn IndexNextMapGenerator>) -> Self {
         IndexInfinite {
             tag,
             generator,
@@ -54,26 +54,19 @@ impl IndexInfinite {
     }
 }
 
-pub type IndexMapperBox = (i64, Option<Arc<MapperBox>>); //MapperBox 和它的 索引
+pub type IndexMapBox = (i64, Option<Arc<MapBox>>); //MapBox 和它的 索引
 
 /// 若返回的 index 小于0, 则指示迭代结束
 ///
-pub trait IndexNextMapperGenerator: DynClone + Debug + Send + Sync {
-    fn next_mapper(
-        &mut self,
-        cid: CID,
-        this_state_index: i64,
-        data: OVOD,
-    ) -> Option<IndexMapperBox>;
+pub trait IndexNextMapGenerator: DynClone + Debug + Send + Sync {
+    fn next_map(&mut self, cid: CID, this_state_index: i64, data: OVOD) -> Option<IndexMapBox>;
 }
 
-dyn_clone::clone_trait_object!(IndexNextMapperGenerator);
+dyn_clone::clone_trait_object!(IndexNextMapGenerator);
 
 impl DynIterator for IndexInfinite {
-    fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapperBox>> {
-        let oi = self
-            .generator
-            .next_mapper(cid, self.current_state_index, data);
+    fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapBox>> {
+        let oi = self.generator.next_map(cid, self.current_state_index, data);
         match oi {
             Some(ib) => {
                 let i = ib.0;
@@ -94,11 +87,11 @@ impl DynIterator for IndexInfinite {
 pub struct Finite {
     /// finite set
     ///
-    /// 每一个 MapperBox 都是静态的, 在 Vec中有固定的序号.
+    /// 每一个 MapBox 都是静态的, 在 Vec中有固定的序号.
     /// 根据 selector 返回的序号 决定下一个调用哪一个.
     /// selector 返回 None 表示  链终止
     ///
-    pub mb_vec: Vec<Arc<MapperBox>>,
+    pub mb_vec: Vec<Arc<MapBox>>,
 
     /// transition function
     pub selector: Box<dyn NextSelector>,
@@ -122,7 +115,7 @@ pub trait NextSelector: Debug + DynClone + Send + Sync {
 dyn_clone::clone_trait_object!(NextSelector);
 
 impl DynIterator for Finite {
-    fn next_with_data(&mut self, _cid: CID, data: OVOD) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _cid: CID, data: OVOD) -> Option<Arc<MapBox>> {
         let oi = self.selector.next_index(self.current_index, data);
         match oi {
             Some(i) => {

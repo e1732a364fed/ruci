@@ -1,4 +1,4 @@
-use macro_mapper::{mapper_ext_fields, MapperExt};
+use macro_map::{map_ext_fields, MapExt};
 use rustls::{
     client::danger::ServerCertVerified,
     pki_types::{CertificateDer, ServerName, UnixTime},
@@ -8,14 +8,14 @@ use rustls::{
 use tokio::io::AsyncWriteExt;
 
 use self::{
-    map::{MapperExt, MapperExtFields, CID},
+    map::{MapExt, MapExtFields, CID},
     net::Stream,
 };
 
 use super::*;
 
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt)]
 pub struct Client {
     pub domain: String,
     pub is_insecure: bool,
@@ -58,7 +58,7 @@ impl Client {
             domain: opt.domain,
             is_insecure: opt.is_insecure,
             client_config: Arc::new(config),
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         }
     }
 }
@@ -152,7 +152,7 @@ impl Name for Client {
     }
 }
 #[async_trait]
-impl map::Mapper for Client {
+impl map::Map for Client {
     async fn maps(
         &self,
         _cid: CID,

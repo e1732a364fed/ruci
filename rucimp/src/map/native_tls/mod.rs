@@ -4,12 +4,12 @@ use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use ruci::{
-    map::{self, MapResult, MapperExtFields, ProxyBehavior},
+    map::{self, MapExtFields, MapResult, ProxyBehavior},
     net::{self, helpers::EarlyDataWrapper, CID},
     Name,
 };
 
-use macro_mapper::*;
+use macro_map::*;
 use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
 
 pub fn load(cert_path: &str, key_path: &str) -> anyhow::Result<Identity> {
@@ -40,13 +40,13 @@ impl ServerOptions {
                 tokio_native_tls::native_tls::TlsAcceptor::new(id)
                     .context("TlsAcceptor new failed")?,
             ),
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         })
     }
 }
 
-#[mapper_ext_fields]
-#[derive(Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, MapExt)]
 pub struct Server {
     ta: TlsAcceptor,
 }
@@ -85,7 +85,7 @@ impl Server {
 }
 
 #[async_trait]
-impl map::Mapper for Server {
+impl map::Map for Server {
     async fn maps(
         &self,
         cid: CID,
@@ -105,8 +105,8 @@ impl map::Mapper for Server {
     }
 }
 
-#[mapper_ext_fields]
-#[derive(Clone, Debug, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, MapExt)]
 pub struct Client {
     pub domain: String,
     pub insecure: bool,
@@ -120,7 +120,7 @@ impl Name for Client {
 }
 
 #[async_trait]
-impl map::Mapper for Client {
+impl map::Map for Client {
     async fn maps(
         &self,
         _cid: CID,

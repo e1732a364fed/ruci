@@ -59,7 +59,7 @@ pub async fn handle_in_stream(
             cid: cid_c,
             behavior: ProxyBehavior::DECODE,
             initial_state: MapResult::builder().c(in_conn).build(),
-            mappers: ins_iterator,
+            maps: ins_iterator,
             chain_tag: String::new(),
             #[cfg(feature = "trace")]
             trace: Vec::new(),
@@ -201,7 +201,7 @@ pub async fn handle_in_fold_result(
                     b: listen_result.b,
                     ..Default::default()
                 },
-                mappers: outbound,
+                maps: outbound,
                 chain_tag: String::new(),
                 #[cfg(feature = "trace")]
                 trace: Vec::new(),

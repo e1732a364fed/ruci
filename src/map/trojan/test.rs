@@ -6,7 +6,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
-use crate::map::{MapParams, Mapper, ProxyBehavior, CID};
+use crate::map::{Map, MapParams, ProxyBehavior, CID};
 use crate::net::addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt};
 use crate::net::{self, helpers, Addr};
 use crate::user::AsyncUserAuthenticator;

@@ -1,5 +1,5 @@
 /*!
-implements Mapper for http proxy
+implements Map for http proxy
  */
 
 use std::cmp::min;
@@ -8,7 +8,7 @@ use anyhow::bail;
 use base64::prelude::*;
 use bytes::BytesMut;
 use futures::executor::block_on;
-use macro_mapper::*;
+use macro_map::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
@@ -23,14 +23,14 @@ use crate::{
     Name,
 };
 
-use super::{MapperBox, MapperExtFields, Stream, ToMapperBox};
+use super::{MapBox, MapExtFields, Stream, ToMapBox};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
 pub const PROXY_AUTH_HEADER_STR: &str = "Proxy-Authorization ";
 
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt)]
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,
     pub only_connect: bool,
@@ -49,8 +49,8 @@ pub struct Config {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapperBox for Config {
-    fn to_mapper_box(&self) -> MapperBox {
+impl ToMapBox for Config {
+    fn to_map_box(&self) -> MapBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
     }
@@ -78,7 +78,7 @@ impl Server {
         Server {
             only_connect: option.only_support_connect,
             um: if um.is_empty() { None } else { Some(um) },
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         }
     }
 
@@ -251,7 +251,7 @@ impl Server {
 }
 
 #[async_trait::async_trait]
-impl map::Mapper for Server {
+impl map::Map for Server {
     async fn maps(
         &self,
         cid: CID,

@@ -1,5 +1,5 @@
 /*!
-Tproxy related Mapper. Tproxy is shortcut for transparent proxy,
+Tproxy related Map. Tproxy is shortcut for transparent proxy,
 
 Only support linux
  */
@@ -27,7 +27,7 @@ use ruci::{
     Name,
 };
 
-use macro_mapper::{mapper_ext_fields, MapperExt};
+use macro_map::{map_ext_fields, MapExt};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, info, warn};
@@ -38,8 +38,8 @@ use crate::utils::{run_command, sync_run_command_list_no_stop, sync_run_command_
 
 /// TproxyResolver 从 系统发来的 tproxy 相关的 连接
 /// 解析出实际 target_addr
-#[mapper_ext_fields]
-#[derive(Debug, Clone, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, Default, MapExt)]
 pub struct TcpResolver {
     opts: Options,
 }
@@ -68,7 +68,7 @@ impl TcpResolver {
 
         Ok(Self {
             opts,
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         })
     }
 }
@@ -104,7 +104,7 @@ fn get_laddr_from_vd(vd: Vec<Option<Box<dyn Data>>>) -> Option<ruci::net::Addr> 
 }
 
 #[async_trait]
-impl Mapper for TcpResolver {
+impl Map for TcpResolver {
     /// TcpResolver only has decode behavior
     ///
     async fn maps(&self, _cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
@@ -133,8 +133,8 @@ impl Mapper for TcpResolver {
     }
 }
 
-#[mapper_ext_fields]
-#[derive(Clone, Debug, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, Default, MapExt)]
 pub struct UDPListener {
     pub listen_addr: net::Addr,
     pub sopt: SockOpt,
@@ -216,7 +216,7 @@ impl UDPListener {
 }
 
 #[async_trait]
-impl Mapper for UDPListener {
+impl Map for UDPListener {
     /// use configured addr.
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {

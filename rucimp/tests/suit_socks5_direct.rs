@@ -19,9 +19,9 @@ use parking_lot::Mutex;
 use ruci::map::socks5;
 use ruci::map::socks5::*;
 use ruci::net::GlobalTrafficRecorder;
-use ruci::{map::Mapper, net, user::PlainText};
+use ruci::{map::Map, net, user::PlainText};
 use rucimp::modes::suit::config::adapter::{
-    load_in_mappers_by_str_and_ld_config, load_out_mappers_by_str_and_ld_config,
+    load_in_maps_by_str_and_ld_config, load_out_maps_by_str_and_ld_config,
 };
 use rucimp::modes::suit::config::{Config, LDConfig};
 use rucimp::modes::suit::engine::{listen_ser, SuitEngine};
@@ -325,7 +325,7 @@ fn get_nl_config(listener_num: u8) -> Config {
     toml::from_str(&ws).unwrap()
 }
 
-async fn get_socks5_mapper(lsuit: &SuitStruct) -> socks5::server::Server {
+async fn get_socks5_map(lsuit: &SuitStruct) -> socks5::server::Server {
     socks5::server::Server::new(
         rucimp::modes::suit::config::adapter::get_socks5_server_option_from_ld_config(
             lsuit.get_config().unwrap().clone(),
@@ -345,8 +345,8 @@ async fn lisen_ser() -> anyhow::Result<(
     let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Arc::new(Box::new(a)));
+    let a = get_socks5_map(&lsuit).await;
+    lsuit.push_map(Arc::new(Box::new(a)));
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
 
@@ -513,10 +513,10 @@ async fn socks5_direct_and_request_counter() -> anyhow::Result<()> {
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
     let a = ruci::map::counter::Counter::default();
-    lsuit.push_mapper(Arc::new(Box::new(a)));
+    lsuit.push_map(Arc::new(Box::new(a)));
 
-    let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Arc::new(Box::new(a)));
+    let a = get_socks5_map(&lsuit).await;
+    lsuit.push_map(Arc::new(Box::new(a)));
 
     let wn = lsuit.whole_name.clone();
 
@@ -675,8 +675,8 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     let mut se = SuitEngine::default();
     se.load_config(
         c,
-        load_in_mappers_by_str_and_ld_config,
-        load_out_mappers_by_str_and_ld_config,
+        load_in_maps_by_str_and_ld_config,
+        load_out_maps_by_str_and_ld_config,
     );
 
     let listen_future = async {
@@ -746,8 +746,8 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> anyhow::Resul
     let mut se = SuitEngine::default();
     se.load_config(
         c,
-        load_in_mappers_by_str_and_ld_config,
-        load_out_mappers_by_str_and_ld_config,
+        load_in_maps_by_str_and_ld_config,
+        load_out_maps_by_str_and_ld_config,
     );
 
     let listen_future = async {
@@ -817,8 +817,8 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
         let mut lo = se.lock();
         lo.load_config(
             c,
-            load_in_mappers_by_str_and_ld_config,
-            load_out_mappers_by_str_and_ld_config,
+            load_in_maps_by_str_and_ld_config,
+            load_out_maps_by_str_and_ld_config,
         );
     }
     let sec = se.clone();

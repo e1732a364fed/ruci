@@ -1,5 +1,5 @@
 /*!
-Defines Mapper s for tls server and client
+Defines Map s for tls server and client
 
 uses rustls 0.22
  */

@@ -10,14 +10,14 @@ use ruci::net::{helpers, CID};
 use ruci::Name;
 use ruci::{map, net::Stream};
 
-use macro_mapper::*;
+use macro_map::*;
 use tokio::sync::Mutex;
 use tracing::debug;
 
 use crate::map::{quic_common, rustls21};
 
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt)]
 pub struct Client {
     c: Endpoint,
     conn: Arc<Mutex<Option<quinn::Connection>>>,
@@ -53,7 +53,7 @@ impl Client {
             conn: Arc::new(Mutex::new(None)),
             server_addr: a,
             server_name: c.server_name,
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         })
     }
     async fn handshake(
@@ -91,7 +91,7 @@ impl Client {
 }
 
 #[async_trait]
-impl Mapper for Client {
+impl Map for Client {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let conn = params.c;
         if let Stream::None = conn {

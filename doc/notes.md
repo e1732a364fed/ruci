@@ -84,8 +84,8 @@ outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不�
 
 动态链分 有限动态链和 完全动态链
 
-动态链的 iter 每次调用时, 会动态地返回一种Mapper
-只有运行时才能知晓一条链是由哪些 Mapper 所组成, 所以无法用 Vec等类型表示,
+动态链的 iter 每次调用时, 会动态地返回一种Map
+只有运行时才能知晓一条链是由哪些 Map 所组成, 所以无法用 Vec等类型表示,
 只能用 Iterator 表示
 
 不过, 有时会有这种情况: 动态链由几部分 静态链组成, 其中两个静态链之间的连接
@@ -166,6 +166,8 @@ www.1.com 的答 是回复给 client1  还是 client2 呢？
 Listener 在 监听 udp, 且 有 udp 的 fixed_target_addr 时, 会对每一个 inbound
 连接新建一个 udp 连接 , 建立了一对一的转发, 而不是 一对多的转发, 就没问题了
 
+有用户报告 用 BindDialer 的 fixed_target_addr 作 udp 转发会导致宕机, 所以一定要用 Listener
+
 
 ### 报错示例: socks5 client only support tcplike stream, got NoStream
 
@@ -219,12 +221,12 @@ early data 必须由最末端的 outbound 传递
 
 不过, 我们可以做些操作, 给末端代理一个标记, 这样就能使用 earydata 功能了.
 
-通过使用 MapperExt 和 NoMapperExt 这两个derive 宏, 可以分别给 struct 实现 common行为
+通过使用 MapExt 和 NoMapExt 这两个derive 宏, 可以分别给 struct 实现 common行为
 和默认行为.
 
-MapperExt 要 配合 mapper_ext_fields 宏一起使用
+MapExt 要 配合 map_ext_fields 宏一起使用
 
-用了 MapperExt 后, 可以在方法内使用 self.is_tail_of_chain 判断是否在链尾, 如果在, 则可以发送ed, 
+用了 MapExt 后, 可以在方法内使用 self.is_tail_of_chain 判断是否在链尾, 如果在, 则可以发送ed, 
 如果不在, 不可以发送, 只能传递到下一级
 
 ## async
@@ -293,7 +295,7 @@ ba02e41a4f81e3cea9626a93f8cefd16a539e341
 在0.0.3, 添加 "trace" feature, 对每条连接加以监视、记录, 其可能导处性能下降, 但
 又在另一些用例中有用, 所以要做
 
-trace 会将chain 中经过的每一个 Mapper的 name 记录下来, 放到 `Vec<String> ` 中. 它只对于动态链有用
+trace 会将chain 中经过的每一个 Map的 name 记录下来, 放到 `Vec<String> ` 中. 它只对于动态链有用
 如果是静态链, 则记录一个 chain_tag 就能知道完整的 链信息
 
 trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来, 这是最耗性能的
@@ -301,11 +303,11 @@ trace 还会将 【每条连接】的【实时】 ub, db 信息记录下来, 这
 
 ## HttpFilter
 
-为了支持对 普通 http 请求的回落, 加一个 叫 HttpFilter 的 Mapper
+为了支持对 普通 http 请求的回落, 加一个 叫 HttpFilter 的 Map
 
 这样可以同时在 grpc 和 ws 中使用
 
-因为 tungstenite (websocket包) 对错误请求是自行返回 http 响应的, 而我们为了回落到其它 Mapper , 
+因为 tungstenite (websocket包) 对错误请求是自行返回 http 响应的, 而我们为了回落到其它 Map , 
 就要 绕过 tungstenite 的处理
 
 ## quic 

@@ -33,8 +33,8 @@ async fn main() -> anyhow::Result<()> {
 
     se.load_config_from_str(
         &contents,
-        load_in_mappers_by_str_and_ld_config,
-        load_out_mappers_by_str_and_ld_config,
+        load_in_maps_by_str_and_ld_config,
+        load_out_maps_by_str_and_ld_config,
     );
     let r = se.block_run().await;
 

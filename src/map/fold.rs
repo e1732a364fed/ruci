@@ -13,14 +13,14 @@ use tracing::{debug, info, warn, Level};
 
 use super::*;
 
-/// static Iterator for [`MapperBox`]
-pub trait MIter: Iterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug {}
-impl<T: Iterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug> MIter for T {}
+/// static Iterator for [`MapBox`]
+pub trait MIter: Iterator<Item = Arc<MapBox>> + DynClone + Send + Sync + Debug {}
+impl<T: Iterator<Item = Arc<MapBox>> + DynClone + Send + Sync + Debug> MIter for T {}
 dyn_clone::clone_trait_object!(MIter);
 
 pub type MIterBox = Box<dyn MIter>;
 
-/// dynamic Iterator for [`MapperBox`], can get different next item if the
+/// dynamic Iterator for [`MapBox`], can get different next item if the
 /// input data is different
 ///
 /// DynIterator is uncountable, because it's input is dynamic, it's
@@ -29,9 +29,9 @@ pub type MIterBox = Box<dyn MIter>;
 /// if you want to count it, you might use get_miter to try to get MIterBox first
 ///
 pub trait DynIterator {
-    fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapperBox>>;
+    fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapBox>>;
 
-    fn next(&mut self) -> Option<Arc<MapperBox>> {
+    fn next(&mut self) -> Option<Arc<MapBox>> {
         self.next_with_data(CID::default(), None)
     }
 
@@ -58,11 +58,11 @@ pub type OVOD = Option<Vec<Option<Box<dyn Data>>>>;
 pub struct DynMIterWrapper(pub MIterBox);
 
 impl DynIterator for DynMIterWrapper {
-    fn next_with_data(&mut self, _cid: CID, _data: OVOD) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _cid: CID, _data: OVOD) -> Option<Arc<MapBox>> {
         self.0.next()
     }
 
-    fn next(&mut self) -> Option<Arc<MapperBox>> {
+    fn next(&mut self) -> Option<Arc<MapBox>> {
         self.0.next()
     }
 
@@ -75,18 +75,18 @@ impl DynIterator for DynMIterWrapper {
     }
 }
 
-/// 包装 [`std::vec::IntoIter<Arc<MapperBox>>`] 以使其支持 [`DynIterator`]
+/// 包装 [`std::vec::IntoIter<Arc<MapBox>>`] 以使其支持 [`DynIterator`]
 ///
 /// 比 [`DynMIterWrapper`] 少一层装箱
 #[derive(Debug, Clone)]
-pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapperBox>>);
+pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapBox>>);
 
 impl DynIterator for DynVecIterWrapper {
-    fn next_with_data(&mut self, _cid: CID, _data: OVOD) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _cid: CID, _data: OVOD) -> Option<Arc<MapBox>> {
         self.0.next()
     }
 
-    fn next(&mut self) -> Option<Arc<MapperBox>> {
+    fn next(&mut self) -> Option<Arc<MapBox>> {
         self.0.next()
     }
 
@@ -113,12 +113,12 @@ pub struct FoldResult {
     pub chain_tag: String,
 
     // 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
-    pub left_mappers_iter: DMIterBox,
+    pub left_maps_iter: DMIterBox,
 
     pub no_timeout: bool,
 
     #[cfg(feature = "trace")]
-    pub trace: Vec<String>, // table of Names of each Mapper during accumulation.
+    pub trace: Vec<String>, // table of Names of each Map during accumulation.
 
     pub shutdown_rx: Option<oneshot::Receiver<()>>,
 }
@@ -142,7 +142,7 @@ pub struct FoldParams {
     pub cid: CID,
     pub behavior: ProxyBehavior,
     pub initial_state: MapResult,
-    pub mappers: DMIterBox,
+    pub maps: DMIterBox,
 
     pub chain_tag: String,
 
@@ -150,7 +150,7 @@ pub struct FoldParams {
     pub trace: Vec<String>,
 }
 
-///  fold 是一个作用很强的函数,是 mappers 的累加器
+///  fold 是一个作用很强的函数,是 maps 的累加器
 ///
 /// 它的做法类似 Iterator 的 fold
 ///
@@ -170,7 +170,7 @@ pub struct FoldParams {
 pub async fn fold(params: FoldParams) -> FoldResult {
     let cid = params.cid;
     let initial_state = params.initial_state;
-    let mut mappers = params.mappers;
+    let mut maps = params.maps;
 
     #[cfg(feature = "trace")]
     let mut trace = params.trace;
@@ -183,10 +183,10 @@ pub async fn fold(params: FoldParams) -> FoldResult {
     let mut tag: String = params.chain_tag;
 
     loop {
-        let adder = if mappers.requires_no_data() {
-            mappers.next()
+        let adder = if maps.requires_no_data() {
+            maps.next()
         } else {
-            mappers.next_with_data(cid.clone(), Some(calculated_output_vec.clone()))
+            maps.next_with_data(cid.clone(), Some(calculated_output_vec.clone()))
         };
 
         let adder = match adder {
@@ -195,7 +195,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
         };
 
         if tracing::enabled!(Level::DEBUG) {
-            debug!(cid = %cid, mapper = adder.name(), behavior = ?params.behavior, "folding",)
+            debug!(cid = %cid, map = adder.name(), behavior = ?params.behavior, "folding",)
         }
         last_r = adder
             .maps(
@@ -246,7 +246,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
             Some(nid) => nid,
             None => cid,
         },
-        left_mappers_iter: mappers,
+        left_maps_iter: maps,
 
         chain_tag: tag,
 
@@ -261,9 +261,9 @@ pub async fn fold(params: FoldParams) -> FoldResult {
 
 /// blocking.
 ///
-/// 先调用第一个 mapper 生成 流发生器, 然后调用 [`in_iter_fold_forever`]
+/// 先调用第一个 map 生成 流发生器, 然后调用 [`in_iter_fold_forever`]
 ///
-/// 但如果 第一个 mapper 生成的不是流发生器而是普通的流, 则会调用 普通的
+/// 但如果 第一个 map 生成的不是流发生器而是普通的流, 则会调用 普通的
 /// fold, 累加结束后就会返回
 ///
 ///
@@ -272,12 +272,12 @@ pub async fn fold_from_start(
     result_dealer: tokio::sync::mpsc::Sender<FoldResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
-    mut inmappers: DMIterBox,
+    mut inmaps: DMIterBox,
     o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
-    let first = inmappers
+    let first = inmaps
         .next_with_data(in_cid.clone(), None)
-        .expect("has first inmapper");
+        .expect("has first inmap");
     let first_r = first
         .maps(
             in_cid.clone(),
@@ -299,7 +299,7 @@ pub async fn fold_from_start(
             cid: in_cid,
             stream_generator,
             result_dealer,
-            dmiter: inmappers,
+            dmiter: inmaps,
             o_gtr,
             first_tag,
 
@@ -328,7 +328,7 @@ pub async fn fold_from_start(
                 cid,
                 behavior: ProxyBehavior::DECODE,
                 initial_state: first_r,
-                mappers: inmappers,
+                maps: inmaps,
                 chain_tag: first_tag,
 
                 #[cfg(feature = "trace")]
@@ -446,7 +446,7 @@ fn spawn_fold_forever(params: SpawnFoldForeverParams) {
             cid,
             behavior: ProxyBehavior::DECODE,
             initial_state: params.new_stream_info,
-            mappers: miter,
+            maps: miter,
 
             chain_tag: params.first_tag,
 
@@ -464,7 +464,7 @@ fn spawn_fold_forever(params: SpawnFoldForeverParams) {
 
                 stream_generator: rx,
                 result_dealer: tx,
-                dmiter: r.left_mappers_iter.clone(),
+                dmiter: r.left_maps_iter.clone(),
                 o_gtr,
                 first_tag: r.chain_tag,
 

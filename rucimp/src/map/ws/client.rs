@@ -3,7 +3,7 @@ use anyhow::{bail, Context};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use futures::Future;
-use macro_mapper::*;
+use macro_map::*;
 use ruci::{
     map::{self, *},
     net::{self, http::CommonConfig, *},
@@ -15,8 +15,8 @@ use tokio_tungstenite::{
 
 use super::*;
 
-#[mapper_ext_fields]
-#[derive(Clone, Debug, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, Default, MapExt)]
 pub struct Client {
     request: Request<()>,
     use_early_data: bool,
@@ -124,7 +124,7 @@ impl Client {
 }
 
 #[async_trait]
-impl Mapper for Client {
+impl Map for Client {
     async fn maps(
         &self,
         _cid: CID,

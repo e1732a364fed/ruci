@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use h2::client::{Connection, SendRequest};
 use http::Request;
-use macro_mapper::*;
+use macro_map::*;
 use ruci::{
-    map::{self, MapResult, Mapper, ProxyBehavior},
+    map::{self, Map, MapResult, ProxyBehavior},
     net::{self, http::CommonConfig, Conn, CID},
 };
 use tokio::sync::{
@@ -20,8 +20,8 @@ use tracing::debug;
 use super::*;
 
 /// SingleClient 不使用 h2 的多路复用特性
-#[mapper_ext_fields]
-#[derive(Clone, Debug, MapperExt, Default)]
+#[map_ext_fields]
+#[derive(Clone, Debug, MapExt, Default)]
 pub struct SingleClient {
     pub http_config: Option<CommonConfig>,
     pub is_grpc: bool,
@@ -147,7 +147,7 @@ async fn new_stream_by_send_request(
 }
 
 #[async_trait]
-impl Mapper for SingleClient {
+impl Map for SingleClient {
     async fn maps(
         &self,
         cid: net::CID,
@@ -168,8 +168,8 @@ impl Mapper for SingleClient {
 }
 
 /// MuxClient 使用 h2 的多路复用特性
-#[mapper_ext_fields]
-#[derive(Clone, Debug, MapperExt, Default)]
+#[map_ext_fields]
+#[derive(Clone, Debug, MapExt, Default)]
 pub struct MuxClient {
     pub http_config: Option<CommonConfig>,
     pub is_grpc: bool,
@@ -285,7 +285,7 @@ impl MuxClient {
 }
 
 #[async_trait]
-impl Mapper for MuxClient {
+impl Map for MuxClient {
     async fn maps(
         &self,
         cid: net::CID,

@@ -3,10 +3,10 @@ Defines config format for chain.
 
 主模块定义了静态链式配置 [`StaticConfig`]
 
-静态链是Mapper组成是运行前即知晓且依次按排列顺序执行的链,
+静态链是Map组成是运行前即知晓且依次按排列顺序执行的链,
 因此可以用 Vec 表示
 
-有限动态链的Mapper组成也用 [`StaticConfig`] 定义, 但其状态转移函数在
+有限动态链的Map组成也用 [`StaticConfig`] 定义, 但其状态转移函数在
 [`dynamic`] 模块中定义
 
 完全动态链在 [`dynamic`] 模块中定义
@@ -43,11 +43,11 @@ use crate::map::tproxy::{self, TcpResolver};
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
 
-/// 静态配置中有初始化后即确定的 Mapper 数量
+/// 静态配置中有初始化后即确定的 Map 数量
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
-    pub inbounds: Vec<InMapperConfigChain>,
-    pub outbounds: Vec<OutMapperConfigChain>,
+    pub inbounds: Vec<InMapConfigChain>,
+    pub outbounds: Vec<OutMapConfigChain>,
 
     pub tag_route: Option<Vec<(String, String)>>,
     pub fallback_route: Option<Vec<(String, String)>>,
@@ -57,8 +57,8 @@ pub struct StaticConfig {
 }
 
 impl StaticConfig {
-    /// convert config chain to mapper chain
-    pub fn get_inbounds(&self) -> Vec<Vec<MapperBox>> {
+    /// convert config chain to map chain
+    pub fn get_inbounds(&self) -> Vec<Vec<MapBox>> {
         let listens: Vec<_> = self
             .inbounds
             .iter()
@@ -66,17 +66,17 @@ impl StaticConfig {
                 let mut chain = config_chain
                     .chain
                     .iter()
-                    .map(|mapper_config| {
-                        let mut mapper = mapper_config.to_mapper_box();
-                        mapper.set_chain_tag(config_chain.tag.as_deref().unwrap_or(""));
-                        mapper
+                    .map(|map_config| {
+                        let mut map = map_config.to_map_box();
+                        map.set_chain_tag(config_chain.tag.as_deref().unwrap_or(""));
+                        map
                     })
                     .collect::<Vec<_>>();
 
                 if let Some(last_m) = chain.last_mut() {
                     last_m.set_is_tail_of_chain(true);
                 } else {
-                    warn!("the inbound chain has no mappers, {:?}", config_chain.tag);
+                    warn!("the inbound chain has no maps, {:?}", config_chain.tag);
                 }
 
                 chain
@@ -86,25 +86,25 @@ impl StaticConfig {
         listens
     }
 
-    /// convert config chain to mapper chain
-    pub fn get_outbounds(&self) -> Vec<Vec<MapperBox>> {
+    /// convert config chain to map chain
+    pub fn get_outbounds(&self) -> Vec<Vec<MapBox>> {
         self.outbounds
             .iter()
             .map(|config_chain| {
                 let mut chain = config_chain
                     .chain
                     .iter()
-                    .map(|mapper_config| {
-                        let mut mapper = mapper_config.to_mapper_box();
-                        mapper.set_chain_tag(&config_chain.tag);
-                        mapper
+                    .map(|map_config| {
+                        let mut map = map_config.to_map_box();
+                        map.set_chain_tag(&config_chain.tag);
+                        map
                     })
                     .collect::<Vec<_>>();
 
                 if let Some(last_m) = chain.last_mut() {
                     last_m.set_is_tail_of_chain(true);
                 } else {
-                    warn!("the outbound chain has no mappers, {:?}", config_chain.tag);
+                    warn!("the outbound chain has no maps, {:?}", config_chain.tag);
                 }
 
                 chain
@@ -123,7 +123,7 @@ impl StaticConfig {
             .map(|outbound| {
                 let tag = outbound
                     .first()
-                    .expect("outbound should has at least one mapper ")
+                    .expect("outbound should has at least one map ")
                     .get_chain_tag();
 
                 let ts = tag.to_string();
@@ -187,15 +187,15 @@ impl StaticConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct InMapperConfigChain {
+pub struct InMapConfigChain {
     tag: Option<String>,
-    chain: Vec<InMapperConfig>,
+    chain: Vec<InMapConfig>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct OutMapperConfigChain {
+pub struct OutMapConfigChain {
     tag: String, //每个 out chain 都必须有一个 tag
-    chain: Vec<OutMapperConfig>,
+    chain: Vec<OutMapConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -204,8 +204,8 @@ pub struct DialerConfig {
     dial_addr: Option<String>,
     ext: Option<Ext>,
 }
-impl ToMapperBox for DialerConfig {
-    fn to_mapper_box(&self) -> MapperBox {
+impl ToMapBox for DialerConfig {
+    fn to_map_box(&self) -> MapBox {
         let opt_bind_a = self
             .bind_addr
             .clone()
@@ -226,7 +226,7 @@ impl ToMapperBox for DialerConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum InMapperConfig {
+pub enum InMapConfig {
     Echo,                     //单流消耗器
     Stdio(Ext),               //单流发生器
     Fileio(FileConfig),       //单流发生器
@@ -277,7 +277,7 @@ pub enum InMapperConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum OutMapperConfig {
+pub enum OutMapConfig {
     Blackhole,                //单流消耗器
     Direct,                   //单流发生器
     Stdio(Ext),               //单流发生器
@@ -320,8 +320,8 @@ pub struct Ext {
     pub pre_defined_early_data: Option<String>,
 }
 impl Ext {
-    fn to_ext_fields(&self) -> MapperExtFields {
-        let mut ext_f = MapperExtFields::default();
+    fn to_ext_fields(&self) -> MapExtFields {
+        let mut ext_f = MapExtFields::default();
         if let Some(ta) = self.fixed_target_addr.as_ref() {
             ext_f.fixed_target_addr = net::Addr::from_network_addr_url(ta).ok();
         }
@@ -377,18 +377,18 @@ pub struct TrojanPassSet {
     more: Option<Vec<String>>,
 }
 
-impl ToMapperBox for InMapperConfig {
-    fn to_mapper_box(&self) -> ruci::map::MapperBox {
+impl ToMapBox for InMapConfig {
+    fn to_map_box(&self) -> ruci::map::MapBox {
         match self {
-            InMapperConfig::Echo => Box::<Echo>::default(),
-            InMapperConfig::Stdio(ext) => {
+            InMapConfig::Echo => Box::<Echo>::default(),
+            InMapConfig::Stdio(ext) => {
                 let ext_f = ext.to_ext_fields();
 
                 let mut s = ruci::map::stdio::Stdio::boxed();
                 s.set_ext_fields(Some(ext_f));
                 s
             }
-            InMapperConfig::Fileio(f) => {
+            InMapConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
                     i_name: f.i.clone(),
                     o_name: f.o.clone(),
@@ -398,8 +398,8 @@ impl ToMapperBox for InMapperConfig {
                 };
                 Box::new(s)
             }
-            InMapperConfig::BindDialer(dc) => dc.to_mapper_box(),
-            InMapperConfig::Listener { listen_addr, ext } => {
+            InMapConfig::BindDialer(dc) => dc.to_map_box(),
+            InMapConfig::Listener { listen_addr, ext } => {
                 let a =
                     net::Addr::from_network_addr_url(listen_addr).expect("network_addr is valid");
                 let g = ruci::map::network::Listener {
@@ -409,18 +409,18 @@ impl ToMapperBox for InMapperConfig {
 
                 Box::new(g)
             }
-            InMapperConfig::Adder(i) => i.to_mapper_box(),
-            InMapperConfig::Counter => Box::<Counter>::default(),
-            InMapperConfig::TLS(c) => tls::server::ServerOptions {
+            InMapConfig::Adder(i) => i.to_map_box(),
+            InMapConfig::Counter => Box::<Counter>::default(),
+            InMapConfig::TLS(c) => tls::server::ServerOptions {
                 addr: "todo!()".to_string(),
                 cert: PathBuf::from(c.cert.clone()),
                 key: PathBuf::from(c.key.clone()),
                 alpn: c.alpn.clone(),
             }
-            .to_mapper_box(),
+            .to_map_box(),
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-            InMapperConfig::NativeTLS(c) => Box::new(
+            InMapConfig::NativeTLS(c) => Box::new(
                 crate::map::native_tls::ServerOptions {
                     cert_f_path: c.cert.clone(),
                     key_f_path: c.key.clone(),
@@ -429,7 +429,7 @@ impl ToMapperBox for InMapperConfig {
                 .unwrap(),
             ),
 
-            InMapperConfig::Http(c) => {
+            InMapConfig::Http(c) => {
                 let so = http_proxy::Config {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
@@ -440,9 +440,9 @@ impl ToMapperBox for InMapperConfig {
                     ..Default::default()
                 };
 
-                so.to_mapper_box()
+                so.to_map_box()
             }
-            InMapperConfig::Socks5(c) => {
+            InMapConfig::Socks5(c) => {
                 let so = socks5::server::Config {
                     support_udp: true, //默认打开udp 支持
                     user_whitespace_pass: c.userpass.clone(),
@@ -453,9 +453,9 @@ impl ToMapperBox for InMapperConfig {
                     }),
                 };
 
-                so.to_mapper_box()
+                so.to_map_box()
             }
-            InMapperConfig::Socks5Http(c) => {
+            InMapConfig::Socks5Http(c) => {
                 let so = socks5http::Config {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
@@ -465,27 +465,27 @@ impl ToMapperBox for InMapperConfig {
                     }),
                 };
 
-                so.to_mapper_box()
+                so.to_map_box()
             }
-            InMapperConfig::Trojan(c) => {
+            InMapConfig::Trojan(c) => {
                 let so = trojan::server::Config {
                     pass: c.password.clone(),
                     passes: c.more.as_ref().map(|up_v| up_v.to_vec()),
                 };
 
-                so.to_mapper_box()
+                so.to_map_box()
             }
-            InMapperConfig::WebSocket {
+            InMapConfig::WebSocket {
                 http_config: config,
             } => Box::new(crate::map::ws::server::Server {
                 config: config.clone(),
                 ..Default::default()
             }),
-            InMapperConfig::HttpFilter(c) => Box::new(ruci::map::http_filter::Server {
+            InMapConfig::HttpFilter(c) => Box::new(ruci::map::http_filter::Server {
                 config: c.clone(),
                 ..Default::default()
             }),
-            InMapperConfig::H2 {
+            InMapConfig::H2 {
                 http_config: config,
                 is_grpc,
             } => Box::new(crate::map::h2::server::Server::new(
@@ -493,13 +493,13 @@ impl ToMapperBox for InMapperConfig {
                 config.clone(),
             )),
             #[cfg(feature = "quic")]
-            InMapperConfig::Quic(c) => Box::new(quic::server::Server::new(c.clone())),
+            InMapConfig::Quic(c) => Box::new(quic::server::Server::new(c.clone())),
 
             #[cfg(feature = "quinn")]
-            InMapperConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
+            InMapConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapperConfig::TcpOptListener {
+            InMapConfig::TcpOptListener {
                 listen_addr,
                 sockopt,
                 ext,
@@ -511,12 +511,12 @@ impl ToMapperBox for InMapperConfig {
             }),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapperConfig::TproxyTcpResolver(opts) => {
+            InMapConfig::TproxyTcpResolver(opts) => {
                 Box::new(TcpResolver::new(opts.clone()).expect("ok"))
             }
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapperConfig::TproxyUdpListener {
+            InMapConfig::TproxyUdpListener {
                 listen_addr,
                 sockopt,
                 ext,
@@ -529,17 +529,17 @@ impl ToMapperBox for InMapperConfig {
         }
     }
 }
-impl ToMapperBox for OutMapperConfig {
-    fn to_mapper_box(&self) -> ruci::map::MapperBox {
+impl ToMapBox for OutMapConfig {
+    fn to_map_box(&self) -> ruci::map::MapBox {
         match self {
-            OutMapperConfig::Stdio(ext) => {
+            OutMapConfig::Stdio(ext) => {
                 let ext_f = ext.to_ext_fields();
 
                 let mut s = ruci::map::stdio::Stdio::boxed();
                 s.set_ext_fields(Some(ext_f));
                 s
             }
-            OutMapperConfig::Fileio(f) => {
+            OutMapConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
                     i_name: f.i.clone(),
                     o_name: f.o.clone(),
@@ -549,13 +549,13 @@ impl ToMapperBox for OutMapperConfig {
                 };
                 Box::new(s)
             }
-            OutMapperConfig::Blackhole => Box::<BlackHole>::default(),
+            OutMapConfig::Blackhole => Box::<BlackHole>::default(),
 
-            OutMapperConfig::Direct => Box::<Direct>::default(),
-            OutMapperConfig::BindDialer(dc) => dc.to_mapper_box(),
-            OutMapperConfig::Adder(i) => i.to_mapper_box(),
-            OutMapperConfig::Counter => Box::<counter::Counter>::default(),
-            OutMapperConfig::TLS(c) => {
+            OutMapConfig::Direct => Box::<Direct>::default(),
+            OutMapConfig::BindDialer(dc) => dc.to_map_box(),
+            OutMapConfig::Adder(i) => i.to_map_box(),
+            OutMapConfig::Counter => Box::<counter::Counter>::default(),
+            OutMapConfig::TLS(c) => {
                 let a = tls::client::Client::new(tls::client::ClientOptions {
                     domain: c.host.clone(),
                     is_insecure: c.insecure.unwrap_or_default(),
@@ -565,14 +565,14 @@ impl ToMapperBox for OutMapperConfig {
             }
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-            OutMapperConfig::NativeTLS(c) => Box::new(crate::map::native_tls::Client {
+            OutMapConfig::NativeTLS(c) => Box::new(crate::map::native_tls::Client {
                 domain: c.host.clone(),
                 insecure: c.insecure.unwrap_or_default(),
                 alpn: c.alpn.clone(),
-                ext_fields: Some(MapperExtFields::default()),
+                ext_fields: Some(MapExtFields::default()),
             }),
 
-            OutMapperConfig::Socks5(c) => {
+            OutMapConfig::Socks5(c) => {
                 let u = c.userpass.clone().unwrap_or_default();
                 let mut a = socks5::client::Client {
                     up: if u.is_empty() {
@@ -588,23 +588,23 @@ impl ToMapperBox for OutMapperConfig {
                 }
                 Box::new(a)
             }
-            OutMapperConfig::Trojan(pass) => {
+            OutMapConfig::Trojan(pass) => {
                 let a = trojan::client::Client::new(pass);
                 Box::new(a)
             }
-            OutMapperConfig::WebSocket(c) => {
+            OutMapConfig::WebSocket(c) => {
                 let client = ws::client::Client::new(c.clone());
 
                 Box::new(client)
             }
-            OutMapperConfig::H2Single {
+            OutMapConfig::H2Single {
                 http_config: config,
                 is_grpc,
             } => Box::new(crate::map::h2::client::SingleClient::new(
                 is_grpc.unwrap_or_default(),
                 config.clone(),
             )),
-            OutMapperConfig::H2Mux {
+            OutMapConfig::H2Mux {
                 http_config: config,
                 is_grpc,
             } => {
@@ -616,23 +616,23 @@ impl ToMapperBox for OutMapperConfig {
                 Box::new(m)
             }
             #[cfg(feature = "quic")]
-            OutMapperConfig::Quic(c) => {
+            OutMapConfig::Quic(c) => {
                 Box::new(quic::client::Client::new(c.clone()).expect("legal quic client config"))
             }
 
             #[cfg(feature = "quinn")]
-            OutMapperConfig::Quic(c) => Box::new(
+            OutMapConfig::Quic(c) => Box::new(
                 crate::map::quinn::client::Client::new(c.clone())
                     .expect("legal quic client config"),
             ),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            OutMapperConfig::OptDirect(sopt) => Box::new(crate::map::opt_net::OptDirect {
+            OutMapConfig::OptDirect(sopt) => Box::new(crate::map::opt_net::OptDirect {
                 sopt: sopt.clone(),
-                ext_fields: Some(MapperExtFields::default()),
+                ext_fields: Some(MapExtFields::default()),
             }),
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            OutMapperConfig::OptDialer(sopt) => {
+            OutMapConfig::OptDialer(sopt) => {
                 Box::new(crate::map::opt_net::OptDialer::new(sopt.clone()).expect("ok"))
             }
         }
@@ -646,23 +646,23 @@ mod test {
     #[test]
     fn serialize_toml() {
         let sc = StaticConfig {
-            inbounds: vec![InMapperConfigChain {
+            inbounds: vec![InMapConfigChain {
                 tag: None,
                 chain: vec![
-                    InMapperConfig::Listener {
+                    InMapConfig::Listener {
                         listen_addr: "0.0.0.0:1080".to_string(),
                         ext: None,
                     },
-                    InMapperConfig::Counter,
-                    InMapperConfig::Socks5(PlainTextSet {
+                    InMapConfig::Counter,
+                    InMapConfig::Socks5(PlainTextSet {
                         userpass: None,
                         more: None,
                     }),
                 ],
             }],
-            outbounds: vec![OutMapperConfigChain {
+            outbounds: vec![OutMapConfigChain {
                 tag: String::from("todo!()"),
-                chain: vec![OutMapperConfig::Direct],
+                chain: vec![OutMapConfig::Direct],
             }],
             ..Default::default()
         };

@@ -1,5 +1,5 @@
 /*!
-Defines Mappers for quic protocol. uses quinn.
+Defines Maps for quic protocol. uses quinn.
 
  */
 

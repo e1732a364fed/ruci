@@ -5,7 +5,7 @@ Defines Mappper s that can generate a/some basic Stream, or can consume a Stream
 pub mod accept;
 pub mod echo;
 
-use macro_mapper::*;
+use macro_map::*;
 use tokio::sync::mpsc::Receiver;
 use tracing::debug;
 use tracing::info;
@@ -15,8 +15,8 @@ use crate::map;
 use crate::Name;
 
 /// BlackHole drops the connection instantly
-#[mapper_ext_fields]
-#[derive(MapperExt, Debug, Default, Clone)]
+#[map_ext_fields]
+#[derive(MapExt, Debug, Default, Clone)]
 pub struct BlackHole {}
 
 impl Name for BlackHole {
@@ -26,7 +26,7 @@ impl Name for BlackHole {
 }
 
 #[async_trait]
-impl Mapper for BlackHole {
+impl Map for BlackHole {
     /// always consume the stream, ignore all params.
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.c.is_some() {
@@ -40,10 +40,10 @@ impl Mapper for BlackHole {
 ///
 /// # Note
 ///
-///  only use [`MapperExt`]'s is_tail_of_chain. won't use configured_target_addr;
+///  only use [`MapExt`]'s is_tail_of_chain. won't use configured_target_addr;
 /// if you want to set configured_target_addr, maybe you should use TcpDialer
-#[mapper_ext_fields]
-#[derive(Clone, Debug, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, Default, MapExt)]
 pub struct Direct {}
 impl Name for Direct {
     fn name(&self) -> &'static str {
@@ -52,7 +52,7 @@ impl Name for Direct {
 }
 
 #[async_trait]
-impl Mapper for Direct {
+impl Map for Direct {
     /// dial params.a.
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a {
@@ -105,8 +105,8 @@ impl Mapper for Direct {
 }
 
 /// BindDialer can dial ip, tcp, udp or unix domain socket
-#[mapper_ext_fields]
-#[derive(Clone, Debug, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, Default, MapExt)]
 pub struct BindDialer {
     pub dial_addr: Option<net::Addr>,
     pub bind_addr: Option<net::Addr>,
@@ -149,7 +149,7 @@ fn get_addr_from_vd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
 }
 
 #[async_trait]
-impl Mapper for BindDialer {
+impl Map for BindDialer {
     /// try the parameter first, if no addr was given, use dial_addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
@@ -211,8 +211,8 @@ impl Mapper for BindDialer {
 /// Listener can listen tcp,udp and unix domain socket.
 ///
 /// udp Listener is only supported with fixed_target_addr
-#[mapper_ext_fields]
-#[derive(MapperExt, Clone, Debug, Default)]
+#[map_ext_fields]
+#[derive(MapExt, Clone, Debug, Default)]
 pub struct Listener {
     pub listen_addr: net::Addr,
 }
@@ -252,7 +252,7 @@ impl Listener {
 }
 
 #[async_trait]
-impl Mapper for Listener {
+impl Map for Listener {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,

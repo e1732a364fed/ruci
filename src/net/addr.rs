@@ -214,7 +214,7 @@ impl Addr {
     ///
     /// tcp://127.0.0.1:80#www.b.com
     ///
-    /// tcp://[::1]:80#www.b.com
+    /// `tcp://[::1]:80#www.b.com`
     ///
     /// if no "#", it will fallback to from_network_addr_str
     ///
@@ -232,7 +232,7 @@ impl Addr {
         }
     }
 
-    /// tcp://127.0.0.1:80 or tcp://www.b.com:80.  or tcp://[::1]:80
+    /// tcp://127.0.0.1:80 or tcp://www.b.com:80.  or `tcp://[::1]:80`
     ///
     /// if :// is not present, use tcp as network, like 1.1.1.1:1 will act like
     /// tcp://1.1.1.1:1
@@ -247,7 +247,7 @@ impl Addr {
         }
     }
 
-    /// "tcp",127.0.0.1:80 or "tcp",www.b.com:80. or "tcp", [::1]:80
+    /// "tcp",127.0.0.1:80 or "tcp",www.b.com:80. or "tcp", `[::1]:80`
     ///
     ///  if unix, then like path/to/file, without the port and colon.
     ///
@@ -271,7 +271,7 @@ impl Addr {
         }
     }
 
-    /// like 127.0.0.1:80  or [::1]:80
+    /// like 127.0.0.1:80  or `[::1]:80`
     pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
         let ns: Vec<_> = if s.starts_with('[') && s.contains("]:") {
             crate::utils::rem_first(s).split("]:").collect()

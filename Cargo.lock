@@ -1395,7 +1395,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "macro_mapper"
+name = "macro_map"
 version = "0.1.0"
 dependencies = [
  "quote",
@@ -2199,7 +2199,7 @@ dependencies = [
  "futures",
  "futures-util",
  "lazy_static",
- "macro_mapper",
+ "macro_map",
  "parking_lot",
  "pin-project-lite",
  "rand 0.8.5",
@@ -2263,7 +2263,7 @@ dependencies = [
  "itertools 0.12.1",
  "lazy_static",
  "libc",
- "macro_mapper",
+ "macro_map",
  "maxminddb",
  "mlua",
  "native-tls",

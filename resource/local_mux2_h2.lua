@@ -52,7 +52,7 @@ infinite = {
                     new_thread_fn = function(cid, state_index, data)
 
                         if socks5_in == nil then
-                            socks5_in = create_in_mapper {
+                            socks5_in = create_in_map {
                                 Socks5 = {}
                             }
                         end
@@ -80,14 +80,14 @@ infinite = {
                 end
 
                 if dial_out == nil then
-                    dial_out = create_out_mapper(dial_config)
+                    dial_out = create_out_map(dial_config)
                 end
                 return 0, dial_out:clone()
 
             elseif state_index == 0 then
 
                 if tlsout == nil then
-                    tlsout = create_out_mapper(tlsout_config)
+                    tlsout = create_out_map(tlsout_config)
                 end
 
                 return 1, tlsout:clone()
@@ -105,7 +105,7 @@ infinite = {
                 --print("1 pooln",pool_n, max_num)
 
                 if pool_n < max_num then
-                    local h2_out = create_out_mapper(h2_out_config)
+                    local h2_out = create_out_map(h2_out_config)
 
                     table.insert(h2_out_pool,h2_out)
                     return 2, h2_out:clone()
@@ -121,16 +121,16 @@ infinite = {
 
                 if pool_n < max_num then
 
-                    local h2_out = create_out_mapper(h2_out_config)
+                    local h2_out = create_out_map(h2_out_config)
                     table.insert(h2_out_pool, h2_out)
                     return 2, h2_out:clone()
                 end
 
-                return 2, create_out_mapper(h2_single_out_config)
+                return 2, create_out_map(h2_single_out_config)
 
             elseif state_index == 2 then
                 if trojan_out == nil then
-                    trojan_out = create_out_mapper(trojan_out_config)
+                    trojan_out = create_out_map(trojan_out_config)
                 end
 
                 return 3, trojan_out:clone()

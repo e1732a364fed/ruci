@@ -1,12 +1,12 @@
 use anyhow::bail;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
-use macro_mapper::{mapper_ext_fields, MapperExt};
+use macro_map::{map_ext_fields, MapExt};
 use tokio::io::AsyncWriteExt;
 use tracing::debug;
 
 use crate::{
-    map::{self, MapResult, Mapper, MapperExt, CID},
+    map::{self, Map, MapExt, MapResult, CID},
     net::{self, helpers, Network},
     Name,
 };
@@ -14,8 +14,8 @@ use crate::{
 use super::*;
 
 /// trojan udp won't timeout
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt, Default)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt, Default)]
 pub struct Client {
     pub u: User,
 }
@@ -90,7 +90,7 @@ impl Name for Client {
 }
 
 #[async_trait]
-impl Mapper for Client {
+impl Map for Client {
     async fn maps(
         &self,
         cid: CID,

@@ -1,12 +1,12 @@
 /*!
-Defines a Mapper that write, read stdio (标准输入输出, 即命令行).
+Defines a Map that write, read stdio (标准输入输出, 即命令行).
 
 在流行为上, stdio 和 [`crate::map::network::BindDialer`] 类似,  都是 一种 【 单流发生器 】
 */
 
 use crate::map;
 use async_trait::async_trait;
-use macro_mapper::{mapper_ext_fields, MapperExt};
+use macro_map::{map_ext_fields, MapExt};
 use std::{pin::Pin, task::Poll};
 use tracing::debug;
 
@@ -62,8 +62,8 @@ impl AsyncWrite for Conn {
     }
 }
 
-#[mapper_ext_fields]
-#[derive(Clone, Debug, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, Default, MapExt)]
 pub struct Stdio {}
 
 impl Name for Stdio {
@@ -73,13 +73,13 @@ impl Name for Stdio {
 }
 
 impl Stdio {
-    pub fn boxed() -> MapperBox {
+    pub fn boxed() -> MapBox {
         Box::<Stdio>::default()
     }
 }
 
 #[async_trait]
-impl Mapper for Stdio {
+impl Map for Stdio {
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.c.is_some() {
             return MapResult::err_str("stdio can't generate stream when there's already one");

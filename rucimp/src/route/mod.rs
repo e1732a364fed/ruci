@@ -311,7 +311,7 @@ mod test {
 
     use std::net::Ipv4Addr;
 
-    use ruci::map::{fold::DynVecIterWrapper, math::Adder, MapperBox};
+    use ruci::map::{fold::DynVecIterWrapper, math::Adder, MapBox};
 
     use crate::COMMON_DIRS;
 
@@ -395,10 +395,10 @@ mod test {
     fn get_miter_ab() -> DMIterBox {
         let mut a = Adder::default();
         a.add_num = 1;
-        let a: MapperBox = Box::new(a);
+        let a: MapBox = Box::new(a);
 
         let b = Adder::default();
-        let b: MapperBox = Box::new(b);
+        let b: MapBox = Box::new(b);
 
         let v = vec![a, b];
         let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
@@ -408,7 +408,7 @@ mod test {
     fn get_miter_a() -> DMIterBox {
         let mut a = Adder::default();
         a.add_num = 2;
-        let a: MapperBox = Box::new(a);
+        let a: MapBox = Box::new(a);
 
         let v = vec![a];
         let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();

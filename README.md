@@ -29,10 +29,10 @@ The project is work in progress, 功能会陆续添加
 
 The project is divided to three main parts:
 
-ruci is the base framewark, defines some concepts like【映射】(Mapper), 动态Mapper迭代器 DMIter; 
-implements chain structure, implements some basic Mappers; provide some useful relay facilities.
+ruci is the base framewark, defines some concepts like【映射】(Map), 动态Map迭代器 DMIter; 
+implements chain structure, implements some basic Maps; provide some useful relay facilities.
 
-rucimp provides more Mappers, defines multiple config modes, provides some example binaries.
+rucimp provides more Maps, defines multiple config modes, provides some example binaries.
 rucimp is the core.
 
 ruci-cmd 是最终的全功能的可执行文件, 包含一些系统路由的配置功能 和 api-server
@@ -80,13 +80,13 @@ On server side, having both an inbound and an outbound is called "reverse proxy"
 
 ## Chain Structure Explained
 
-Ruci abstracts proxy, regards any protocols as consisting of one or more Mapper 【映射】
+Ruci abstracts proxy, regards any protocols as consisting of one or more Map 【映射】
 
 Pseudo code: 
 
 stream generator 【单流发生器】:  `function(args)->stream`
 
-injective function 【单射】(which is the normal stream Mapper): 
+injective function 【单射】(which is the normal stream Map): 
  `function(stream1, args...)-> (Option<stream2>, useful_data...) `
 
 multi-stream generator【多流发生器】: `function( Option<stream> ,args...)->[channel->stream]`
@@ -127,7 +127,7 @@ multi-stream generator【多流发生器】: `function( Option<stream> ,args...)
 
 能够定义动态的链式结构 (如跳转, 以及通过跳转实现的 循环)的链式配置文件要采用脚本语言格式.  这里使用 Lua
 
-只会返回 有限个Mapper可能 的动态链 是一种 有限状态机. 静态链是一种特化的有限状态机, 其状态转换函数是 `fn(i)->++i`
+只会返回 有限个Map可能 的动态链 是一种 有限状态机. 静态链是一种特化的有限状态机, 其状态转换函数是 `fn(i)->++i`
 
 
 经典链

@@ -3,7 +3,7 @@ use std::{env::set_var, sync::Arc, time::Duration};
 use crate::{
     map::{
         tls::{self, client::ClientOptions},
-        MapParams, Mapper, CID,
+        Map, MapParams, CID,
     },
     net::{self, gen_random_higher_port, helpers::MockTcpStream},
 };

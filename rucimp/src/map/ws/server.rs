@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use bytes::BytesMut;
-use macro_mapper::*;
+use macro_map::*;
 use ruci::{
-    map::{self, MapResult, Mapper, ProxyBehavior},
+    map::{self, Map, MapResult, ProxyBehavior},
     net::{self, helpers::EarlyDataWrapper, http::CommonConfig},
 };
 use tokio_tungstenite::{
@@ -16,8 +16,8 @@ use tracing::{debug, warn};
 
 use super::*;
 
-#[mapper_ext_fields]
-#[derive(Clone, Debug, MapperExt, Default)]
+#[map_ext_fields]
+#[derive(Clone, Debug, MapExt, Default)]
 pub struct Server {
     pub config: Option<CommonConfig>,
 }
@@ -117,7 +117,7 @@ impl Server {
 }
 
 #[async_trait]
-impl Mapper for Server {
+impl Map for Server {
     async fn maps(
         &self,
         cid: net::CID,

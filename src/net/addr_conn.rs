@@ -420,7 +420,7 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
     Ok(l)
 }
 
-/// copy data between two AddrConn struct
+/// copy data between two [`AddrConn`] struct
 #[inline]
 pub async fn cp(
     cid: CID,

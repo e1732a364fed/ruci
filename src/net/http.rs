@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-/// used by various Mappers in ruci that has a http layer
+/// used by various Maps in ruci that has a http layer
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CommonConfig {
     pub method: Option<String>,

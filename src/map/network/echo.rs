@@ -5,8 +5,8 @@ use tracing::{debug, warn};
 use super::*;
 
 /// consumes the stream, loop listen and echo it back.
-#[mapper_ext_fields]
-#[derive(Clone, Debug, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Clone, Debug, Default, MapExt)]
 pub struct Echo {}
 
 impl Name for Echo {
@@ -16,7 +16,7 @@ impl Name for Echo {
 }
 
 #[async_trait]
-impl Mapper for Echo {
+impl Map for Echo {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::Conn(mut c) => {

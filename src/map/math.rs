@@ -1,5 +1,5 @@
 /*!
-some math related Mapper s
+some math related Map s
 */
 
 use crate::map;
@@ -9,7 +9,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use bytes::BytesMut;
-use macro_mapper::*;
+use macro_map::*;
 use std::{io, pin::Pin, task::Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
@@ -138,8 +138,8 @@ impl AsyncWrite for AdderConn {
 }
 
 /// maps generates an AdderConn stream, which does add or sub for the input
-#[mapper_ext_fields]
-#[derive(Debug, Clone, Default, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, Default, MapExt)]
 pub struct Adder {
     pub add_num: i8,
     pub direction: AddDirection,
@@ -155,9 +155,9 @@ impl std::fmt::Display for Adder {
     }
 }
 
-impl ToMapperBox for i8 {
+impl ToMapBox for i8 {
     /// AddDirection = Read
-    fn to_mapper_box(&self) -> MapperBox {
+    fn to_map_box(&self) -> MapBox {
         Box::new(Adder {
             add_num: *self,
             ..Default::default()
@@ -166,7 +166,7 @@ impl ToMapperBox for i8 {
 }
 
 #[async_trait]
-impl crate::map::Mapper for Adder {
+impl crate::map::Map for Adder {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::Conn(c) => {

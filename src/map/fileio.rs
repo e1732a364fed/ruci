@@ -1,10 +1,10 @@
 /*!
-实现对文件读写的Mapper
+实现对文件读写的Map
 
 */
 use crate::map;
 use async_trait::async_trait;
-use macro_mapper::{mapper_ext_fields, MapperExt};
+use macro_map::{map_ext_fields, MapExt};
 use std::{cmp::min, pin::Pin, task::Poll, time::Duration};
 use tracing::debug;
 
@@ -120,8 +120,8 @@ impl AsyncWrite for FileIOConn {
 /// ## Write:
 /// append or create the file with name o_name
 ///
-#[mapper_ext_fields]
-#[derive(Debug, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, MapExt)]
 pub struct FileIO {
     pub i_name: String,
     pub o_name: String,
@@ -158,7 +158,7 @@ impl FileIO {
 }
 
 #[async_trait]
-impl Mapper for FileIO {
+impl Map for FileIO {
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         // function is similar to Stdio
 

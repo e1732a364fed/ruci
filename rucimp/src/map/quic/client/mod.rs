@@ -8,15 +8,15 @@ use ruci::net::CID;
 use ruci::Name;
 use ruci::{map, net::Stream};
 
-use macro_mapper::*;
+use macro_map::*;
 use s2n_quic::client::Connect;
 use tokio::sync::Mutex;
 use tracing::debug;
 
 use crate::map::rustls21;
 
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt)]
 pub struct Client {
     c: s2n_quic::Client,
     conn: Arc<Mutex<Option<s2n_quic::Connection>>>,
@@ -55,7 +55,7 @@ impl Client {
             conn: Arc::new(Mutex::new(None)),
             server_addr: a,
             server_name: c.server_name,
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         })
     }
     async fn handshake(
@@ -91,7 +91,7 @@ impl Client {
 }
 
 #[async_trait]
-impl Mapper for Client {
+impl Map for Client {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let conn = params.c;
         if let Stream::None = conn {

@@ -1,14 +1,14 @@
 use crate::map::fold::MIterBox;
 use crate::map::math::{AddDirection, Adder};
 use crate::map::network::Direct;
-use crate::map::{MapParams, Mapper, CID};
+use crate::map::{Map, MapParams, CID};
 use crate::net::helpers::MockTcpStream;
 
 use parking_lot::Mutex;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use super::{MapperBox, ProxyBehavior};
+use super::{MapBox, ProxyBehavior};
 
 #[test]
 fn put() {
@@ -167,10 +167,10 @@ fn test_clone_box_and_iter() {
     let a = Direct::default();
     let abase_c = a.clone();
 
-    let a: MapperBox = Box::new(a);
+    let a: MapBox = Box::new(a);
     let a = Arc::new(a);
 
-    let mut ac: MapperBox = Box::new(abase_c);
+    let mut ac: MapBox = Box::new(abase_c);
     ac.set_chain_tag("tag2");
 
     let ac = Arc::new(ac);

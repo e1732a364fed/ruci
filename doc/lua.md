@@ -58,7 +58,7 @@ config = {
 }
 ```
 
-要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 mapper (映射)
+要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 map (映射)
 
 rule_route 和 tag_route 同时出现时, 程序只会采用 rule_route. 因为 rule_route 的内容涵盖了 tag_route 
 
@@ -78,7 +78,7 @@ BlackList 意思是, 给出的规则有任意一项匹配就算通过.
 
 dyn_selectors, 对每一个tag 的inbound/outbound 都要有返回一个selector
 
-selector 接受 this_index 和 data 作为输入, 返回一个新的index, index 是 在 该chain (Mapper数组) 中的索引
+selector 接受 this_index 和 data 作为输入, 返回一个新的index, index 是 在 该chain (Map数组) 中的索引
 
     selector 在 "有限状态机" 里对应的是 "状态转移函数"
 
@@ -119,11 +119,11 @@ end
 
 ### 无限(完全)动态链
 
-完全动态链的基本演示完全动态链不使用 固定的列表 来预定义任何Mappers, 它只给出一个函数
+完全动态链的基本演示完全动态链不使用 固定的列表 来预定义任何Maps, 它只给出一个函数
 
-generator, generator 根据参数内容来动态生成 [Mapper], 如果不想
+generator, generator 根据参数内容来动态生成 [Map], 如果不想
 
-重复生成以前生成过的Mapper, 则可以返回一个已创建过的Mapper 
+重复生成以前生成过的Map, 则可以返回一个已创建过的Map 
 
 演示的功能是 inbound 为 tcp - socks5, outbound 为 direct
 

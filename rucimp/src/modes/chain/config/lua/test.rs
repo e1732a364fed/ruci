@@ -43,13 +43,13 @@ fn test_in() -> mlua::Result<()> {
     println!("{:#?}", c);
     let first_listen_group = c.inbounds.first().unwrap();
     let last_m = first_listen_group.chain.last().unwrap();
-    assert!(matches!(InMapperConfig::Counter, last_m));
+    assert!(matches!(InMapConfig::Counter, last_m));
 
     let first_m = first_listen_group.chain.first().unwrap();
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        InMapperConfig::Listener {
+        InMapConfig::Listener {
             listen_addr: str,
             ext: None
         }
@@ -57,12 +57,12 @@ fn test_in() -> mlua::Result<()> {
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        InMapperConfig::Listener {
+        InMapConfig::Listener {
             listen_addr: str2,
             ext: None
         } //won't match inner fields
     ));
-    assert!(!matches!(first_m, InMapperConfig::Counter));
+    assert!(!matches!(first_m, InMapConfig::Counter));
     Ok(())
 }
 
@@ -104,13 +104,13 @@ fn test_out() -> mlua::Result<()> {
     let dial = c.outbounds;
     let first_listen_group = dial.first().unwrap();
     let last_m = first_listen_group.chain.last().unwrap();
-    assert!(matches!(InMapperConfig::Counter, last_m));
+    assert!(matches!(InMapConfig::Counter, last_m));
 
     let first_m = first_listen_group.chain.first().unwrap();
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::BindDialer(DialerConfig {
+        OutMapConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str,
             ext: None
@@ -119,13 +119,13 @@ fn test_out() -> mlua::Result<()> {
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::BindDialer(DialerConfig {
+        OutMapConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str2,
             ext: None
         }) //won't match inner fields
     ));
-    assert!(!matches!(first_m, OutMapperConfig::Counter));
+    assert!(!matches!(first_m, OutMapConfig::Counter));
     Ok(())
 }
 
@@ -158,13 +158,13 @@ fn test_out2() -> mlua::Result<()> {
     let dial = c.outbounds;
     let first_listen_group = dial.first().unwrap();
     let last_m = first_listen_group.chain.last().unwrap();
-    assert!(matches!(InMapperConfig::Counter, last_m));
+    assert!(matches!(InMapConfig::Counter, last_m));
 
     let first_m = first_listen_group.chain.first().unwrap();
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::BindDialer(DialerConfig {
+        OutMapConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str,
             ext: None
@@ -173,13 +173,13 @@ fn test_out2() -> mlua::Result<()> {
     let str2 = "0.0.0.0:1".to_string();
     assert!(matches!(
         first_m,
-        OutMapperConfig::BindDialer(DialerConfig {
+        OutMapConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str2,
             ext: None
         }) //won't match inner fields
     ));
-    assert!(!matches!(first_m, OutMapperConfig::Counter));
+    assert!(!matches!(first_m, OutMapConfig::Counter));
     Ok(())
 }
 
@@ -210,17 +210,17 @@ fn test_out3() -> mlua::Result<()> {
     let last_m = first_listen_group.chain.last().unwrap();
     println!("{:#?}", last_m);
 
-    // assert!(matches!(InMapperConfig::Counter, last_m));
+    // assert!(matches!(InMapConfig::Counter, last_m));
 
     // let first_m = first_listen_group.chain.first().unwrap();
     // let str = "0.0.0.0:1080".to_string();
-    // assert!(matches!(first_m, OutMapperConfig::BindDialer(str)));
+    // assert!(matches!(first_m, OutMapConfig::BindDialer(str)));
     // let str2 = "0.0.0.0:1".to_string();
     // assert!(matches!(
     //     first_m,
-    //     OutMapperConfig::BindDialer(str2) //won't match inner fields
+    //     OutMapConfig::BindDialer(str2) //won't match inner fields
     // ));
-    // assert!(!matches!(first_m, OutMapperConfig::Counter));
+    // assert!(!matches!(first_m, OutMapConfig::Counter));
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 /*!
-Defines some [`ruci::map::Mapper`] s
+Defines some [`ruci::map::Map`] s
  */
 
 #[cfg(all(feature = "sockopt", target_os = "linux"))]

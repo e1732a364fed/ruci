@@ -1,5 +1,5 @@
 /*
-Defines a Mapper for socks5 server.
+Defines a Map for socks5 server.
 
 */
 
@@ -10,7 +10,7 @@ pub mod udp2;
 use super::*;
 
 use crate::{
-    map::{self, MapResult, MapperBox, MapperExtFields, ProxyBehavior, ToMapperBox, CID},
+    map::{self, MapBox, MapExtFields, MapResult, ProxyBehavior, ToMapBox, CID},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
     utils::{buf_to_ob, io_error},
@@ -19,7 +19,7 @@ use crate::{
 use anyhow::Context;
 use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
-use macro_mapper::*;
+use macro_map::*;
 use map::Stream;
 use std::{
     cmp::min,
@@ -42,8 +42,8 @@ pub struct Config {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapperBox for Config {
-    fn to_mapper_box(&self) -> MapperBox {
+impl ToMapBox for Config {
+    fn to_map_box(&self) -> MapBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
     }
@@ -58,8 +58,8 @@ impl ToMapperBox for Config {
 ///
 /// 握手成功后, 会以100ms为限读一次 eary_data
 ///
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt)]
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,
     pub support_udp: bool,
@@ -96,7 +96,7 @@ impl Server {
         Server {
             support_udp: option.support_udp,
             um: if um.is_empty() { None } else { Some(um) },
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         }
     }
 
@@ -489,7 +489,7 @@ impl Name for Server {
     }
 }
 #[async_trait::async_trait]
-impl map::Mapper for Server {
+impl map::Map for Server {
     async fn maps(
         &self,
         cid: CID,

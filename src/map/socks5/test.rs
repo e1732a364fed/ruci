@@ -15,8 +15,8 @@ use tokio::net::TcpStream;
 
 use crate::map;
 use crate::map::socks5::server::*;
+use crate::map::Map;
 use crate::map::MapParams;
-use crate::map::Mapper;
 use crate::map::ProxyBehavior;
 use crate::map::CID;
 use crate::net;

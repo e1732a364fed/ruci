@@ -1,4 +1,4 @@
-workspace = { members = [ "rucimp" ,"./", "crates/macro_mapper", "crates/ruci-cmd"]  }
+workspace = { members = [ "rucimp" ,"./", "crates/macro_map", "crates/ruci-cmd"]  }
 [package]
 name = "ruci"
 version = "0.0.5"
@@ -46,7 +46,7 @@ rustls = { version = "0.22" }
 rustls-pemfile = "1.0"
 webpki-roots = "0.22.6"
 
-macro_mapper ={ path = "crates/macro_mapper" }
+macro_map ={ path = "crates/macro_map" }
 
 tun2 = { version = "1", features = ["async"] ,optional = true}
 

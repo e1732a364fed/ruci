@@ -1,11 +1,11 @@
 /*!
-Defines a Mapper that can accept both socks5 and http proxy request.
+Defines a Map that can accept both socks5 and http proxy request.
 
 It will try socks5 first . If not socks5, fallbacks to http proxy
  */
 
 use futures::executor::block_on;
-use macro_mapper::*;
+use macro_map::*;
 use map::Stream;
 use tracing::debug;
 
@@ -18,7 +18,7 @@ use crate::{
     Name,
 };
 
-use super::{http_proxy, socks5, MapperBox, MapperExtFields, ToMapperBox};
+use super::{http_proxy, socks5, MapBox, MapExtFields, ToMapBox};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -26,15 +26,15 @@ pub struct Config {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapperBox for Config {
-    fn to_mapper_box(&self) -> MapperBox {
+impl ToMapBox for Config {
+    fn to_map_box(&self) -> MapBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
     }
 }
 
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt)]
 pub struct Server {
     pub http_s: http_proxy::Server,
     pub socks5_s: socks5::server::Server,
@@ -74,12 +74,12 @@ impl Server {
             http_s: http_proxy::Server {
                 um: oum.clone(),
                 only_connect: false,
-                ext_fields: Some(MapperExtFields::default()),
+                ext_fields: Some(MapExtFields::default()),
             },
             socks5_s: socks5::server::Server {
                 um: oum,
                 support_udp: true, //默认打开udp 支持
-                ext_fields: Some(MapperExtFields::default()),
+                ext_fields: Some(MapExtFields::default()),
             },
             ext_fields: None,
         }
@@ -117,7 +117,7 @@ impl Server {
 }
 
 #[async_trait::async_trait]
-impl map::Mapper for Server {
+impl map::Map for Server {
     async fn maps(
         &self,
         cid: CID,

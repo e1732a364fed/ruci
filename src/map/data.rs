@@ -1,5 +1,5 @@
 /*!
-定义 Mapper 所返回的数据类型
+定义 Map 所返回的数据类型
 
 */
 
@@ -33,7 +33,7 @@ bitflags! {
     }
 }
 
-/// Mapper 的 maps 返回的 MapResult 中的静态数据类型
+/// Map 的 maps 返回的 MapResult 中的静态数据类型
 #[typetag::serde(tag = "type")]
 pub trait Data: Debug + Send + Sync + DynClone {
     fn get_flags(&self) -> DataFlags {

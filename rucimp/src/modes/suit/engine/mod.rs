@@ -38,28 +38,28 @@ impl SuitEngine {
     }
 
     /// convert and calls load_config
-    pub fn load_config_from_str<FInMapper, FOutMapper>(
+    pub fn load_config_from_str<FInMap, FOutMap>(
         &mut self,
         s: &str,
-        load_in_mappers_func: FInMapper,
-        load_out_mappers_func: FOutMapper,
+        load_in_maps_func: FInMap,
+        load_out_maps_func: FOutMap,
     ) where
-        FInMapper: Fn(&str, LDConfig) -> Option<MapperBox>,
-        FOutMapper: Fn(&str, LDConfig) -> Option<MapperBox>,
+        FInMap: Fn(&str, LDConfig) -> Option<MapBox>,
+        FOutMap: Fn(&str, LDConfig) -> Option<MapBox>,
     {
         //todo: 修改 suit::config::Config 的结构后要改这里
         let c: super::config::Config = super::config::Config::from_toml(s);
-        self.load_config(c, load_in_mappers_func, load_out_mappers_func);
+        self.load_config(c, load_in_maps_func, load_out_maps_func);
     }
 
-    pub fn load_config<FInMapper, FOutMapper>(
+    pub fn load_config<FInMap, FOutMap>(
         &mut self,
         c: super::config::Config,
-        load_in_mappers_func: FInMapper,
-        load_out_mappers_func: FOutMapper,
+        load_in_maps_func: FInMap,
+        load_out_maps_func: FOutMap,
     ) where
-        FInMapper: Fn(&str, LDConfig) -> Option<MapperBox>,
-        FOutMapper: Fn(&str, LDConfig) -> Option<MapperBox>,
+        FInMap: Fn(&str, LDConfig) -> Option<MapBox>,
+        FOutMap: Fn(&str, LDConfig) -> Option<MapBox>,
     {
         self.clients = c
             .dial
@@ -67,10 +67,10 @@ impl SuitEngine {
             .map(|lc| {
                 let mut s = SuitStruct::from(lc.clone());
                 s.set_behavior(ProxyBehavior::ENCODE);
-                s.generate_upper_mappers();
-                let r_proxy_out_mapper = load_out_mappers_func(s.protocol(), s.config.clone());
-                if let Some(proxy_out_mapper) = r_proxy_out_mapper {
-                    s.push_mapper(Arc::new(proxy_out_mapper));
+                s.generate_upper_maps();
+                let r_proxy_out_map = load_out_maps_func(s.protocol(), s.config.clone());
+                if let Some(proxy_out_map) = r_proxy_out_map {
+                    s.push_map(Arc::new(proxy_out_map));
                 }
                 let x: Box<dyn Suit> = Box::new(s);
                 Arc::new(x)
@@ -93,10 +93,10 @@ impl SuitEngine {
                 let mut s = SuitStruct::from(lc.clone());
                 s.set_behavior(ProxyBehavior::DECODE);
 
-                s.generate_upper_mappers();
-                let r_proxy_in_mapper = load_in_mappers_func(s.protocol(), s.config.clone());
-                if let Some(proxy_in_mapper) = r_proxy_in_mapper {
-                    s.push_mapper(Arc::new(proxy_in_mapper));
+                s.generate_upper_maps();
+                let r_proxy_in_map = load_in_maps_func(s.protocol(), s.config.clone());
+                if let Some(proxy_in_map) = r_proxy_in_map {
+                    s.push_map(Arc::new(proxy_in_map));
                 }
                 let x: Box<dyn Suit> = Box::new(s);
                 Arc::new(x)
@@ -227,7 +227,7 @@ async fn listen_tcp(
 
     let clone_ogtr = move || ogtr.clone();
 
-    let iter = out_c.get_mappers_vec().into_iter();
+    let iter = out_c.get_maps_vec().into_iter();
     let ib = Box::new(DynVecIterWrapper(iter));
     let selector: Box<dyn OutSelector> = Box::new(FixedOutSelector { default: ib });
     let selector = Arc::new(selector);
@@ -242,7 +242,7 @@ async fn listen_tcp(
                     debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
                 }
 
-                let iter = ins.get_mappers_vec().into_iter();
+                let iter = ins.get_maps_vec().into_iter();
                 let ib = Box::new(DynVecIterWrapper(iter));
 
                 let slt = selector.clone();

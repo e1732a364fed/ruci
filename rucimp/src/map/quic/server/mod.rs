@@ -9,14 +9,14 @@ use ruci::net::CID;
 use ruci::Name;
 use ruci::{map, net::Stream};
 
-use macro_mapper::*;
+use macro_map::*;
 use tokio::sync::mpsc;
 use tracing::{debug, warn};
 
 use crate::map::quic_common::ServerConfig;
 
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt)]
 pub struct Server {
     tls_key_path: String,
     tls_cert_path: String,
@@ -40,7 +40,7 @@ impl Server {
             listen_addr: c.listen_addr,
             alpn: c.alpn,
             a_next_cid: Arc::new(AtomicU32::new(1)),
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         }
     }
     async fn handshake(&self, cid: CID) -> anyhow::Result<map::MapResult> {
@@ -109,7 +109,7 @@ impl Server {
 }
 
 #[async_trait]
-impl Mapper for Server {
+impl Map for Server {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let conn = params.c;
         if let Stream::None = conn {

@@ -3,9 +3,9 @@ use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use http::{header::CONTENT_TYPE, Response, StatusCode};
-use macro_mapper::*;
+use macro_map::*;
 use ruci::{
-    map::{self, MapResult, Mapper, ProxyBehavior},
+    map::{self, Map, MapResult, ProxyBehavior},
     net::{self, helpers::EarlyDataWrapper, http::CommonConfig},
 };
 use tokio::sync::mpsc;
@@ -15,8 +15,8 @@ use tracing::{info, warn};
 use crate::map::h2::grpc::GRPC_CONTENT_TYPE;
 
 use super::*;
-#[mapper_ext_fields]
-#[derive(Clone, Debug, MapperExt, Default)]
+#[map_ext_fields]
+#[derive(Clone, Debug, MapExt, Default)]
 pub struct Server {
     pub is_grpc: Option<bool>,
 
@@ -181,7 +181,7 @@ impl Server {
 }
 
 #[async_trait]
-impl Mapper for Server {
+impl Map for Server {
     async fn maps(
         &self,
         cid: net::CID,

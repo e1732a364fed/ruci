@@ -1,10 +1,10 @@
 /*
-Defines a Mapper for socks5 client.
+Defines a Map for socks5 client.
 
 */
 
 use bytes::BufMut;
-use macro_mapper::*;
+use macro_map::*;
 use map::{helpers, Addr, Network};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -15,13 +15,13 @@ use tracing::debug;
 use self::map::{MapParams, ProxyBehavior, CID};
 use super::*;
 use crate::{
-    map::{socks5::udp::new_addr_conn, MapResult, MapperExt},
+    map::{socks5::udp::new_addr_conn, MapExt, MapResult},
     net,
 };
 use anyhow::{anyhow, bail, Ok};
 
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt, Default)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt, Default)]
 pub struct Client {
     pub up: Option<PlainText>, //todo: make sure len <= 255
 
@@ -187,7 +187,7 @@ impl crate::Name for Client {
 }
 
 #[async_trait::async_trait]
-impl map::Mapper for Client {
+impl map::Map for Client {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let target_addr = match params.a {
             Some(ta) => ta,

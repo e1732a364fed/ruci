@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    map::{self, Data, MapResult, Mapper, MapperBox, MapperExtFields, ToMapperBox, CID},
+    map::{self, Data, Map, MapBox, MapExtFields, MapResult, ToMapBox, CID},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
     utils, Name,
@@ -9,7 +9,7 @@ use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
-use macro_mapper::*;
+use macro_map::*;
 use tokio::io::AsyncReadExt;
 use tracing::debug;
 
@@ -19,15 +19,15 @@ pub struct Config {
     pub passes: Option<Vec<String>>,
 }
 
-impl ToMapperBox for Config {
-    fn to_mapper_box(&self) -> MapperBox {
+impl ToMapBox for Config {
+    fn to_map_box(&self) -> MapBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
     }
 }
 
-#[mapper_ext_fields]
-#[derive(Debug, Clone, MapperExt)]
+#[map_ext_fields]
+#[derive(Debug, Clone, MapExt)]
 pub struct Server {
     pub um: UsersMap<User>,
 }
@@ -53,7 +53,7 @@ impl Server {
 
         Server {
             um,
-            ext_fields: Some(MapperExtFields::default()),
+            ext_fields: Some(MapExtFields::default()),
         }
     }
 
@@ -261,7 +261,7 @@ impl Name for Server {
 }
 
 #[async_trait]
-impl Mapper for Server {
+impl Map for Server {
     async fn maps(
         &self,
         cid: CID,
