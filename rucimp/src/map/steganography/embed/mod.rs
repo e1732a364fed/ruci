@@ -408,7 +408,7 @@ where
     // shutdown_rx: tokio::sync::oneshot::Receiver<()>,
 }
 
-impl<'a, R, W> Player<'a, R, W>
+impl<R, W> Player<'_, R, W>
 where
     R: AsyncRead + Unpin + ?Sized,
     W: AsyncWrite + Unpin + ?Sized,

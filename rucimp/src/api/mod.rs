@@ -437,7 +437,7 @@ pub async fn serve(
     extension_api_doc: Option<utoipa::openapi::OpenApi>,
 
     #[cfg(feature = "file_server")] file_server_tar_zip_data_source_base64: Option<String>,
-) {
+) -> anyhow::Result<()> {
     let addr = s
         .listen_addr
         .clone()
@@ -607,6 +607,8 @@ pub async fn serve(
     });
 
     info!("api server started {addr}");
+
+    Ok(())
 }
 
 pub async fn setup_api_server_with_chain_engine(

@@ -17,10 +17,7 @@ fn test() {
 ///
 pub fn str_to_userbox(str: &str) -> Option<UserBox> {
     let s = String::from(str);
-    let (protocol, desc_str) = match s.split_once(':') {
-        Some(r) => r,
-        None => return None,
-    };
+    let (protocol, desc_str) = s.split_once(':')?;
 
     let pass_type = String::from(protocol).to_lowercase();
     match pass_type.as_str() {

@@ -410,7 +410,7 @@ impl Server {
 
         //network octet order, 即大端序, 低地址的数是更重要的字节 (即要左移8的字节).
 
-        let port = (buf[end - 2] as u16) << 8 | buf[end - 1] as u16;
+        let port = ((buf[end - 2] as u16) << 8) | buf[end - 1] as u16;
 
         buf.advance(end);
         buf.truncate(remain as usize);

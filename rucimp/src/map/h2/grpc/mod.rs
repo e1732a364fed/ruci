@@ -110,7 +110,7 @@ pub fn read_uvarint(r: &mut BytesMut) -> (u64, Option<UVariantErr>) {
             if i == MAX_VARINT_LEN64 - 1 && b > 1 {
                 return (result, Some(UVariantErr::OverFlow));
             }
-            return (result | (b as u64) << s, None);
+            return (result | ((b as u64) << s), None);
         }
         result |= ((b & 0x7f) as u64) << s;
         s += 7;
