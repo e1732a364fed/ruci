@@ -37,6 +37,20 @@ struct Args {
     #[arg(short, long)]
     log_level: Option<tracing::Level>,
 
+    /// if empty string is given, no log file will be generated;
+    ///
+    /// if the flag is not given, log file will be generated with default name
+    #[arg(long)]
+    log_file: Option<String>,
+
+    /// specifiy the directory where log files would be in
+    ///
+    /// if empty string is given, log file will be generated in default folder
+    ///
+    /// if the flag is not given, log file will be generated in default folder
+    #[arg(long)]
+    log_dir: Option<String>,
+
     /// use infinite dynamic chain that is written in the lua config file (the "infinite"
     /// global variable must exist)
     #[cfg(feature = "lua")]
@@ -90,11 +104,7 @@ enum SubCommands {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    println!("Mode: {:?}", args.mode);
-    println!("Config: {}", args.config);
-    println!("LogLevel(flag): {:?}", args.log_level);
-
-    let _g = env_and_version(args.log_level);
+    let _g = log_setup(args.clone());
 
     match args.sub_cmds {
         None => {
@@ -131,17 +141,21 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn env_and_version(ll: Option<tracing::Level>) -> tracing_appender::non_blocking::WorkerGuard {
-    println!("ruci-cmd\n");
+fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> {
+    println!("ruci-cmd");
     let cdir = std::env::current_dir().expect("has current directory");
-    println!("working dir: {:?} \n", cdir);
+    println!("working dir: {:?}", cdir);
+
+    println!("Mode: {:?}", args.mode);
+    println!("Config: {}", args.config);
+    println!("LogLevel(flag): {:?}", args.log_level);
 
     const RL: &str = "RUST_LOG";
 
     let mut not_given_flag = false;
     let mut not_given_env = false;
 
-    let given_level = if let Some(l) = ll {
+    let given_level = if let Some(l) = args.log_level {
         l.as_str()
     } else {
         not_given_flag = true;
@@ -164,20 +178,41 @@ pub fn env_and_version(ll: Option<tracing::Level>) -> tracing_appender::non_bloc
     use tracing_appender::{non_blocking, rolling};
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    let file_appender = rolling::daily("logs", "ruci-cmd.log");
-    let (non_blocking_appender, guard) = non_blocking(file_appender);
-    let file_layer = fmt::layer()
-        .json()
-        .with_ansi(false)
-        .with_writer(non_blocking_appender);
-
     let console_layer = fmt::layer().with_writer(std::io::stderr);
 
-    tracing_subscriber::registry()
+    let logger = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
-        .with(console_layer)
-        .with(file_layer)
-        .init();
+        .with(console_layer);
+
+    let mut no_file = false;
+    let mut file_name = String::from("ruci-cmd.log");
+
+    match args.log_file {
+        Some(fname) => {
+            if fname.is_empty() {
+                no_file = true;
+                println!("Empty log-file name specified, no log file would be generated.")
+            } else {
+                file_name = fname;
+            }
+        }
+        None => {}
+    }
+
+    let guard = if !no_file {
+        let file_appender =
+            rolling::daily(args.log_dir.unwrap_or(String::from("logs")), &file_name);
+        let (non_blocking_appender, guard) = non_blocking(file_appender);
+        let file_layer = fmt::layer()
+            .json()
+            .with_ansi(false)
+            .with_writer(non_blocking_appender);
+        logger.with(file_layer).init();
+        Some(guard)
+    } else {
+        logger.init();
+        None
+    };
 
     println!(
         "Log Level(flag/env): {:?}",
@@ -189,6 +224,9 @@ pub fn env_and_version(ll: Option<tracing::Level>) -> tracing_appender::non_bloc
         env!("CARGO_PKG_VERSION"),
         rucimp::VERSION,
     );
+    if no_file {
+        info!("Empty log-file name specified, no log file would be generated.")
+    }
 
     guard
 }
