@@ -10,8 +10,18 @@ use ruci::{map, net::Stream};
 
 use macro_mapper::*;
 use s2n_quic::client::Connect;
+use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tracing::debug;
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Config {
+    pub cert_string: String,
+
+    pub server_addr: String,
+    pub server_name: String,
+}
+
 #[mapper_ext_fields]
 #[derive(Debug, Clone, MapperExt)]
 pub struct Client {
@@ -29,6 +39,22 @@ impl Name for Client {
 }
 
 impl Client {
+    pub fn new(c: Config) -> anyhow::Result<Self> {
+        let client = s2n_quic::Client::builder()
+            .with_tls(c.cert_string.as_str())?
+            .with_io("0.0.0.0:0")?
+            .start()?;
+
+        let a: SocketAddr = c.server_addr.parse()?;
+
+        Ok(Self {
+            c: client,
+            conn: Arc::new(Mutex::new(None)),
+            server_addr: a,
+            server_name: c.server_name,
+            ext_fields: Some(MapperExtFields::default()),
+        })
+    }
     async fn handshake(
         &self,
         cid: CID,

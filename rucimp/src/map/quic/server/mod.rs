@@ -8,8 +8,17 @@ use ruci::Name;
 use ruci::{map, net::Stream};
 
 use macro_mapper::*;
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::{debug, warn};
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Config {
+    pub tls_key: String,
+    pub tls_cert: String,
+    pub listen_addr: String,
+}
+
 #[mapper_ext_fields]
 #[derive(Debug, Clone, MapperExt)]
 pub struct Server {
@@ -27,6 +36,15 @@ impl Name for Server {
 }
 
 impl Server {
+    pub fn new(c: Config) -> Self {
+        Self {
+            tls_key: c.tls_key,
+            tls_cert: c.tls_cert,
+            listen_addr: c.listen_addr,
+            a_next_cid: Arc::new(AtomicU32::new(1)),
+            ext_fields: Some(MapperExtFields::default()),
+        }
+    }
     async fn handshake(&self, cid: CID) -> anyhow::Result<map::MapResult> {
         let mut server = s2n_quic::Server::builder()
             .with_tls((self.tls_key.as_str(), self.tls_cert.as_str()))?

@@ -32,7 +32,7 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::ws;
+use crate::map::{quic, ws};
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
 
@@ -217,6 +217,7 @@ pub enum InMapperConfig {
     WebSocket {
         http_config: Option<CommonConfig>,
     },
+    Quic(quic::server::Config),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -246,6 +247,8 @@ pub enum OutMapperConfig {
 
         http_config: Option<CommonConfig>,
     },
+
+    Quic(quic::client::Config),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -429,6 +432,7 @@ impl ToMapperBox for InMapperConfig {
                 *is_grpc,
                 config.clone(),
             )),
+            InMapperConfig::Quic(c) => Box::new(quic::server::Server::new(c.clone())),
         }
     }
 }
@@ -523,6 +527,9 @@ impl ToMapperBox for OutMapperConfig {
                 );
 
                 Box::new(m)
+            }
+            OutMapperConfig::Quic(c) => {
+                Box::new(quic::client::Client::new(c.clone()).expect("legal quic client config"))
             }
         }
     }
