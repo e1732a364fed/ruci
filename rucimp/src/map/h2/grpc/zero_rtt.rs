@@ -9,7 +9,7 @@ use super::*;
 pub struct Stream {
     recv: Option<RecvStream>,
     send: SendStream<Bytes>,
-    resp_f: Pin<Box<ResponseFuture>>,
+    resp_f: Option<Pin<Box<ResponseFuture>>>,
     r_buffer: BytesMut,
 
     next_data_len: usize,
@@ -36,7 +36,7 @@ impl Stream {
         //debug!("new grpc stream");
         Stream {
             recv: None,
-            resp_f: Box::pin(rf),
+            resp_f: Some(Box::pin(rf)),
             send,
             r_buffer: BytesMut::with_capacity(BUFFER_CAP),
             next_data_len: 0,
@@ -86,11 +86,12 @@ impl AsyncRead for Stream {
                 let rv = if let Some(rv) = self.recv.as_mut() {
                     rv
                 } else {
-                    let r = self.resp_f.poll(cx);
+                    let r = self.resp_f.as_mut().unwrap().poll(cx);
                     match r {
                         Poll::Ready(r) => match r {
                             Ok(r) => {
                                 self.recv = Some(r.into_body());
+                                self.resp_f = None;
                                 self.recv.as_mut().unwrap()
                             }
                             Err(e) => return Poll::Ready(Err(io_error(e.to_string()))),
