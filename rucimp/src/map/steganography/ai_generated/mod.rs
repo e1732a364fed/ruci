@@ -1,3 +1,7 @@
+/*!
+ * Defines an AI generated steganography protocol.
+ */
+
 use anyhow::Result;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
@@ -15,6 +19,7 @@ mod conn;
 #[cfg(test)]
 mod tests;
 use conn::AIConn;
+use tracing::debug;
 
 /// AI生成的协议的参数，包含算法描述和OpenAI API配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,36 +53,36 @@ impl AIGeneratedMap {
         let messages = vec![
             json!({
                 "role": "system",
-                "content": "你是一个网络协议设计专家，专门设计能够隐藏在HTTPS流量中的隐写协议。"
+                "content": "You are a network protocol design expert, specializing in steganography protocols that can hide within HTTPS traffic."
             }),
             json!({
                 "role": "user",
-                "content": "请设计一个隐写协议算法，要求如下：
-                1. 隐写原理：
-                   - 每个实际的写入操作(W)都会被转换为一系列交替的写和读操作(w1,r1,w2,r2,...,wN,rN)
-                   - 其中wi包含实际需要传输的信息，ri是用于隐写的填充数据
-                   - 第一个包w1包含整个序列的元信息，使得接收方知道后续的交互模式
-                2. 协议特性：
-                   - 发送方在发送w1后，等待接收方返回r1才能发送w2
-                   - 接收方在收到w1后，能解析出整个序列的结构，知道何时发送ri
-                   - 这种交替的读写模式帮助隐藏真实的数据流向
-                   - 特殊情况：当ri长度为0时，表示跳过该读取步骤，直接发送下一个wi+1
-                3. HTTPS伪装要求：
-                   - 所有数据包必须符合TLS格式
-                   - 数据包长度分布要与典型的HTTPS流量相匹配
-                   - 读写操作的时序模式要模仿HTTP over TLS的特征
-                   - 确保整体流量特征（包大小分布、读写频率、突发性等）与正常HTTPS流量一致
-                4. 握手阶段特殊要求：
-                   - 客户端握手：输入包含目标地址信息（网络类型、域名、IP、端口），需要将这些信息编码在握手包中
-                   - 服务端握手：需要能从握手包中解析出完整的目标地址信息
-                   - 握手包同样需要遵循w1,r1,w2,r2,...,wN,rN的序列格式
+                "content": "Please design a steganography protocol algorithm with the following requirements:
+                1. Steganography Principle:
+                   - Each actual write operation (W) is converted into a series of alternating write and read operations (w1,r1,w2,r2,...,wN,rN)
+                   - wi contains the actual information to be transmitted, ri is padding data for steganography
+                   - The first packet w1 contains metadata for the entire sequence, enabling the receiver to understand subsequent interaction patterns
+                2. Protocol Characteristics:
+                   - After sending w1, the sender waits for r1 from the receiver before sending w2
+                   - After receiving w1, the receiver can parse the structure of the entire sequence and know when to send ri
+                   - This alternating read-write pattern helps hide the true data flow direction
+                   - Special case: when ri length is 0, skip that read step and directly send wi+1
+                3. HTTPS Camouflage Requirements:
+                   - All packets must conform to TLS format
+                   - Packet length distribution must match typical HTTPS traffic
+                   - Read-write operation timing patterns must mimic HTTP over TLS characteristics
+                   - Ensure overall traffic characteristics (packet size distribution, read-write frequency, burstiness) match normal HTTPS traffic
+                4. Handshake Phase Special Requirements:
+                   - Client handshake: input contains target address information (network type, domain, IP, port), must encode this in handshake packets
+                   - Server handshake: must be able to parse complete target address information from handshake packets
+                   - Handshake packets must follow the w1,r1,w2,r2,...,wN,rN sequence format
                 
-                请以结构化的方式描述算法，使得其他AI系统可以准确理解和执行。
-                算法描述中必须包含：
-                1. 如何在w1中编码序列信息
-                2. 如何确保数据包符合TLS格式
-                3. 如何控制数据包大小和时序分布
-                4. 如何在握手阶段处理目标地址信息"
+                Please describe the algorithm in a structured way that other AI systems can accurately understand and execute.
+                Algorithm description must include:
+                1. How to encode sequence information in w1
+                2. How to ensure packets conform to TLS format
+                3. How to control packet size and timing distribution
+                4. How to handle target address information during handshake"
             }),
         ];
 
@@ -128,55 +133,55 @@ impl AIGeneratedMap {
 
         // 构建system提示
         let role = if self.config.is_server {
-            "服务端"
+            "server"
         } else {
-            "客户端"
+            "client"
         };
-        let operation = if is_read { "读取" } else { "写入" };
+        let operation = if is_read { "read" } else { "write" };
         let system_prompt = format!(
-            "你是一个网络协议处理器的{}。你需要按照以下算法描述实现一个隐写协议的{}操作：\n\
+            "You are the {} of a network protocol processor. You need to decode a {} data sequence for a steganography protocol according to the following algorithm description:\n\
              {}\n\n\
-             响应格式：\n\
-             对于写序列，请返回：\n\
-             WRITE_PACKETS: [base64编码的实际数据包序列 w1,w2,...,wN]\n\
-             READ_LENGTHS: [期望接收的数据包长度序列 r1,r2,...,rN]\n\
-             对于读序列，请返回：\n\
-             WRITE_PACKETS: [base64编码的响应数据包序列 w1,w2,...,wN]\n\
-             READ_LENGTHS: [期望接收的数据包长度序列 r1,r2,...,rN]\n\
-             TARGET_ADDR_*: [地址信息，仅在服务端握手时需要]",
+             Response Format:\n\
+             For write sequences, please return:\n\
+             WRITE_PACKETS: [base64 encoded actual packet sequence w1,w2,...,wN]\n\
+             READ_LENGTHS: [expected received packet length sequence r1,r2,...,rN]\n\
+             For read sequences, please return:\n\
+             WRITE_PACKETS: [base64 encoded response packet sequence w1,w2,...,wN]\n\
+             READ_LENGTHS: [expected received packet length sequence r1,r2,...,rN]\n\
+             TARGET_ADDR_*: [address information, only needed for server handshake]",
             role, operation, self.config.algorithm_description
         );
 
         let operation_type = if is_handshake {
             if self.config.is_server {
-                "服务端握手"
+                "Server Handshake"
             } else {
-                "客户端握手"
+                "Client Handshake"
             }
         } else {
             if self.config.is_server {
-                "服务端普通"
+                "Server Normal"
             } else {
-                "客户端普通"
+                "Client Normal"
             }
         };
 
         // 构建用户提示
         let user_prompt = match (self.config.is_server, target_addr_str, early_data_base64) {
             (false, Some(addr), Some(early)) => format!(
-                "这是{}数据。请处理以下信息：\n目标地址：{}\n早期数据：{}\n主要数据：{}",
+                "This is {} data. Please process the following information:\nTarget address: {}\nEarly data: {}\nMain data: {}",
                 operation_type, addr, early, data_base64
             ),
             (false, Some(addr), None) => format!(
-                "这是{}数据。请处理以下信息：\n目标地址：{}\n主要数据：{}",
+                "This is {} data. Please process the following information:\nTarget address: {}\nMain data: {}",
                 operation_type, addr, data_base64
             ),
             (true, _, _) => format!(
-                "这是{}数据。请从以下数据中提取目标地址和实际数据：\n{}",
+                "This is {} data. Please extract the target address and actual data from the following data:\n{}",
                 operation_type, data_base64
             ),
             _ => format!(
-                "这是{}数据。请处理以下数据：\n{}",
+                "This is {} data. Please process the following data:\n{}",
                 operation_type, data_base64
             ),
         };
@@ -198,7 +203,7 @@ impl AIGeneratedMap {
             self.config.api_base_url.trim_end_matches('/')
         );
 
-        tracing::debug!("Sending request to OpenAI API: {}", api_url);
+        debug!("Sending request to OpenAI API: {}", api_url);
         let response = self
             .client
             .post(api_url)
@@ -213,7 +218,7 @@ impl AIGeneratedMap {
 
         let response_data = response.json::<serde_json::Value>().await?;
 
-        // tracing::debug!("Response data: {}", response_data);
+        // debug!("Response data: {}", response_data);
         let content = response_data["choices"][0]["message"]["content"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid API response format"))?;
@@ -236,7 +241,7 @@ impl AIGeneratedMap {
         }
     }
     /// 创建一个新的AIGeneratedMap实例，自动生成算法描述
-    pub async fn create_with_generated_algorithm(
+    pub async fn from_generated_algorithm(
         api_key: String,
         model: String,
         api_base_url: String,
@@ -264,11 +269,11 @@ impl AIGeneratedMap {
 
         // 构建system提示
         let system_prompt = format!(
-            "你是一个网络协议处理器。你需要按照以下算法描述解密从隐写协议中读取的数据：\n\
+            "You are a network protocol processor. You need to decrypt data read from the steganography protocol according to the following algorithm description:\n\
              {}\n\n\
-             请解密以下数据并返回原始数据。\n\
-             响应格式：\n\
-             DECRYPTED_DATA: [base64编码的解密后数据]",
+             Please decrypt the following data and return the original data.\n\
+             Response format:\n\
+             DECRYPTED_DATA: [base64 encoded decrypted data]",
             self.config.algorithm_description
         );
 
@@ -373,7 +378,7 @@ fn parse_ai_response_to_read_sequence(content: &str) -> Result<(ReadSequence, Op
                     }
                 }
                 _ => {
-                    tracing::debug!("unknown key1: {}", key);
+                    debug!("unknown key1: {}", key);
                 } // 忽略未知字段
             }
         }
@@ -429,7 +434,7 @@ fn parse_ai_response_to_write_sequence(content: &str) -> Result<WriteSequence> {
                     }
                 }
                 _ => {
-                    tracing::debug!("unknown key2: {}", key);
+                    debug!("unknown key2: {}", key);
                 } // 忽略未知字段
             }
         }

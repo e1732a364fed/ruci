@@ -1,6 +1,7 @@
 use super::*;
 use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tracing::debug;
 use tracing_subscriber;
 use wiremock::matchers::{body_string_contains, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -46,7 +47,7 @@ async fn test_wiremock_post() -> Result<()> {
     init_tracing();
     let mock_server = MockServer::start().await;
     let url = mock_server.uri();
-    tracing::debug!("mock_server: {}", url);
+    debug!("mock_server: {}", url);
 
     Mock::given(method("POST"))
         .and(path("/test-path")) // 添加路径匹配
@@ -76,10 +77,10 @@ async fn test_wiremock_post() -> Result<()> {
         .send()
         .await;
 
-    tracing::debug!("Response status: {:?}", response);
+    debug!("Response status: {:?}", response);
     let response = response?;
     let response_data = response.json::<serde_json::Value>().await?;
-    tracing::debug!("Response data: {}", response_data);
+    debug!("Response data: {}", response_data);
     Ok(())
 }
 
@@ -89,7 +90,7 @@ async fn test_wiremock() -> Result<()> {
     let mock_server = MockServer::start().await;
 
     let url = mock_server.uri();
-    tracing::debug!("mock_server: {}", url);
+    debug!("mock_server: {}", url);
 
     Mock::given(method("POST"))
         .and(path("/v1/chat/completions"))
@@ -121,10 +122,10 @@ async fn test_wiremock() -> Result<()> {
         .send()
         .await;
 
-    tracing::debug!("Response status: {:?}", response);
+    debug!("Response status: {:?}", response);
     let response = response?;
     let response_data = response.json::<serde_json::Value>().await?;
-    tracing::debug!("Response data: {}", response_data);
+    debug!("Response data: {}", response_data);
 
     mock_server.verify().await;
     Ok(())
@@ -133,11 +134,11 @@ async fn test_wiremock() -> Result<()> {
 #[tokio::test]
 async fn test_basic_write_sequence() -> Result<()> {
     init_tracing();
-    tracing::debug!("test_basic_write_sequence start");
+    debug!("test_basic_write_sequence start");
     // 启动模拟服务器
     let mock_server = MockServer::start().await;
 
-    tracing::debug!("mock_server: {}", mock_server.uri());
+    debug!("mock_server: {}", mock_server.uri());
 
     // 设置预期的 OpenAI API 响应
     Mock::given(method("POST"))
@@ -159,7 +160,7 @@ async fn test_basic_write_sequence() -> Result<()> {
         .mount(&mock_server)
         .await;
 
-    tracing::debug!("mock_server.mount done");
+    debug!("mock_server.mount done");
 
     // 创建一对连接的 TCP 流
     let (client_tcp, mut server_tcp) = tokio::io::duplex(1024);
@@ -182,27 +183,27 @@ async fn test_basic_write_sequence() -> Result<()> {
     let server_handle = tokio::spawn(async move {
         let mut buf = vec![0u8; 1024];
 
-        tracing::debug!("server_handle start");
+        debug!("server_handle start");
 
         // 读取第一个包
         let n = server_tcp.read(&mut buf).await?;
         assert_eq!(&buf[..n], b"test_packet_1");
-        tracing::debug!("server_handle read packet 1 done");
+        debug!("server_handle read packet 1 done");
 
         // 发送 r1 响应
         let r1_data = vec![1u8; 10];
         server_tcp.write_all(&r1_data).await?;
-        tracing::debug!("server_handle write r1 done");
+        debug!("server_handle write r1 done");
 
         // 读取第二个包
         let n = server_tcp.read(&mut buf).await?;
         assert_eq!(&buf[..n], b"test_packet_2");
-        tracing::debug!("server_handle read packet 2 done");
+        debug!("server_handle read packet 2 done");
 
         // 发送 r2 响应
         let r2_data = vec![1u8; 10];
         server_tcp.write_all(&r2_data).await?;
-        tracing::debug!("server_handle write r2 done");
+        debug!("server_handle write r2 done");
 
         // 保持连接打开，等待客户端完成所有操作
         loop {
@@ -216,10 +217,10 @@ async fn test_basic_write_sequence() -> Result<()> {
         Ok::<_, anyhow::Error>(())
     });
 
-    tracing::debug!("write_all");
+    debug!("write_all");
     // 写入测试数据
     ai_conn.write_all(b"test_data").await?;
-    tracing::debug!("write_all done");
+    debug!("write_all done");
 
     // 等待一段时间确保所有操作完成
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -233,7 +234,7 @@ async fn test_basic_write_sequence() -> Result<()> {
     // 验证所有预期的 mock 调用都发生了
     mock_server.verify().await;
 
-    tracing::debug!("mock_server.verify done");
+    debug!("mock_server.verify done");
 
     Ok(())
 }
@@ -241,16 +242,16 @@ async fn test_basic_write_sequence() -> Result<()> {
 #[tokio::test]
 async fn test_basic_read_sequence() -> Result<()> {
     init_tracing();
-    tracing::debug!("test_basic_read_sequence start");
+    debug!("test_basic_read_sequence start");
 
     let mock_server = MockServer::start().await;
-    tracing::debug!("mock_server: {}", mock_server.uri());
+    debug!("mock_server: {}", mock_server.uri());
 
     // 设置解密数据的 Mock
     Mock::given(method("POST"))
         .and(path("/v1/chat/completions"))
         .and(header("Authorization", "Bearer test"))
-        .and(body_string_contains("解密从隐写协议中读取的数据"))
+        .and(body_string_contains("You are a network protocol processor. You need to decrypt data read from the steganography protocol according to the following algorithm"))
         .and(body_string_contains("ENCRYPTED_DATA:"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "choices": [{
@@ -268,9 +269,8 @@ async fn test_basic_read_sequence() -> Result<()> {
         .and(path("/v1/chat/completions"))
         .and(header("Authorization", "Bearer test"))
         .and(body_string_contains(
-            "。你需要按照以下算法描述实现一个隐写协议的",
+            "data sequence for a steganography protocol according to the following algorithm description",
         ))
-        .and(body_string_contains("地址信息，仅在服务端握手时需要"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "choices": [{
                 "message": {
@@ -306,41 +306,41 @@ async fn test_basic_read_sequence() -> Result<()> {
 
     // 在另一个任务中处理服务端
     let server_handle = tokio::spawn(async move {
-        tracing::debug!("server_handle start");
+        debug!("server_handle start");
 
         // 发送初始数据触发读取操作
         server_tcp.write_all(b"initial_test_data").await?;
 
-        tracing::debug!("server_handle write initial_test_data done");
+        debug!("server_handle write initial_test_data done");
 
         // 等待一小段时间确保数据被处理
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        tracing::debug!("server_handle sleep done");
+        debug!("server_handle sleep done");
 
         // 发送第一个预期的数据包 (15 bytes)
         server_tcp.write_all(&vec![2u8; 15]).await?;
 
-        tracing::debug!("server_handle write r1 done");
+        debug!("server_handle write r1 done");
 
         // 读取第一个响应包
         let mut buf = vec![0u8; 1024];
         let n = server_tcp.read(&mut buf).await?;
         assert_eq!(&buf[..n], b"test_response_1");
 
-        tracing::debug!("server_handle read r1 done");
+        debug!("server_handle read r1 done");
 
         // 发送第二个预期的数据包
         server_tcp.write_all(&vec![3u8; 15]).await?;
 
-        tracing::debug!("server_handle write r2 done");
+        debug!("server_handle write r2 done");
 
         // 读取第二个响应包
         let mut buf = vec![0u8; 1024];
         let n = server_tcp.read(&mut buf).await?;
         assert_eq!(&buf[..n], b"test_response_2");
 
-        tracing::debug!("server_handle read r2 done");
+        debug!("server_handle read r2 done");
 
         Ok::<_, anyhow::Error>(())
     });
