@@ -1,7 +1,7 @@
 /*!
 module proxy define some important traits for proxy
 
-几个关键部分: State, Stream, Mapper,accumulate , accumulate_from_start
+几个关键部分: AnyData, MapParams, MapResult, Mapper,accumulate , accumulate_from_start
 
 ruci 包中实现 Mapper 的模块有: math, counter, tls, socks5, trojan
 
@@ -50,118 +50,7 @@ use tokio::{
     sync::{oneshot, Mutex},
 };
 
-use std::{
-    any::Any,
-    fmt::{Debug, Display},
-    io,
-    sync::Arc,
-};
-
-//todo: 移除 State。其作用不大
-
-/// 描述一条代理连接
-pub trait State<T>
-where
-    T: Display,
-{
-    fn cid(&self) -> CID;
-    fn network(&self) -> &'static str;
-    fn ins_name(&self) -> String; // 入口名称
-    fn set_ins_name(&mut self, str: String);
-    fn outc_name(&self) -> String; // 出口名称
-    fn set_outc_name(&mut self, str: String);
-
-    fn cached_in_raddr(&self) -> String; // 进入程序时的 连接 的远端地址
-    fn set_cached_in_raddr(&mut self, str: String);
-}
-
-/// 实现 State, 其没有 parent
-#[derive(Debug, Default, Clone)]
-pub struct RootState {
-    pub cid: u32, //固定十进制位数的数
-    pub network: &'static str,
-    pub ins_name: String,        // 入口名称
-    pub outc_name: String,       // 出口名称
-    pub cached_in_raddr: String, // 进入程序时的 连接 的远端地址
-}
-
-impl RootState {
-    /// new with random id
-    pub fn new(network: &'static str) -> RootState {
-        let mut s = RootState::default();
-        s.cid = net::new_rand_cid();
-        s.network = network;
-        s
-    }
-
-    /// new with ordered id
-    pub fn new_ordered(network: &'static str, lastid: &std::sync::atomic::AtomicU32) -> RootState {
-        let li = lastid.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let mut s = RootState::default();
-        s.cid = li + 1;
-        s.network = network;
-        s
-    }
-}
-
-impl Display for RootState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.outc_name() == "" {
-            write!(
-                f,
-                "[ cid: {}, {}://{}, listener: {}, ]  ",
-                self.cid(),
-                self.network(),
-                self.cached_in_raddr(),
-                self.ins_name()
-            )
-        } else {
-            write!(
-                f,
-                "[ cid: {}, {}://{}, route from: {}, to: {} ]  ",
-                self.cid(),
-                self.network(),
-                self.cached_in_raddr(),
-                self.ins_name(),
-                self.outc_name(),
-            )
-        }
-    }
-}
-
-impl State<u32> for RootState {
-    fn cid(&self) -> CID {
-        CID::Unit(self.cid)
-    }
-
-    fn network(&self) -> &'static str {
-        self.network
-    }
-
-    fn ins_name(&self) -> String {
-        self.ins_name.clone()
-    }
-
-    fn outc_name(&self) -> String {
-        self.outc_name.clone()
-    }
-
-    fn cached_in_raddr(&self) -> String {
-        self.cached_in_raddr.clone()
-    }
-
-    fn set_ins_name(&mut self, str: String) {
-        self.ins_name = str
-    }
-
-    fn set_outc_name(&mut self, str: String) {
-        self.outc_name = str
-    }
-
-    fn set_cached_in_raddr(&mut self, str: String) {
-        self.cached_in_raddr = str
-    }
-}
+use std::{any::Any, fmt::Debug, io, sync::Arc};
 
 /// 如果新连接不是udp, 则内含新连接
 pub enum NewConnection {

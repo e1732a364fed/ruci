@@ -1,7 +1,7 @@
 /*!
  * module net defines some important parts for proxy.
  *
- * important parts: Addr, ConnTrait, Conn, TransmissionInfo,
+ * important parts: CID, Addr, ConnTrait, Conn, Stream, TransmissionInfo,
  *  and a cp function for copying data between Conn
  *
 */
