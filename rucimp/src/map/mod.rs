@@ -12,3 +12,5 @@ pub mod h2;
 #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
 pub mod native_tls;
 pub mod ws;
+
+pub mod quic;

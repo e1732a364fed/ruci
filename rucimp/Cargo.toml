@@ -43,6 +43,7 @@ macro_mapper ={ path = "../crates/macro_mapper" }
 tokio-tungstenite = "0.21.0"
 http = "1.1.0"
 thiserror = "1.0.58"
+s2n-quic = "1"
 
 [dev-dependencies]
 chrono = "0.4.34"
