@@ -97,14 +97,14 @@ impl Map for TcpResolver {
     ///
     async fn maps(&self, _cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if let ProxyBehavior::ENCODE = behavior {
-            return MapResult::err_str("tproxy TcpResolver doesn't support ENCODE behavior");
+            return MapResult::from_err_str("tproxy TcpResolver doesn't support ENCODE behavior");
         }
         match params.c {
             Stream::Conn(c) => {
                 let oa = get_laddr_from_vd(params.d);
 
                 if oa.is_none() {
-                    return MapResult::err_str(
+                    return MapResult::from_err_str(
                         "tproxy TcpResolver needs data for local_addr, did't get it from the data.",
                     );
                 }
@@ -112,7 +112,7 @@ impl Map for TcpResolver {
                 // laddr in tproxy is in fact target_addr
                 MapResult::new_c(c).a(oa).b(params.b).build()
             }
-            _ => MapResult::err_str(&format!(
+            _ => MapResult::from_err_str(&format!(
                 "tproxy TcpResolver needs a tcp stream, got {}",
                 params.c
             )),
@@ -221,7 +221,7 @@ impl Map for UDPListener {
             }
 
             _ => {
-                return MapResult::err_str(
+                return MapResult::from_err_str(
                     "tproxy_udp_listener can't dial when a stream already exists",
                 )
             }

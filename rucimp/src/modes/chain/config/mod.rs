@@ -661,7 +661,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             })),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapConfig::TproxyTcpResolver(opts) => Ok(Box::new(TcpResolver::new(opts))),
+            InMapConfig::TproxyTcpResolver(opts) => Ok(Box::new(TcpResolver::new(opts)?)),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
             InMapConfig::TproxyUdpListener {
@@ -669,7 +669,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 sockopt,
                 ext,
             } => Ok(Box::new(crate::map::tproxy::UDPListener {
-                listen_addr: net::Addr::from_network_addr_url(listen_addr),
+                listen_addr: net::Addr::from_network_addr_url(&listen_addr)?,
                 sopt: sockopt,
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
             })),
