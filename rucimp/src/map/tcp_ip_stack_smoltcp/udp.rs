@@ -32,17 +32,17 @@ pub struct R {
     rx: Receiver<(IpEndpoint, BytesMut)>,
 }
 
-impl ruci::Name for R {
-    fn name(&self) -> &str {
-        "smoltcp_udp(r)"
-    }
-}
+// impl ruci::Name for R {
+//     fn name(&self) -> &str {
+//         "smoltcp_udp(r)"
+//     }
+// }
 
-impl ruci::Name for W {
-    fn name(&self) -> &str {
-        "smoltcp_udp(w)"
-    }
-}
+// impl ruci::Name for W {
+//     fn name(&self) -> &str {
+//         "smoltcp_udp(w)"
+//     }
+// }
 
 /// used by [`super::SmoltcpDevice`]
 pub fn new(
@@ -57,8 +57,8 @@ pub fn new(
         h,
         local,
     };
-    let mut ac = AddrConn::new(Box::new(c1), Box::new(c2));
-    ac.cached_name = "smoltcp_udp".to_string();
+    let ac = AddrConn::new(Box::new(c1), Box::new(c2));
+    // ac.cached_name = "smoltcp_udp".to_string();
     ac
 }
 

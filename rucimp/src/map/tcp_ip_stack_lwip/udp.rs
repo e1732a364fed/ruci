@@ -15,7 +15,7 @@ use std::{
 use bytes::BytesMut;
 use futures::channel::oneshot;
 use netstack_lwip::udp::RecvHalf;
-use ruci::{net::addr_conn::CP_UDP_TIMEOUT, Name};
+use ruci::net::addr_conn::CP_UDP_TIMEOUT;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tracing::{debug, warn};
 
@@ -257,8 +257,8 @@ fn new_addr_conn(
         dst,
         conn_map,
     };
-    let mut ac = AddrConn::new(Box::new(r), Box::new(w));
-    ac.cached_name = String::from("tproxy_udp");
+    let ac = AddrConn::new(Box::new(r), Box::new(w));
+    // ac.cached_name = String::from("tproxy_udp");
     ac
 }
 
@@ -268,11 +268,11 @@ pub struct Writer {
     dst: std::net::SocketAddr,
     conn_map: ConnMap,
 }
-impl Name for Writer {
-    fn name(&self) -> &str {
-        "tproxy_udp_w"
-    }
-}
+// impl Name for Writer {
+//     fn name(&self) -> &str {
+//         "tproxy_udp_w"
+//     }
+// }
 
 impl AsyncWriteAddr for Writer {
     fn poll_write_addr(
@@ -307,11 +307,11 @@ pub struct Reader {
     last_buf: Option<Vec<u8>>,
     state: ReadState,
 }
-impl ruci::Name for Reader {
-    fn name(&self) -> &str {
-        "tproxy_udp_r"
-    }
-}
+// impl ruci::Name for Reader {
+//     fn name(&self) -> &str {
+//         "tproxy_udp_r"
+//     }
+// }
 
 enum ReadState {
     Buf,

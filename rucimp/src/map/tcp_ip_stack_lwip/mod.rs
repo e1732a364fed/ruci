@@ -24,7 +24,6 @@ use ruci::{map, net::Network};
 use ruci::{
     map::{Map, MapParams, MapResult, ProxyBehavior},
     net::{Addr, CID},
-    Name,
 };
 use tokio::{
     io::{split, AsyncReadExt, AsyncWriteExt},
@@ -38,11 +37,11 @@ use udp::loop_accept_udp;
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Stack {}
 
-impl Name for Stack {
-    fn name(&self) -> &'static str {
-        "lwip_stack"
-    }
-}
+// impl Name for Stack {
+//     fn name(&self) -> &'static str {
+//         "lwip_stack"
+//     }
+// }
 
 #[async_trait]
 impl Map for Stack {

@@ -432,7 +432,7 @@ impl Server {
         let d = ou_to_oad(the_user);
 
         if cmd == CMD_CONNECT {
-            let _ = base.write(&*COMMON_TCP_HANDSHAKE_REPLY).await?;
+            let _ = base.write(&COMMON_TCP_HANDSHAKE_REPLY).await?;
 
             if buf.is_empty() {
                 debug!("try read first data in 100ms");

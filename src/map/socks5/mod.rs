@@ -45,17 +45,11 @@ pub const SUCCESS: u8 = 0;
 pub const RSV: u8 = 0;
 pub const USERPASS_SUBNEGOTIATION_VERSION: u8 = 1;
 
-use lazy_static::lazy_static;
-
 use super::Network;
 
-lazy_static! {
-    pub static ref COMMON_TCP_HANDSHAKE_REPLY: [u8; 10] = {
-        [
-            VERSION5, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ]
-    };
-}
+pub const COMMON_TCP_HANDSHAKE_REPLY: [u8; 10] = [
+    VERSION5, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
 
 //todo: 支持 fragment
 pub fn decode_udp_diagram(buf: &mut BytesMut) -> anyhow::Result<net::Addr> {

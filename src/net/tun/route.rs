@@ -3,15 +3,15 @@ Provides functions for routing system network data
 to the tun device.
  */
 
-use std::time::Duration;
+use std::{process::Command, time::Duration};
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 use crate::{
     net::dns::{get_sys_dns, set_sys_dns},
-    utils::{self, sync_run_command_list_no_stop, sync_run_command_list_stop},
+    utils::{self},
 };
 
 const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
@@ -310,5 +310,82 @@ pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
             set_sys_dns(d).context("set_sys_dns failed")?;
         }
     }
+    Ok(())
+}
+
+fn run_command(cmd: &str, args: &str) -> anyhow::Result<()> {
+    trace!(cmd = cmd, args = ?args, "running command",);
+
+    let r = Command::new(cmd).args(args.split(' ')).output()?;
+
+    if r.status.success() {
+        Ok(())
+    } else {
+        bail!("err output: {:?}", r);
+    }
+}
+/// keep run next command if got error
+fn sync_run_command_list_no_stop(list: Vec<&str>, no_warn: bool) -> anyhow::Result<()> {
+    //debug!("utils: start run_command_list ");
+    for cmd in list {
+        let mut strs: Vec<_> = cmd.split(' ').collect();
+        if strs.is_empty() {
+            bail!("got empty command");
+        }
+        let args = strs.split_off(1);
+
+        trace!(cmd = strs[0], args = ?args, "running command",);
+
+        let r = Command::new(strs[0]).args(args).output();
+        match r {
+            Ok(o) => {
+                if !o.status.success() {
+                    if !no_warn {
+                        warn!("run command not success, result is {:?}", o);
+                    }
+                    continue;
+                }
+            }
+            Err(e) => {
+                if !no_warn {
+                    warn!("run command got err, result is {:?}", e);
+                }
+                continue;
+            }
+        }
+    }
+    //debug!("utils: finish run_command_list ");
+
+    Ok(())
+}
+
+/// stop run if got error
+fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
+    //debug!("utils: start run_command_list ");
+    for cmd in list {
+        let mut strs: Vec<_> = cmd.split(' ').collect();
+        if strs.is_empty() {
+            bail!("got empty command");
+        }
+        let args = strs.split_off(1);
+
+        trace!(cmd = strs[0], args = ?args, "running command",);
+
+        let r = Command::new(strs[0]).args(args).output();
+
+        match r {
+            Ok(o) => {
+                if !o.status.success() {
+                    bail!("run command not success, result is {:?}", o);
+                }
+            }
+            Err(e) => {
+                warn!("run command got err, result is {:?}", e);
+                return Err(e.into());
+            }
+        }
+    }
+    //debug!("utils: finish run_command_list ");
+
     Ok(())
 }

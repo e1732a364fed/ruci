@@ -11,7 +11,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use ruci::map::{self, *};
 use ruci::net::*;
-use ruci::Name;
+// use ruci::Name;
 
 use macro_map::*;
 use smoltcp::iface::PollIngressSingleResult;
@@ -23,11 +23,11 @@ use tracing::debug;
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Stack {}
 
-impl Name for Stack {
-    fn name(&self) -> &'static str {
-        "smoltcp_stack"
-    }
-}
+// impl Name for Stack {
+//     fn name(&self) -> &'static str {
+//         "smoltcp_stack"
+//     }
+// }
 
 #[async_trait]
 impl Map for Stack {

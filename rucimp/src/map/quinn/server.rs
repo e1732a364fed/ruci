@@ -1,6 +1,6 @@
+use crate::utils::FileSource;
 use anyhow::Context;
 use quinn::{Endpoint, ServerConfig};
-use crate::utils::FileSource;
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -8,7 +8,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use ruci::map::*;
 use ruci::net::{helpers, CID};
-use ruci::Name;
+// use ruci::Name;
 use ruci::{map, net::Stream};
 
 use macro_map::*;
@@ -30,11 +30,11 @@ pub struct Server {
     cached_server_config: rustls::ServerConfig,
 }
 
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "quic_server"
-    }
-}
+// impl Name for Server {
+//     fn name(&self) -> &'static str {
+//         "quic_server"
+//     }
+// }
 
 impl Server {
     pub fn new(c: quic_common::ServerConfig, file_source: &FileSource) -> anyhow::Result<Self> {
