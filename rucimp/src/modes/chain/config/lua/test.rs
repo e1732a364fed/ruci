@@ -252,7 +252,14 @@ fn test_tag_route() -> mlua::Result<()> {
         Config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"},
-                {chain = { Stdio="my_fake.com" }, tag = "listen2"},
+                {chain = { Stdio={
+                     ext = {
+                            fixed_target_addr = "myfake.com",
+                            pre_defined_early_data = "abc"
+                        }
+                }
+                
+                 }, tag = "listen2"},
             },
             outbounds = {
                 { 
@@ -263,7 +270,7 @@ fn test_tag_route() -> mlua::Result<()> {
 
                 { 
                     tag="dial2", chain = {
-                        "Direct"
+                        {Direct = {}}
                     }
                 }
             },
@@ -363,8 +370,9 @@ fn test_rule_route() -> mlua::Result<()> {
                             Direct = {
                                 dns_client = {
                                     dns_server_list = {
-                                        {SocketAddr = {},
-                                        Protocol = "Udp"}
+                                        {
+                                        "127.0.0.1:20800", "udp"
+                                        }
                                     },
                                     ip_strategy = "Ipv4Only",
                                     static_pairs = {
