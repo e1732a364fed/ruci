@@ -14,7 +14,7 @@ tls 中,  native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前�
 
 除了用 ruci-cmd utils gen-cer 命令生成自签名根证书, 还可以试图自行用 openssl 命令生成:
 
-生成 key 和 证书:
+生成自签名 key 和 证书:
 
 ```sh
 # ec key

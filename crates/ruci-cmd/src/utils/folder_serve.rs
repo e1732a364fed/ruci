@@ -69,6 +69,8 @@ async fn download(Path(filename): Path<String>) -> impl axum::response::IntoResp
 }
 
 /// non-blocking, default is 0.0.0.0:18143
+///
+/// will print a line of info
 pub async fn serve_static(listen_addr: Option<String>) {
     let addr = listen_addr
         .clone()

@@ -48,7 +48,7 @@ ruci项目的终极目标是利用人工神经网络针对用户自己的流量�
 
 Deep Packet Inspection,数据分析,加密流量识别, 流量分类, 流量分析, 异常流量检测
 
-Steganography, cryptography, Provable Perfect Security ， Covert Communication
+Steganography, cryptography, Provable Perfect Security ， Covert Communication, network traffic generation, UGC( user generated content)
 
 信息隐藏，隐写，隐写分析，隐敝通信
 
@@ -71,11 +71,51 @@ https://arxiv.org/abs/2210.14889
 Deep Packet: A Novel Approach For Encrypted Traffic Classification Using Deep Learning
 https://arxiv.org/abs/1709.02656
 
+
 可证安全隐写：理论、应用与展望
 https://www.journalofcybersec.com/CN/Y2023/V1/I1/38
 
 生成式隐写研究
 http://cjc.ict.ac.cn/online/bfpub/zlz-202322140707.pdf
+
+
+Infranet: Circumventing Web Censorship and Surveillance
+https://www.usenix.org/legacy/events/sec02/feamster/feamster.pdf
+
+
+StegoTorus: A Camouflage Proxy for the Tor Anonymity
+System
+https://raw.githubusercontent.com/SRI-CSL/Stegotorus/refs/heads/master/doc/stegotorus.pdf
+
+SkypeMorph: Protocol Obfuscation for Tor Bridges
+https://cacr.uwaterloo.ca/techreports/2012/cacr2012-08.pdf
+
+SWEET: Serving the Web by
+Exploiting Email Tunnels
+http://caesar.web.engr.illinois.edu/papers/sweet-ton17.pdf
+
+NetDiffus: Network Traffic Generation by Diffusion
+Models through Time-Series Imaging
+https://arxiv.org/abs/2310.04429
+
+TrafficGPT: Breaking the Token Barrier for
+Efficient Long Traffic Analysis and Generation
+https://arxiv.org/pdf/2403.05822
+
+NetGPT: Generative Pretrained Transformer for
+Network Traffi
+https://arxiv.org/pdf/2304.09513
+
+Lens: A FOUNDATION MODEL FOR NETWORK TRAFFIC
+https://arxiv.org/pdf/2402.03646
+
+NetBench: A Large-Scale and Comprehensive Network Traffic Benchmark Dataset for Foundation Models
+https://arxiv.org/html/2403.10319v1
+
+CloudTransport: Using Cloud Storage for Censorship-Resistant Networking
+https://link.springer.com/chapter/10.1007/978-3-319-08506-7_1
+
+
 
 ## 一些项目与资源
 
@@ -88,6 +128,13 @@ https://github.com/mrazimi99/deep-packet
 https://github.com/Srinivas11789/PcapXray
 
 https://wiki.wireshark.org/SampleCaptures
+
+Dust: A Polymorphic Engine for Filtering-Resistant Transport Protocols 
+https://github.com/blanu/Dust
+
+marionette
+https://github.com/marionette-tg/marionette
+
 
 
 ## 学术刊物

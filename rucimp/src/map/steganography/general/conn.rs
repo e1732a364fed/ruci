@@ -2,28 +2,81 @@
  * Defines a [`GeneralConn`] for general steganography
  */
 
-use super::{GeneralMap, ParsedResult, ReadSequence, WriteSequence};
+use super::GeneralMap;
 use anyhow::Result;
 use bytes::BytesMut;
 use futures::future::BoxFuture;
 use futures_lite::FutureExt;
+use rainbow::{DecodeResult, EncodeResult};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{ready, Context, Poll};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tracing::{self, debug};
 
+/// 写序列状态
+#[derive(Debug)]
+pub struct WriteStep {
+    pub is_write: bool, // true: 执行 w* 操作, false: 执行 r* 操作
+    pub index: usize,   // 对应 write_packets 或 read_lengths 的索引
+}
+
+#[derive(Debug)]
+pub struct WriteSequence {
+    pub write_packets: Vec<Vec<u8>>,
+    pub read_lengths: Vec<usize>,
+    pub(crate) current_step: WriteStep,
+}
+
+/// 读序列状态
+#[derive(Debug)]
+pub struct ReadStep {
+    pub is_read: bool, // true: 执行 r* 操作, false: 执行 w* 操作
+    pub index: usize,  // 对应 read_packets 或 write_packets 的索引
+}
+
+#[derive(Debug)]
+pub struct ReadSequence {
+    pub total_packet_number: usize,
+    pub write_packets: Vec<Vec<u8>>,
+    pub read_lengths: Vec<usize>,
+    pub read_packets: Vec<Vec<u8>>,
+    pub current_step: ReadStep,
+}
+
+impl ReadSequence {
+    fn advance_to_next_write(&mut self) {
+        self.current_step.is_read = false;
+    }
+
+    fn advance_to_next_read(&mut self) {
+        self.current_step.is_read = true;
+        self.current_step.index += 1;
+    }
+}
+
+impl WriteSequence {
+    fn advance_to_next_read(&mut self) {
+        self.current_step.is_write = false;
+    }
+
+    fn advance_to_next_write(&mut self) {
+        self.current_step.is_write = true;
+        self.current_step.index += 1;
+    }
+}
+
 /// 连接状态
 pub enum ConnState {
     Ready,
     Writing(WriteSequence),
     Reading(ReadSequence),
-    ProcessingParse {
-        future: Arc<Mutex<BoxFuture<'static, Result<ParsedResult>>>>,
+    ProcessingEncoding {
+        future: Arc<Mutex<BoxFuture<'static, rainbow::Result<EncodeResult>>>>,
         is_write: bool, // true 表示是写操作引起的，false 表示是读操作引起的
     },
     ProcessingDecoding {
-        future: Arc<Mutex<BoxFuture<'static, Result<Vec<u8>>>>>,
+        future: Arc<Mutex<BoxFuture<'static, rainbow::Result<DecodeResult>>>>,
     },
 }
 
@@ -41,7 +94,7 @@ impl std::fmt::Debug for ConnState {
                 .field(&seq.read_lengths.len())
                 .field(&seq.write_packets.len())
                 .finish(),
-            ConnState::ProcessingParse { .. } => f.debug_tuple("ProcessingParse").finish(),
+            ConnState::ProcessingEncoding { .. } => f.debug_tuple("ProcessingParse").finish(),
             ConnState::ProcessingDecoding { .. } => f.debug_tuple("ProcessingDecoding").finish(),
         }
     }
@@ -53,7 +106,6 @@ pub struct GeneralConn {
     pub state: ConnState,
     read_waker: Option<std::task::Waker>,  // 存储读操作的 waker
     write_waker: Option<std::task::Waker>, // 存储写操作的 waker
-    handshake_completed: bool,
 
     // 若为客户端握手，则传入；若为服务端握手，则由Parse生成后，由调用者取出
     pub first_buf: Option<BytesMut>,
@@ -67,7 +119,6 @@ impl GeneralConn {
             state: ConnState::Ready,
             read_waker: None,
             write_waker: None,
-            handshake_completed: false,
             first_buf,
         }
     }
@@ -76,23 +127,16 @@ impl GeneralConn {
         self.map.is_server
     }
 
-    fn is_handshake(&self, is_write: bool) -> bool {
-        // 只有服务端的第一个读操作是握手包
-        // 只有客户端的第一个写操作是握手包
-
-        !self.handshake_completed && self.is_server() == !is_write
-    }
-
     /// 开始一个写序列
     ///
     /// It creates a future to call self.map.generate_sequence
-    /// and change self.state to ConnState::ProcessingParse
+    /// and change self.state to ConnState::ProcessingEncoding
     fn initiate_ai_write_processing(&mut self, data: Vec<u8>) -> Result<()> {
         let map = self.map.clone();
-        let is_handshake = self.is_handshake(true);
+        let is_client = !self.is_server();
         let future =
-            Box::pin(async move { map.generate_sequence(&data, is_handshake, false).await });
-        self.state = ConnState::ProcessingParse {
+            Box::pin(async move { map.processor.encode_write(&data, is_client, None).await });
+        self.state = ConnState::ProcessingEncoding {
             future: Arc::new(Mutex::new(future)),
             is_write: true,
         };
@@ -103,15 +147,17 @@ impl GeneralConn {
     /// 处理读取到的数据，可能开始新的读序列
     ///
     /// It creates a future to call self.map.process_with_ai
-    /// and change self.state to ConnState::ProcessingParse
-    fn initiate_ai_read_processing(&mut self, data: Vec<u8>) -> Result<()> {
+    /// and change self.state to ConnState::ProcessingDecoding
+    fn initiate_ai_read_processing(&mut self, packet_index: usize, data: Vec<u8>) -> Result<()> {
         let map = self.map.clone();
-        let is_handshake = self.is_handshake(false);
-        let future =
-            Box::pin(async move { map.generate_sequence(&data, is_handshake, true).await });
-        self.state = ConnState::ProcessingParse {
+        let is_client = !self.is_server();
+        let future = Box::pin(async move {
+            map.processor
+                .decrypt_single_read(data, packet_index, is_client)
+                .await
+        });
+        self.state = ConnState::ProcessingDecoding {
             future: Arc::new(Mutex::new(future)),
-            is_write: false,
         };
 
         Ok(())
@@ -188,7 +234,7 @@ impl AsyncRead for GeneralConn {
                     }
                     continue;
                 }
-                ConnState::ProcessingParse {
+                ConnState::ProcessingEncoding {
                     ref future,
                     is_write,
                 } => {
@@ -387,7 +433,7 @@ impl AsyncWrite for GeneralConn {
                     }
                     continue;
                 }
-                ConnState::ProcessingParse {
+                ConnState::ProcessingEncoding {
                     ref future,
                     is_write,
                 } => {

@@ -5,6 +5,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use rainbow::NetworkSteganographyProcessor;
 use reqwest;
 
 use ruci::Name;
@@ -120,16 +121,16 @@ impl Name for AIGeneratedProcessor {
 }
 
 #[async_trait]
-impl SteganographyProcessor for AIGeneratedProcessor {
+impl NetworkSteganographyProcessor for AIGeneratedProcessor {
     /// 调用OpenAI API处理数据
     ///
     /// 在客户端，处理目标地址和数据，生成写序列
     /// 在服务端，处理读到的客户端握手的写序列中的第一个包，生成读序列
-    async fn generate_sequence(
+    async fn encode_write(
         &self,
-        data: &[u8],
-        is_handshake: bool,
-        is_read: bool,
+        plain_data: &[u8],
+        is_client: bool,
+        mime_type: Option<String>,
     ) -> Result<ParsedResult> {
         let data_base64 = BASE64.encode(data);
 
@@ -227,7 +228,12 @@ impl SteganographyProcessor for AIGeneratedProcessor {
     }
 
     /// 解密从隐写协议中读取的数据
-    async fn decrypt_read_sequence(&self, combined_data: Vec<u8>) -> Result<Vec<u8>> {
+    async fn decrypt_single_read(
+        &self,
+        cipher_data: Vec<u8>,
+        packet_index: usize,
+        is_client: bool,
+    ) -> Result<Vec<u8>> {
         let data_base64 = BASE64.encode(&combined_data);
 
         // 构建system提示

@@ -26,8 +26,8 @@ pub enum Commands {
     /// calculate trojan hash for a plain text password
     CalcuTrojanHash { password: String },
 
-    /// generate self signed root certificate
-    GenCer { names: Vec<String> },
+    /// generate self signed root certificate and key
+    GenCer { subject_alt_names: Vec<String> },
 
     /// start a interactive lua shell, which is a read–eval–print loop (REPL).
     #[cfg(any(feature = "lua", feature = "lua54"))]
@@ -72,13 +72,24 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             download_wintun().await?;
         }
         Commands::CalcuTrojanHash { password } => calcu_trojan_hash(&password),
-        Commands::GenCer { names } => {
+        Commands::GenCer {
+            subject_alt_names: names,
+        } => {
+            info!("generatiing cert and key...");
+
             use rcgen::generate_simple_self_signed;
 
             let cert = generate_simple_self_signed(names).unwrap();
             let c = cert.key_pair.serialize_pem();
 
-            fs::write("generated_crt_and_key.crt", c)?;
+            fs::write("generated.key", c)?;
+            info!("generated key as generated.key");
+
+            let c = cert.cert.pem();
+
+            fs::write("generated.crt", c)?;
+
+            info!("generated cert as generated.crt");
         }
         #[cfg(any(feature = "lua", feature = "lua54"))]
         Commands::Repl => rucimp::utils::lua_repl(),
@@ -148,6 +159,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// print a line of info and pack the folder into tar
 fn pack_tar(folder: &str) -> anyhow::Result<(Vec<u8>, String)> {
     info!("packing into tar...");
     let (bs, mut md5) = rucimp::utils::tar_folder_and_compute_md5(folder)?;

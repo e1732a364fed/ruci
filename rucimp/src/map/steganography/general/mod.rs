@@ -19,10 +19,9 @@
 
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use bytes::BytesMut;
-use dyn_clone::DynClone;
+use rainbow::NetworkSteganographyProcessor;
 use ruci::{map::*, net::CID, Name};
 
 pub mod conn;
@@ -31,87 +30,11 @@ use conn::GeneralConn;
 use tokio::io::AsyncReadExt;
 use tracing::debug;
 
-/// 写序列状态
-#[derive(Debug)]
-pub struct WriteStep {
-    pub is_write: bool, // true: 执行 w* 操作, false: 执行 r* 操作
-    pub index: usize,   // 对应 write_packets 或 read_lengths 的索引
-}
-
-#[derive(Debug)]
-pub struct WriteSequence {
-    pub write_packets: Vec<Vec<u8>>,
-    pub read_lengths: Vec<usize>,
-    pub(crate) current_step: WriteStep,
-}
-
-/// 读序列状态
-#[derive(Debug)]
-pub struct ReadStep {
-    pub is_read: bool, // true: 执行 r* 操作, false: 执行 w* 操作
-    pub index: usize,  // 对应 read_packets 或 write_packets 的索引
-}
-
-#[derive(Debug)]
-pub struct ReadSequence {
-    pub write_packets: Vec<Vec<u8>>,
-    pub read_lengths: Vec<usize>,
-    pub read_packets: Vec<Vec<u8>>,
-    pub current_step: ReadStep,
-}
-
-impl ReadSequence {
-    fn advance_to_next_write(&mut self) {
-        self.current_step.is_read = false;
-    }
-
-    fn advance_to_next_read(&mut self) {
-        self.current_step.is_read = true;
-        self.current_step.index += 1;
-    }
-}
-
-impl WriteSequence {
-    fn advance_to_next_read(&mut self) {
-        self.current_step.is_write = false;
-    }
-
-    fn advance_to_next_write(&mut self) {
-        self.current_step.is_write = true;
-        self.current_step.index += 1;
-    }
-}
-
-#[derive(Debug)]
-pub enum ParsedResult {
-    Write(WriteSequence),
-    Read(ReadSequence),
-}
-
-/// 隐写协议处理器
-///
-/// 这里是实际的隐写协议的实现之处
-#[async_trait]
-pub trait SteganographyProcessor: Send + Sync + Name + DynClone {
-    /// 在客户端，处理目标地址和数据，生成写序列
-    /// 在服务端，处理读到的客户端握手的写序列中的第一个包，生成读序列
-    async fn generate_sequence(
-        &self,
-        data: &[u8],
-        is_handshake: bool,
-        is_read: bool,
-    ) -> Result<ParsedResult>;
-
-    /// 解密读取到的数据
-    async fn decrypt_read_sequence(&self, data: Vec<u8>) -> Result<Vec<u8>>;
-}
-dyn_clone::clone_trait_object!(SteganographyProcessor);
-
 #[derive(Clone)]
 pub struct GeneralMap {
     pub is_server: bool,
 
-    pub processor: Arc<Box<dyn SteganographyProcessor>>,
+    pub processor: Arc<Box<dyn NetworkSteganographyProcessor>>,
     cached_name: String,
 }
 
@@ -124,41 +47,21 @@ impl std::fmt::Debug for GeneralMap {
 impl GeneralMap {
     pub fn from_processor(
         is_server: bool,
-        processor: Arc<Box<dyn SteganographyProcessor>>,
+        processor: Arc<Box<dyn NetworkSteganographyProcessor>>,
+        name: &str,
     ) -> Self {
         let mut map = Self {
             is_server,
             processor,
             cached_name: "".to_string(),
         };
-        map.generate_name();
+        map.generate_name(name);
         map
     }
 
-    /// 在客户端，处理目标地址和数据，生成写序列
-    /// 在服务端，处理读到的客户端握手的写序列中的第一个包，生成读序列
-    async fn generate_sequence(
-        &self,
-        data: &[u8],
-        is_handshake: bool,
-        is_read: bool,
-    ) -> Result<ParsedResult> {
-        self.processor
-            .generate_sequence(data, is_handshake, is_read)
-            .await
-    }
-
-    /// 解密从隐写协议中读取的数据
-    async fn decrypt_read_sequence(&self, combined_data: Vec<u8>) -> Result<Vec<u8>> {
-        self.processor.decrypt_read_sequence(combined_data).await
-    }
-
     /// generated cached name from its processor
-    fn generate_name(&mut self) {
-        self.cached_name = format!(
-            "general_steganography_map[processor: {}]",
-            self.processor.name()
-        );
+    fn generate_name(&mut self, name: &str) {
+        self.cached_name = format!("general_steganography_map[processor: {name}]",);
     }
 }
 
