@@ -56,11 +56,18 @@ async fn no_ti_ed(
     if log_enabled!(Debug) {
         debug!("{cid}, relay with earlydata, {}", earlydata.len());
     }
-    let r = out_conn.write(&earlydata).await;
+    let r = out_conn.write_all(&earlydata).await;
     match r {
-        Ok(upload_bytes) => {
+        Ok(_) => {
             if log_enabled!(Debug) {
-                debug!("{cid}, upload earlydata ok, {}", upload_bytes);
+                debug!("{cid}, upload earlydata ok, ");
+            }
+            let r = out_conn.flush().await;
+            if let Err(e) = r {
+                warn!("{cid}, upload early_data flush failed: {}", e);
+                let _ = in_conn.shutdown().await;
+                let _ = out_conn.shutdown().await;
+                return;
             }
         }
         Err(e) => {
@@ -87,14 +94,14 @@ async fn ti_ed(
     if log_enabled!(Debug) {
         debug!("{cid}, relay with earlydata, {}", earlydata.len());
     }
-    let r = out_conn.write(&earlydata).await;
+    let r = out_conn.write_all(&earlydata).await;
     match r {
-        Ok(upload_bytes) => {
+        Ok(_) => {
             if log_enabled!(Debug) {
-                debug!("{cid}, upload earlydata ok, {}", upload_bytes);
+                debug!("{cid}, upload earlydata ok ");
             }
 
-            ti.ub.fetch_add(upload_bytes as u64, Ordering::Relaxed);
+            ti.ub.fetch_add(earlydata.len() as u64, Ordering::Relaxed);
         }
         Err(e) => {
             warn!("{cid}, upload early_data failed: {}", e);

@@ -53,6 +53,7 @@ impl Server {
         a: Option<net::Addr>,
     ) -> io::Result<map::MapResult> {
         if let Some(pre_read_data) = b {
+            debug!("tls server got pre_read_data, init with EarlyDataWrapper");
             let nc = EarlyDataWrapper::from(pre_read_data, conn);
 
             conn = Box::new(nc);

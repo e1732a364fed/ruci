@@ -85,6 +85,7 @@ impl Client {
 
         if let Some(ed) = b {
             new_c.write_all(&ed).await?;
+            new_c.flush().await?;
         }
 
         Ok(MapResult {

@@ -45,6 +45,7 @@ impl Client {
             buf.extend_from_slice(&b);
         }
         base.write_all(&buf).await?;
+        base.flush().await?;
 
         Ok(MapResult::c(base))
     }
