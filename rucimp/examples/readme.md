@@ -17,7 +17,7 @@ chain_infinite 演示 完全动态链, 其与 chain 的运行方式一样, 不�
 # in folder rucimp, run:
 
 # chain mode
-RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain
+RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp" --example chain
 RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain -- remote.lua
 
 RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain_infinite -- local_mux_h2.lua

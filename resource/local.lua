@@ -619,7 +619,7 @@ local config_16_tun = {
 }
 
 
-local config_17_tcp_ip_stack_direct = {
+local config_17_tcp_ip_stack = {
 
     inbounds = {
         {
@@ -638,15 +638,27 @@ local config_17_tcp_ip_stack_direct = {
             tag = "listen1"
         },
     },
-    outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
+    --outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
     -- outbounds = { {
     --     tag = "dial1",
     --     chain = { "Direct" }
     -- } }
+
+    outbounds = { {
+        tag = "dial1",
+        chain = { {
+            OptDialer = {
+                dial_addr = "tcp://192.168.0.225:10801",
+                sockopt = {
+                    bind_to_device = "en0"
+                }
+            }
+        }, tlsout,trojan_out}
+    } }
 }
 
 
-Config = config_17_tcp_ip_stack_direct
+Config = config_17_tcp_ip_stack
 
 --[[
 
