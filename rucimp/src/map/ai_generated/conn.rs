@@ -1,123 +1,118 @@
-use super::{AIGeneratedMap, AISequence};
+use super::{AIGeneratedMap, AIResult, ReadSequence, WriteSequence};
 use anyhow::Result;
 use futures::future::BoxFuture;
 use futures_lite::FutureExt;
-use std::collections::VecDeque;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{ready, Context, Poll};
 use tokio::io::{AsyncRead, AsyncWrite};
-
-/// 写序列状态
-#[derive(Debug)]
-struct WriteSequence {
-    write_packets: VecDeque<Vec<u8>>,    // 待发送的数据包 w1,w2,...,wN
-    read_lengths: VecDeque<usize>,       // 期望接收的数据长度 r1,r2,...,rN
-    current_step: usize,                 // 当前执行到第几步
-    waiting_for_read: bool,              // 是否正在等待读取响应
-    expected_read_length: Option<usize>, // 期望读取的长度
-}
-
-/// 读序列状态
-#[derive(Debug)]
-struct ReadSequence {
-    write_lengths: VecDeque<usize>,  // 需要发送的响应长度 w1,w2,...,wN
-    read_packets: VecDeque<Vec<u8>>, // 期望接收的数据包 r1,r2,...,rN
-    current_step: usize,             // 当前执行到第几步
-    pending_write: Option<Vec<u8>>,  // 待写入的响应数据
-}
+use tracing;
 
 /// 连接状态
-enum ConnState {
+pub enum ConnState {
     Ready,
     Writing(WriteSequence),
     Reading(ReadSequence),
     ProcessingAI {
-        future: Arc<Mutex<BoxFuture<'static, Result<AISequence>>>>,
+        future: Arc<Mutex<BoxFuture<'static, Result<AIResult>>>>,
+        is_write: bool, // true 表示是写操作引起的，false 表示是读操作引起的
     },
+    ProcessingDecodingAI {
+        future: Arc<Mutex<BoxFuture<'static, Result<Vec<u8>>>>>,
+    },
+}
+
+impl std::fmt::Debug for ConnState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConnState::Ready => write!(f, "Ready"),
+            ConnState::Writing(seq) => f
+                .debug_tuple("Writing")
+                .field(&seq.write_packets.len())
+                .field(&seq.read_lengths.len())
+                .finish(),
+            ConnState::Reading(seq) => f
+                .debug_tuple("Reading")
+                .field(&seq.read_lengths.len())
+                .field(&seq.write_packets.len())
+                .finish(),
+            ConnState::ProcessingAI { .. } => f.debug_tuple("ProcessingAI").finish(),
+            ConnState::ProcessingDecodingAI { .. } => {
+                f.debug_tuple("ProcessingDecodingAI").finish()
+            }
+        }
+    }
 }
 
 /// AI生成的协议的连接实现
 pub struct AIConn {
-    inner: ruci::net::Conn,
-    ai_map: AIGeneratedMap,
-    first_packet: Option<Vec<u8>>,
-    state: ConnState,
+    pub inner: ruci::net::Conn,
+    pub ai_map: AIGeneratedMap,
+    pub state: ConnState,
+    read_waker: Option<std::task::Waker>,  // 存储读操作的 waker
+    write_waker: Option<std::task::Waker>, // 存储写操作的 waker
 }
 
 impl AIConn {
-    pub fn new(inner: ruci::net::Conn, ai_map: AIGeneratedMap, first_sequence: AISequence) -> Self {
+    pub fn new(inner: ruci::net::Conn, ai_map: AIGeneratedMap) -> Self {
         Self {
             inner,
             ai_map,
-            first_packet: Some(
-                first_sequence
-                    .write_packets
-                    .into_iter()
-                    .next()
-                    .unwrap_or_default(),
-            ),
             state: ConnState::Ready,
+            read_waker: None,
+            write_waker: None,
         }
     }
 
     /// 开始一个写序列
     ///
     /// Will change self.state to ConnState::ProcessingAI
-    fn start_write_sequence(&mut self, first_data: Vec<u8>) -> Result<()> {
+    fn initiate_ai_write_processing(&mut self, first_data: Vec<u8>) -> Result<()> {
         let ai_map = self.ai_map.clone();
-        let future =
-            Box::pin(async move { ai_map.process_with_ai(&first_data, None, None, false).await });
+        let future = Box::pin(async move {
+            ai_map
+                .generate_sequence_with_ai(&first_data, None, None, false)
+                .await
+        });
         self.state = ConnState::ProcessingAI {
             future: Arc::new(Mutex::new(future)),
+            is_write: true,
         };
-        Ok(())
-    }
-
-    /// 从AI返回的序列信息创建写序列
-    ///
-    /// Will change self.state to ConnState::Writing
-    fn create_write_sequence(&mut self, sequence: AISequence) -> Result<()> {
-        let write_sequence = WriteSequence {
-            write_packets: VecDeque::from(sequence.write_packets),
-            read_lengths: VecDeque::from(sequence.read_lengths),
-            current_step: 0,
-            waiting_for_read: false,
-            expected_read_length: None,
-        };
-        self.state = ConnState::Writing(write_sequence);
         Ok(())
     }
 
     /// 处理读取到的数据，可能开始新的读序列
-    fn handle_read_data(&mut self, data: Vec<u8>) -> Result<()> {
+    ///
+    /// will call self.ai_map.process_with_ai
+    ///
+    /// will change self.state to ConnState::ProcessingAI
+    fn initiate_ai_read_processing(&mut self, data: Vec<u8>) -> Result<()> {
         let ai_map = self.ai_map.clone();
-        let future =
-            Box::pin(async move { ai_map.process_with_ai(&data, None, None, false).await });
+        let future = Box::pin(async move {
+            ai_map
+                .generate_sequence_with_ai(&data, None, None, false)
+                .await
+        });
         self.state = ConnState::ProcessingAI {
             future: Arc::new(Mutex::new(future)),
+            is_write: false,
         };
         Ok(())
     }
 
-    /// 从AI返回的序列信息创建读序列
-    ///
-    /// Will change self.state to ConnState::Reading
-    fn create_read_sequence(&mut self, sequence: AISequence) -> Result<()> {
-        let read_sequence = ReadSequence {
-            write_lengths: VecDeque::from(
-                sequence
-                    .write_packets
-                    .iter()
-                    .map(|p| p.len())
-                    .collect::<Vec<_>>(),
-            ),
-            read_packets: VecDeque::from(sequence.write_packets),
-            current_step: 0,
-            pending_write: None,
-        };
-        self.state = ConnState::Reading(read_sequence);
-        Ok(())
+    // 当一个操作完成时，唤醒另一个被阻塞的操作
+    fn wake_pending_operation(&mut self, completed_write: bool) {
+        if completed_write {
+            // 写操作完成，唤醒等待的读操作
+            if let Some(waker) = self.read_waker.take() {
+                waker.wake();
+            }
+        } else {
+            // 读操作完成，唤醒等待的写操作
+            if let Some(waker) = self.write_waker.take() {
+                waker.wake();
+            }
+        }
     }
 }
 
@@ -130,6 +125,7 @@ impl AsyncRead for AIConn {
         let this = &mut *self;
 
         loop {
+            tracing::debug!("AIConn::poll_read state: {:?}", this.state);
             match &mut this.state {
                 ConnState::Ready => {
                     // 准备一个临时缓冲区
@@ -140,9 +136,18 @@ impl AsyncRead for AIConn {
                     let result = ready!(Pin::new(&mut this.inner).poll_read(cx, &mut temp_buf));
                     match result {
                         Ok(()) => {
-                            let filled_data = temp_buf.filled().to_vec();
-                            if !filled_data.is_empty() {
-                                if let Err(e) = this.handle_read_data(filled_data) {
+                            let filled_len = temp_buf.filled().len();
+                            tracing::debug!(
+                                "AIConn::poll_read read {} bytes from inner",
+                                filled_len
+                            );
+                            if filled_len > 0 {
+                                temp_vec.truncate(filled_len);
+                                if let Err(e) = this.initiate_ai_read_processing(temp_vec) {
+                                    tracing::debug!(
+                                        "AIConn::poll_read handle_read_data error: {}",
+                                        e
+                                    );
                                     return Poll::Ready(Err(std::io::Error::new(
                                         std::io::ErrorKind::Other,
                                         e.to_string(),
@@ -152,89 +157,175 @@ impl AsyncRead for AIConn {
                             }
                             return Poll::Ready(Ok(()));
                         }
-                        Err(e) => return Poll::Ready(Err(e)),
+                        Err(e) => {
+                            tracing::debug!("AIConn::poll_read inner read error: {}", e);
+                            return Poll::Ready(Err(e));
+                        }
                     }
                 }
-                ConnState::ProcessingAI { ref future } => {
+                ConnState::ProcessingAI {
+                    ref future,
+                    is_write,
+                } => {
+                    if *is_write {
+                        // 如果是写操作触发的AI处理，直接返回Pending
+                        tracing::debug!("AIConn::poll_read pending due to ongoing write operation");
+                        this.read_waker = Some(cx.waker().clone());
+                        return Poll::Pending;
+                    }
+
                     let mut future = future.lock().unwrap();
                     let poll_result = Pin::new(&mut *future).poll(cx);
                     drop(future);
 
-                    let sequence = match ready!(poll_result) {
-                        Ok(sequence) => sequence,
+                    match ready!(poll_result) {
+                        Ok(AIResult::Read { sequence, .. }) => {
+                            tracing::debug!(
+                                "AIConn::poll_read AI processing completed with read sequence"
+                            );
+                            this.state = ConnState::Reading(sequence);
+                            continue;
+                        }
+                        Ok(AIResult::Write(_)) => {
+                            tracing::debug!("AIConn::poll_read unexpected write sequence");
+                            return Poll::Ready(Err(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                "Unexpected write sequence in read operation",
+                            )));
+                        }
                         Err(e) => {
+                            tracing::debug!("AIConn::poll_read AI processing failed: {}", e);
                             this.state = ConnState::Ready;
                             return Poll::Ready(Err(std::io::Error::new(
                                 std::io::ErrorKind::Other,
                                 format!("AI processing failed: {}", e),
                             )));
                         }
-                    };
-
-                    if let Err(e) = this.create_read_sequence(sequence) {
-                        return Poll::Ready(Err(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            e.to_string(),
-                        )));
                     }
-                    continue;
+                }
+                ConnState::Writing(_) => {
+                    tracing::debug!("AIConn::poll_read pending due to ongoing write operation");
+
+                    // 保存 waker，等写操作完成时再唤醒
+                    this.read_waker = Some(cx.waker().clone());
+                    return Poll::Pending;
                 }
                 ConnState::Reading(sequence) => {
-                    // 如果有待写入的响应
-                    if let Some(data) = sequence.pending_write.take() {
-                        match Pin::new(&mut this.inner).poll_write(cx, &data) {
-                            Poll::Ready(Ok(_)) => {
-                                sequence.current_step += 1;
-                                continue;
-                            }
-                            Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
-                            Poll::Pending => {
-                                sequence.pending_write = Some(data);
-                                return Poll::Pending;
-                            }
-                        }
-                    }
-
-                    // 获取期望的读取数据
-                    if let Some(expected_data) = sequence.read_packets.front() {
-                        let len = expected_data.len().min(buf.remaining());
-                        buf.put_slice(&expected_data[..len]);
-                        sequence.read_packets.pop_front();
-                        sequence.current_step += 1;
-
-                        // 检查是否需要准备写入响应
-                        if let Some(&write_len) = sequence.write_lengths.front() {
-                            if write_len > 0 {
-                                // TODO: 生成响应数据
-                                sequence.pending_write = Some(vec![0; write_len]);
-                            }
-                            sequence.write_lengths.pop_front();
-                        }
-
-                        // 如果序列完成，重置状态
-                        if sequence.read_packets.is_empty() && sequence.pending_write.is_none() {
-                            this.state = ConnState::Ready;
-                        }
-                        return Poll::Ready(Ok(()));
-                    } else {
-                        this.state = ConnState::Ready;
-                        continue;
-                    }
-                }
-                ConnState::Writing(sequence) => {
-                    if sequence.waiting_for_read {
-                        // 如果正在等待读取响应，尝试读取
-                        let expected_len = sequence.expected_read_length.unwrap_or(0);
-                        if expected_len > 0 {
+                    if sequence.current_step.is_read {
+                        // 执行读子序列 (r*)
+                        if sequence.current_step.index < sequence.read_lengths.len() {
+                            let expected_len = sequence.read_lengths[sequence.current_step.index];
+                            tracing::debug!(
+                                "AIConn::poll_read reading r{} with length {}",
+                                sequence.current_step.index,
+                                expected_len
+                            );
                             let mut temp_vec = vec![0u8; expected_len];
                             let mut temp_buf = tokio::io::ReadBuf::new(&mut temp_vec);
 
-                            ready!(Pin::new(&mut this.inner).poll_read(cx, &mut temp_buf))?;
+                            match ready!(Pin::new(&mut this.inner).poll_read(cx, &mut temp_buf)) {
+                                Ok(()) => {
+                                    let filled_len = temp_buf.filled().len();
+                                    tracing::debug!(
+                                        "AIConn::poll_read r{} completed with {} bytes",
+                                        sequence.current_step.index,
+                                        filled_len
+                                    );
+                                    // 根据实际填充的长度截取 temp_vec
+                                    temp_vec.truncate(filled_len);
+                                    sequence.read_packets.push(temp_vec);
+
+                                    // 切换到写操作
+                                    sequence.advance_to_next_write();
+                                    continue;
+                                }
+                                Err(e) => {
+                                    tracing::debug!(
+                                        "AIConn::poll_read r{} failed: {}",
+                                        sequence.current_step.index,
+                                        e
+                                    );
+                                    return Poll::Ready(Err(e));
+                                }
+                            }
+                        } else {
+                            // 读取序列完成
+                            tracing::debug!("AIConn::poll_read read sequence completed");
+
+                            // 合并所有读取的数据包
+                            let mut combined_data = Vec::new();
+                            combined_data.extend(sequence.read_packets.drain(..).flatten());
+
+                            // 创建解密future
+                            let ai_map = this.ai_map.clone();
+                            let future = Box::pin(async move {
+                                ai_map.decrypt_read_sequence(combined_data).await
+                            });
+
+                            this.state = ConnState::ProcessingDecodingAI {
+                                future: Arc::new(Mutex::new(future)),
+                            };
+                            continue;
                         }
-                        sequence.waiting_for_read = false;
-                        sequence.expected_read_length = None;
+                    } else {
+                        // 执行写子序列 (w*)
+                        if let Some(write_packet) =
+                            sequence.write_packets.get(sequence.current_step.index)
+                        {
+                            tracing::debug!(
+                                "AIConn::poll_read writing w{} with length {}",
+                                sequence.current_step.index,
+                                write_packet.len()
+                            );
+                            match ready!(Pin::new(&mut this.inner).poll_write(cx, write_packet)) {
+                                Ok(_) => {
+                                    tracing::debug!(
+                                        "AIConn::poll_read w{} completed",
+                                        sequence.current_step.index
+                                    );
+                                    // 切换到下一个读操作
+                                    sequence.advance_to_next_read();
+                                    continue;
+                                }
+                                Err(e) => {
+                                    tracing::debug!(
+                                        "AIConn::poll_read w{} failed: {}",
+                                        sequence.current_step.index,
+                                        e
+                                    );
+                                    return Poll::Ready(Err(e));
+                                }
+                            }
+                        } else {
+                            panic!("this can't happen");
+                        }
                     }
-                    continue;
+                }
+
+                ConnState::ProcessingDecodingAI { ref future } => {
+                    let poll_result = Pin::new(&mut future.lock().unwrap()).poll(cx);
+                    match ready!(poll_result) {
+                        Ok(decrypted_data) => {
+                            let len = decrypted_data.len().min(buf.remaining());
+                            tracing::debug!(
+                                "AIConn::poll_read returning {} decrypted bytes to caller",
+                                len
+                            );
+                            buf.put_slice(&decrypted_data[..len]);
+                            this.state = ConnState::Ready;
+                            // 通知等待的写操作
+                            this.wake_pending_operation(false);
+                            return Poll::Ready(Ok(()));
+                        }
+                        Err(e) => {
+                            tracing::debug!("AIConn::poll_read decryption failed: {}", e);
+                            this.state = ConnState::Ready;
+                            return Poll::Ready(Err(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Failed to decrypt data: {}", e),
+                            )));
+                        }
+                    }
                 }
             }
         }
@@ -249,99 +340,173 @@ impl AsyncWrite for AIConn {
     ) -> Poll<std::io::Result<usize>> {
         let this = &mut *self;
 
-        // 首先处理首包（如果有）
-        if let Some(first_packet) = this.first_packet.take() {
-            match Pin::new(&mut this.inner).poll_write(cx, &first_packet) {
-                Poll::Ready(Ok(_)) => {
-                    // 继续处理当前数据
+        loop {
+            tracing::debug!("AIConn::poll_write state: {:?}", this.state);
+            match &mut this.state {
+                ConnState::Ready => {
+                    tracing::debug!(
+                        "AIConn::poll_write starting new write sequence with {} bytes",
+                        buf.len()
+                    );
+                    if let Err(e) = this.initiate_ai_write_processing(buf.to_vec()) {
+                        tracing::debug!("AIConn::poll_write start_write_sequence failed: {}", e);
+                        return Poll::Ready(Err(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            e.to_string(),
+                        )));
+                    }
+                    continue;
                 }
-                Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
-                Poll::Pending => {
-                    this.first_packet = Some(first_packet);
-                    return Poll::Pending;
-                }
-            }
-        }
+                ConnState::ProcessingAI {
+                    ref future,
+                    is_write,
+                } => {
+                    if !*is_write {
+                        // 如果是读操作触发的AI处理，直接返回Pending
+                        tracing::debug!("AIConn::poll_write pending due to ongoing read operation");
+                        this.write_waker = Some(cx.waker().clone());
+                        return Poll::Pending;
+                    }
 
-        match &mut this.state {
-            ConnState::Ready => {
-                // 开始新的写序列
-                if let Err(e) = this.start_write_sequence(buf.to_vec()) {
-                    return Poll::Ready(Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        e.to_string(),
-                    )));
-                }
-                Poll::Ready(Ok(buf.len()))
-            }
-            ConnState::ProcessingAI { ref future } => {
-                let mut future = future.lock().unwrap();
-                let poll_result = Pin::new(&mut *future).poll(cx);
-                drop(future);
+                    let mut future = future.lock().unwrap();
+                    let poll_result = Pin::new(&mut *future).poll(cx);
+                    drop(future);
 
-                match ready!(poll_result) {
-                    Ok(sequence) => {
-                        if let Err(e) = this.create_write_sequence(sequence) {
+                    match ready!(poll_result) {
+                        Ok(AIResult::Write(sequence)) => {
+                            tracing::debug!(
+                                "AIConn::poll_write AI processing completed with write sequence"
+                            );
+                            this.state = ConnState::Writing(sequence);
+                            continue;
+                        }
+                        Ok(AIResult::Read { .. }) => {
+                            tracing::debug!("AIConn::poll_write unexpected read sequence");
                             return Poll::Ready(Err(std::io::Error::new(
                                 std::io::ErrorKind::Other,
-                                e.to_string(),
+                                "Unexpected read sequence in write operation",
                             )));
                         }
-                        Poll::Ready(Ok(buf.len()))
+                        Err(e) => {
+                            tracing::debug!("AIConn::poll_write AI processing failed: {}", e);
+                            return Poll::Ready(Err(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("AI processing failed: {}", e),
+                            )));
+                        }
                     }
-                    Err(e) => Poll::Ready(Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("AI processing failed: {}", e),
-                    ))),
                 }
-            }
-            ConnState::Writing(sequence) => {
-                if sequence.waiting_for_read {
-                    // 如果正在等待读取响应，返回 Pending
+                ConnState::Reading(_) | ConnState::ProcessingDecodingAI { .. } => {
+                    tracing::debug!("AIConn::poll_write pending due to ongoing read operation");
+
+                    // 保存 waker，等读操作完成时再唤醒
+                    this.write_waker = Some(cx.waker().clone());
                     return Poll::Pending;
                 }
-
-                if let Some(packet) = sequence.write_packets.front() {
-                    match Pin::new(&mut this.inner).poll_write(cx, packet) {
-                        Poll::Ready(Ok(_)) => {
-                            sequence.write_packets.pop_front();
-                            sequence.current_step += 1;
-
-                            // 检查是否需要等待读取响应
-                            if let Some(&read_len) = sequence.read_lengths.front() {
-                                if read_len > 0 {
-                                    sequence.waiting_for_read = true;
-                                    sequence.expected_read_length = Some(read_len);
+                ConnState::Writing(sequence) => {
+                    if sequence.current_step.is_write {
+                        // 执行写操作 (w*)
+                        if let Some(write_packet) =
+                            sequence.write_packets.get(sequence.current_step.index)
+                        {
+                            tracing::debug!(
+                                "AIConn::poll_write writing w{} with length {}",
+                                sequence.current_step.index,
+                                write_packet.len()
+                            );
+                            match ready!(Pin::new(&mut this.inner).poll_write(cx, write_packet)) {
+                                Ok(_) => {
+                                    tracing::debug!(
+                                        "AIConn::poll_write w{} completed",
+                                        sequence.current_step.index
+                                    );
+                                    // 切换到读操作
+                                    sequence.advance_to_next_read();
+                                    continue;
                                 }
-                                sequence.read_lengths.pop_front();
+                                Err(e) => {
+                                    tracing::debug!(
+                                        "AIConn::poll_write w{} failed: {}",
+                                        sequence.current_step.index,
+                                        e
+                                    );
+                                    return Poll::Ready(Err(e));
+                                }
                             }
-
-                            // 如果序列完成，重置状态
-                            if sequence.write_packets.is_empty() && !sequence.waiting_for_read {
-                                this.state = ConnState::Ready;
-                            }
-                            Poll::Ready(Ok(buf.len()))
+                        } else {
+                            panic!("this can't happen");
                         }
-                        Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
-                        Poll::Pending => Poll::Pending,
+                    } else {
+                        // 执行读操作 (r*)
+                        if let Some(&read_len) =
+                            sequence.read_lengths.get(sequence.current_step.index)
+                        {
+                            if read_len > 0 {
+                                tracing::debug!(
+                                    "AIConn::poll_write reading r{} with length {}",
+                                    sequence.current_step.index,
+                                    read_len
+                                );
+                                let mut temp_vec = vec![0u8; read_len];
+                                let mut temp_buf = tokio::io::ReadBuf::new(&mut temp_vec);
+
+                                match ready!(Pin::new(&mut this.inner).poll_read(cx, &mut temp_buf))
+                                {
+                                    Ok(()) => {
+                                        let filled_len = temp_buf.filled().len();
+                                        temp_vec.truncate(filled_len);
+                                        tracing::debug!(
+                                            "AIConn::poll_write r{} completed",
+                                            sequence.current_step.index
+                                        );
+
+                                        if sequence.current_step.index + 1
+                                            >= sequence.read_lengths.len()
+                                        {
+                                            // 序列完成
+                                            tracing::debug!("AIConn::poll_write sequence completed (at final read)");
+                                            this.state = ConnState::Ready;
+                                            return Poll::Ready(Ok(buf.len()));
+                                        } else {
+                                            // 切换到下一个写操作
+                                            sequence.advance_to_next_write();
+                                            continue;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        tracing::debug!(
+                                            "AIConn::poll_write r{} failed: {}",
+                                            sequence.current_step.index,
+                                            e
+                                        );
+                                        return Poll::Ready(Err(e));
+                                    }
+                                }
+                            } else {
+                                // 空读操作，直接切换到下一个写操作
+                                tracing::debug!(
+                                    "AIConn::poll_write skipping empty r{}",
+                                    sequence.current_step.index
+                                );
+                                sequence.advance_to_next_write();
+                                continue;
+                            }
+                        } else {
+                            panic!("this can't happen");
+                        }
                     }
-                } else {
-                    this.state = ConnState::Ready;
-                    Poll::Ready(Ok(buf.len()))
                 }
             }
-            ConnState::Reading(_) => Poll::Ready(Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Cannot write while in read sequence",
-            ))),
         }
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        tracing::debug!("AIConn::poll_flush");
         Pin::new(&mut self.inner).poll_flush(cx)
     }
 
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        tracing::debug!("AIConn::poll_shutdown");
         Pin::new(&mut self.inner).poll_shutdown(cx)
     }
 }
