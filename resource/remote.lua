@@ -25,7 +25,8 @@ direct_out_chain = { "Direct" }
 
 config = {
     inbounds = { 
-        {chain = trojan_chain, tag = "listen1"} ,
+        --{chain = trojan_chain, tag = "listen1"} ,
+        {chain = socks5http_chain, tag = "listen1"} ,
     },
 
     outbounds = { { tag="dial1", chain = direct_out_chain  } }

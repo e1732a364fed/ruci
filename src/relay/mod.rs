@@ -10,8 +10,9 @@ pub mod route;
 use std::sync::Arc;
 
 use bytes::BytesMut;
-use log::{info, log_enabled, warn};
+use log::{debug, info, log_enabled, warn};
 
+use crate::net::addr_conn::AsyncWriteAddrExt;
 use crate::net::{self, Stream, CID};
 
 use self::acc::MIterBox;
@@ -147,10 +148,17 @@ pub async fn handle_in_accumulate_result(
         return Ok(());
     }
 
-    if let Some(rta) = dial_result.a {
-        warn!("{cid}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
+    if let Some(rta) = &dial_result.a {
+        debug!("{cid}, dial out client succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
     }
-    cp_stream(cid, listen_result.c, dial_result.c, dial_result.b, ti);
+    cp_stream(
+        cid,
+        listen_result.c,
+        dial_result.c,
+        dial_result.b,
+        dial_result.a,
+        ti,
+    );
 
     Ok(())
 }
@@ -160,19 +168,20 @@ pub fn cp_stream(
     cid: CID,
     s1: Stream,
     s2: Stream,
-    ed: Option<BytesMut>, //earlydata
+    ed: Option<BytesMut>,            //earlydata
+    first_target: Option<net::Addr>, // 用于 udp
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
     match (s1, s2) {
         (Stream::TCP(i), Stream::TCP(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti),
         (Stream::TCP(i), Stream::UDP(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(cid, o, i, false, ed, ti));
+            tokio::spawn(cp_udp::cp_udp_tcp(cid, o, i, false, ed, first_target, ti));
         }
         (Stream::UDP(i), Stream::TCP(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(cid, i, o, true, ed, ti));
+            tokio::spawn(cp_udp::cp_udp_tcp(cid, i, o, true, ed, first_target, ti));
         }
         (Stream::UDP(i), Stream::UDP(o)) => {
-            tokio::spawn(cp_udp(cid, i, o, ti));
+            tokio::spawn(cp_udp(cid, i, o, ed, first_target, ti));
         }
         _ => {
             warn!("can't cp stream when either of them is None");
@@ -183,12 +192,12 @@ pub fn cp_stream(
 pub async fn cp_udp(
     cid: CID,
     in_conn: net::addr_conn::AddrConn,
-    out_conn: net::addr_conn::AddrConn,
+    mut out_conn: net::addr_conn::AddrConn,
+    ed: Option<BytesMut>,
+    first_target: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
     info!("{cid}, relay udp start",);
-
-    //discard early data, as we don't know it's target addr
 
     let tic = ti.clone();
     scopeguard::defer! {
@@ -198,6 +207,17 @@ pub async fn cp_udp(
 
         }
         info!("{cid},udp relay end" );
+    }
+
+    if let Some(real_ed) = ed {
+        if let Some(real_first_target) = first_target {
+            debug!("cp_udp: writing ed");
+            let r = out_conn.w.write(&real_ed, &real_first_target).await;
+            if let Err(e) = r {
+                warn!("cp_udp: writing ed failed: {e}");
+                return;
+            }
+        }
     }
 
     let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, ti).await;

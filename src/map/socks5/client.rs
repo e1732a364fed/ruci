@@ -1,4 +1,5 @@
 use bytes::BufMut;
+use log::debug;
 use macro_mapper::NoMapperExt;
 use map::{helpers, Addr, Network};
 use tokio::{
@@ -114,11 +115,12 @@ impl Client {
             if n < 3 {
                 bail!("socks5 client udp handshake read failed, too short: {}", n)
             }
-            assert!(n < 3);
+            assert!(n >= 3);
             if buf[0] != VERSION5 || buf[1] != 0 || buf[2] != 0 {
                 bail!("socks5 client udp handshake read failed, wrong msg");
             }
             buf.truncate(n);
+            buf.advance(3);
             let server_udp_addr = match helpers::socks5_bytes_to_addr(&mut buf) {
                 std::result::Result::Ok(a) => a,
                 Err(e) => return Err(e.context("socks5 client udp handshake failed")),
@@ -128,11 +130,14 @@ impl Client {
                 Some(so) => so,
                 None => bail!("socks5 client udp handshake failed, got server addr, but not a valid socketaddr, is {} instead", &server_udp_addr),
             };
-            let uso = UdpSocket::bind(server_udp_so).await?;
+
+            debug!("socks5 client, server udp socketaddr is {}", server_udp_so);
+            let uso = UdpSocket::bind("0.0.0.0:0").await?; //随机端口
 
             let ac = new_addr_conn(uso, server_udp_so);
 
             Ok(MapResult::newu(ac)
+                .a(Some(a))
                 .b(the_ed)
                 .d(map::AnyData::B(Box::new(adopted_method)))
                 .build())

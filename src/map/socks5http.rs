@@ -74,7 +74,7 @@ impl Server {
             },
             socks5_s: socks5::server::Server {
                 um: oum,
-                support_udp: false,
+                support_udp: true, //默认打开udp 支持
             },
         }
     }

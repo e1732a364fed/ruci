@@ -1,6 +1,5 @@
 use crate::net;
 use crate::net::addr_conn::*;
-use crate::net::Addr;
 use crate::net::CID;
 use bytes::BytesMut;
 use futures_util::pin_mut;
@@ -25,6 +24,7 @@ pub async fn cp_udp_tcp(
     mut c: net::Conn,
     ed_from_ac: bool,
     ed: Option<BytesMut>,
+    first_target: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<u64> {
     info!("{cid}, relay udp to tcp start",);
@@ -38,7 +38,7 @@ pub async fn cp_udp_tcp(
         }
         info!("{cid},udp to tcp relay end", );
     }
-    //discard udp addr part or use Addr::default
+    //might discard udp addr part
 
     if let Some(ed) = ed {
         if ed_from_ac {
@@ -47,7 +47,7 @@ pub async fn cp_udp_tcp(
                 return r.map(|x| x as u64);
             }
         } else {
-            let r = ac.w.write(&ed, &Addr::default()).await;
+            let r = ac.w.write(&ed, &first_target.unwrap_or_default()).await;
             if r.is_err() {
                 return r.map(|x| x as u64);
             }

@@ -252,6 +252,7 @@ impl ToMapper for InMapperConfig {
             }
             InMapperConfig::Socks5(c) => {
                 let so = socks5::server::Config {
+                    support_udp: true, //默认打开udp 支持
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()

@@ -40,12 +40,13 @@ pub(super) async fn udp_associate(
 
     let mut buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
 
-    let (_n, so) = tokio::time::timeout(
+    let (n, so) = tokio::time::timeout(
         time::Duration::from_secs(15),
         user_udp_socket.recv_from(&mut buf),
     )
     .await??;
-    use std::result::Result::Ok;
+
+    buf.truncate(n);
 
     let cip = client_future_addr
         .get_ip()
@@ -60,7 +61,8 @@ pub(super) async fn udp_associate(
         unspecified = true;
     }
 
-    let ad = decode_udp_diagram(&mut buf)?;
+    let ad = decode_udp_diagram(&mut buf)
+        .context("socks5 server udp handshake decode first addr failed")?;
 
     let clientsoa = if unspecified {
         so
