@@ -24,7 +24,7 @@ pub type MIterBox = Box<dyn MIter>;
 /// DynIterator is uncountable, because it's input is dynamic, it's
 /// output is also dynamic
 ///
-/// if you want to count it, you might use to_miter to try to get MIterBox first
+/// if you want to count it, you might use get_miter to try to get MIterBox first
 ///
 pub trait DynIterator {
     fn next_with_data(&mut self, data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>>;
@@ -33,7 +33,7 @@ pub trait DynIterator {
         self.next_with_data(None)
     }
 
-    fn to_miter(&self) -> Option<MIterBox> {
+    fn get_miter(&self) -> Option<MIterBox> {
         None
     }
 
@@ -61,7 +61,7 @@ impl DynIterator for DynMIterWrapper {
         self.0.next()
     }
 
-    fn to_miter(&self) -> Option<MIterBox> {
+    fn get_miter(&self) -> Option<MIterBox> {
         Some(self.0.clone())
     }
 
@@ -71,6 +71,8 @@ impl DynIterator for DynMIterWrapper {
 }
 
 /// 包装 std::vec::IntoIter<Arc<MapperBox>> 以使其支持 DynIterator
+///
+/// 比 DynMIterWrapper 少一层装箱
 #[derive(Debug, Clone)]
 pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapperBox>>);
 
@@ -83,7 +85,7 @@ impl DynIterator for DynVecIterWrapper {
         self.0.next()
     }
 
-    fn to_miter(&self) -> Option<MIterBox> {
+    fn get_miter(&self) -> Option<MIterBox> {
         Some(Box::new(self.0.clone()))
     }
 

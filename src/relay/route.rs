@@ -266,10 +266,10 @@ mod test {
         };
         let x = t.select(&Addr::default(), "l1", &Vec::new()).await;
         println!("{:?}", x);
-        assert_eq!(x.to_miter().unwrap().count(), 2); //can't count DMIter directly
+        assert_eq!(x.get_miter().unwrap().count(), 2); //can't count DMIter directly
         let x = t.select(&Addr::default(), "l11", &Vec::new()).await;
         println!("{:?}", x);
-        assert_eq!(x.to_miter().unwrap().count(), 1);
+        assert_eq!(x.get_miter().unwrap().count(), 1);
     }
 
     #[tokio::test]
@@ -314,13 +314,13 @@ mod test {
 
         let x = rsos.select(&Addr::default(), "l1", &params).await;
 
-        assert_eq!(x.to_miter().unwrap().count(), 1);
+        assert_eq!(x.get_miter().unwrap().count(), 1);
 
         println!("{:?}", x);
         params.clear();
         let x = rsos.select(&Addr::default(), "l1", &params).await;
 
-        assert_eq!(x.to_miter().unwrap().count(), 2);
+        assert_eq!(x.get_miter().unwrap().count(), 2);
         println!("{:?}", x);
     }
 }
