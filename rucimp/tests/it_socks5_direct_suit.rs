@@ -167,8 +167,7 @@ async fn f_dial_future_out_adder(
             },
         )
         .await
-        .c
-        .unwrap();
+        .c;
 
     info!("client{} writing hello...", rid,);
 

@@ -152,7 +152,7 @@ impl Mapper for Counter {
                 MapResult {
                     a: params.a,
                     b: None,
-                    c: Some(Stream::TCP(Box::new(cc))),
+                    c: Stream::TCP(Box::new(cc)),
                     d: Some(AnyData::B(Box::new(cd))),
                     e: None,
                 }

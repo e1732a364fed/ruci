@@ -31,7 +31,7 @@ async fn test_adder1() -> std::io::Result<()> {
         return Err(e);
     }
 
-    let r = r.c.unwrap();
+    let r = r.c;
     let mut r = r.try_unwrap_tcp()?;
     {
         let mut buf = [1u8, 2, 3];
@@ -83,10 +83,7 @@ async fn test_counter1() -> std::io::Result<()> {
         crate::map::AnyData::B(mut d) => {
             if let Some(cd) = d.downcast_mut::<counter::CounterData>() {
                 let mut inital_data = [1u8, 2, 3];
-                r.c.unwrap()
-                    .try_unwrap_tcp()?
-                    .write(&mut inital_data)
-                    .await?;
+                r.c.try_unwrap_tcp()?.write(&mut inital_data).await?;
 
                 let v = writevc.lock();
 

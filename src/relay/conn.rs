@@ -51,7 +51,7 @@ pub async fn handle_conn<'a>(
                 MapResult {
                     a: None,
                     b: None,
-                    c: Some(net::Stream::TCP(in_conn)),
+                    c: net::Stream::TCP(in_conn),
                     d: None,
                     e: None,
                 },
@@ -75,9 +75,7 @@ pub async fn handle_conn<'a>(
         Some(ta) => ta,
         None => {
             warn!("{state}, handshake in server succeed but got no target_addr",);
-            if let Some(c) = listen_result.c {
-                let _ = c.try_shutdown().await;
-            }
+            let _ = listen_result.c.try_shutdown().await;
             return Err(io::Error::other(
                 "handshake in server succeed but got no target_addr",
             ));
@@ -109,22 +107,13 @@ pub async fn handle_conn<'a>(
         Ok(t) => t,
         Err(e) => {
             warn!("{state}, parse target addr failed, {real_target_addr} , {e}",);
-            if let Some(c) = listen_result.c {
-                let _ = c.try_shutdown().await;
-            }
+            let _ = listen_result.c.try_shutdown().await;
             return Err(e);
         }
     };
 
     if is_direct {
-        cp_stream(
-            cid,
-            listen_result.c.take().unwrap(),
-            out_stream,
-            listen_result.b.take(),
-            ti,
-        )
-        .await;
+        cp_stream(cid, listen_result.c, out_stream, listen_result.b.take(), ti).await;
     } else {
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
@@ -134,7 +123,7 @@ pub async fn handle_conn<'a>(
                     MapResult {
                         a: Some(target_addr),
                         b: listen_result.b.take(),
-                        c: Some(out_stream),
+                        c: out_stream,
                         d: None,
                         e: None,
                     },
@@ -157,7 +146,7 @@ pub async fn handle_conn<'a>(
             //let _ = in_conn.shutdown();
             //let _ = out_stream.try_shutdown();
             return Err(e);
-        } else if let None = dial_result.c {
+        } else if let Stream::None = dial_result.c {
             info!("{state}, dial out client stream got consumed ",);
 
             return Ok(());
@@ -167,14 +156,7 @@ pub async fn handle_conn<'a>(
         if let Some(rta) = dial_result.a {
             warn!("{state}, dial out client succeed, but the target_addr is not consumed, {rta} ",);
         }
-        cp_stream(
-            cid,
-            listen_result.c.take().unwrap(),
-            dial_result.c.unwrap(),
-            None,
-            ti,
-        )
-        .await;
+        cp_stream(cid, listen_result.c, dial_result.c, None, ti).await;
     }
 
     Ok(())

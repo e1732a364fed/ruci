@@ -594,7 +594,7 @@ impl Server {
             return Ok(MapResult {
                 a: Some(ad),
                 b: if buf.len() > 0 { Some(buf) } else { None },
-                c: Some(map::Stream::TCP(base)),
+                c: map::Stream::TCP(base),
                 d: the_user.map_or(None, |up| Some(map::AnyData::B(Box::new(up)))), //将 该登录的用户信息 作为 额外信息 传回
                 e: None,
             });
@@ -605,7 +605,7 @@ impl Server {
             return Ok(MapResult {
                 a: None,
                 b: if buf.len() > 0 { Some(buf) } else { None },
-                c: None,
+                c: net::Stream::None,
                 d: Some(map::AnyData::B(Box::new(map::NewConnectionOptData {
                     new_connection: map::NewConnection::UdpConnection,
                     data: None,
@@ -617,7 +617,7 @@ impl Server {
         return Ok(MapResult {
             a: None,
             b: if buf.len() > 0 { Some(buf) } else { None },
-            c: Some(map::Stream::TCP(base)),
+            c: map::Stream::TCP(base),
             d: None,
             e: Some(Error::other(format!("socks5: not supported cmd, {}", cmd))),
         });

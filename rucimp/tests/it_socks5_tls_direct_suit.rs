@@ -70,7 +70,6 @@ async fn f_dial_future_tls_out_adder(
         )
         .await
         .c
-        .unwrap()
         .try_unwrap_tcp()?;
 
     let a = socks5::client::Client {
@@ -81,7 +80,6 @@ async fn f_dial_future_tls_out_adder(
         .maps(0, ruci::map::ProxyBehavior::ENCODE, MapParams::ca(nc, ta))
         .await
         .c
-        .unwrap()
         .try_unwrap_tcp()?;
 
     info!("client{} writing hello...", rid,);

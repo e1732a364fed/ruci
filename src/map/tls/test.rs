@@ -45,8 +45,7 @@ async fn dial_tls_in_mem() {
             },
         )
         .await
-        .c
-        .unwrap();
+        .c;
 
     let mut buf = [0u8; 1024];
     let n = r
@@ -81,8 +80,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result
             },
         )
         .await
-        .c
-        .unwrap();
+        .c;
 
     info!("client ok");
 
@@ -128,7 +126,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> std::io::Resu
     if let Some(e) = add_result.e {
         return Err(e);
     }
-    let conn = add_result.c.unwrap();
+    let conn = add_result.c;
 
     debug!("tls listen");
 

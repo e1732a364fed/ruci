@@ -154,7 +154,7 @@ impl MapParams {
 pub struct MapResult {
     pub a: Option<net::Addr>, //target_addr
     pub b: Option<BytesMut>,  //pre read buf
-    pub c: Option<Stream>,
+    pub c: Stream,
 
     ///extra data, 如果d为 AnyData::B, 则只能被外部调用;, 如果
     /// d为 AnyData::A, 可其可以作为 下一层的 InputData
@@ -168,7 +168,7 @@ impl MapResult {
         MapResult {
             a: Some(a),
             b: None,
-            c: Some(Stream::TCP(c)),
+            c: Stream::TCP(c),
             d: None,
             e: None,
         }
@@ -179,7 +179,7 @@ impl MapResult {
         MapResult {
             a: Some(a),
             b: if b.len() > 0 { Some(b) } else { None },
-            c: Some(Stream::TCP(c)),
+            c: Stream::TCP(c),
             d: None,
             e: None,
         }
@@ -189,7 +189,7 @@ impl MapResult {
         MapResult {
             a: Some(a),
             b: if b.len() > 0 { Some(b) } else { None },
-            c: Some(Stream::UDP(c)),
+            c: Stream::UDP(c),
             d: None,
             e: None,
         }
@@ -199,7 +199,7 @@ impl MapResult {
         MapResult {
             a: None,
             b: None,
-            c: Some(Stream::TCP(c)),
+            c: Stream::TCP(c),
             d: None,
             e: None,
         }
@@ -208,7 +208,7 @@ impl MapResult {
         MapResult {
             a: None,
             b: None,
-            c: None,
+            c: Stream::None,
             d: None,
             e: Some(e),
         }
@@ -228,7 +228,7 @@ impl MapResult {
         MapResult {
             a: None,
             b: Some(buf),
-            c: None,
+            c: Stream::None,
             d: None,
             e: Some(e),
         }
@@ -343,7 +343,7 @@ pub struct Accumulator<'a> {
 pub struct AccumulateResult {
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
-    pub c: Option<Stream>,
+    pub c: Stream,
     pub d: Vec<OptData>,
     pub e: Option<io::Error>,
 }
@@ -402,7 +402,7 @@ impl<'a> Accumulator<'a> {
                             cid,
                             behavior,
                             MapParams {
-                                c: last_r.c.unwrap(),
+                                c: last_r.c,
                                 a: last_r.a,
                                 b: last_r.b,
                                 d: input_data,
@@ -412,7 +412,10 @@ impl<'a> Accumulator<'a> {
 
                     calculated_output_vec.push(last_r.d);
 
-                    if last_r.c.is_none() || last_r.e.is_some() {
+                    if let Stream::None = last_r.c {
+                        break;
+                    }
+                    if last_r.e.is_some() {
                         break;
                     }
                 }

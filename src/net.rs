@@ -354,10 +354,13 @@ impl<'a> Display for OptAddrRef<'a> {
     }
 }
 
+#[derive(Default)]
 pub enum Stream {
     ///  tcp / unix domain socket 等 目标 Addr 唯一的 情况
     TCP(Conn),
     UDP(AddrConn),
+
+    #[default]
     None,
 }
 impl Stream {
