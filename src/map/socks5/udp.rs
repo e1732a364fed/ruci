@@ -106,7 +106,7 @@ impl AsyncReadAddr for Conn {
                 Ok(so) => {
                     if !so.eq(&self.peer_soa) {
                         // 读到不来自peer的信息时不报错, 直接舍弃
-                        info!("socks5 udp got msg not from peer");
+                        info!("socks5 udp got msg not from peer, will ignore discard it.");
                         return Poll::Pending;
                     }
                     let bs = rbuf.filled();
@@ -142,15 +142,20 @@ mod test {
     use bytes::BytesMut;
     use tokio::{net::UdpSocket, sync::mpsc};
 
-    use crate::net::{
-        addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt},
-        Addr,
+    use crate::{
+        map::socks5::decode_udp_diagram,
+        net::{
+            addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt},
+            Addr,
+        },
     };
 
     use super::new_addr_conn;
 
     #[tokio::test]
     async fn test1() -> anyhow::Result<()> {
+        //写两遍，一遍错一遍对，然后在 另一端写一遍
+
         let u = UdpSocket::bind("127.0.0.1:0").await?;
         let ula = u.local_addr()?;
         println!("binded to , {}", ula);
@@ -182,7 +187,7 @@ mod test {
             println!("try w2");
 
             let r =
-                ac.w.write(b"dfg", &Addr::from_addr_str("udp", "1.2.3.4:56").unwrap())
+                ac.w.write(b"dfg", &Addr::from_addr_str("udp", "5.6.7.8:90").unwrap())
                     .await;
 
             println!("try w2 ok, {:?}", r);
@@ -217,7 +222,12 @@ mod test {
 
         let n = nu.recv(&mut buf).await?;
 
-        println!("rok, {n}, {:?}", &buf[..n]);
+        buf.truncate(n);
+        println!("rok, {n}");
+
+        let ra = decode_udp_diagram(&mut buf);
+        assert!(ra.is_ok());
+        println!("rok, {:?}. {:?}", ra, buf);
 
         // ac.w.write(
         //     b"abc",
