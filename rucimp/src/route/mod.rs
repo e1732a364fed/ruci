@@ -18,6 +18,7 @@ pub mod config;
 
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Debug,
     sync::Arc,
 };
 
@@ -84,7 +85,7 @@ pub enum Mode {
 }
 
 /// ta 前缀 意思是 target_addr,
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct RuleSet {
     pub out_tag: String,
 
@@ -107,6 +108,23 @@ pub struct RuleSet {
     pub mmdb_reader: Option<Arc<maxminddb::Reader<Vec<u8>>>>,
 }
 //todo: add peer_addr related filter
+
+impl Debug for RuleSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RuleSet")
+            .field("out_tag", &self.out_tag)
+            .field("mode", &self.mode)
+            .field("in_tags", &self.in_tags)
+            .field("userset", &self.userset)
+            .field("ta_ip_countries", &self.ta_ip_countries)
+            .field("ta_networks", &self.ta_networks)
+            .field("ta_ipv4", &self.ta_ipv4)
+            .field("ta_ipv6", &self.ta_ipv6)
+            .field("ta_domain_matcher", &self.ta_domain_matcher)
+            //.field("mmdb_reader", &self.mmdb_reader) //print this would spam the console
+            .finish()
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct DomainMatcher {

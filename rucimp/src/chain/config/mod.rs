@@ -18,7 +18,10 @@ use ruci::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::route::config::RuleSetConfig;
+use crate::{
+    route::{config::RuleSetConfig, RuleSet},
+    COMMON_DIRS,
+};
 
 /// 静态配置中有初始化后即确定的listen/dial数量和行为
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
@@ -125,6 +128,34 @@ impl StaticConfig {
 
             route_tag_map
         })
+    }
+
+    pub fn get_rule_route(&self) -> Option<Vec<RuleSet>> {
+        let mut result = self.rule_route.clone().map(|rr| {
+            let x: Vec<RuleSet> = rr.into_iter().map(|r| r.to_ruleset()).collect();
+            x
+        });
+        #[cfg(feature = "geoip")]
+        {
+            if let Some(mut rs_v) = result {
+                use crate::route::maxmind;
+
+                let r = maxmind::open_mmdb("Country.mmdb", &COMMON_DIRS);
+                match r {
+                    Ok(m) => {
+                        let am = Some(Arc::new(m));
+
+                        rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
+                    }
+                    Err(e) => {
+                        warn!("no Country.mmdb: {e}");
+                    }
+                }
+
+                result = Some(rs_v);
+            }
+        }
+        result
     }
 }
 

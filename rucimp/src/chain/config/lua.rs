@@ -222,7 +222,7 @@ mod test {
     }
 
     #[test]
-    fn test_route() -> Result<()> {
+    fn test_tag_route() -> Result<()> {
         let lua = Lua::new();
         let globals = lua.globals();
 
@@ -263,6 +263,66 @@ mod test {
         println!("{:#?}", c.get_tag_route());
 
         println!("{:#?}", c.get_default_and_outbounds_map());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_rule_route() -> Result<()> {
+        let lua = Lua::new();
+        let globals = lua.globals();
+
+        let text = r#"
+        listen = { Listener =   "0.0.0.0:1080"   }
+        chain1 = {
+            listen,
+            { Socks5 = {   } },
+        }
+        
+        config = {
+            inbounds = {
+                {chain = chain1, tag = "listen1"},
+                {chain = { Stdio="myfake.com" }, tag = "listen2"},
+            },
+            outbounds = {
+                { 
+                    tag="dial1", chain = {
+                        { Dialer =  "0.0.0.0:1080"   }
+                    }
+                },
+
+                { 
+                    tag="dial2", chain = {
+                        "Direct"
+                    }
+                }
+            },
+            rule_route = { 
+                { 
+                    out_tag = "dial1", 
+                    mode = "WhiteList",
+                    in_tags = { "listen1" } ,
+                    ta_ip_countries = { "CN", "US" },
+                    ta_networks = { "tcp", "udp" },
+                    ta_ipv4 = { "192.168.1.0/24" },
+                    ta_domain_matcher = {
+                        domain_regex = {  "[a-z]+@[a-z]+",
+                        "[a-z]+" },
+                        domain_set = { "www.baidu.com" },
+                    }
+                } 
+            }
+        }
+        "#;
+
+        let c: StaticConfig = load(text)?;
+
+        println!("{:#?}", c);
+        let tr = c.get_rule_route();
+        assert!(tr.is_some());
+        println!("{:#?}", tr);
+
+        //println!("{:#?}", c.get_default_and_outbounds_map());
 
         Ok(())
     }

@@ -4,16 +4,10 @@
 
 use log::warn;
 use rucimp::{
-    example_common::{print_env_version, try_get_filecontent},
-    suit::{
-        config::adapter::{
-            load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
-        },
-        engine::SuitEngine,
-    },
+    example_common::*,
+    suit::{config::adapter::*, engine::SuitEngine},
 };
 
-/// 使用 config.suit.toml, resource/local.suit.toml, 或 用户提供的参数作为配置文件
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     //it's the second impl version of suit
