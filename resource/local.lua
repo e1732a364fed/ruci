@@ -599,7 +599,11 @@ local config_16_tun = {
            -- BindDialer = {
                 dial_addr = "tcp://192.168.0.204:10801",
                 sockopt = {
-                    bind_to_device = "WLAN" --enp0s1(linux 的一般情况) --WLAN( windows, 用wifi联网的情况)
+                    bind_to_device = "en0"
+                    
+                    -- enp0s1(linux 的一般情况) 
+                    -- en0  (macos 的情况)
+                    -- WLAN( windows, 用wifi联网的情况)
                 }
             }
         }, tlsout, websocket_out}
