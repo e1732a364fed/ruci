@@ -6,6 +6,7 @@ use std::io;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::map;
 use crate::map::*;
 use crate::net;
 
@@ -45,7 +46,7 @@ pub async fn handle_conn<'a>(
 
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            Accumulator::accumulate::<_, ExtraDataIterType>(
+            map::accumulate::<_, ExtraDataIterType>(
                 cid,
                 ProxyBehavior::DECODE,
                 MapResult {
@@ -117,7 +118,7 @@ pub async fn handle_conn<'a>(
     } else {
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                Accumulator::accumulate::<_, ExtraDataIterType>(
+                map::accumulate::<_, ExtraDataIterType>(
                     cid,
                     ProxyBehavior::ENCODE,
                     MapResult {

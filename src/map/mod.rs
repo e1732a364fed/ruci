@@ -333,9 +333,9 @@ pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
 /// 不使用累加器。
 ///
 /// 一种统计正确流量的办法是，将 Tcp连接包装一层专门记录流量的层，见 counter 模块
-pub struct Accumulator<'a> {
-    phantom: std::marker::PhantomData<&'a i32>,
-}
+// pub struct Accumulator<'a> {
+//     phantom: std::marker::PhantomData<&'a i32>,
+// }
 
 pub struct AccumulateResult {
     pub a: Option<net::Addr>,
@@ -345,92 +345,92 @@ pub struct AccumulateResult {
     pub e: Option<io::Error>,
 }
 
-impl<'a> Accumulator<'a> {
-    ///  accumulate 是一个作用很强的函数
-    /// extra_data_vec 若不为空，其须与 mappers 提供同数量的元素, 否则
-    /// 将panic
-    pub async fn accumulate<IterMapperBoxRef, IterOptData>(
-        cid: u32,
-        behavior: ProxyBehavior,
-        initial_state: MapResult,
-        mut mappers: IterMapperBoxRef,
-        mut hyperparameter_vec: Option<IterOptData>,
-    ) -> AccumulateResult
-    where
-        IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
-        IterOptData: Iterator<Item = OptData>,
-    {
-        let mut last_r: MapResult = initial_state;
+//impl<'a> Accumulator<'a> {
+///  accumulate 是一个作用很强的函数
+/// extra_data_vec 若不为空，其须与 mappers 提供同数量的元素, 否则
+/// 将panic
+pub async fn accumulate<'a, IterMapperBoxRef, IterOptData>(
+    cid: u32,
+    behavior: ProxyBehavior,
+    initial_state: MapResult,
+    mut mappers: IterMapperBoxRef,
+    mut hyperparameter_vec: Option<IterOptData>,
+) -> AccumulateResult
+where
+    IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
+    IterOptData: Iterator<Item = OptData>,
+{
+    let mut last_r: MapResult = initial_state;
 
-        let mut calculated_output_vec = Vec::new();
+    let mut calculated_output_vec = Vec::new();
 
-        loop {
-            match mappers.next() {
-                Some(adder) => {
-                    let input_data = InputData {
-                        calculated_data: match calculated_output_vec.last() {
-                            Some(x) => match x {
-                                Some(y) => match y {
-                                    AnyData::A(a) => {
-                                        let na = a.clone();
-                                        Some(AnyData::A(na))
-                                    }
-                                    _ => None,
-                                },
-                                None => None,
+    loop {
+        match mappers.next() {
+            Some(adder) => {
+                let input_data = InputData {
+                    calculated_data: match calculated_output_vec.last() {
+                        Some(x) => match x {
+                            Some(y) => match y {
+                                AnyData::A(a) => {
+                                    let na = a.clone();
+                                    Some(AnyData::A(na))
+                                }
+                                _ => None,
                             },
                             None => None,
                         },
-                        hyperparameter: if let Some(v) = hyperparameter_vec.as_mut() {
-                            v.next().unwrap()
-                        } else {
-                            None
-                        },
-                    };
-                    let input_data = if input_data.calculated_data.is_none()
-                        && input_data.calculated_data.is_none()
-                    {
-                        None
+                        None => None,
+                    },
+                    hyperparameter: if let Some(v) = hyperparameter_vec.as_mut() {
+                        v.next().unwrap()
                     } else {
-                        Some(input_data)
-                    };
-                    last_r = adder
-                        .maps(
-                            cid,
-                            behavior,
-                            MapParams {
-                                c: last_r.c,
-                                a: last_r.a,
-                                b: last_r.b,
-                                d: input_data,
-                            },
-                        )
-                        .await;
+                        None
+                    },
+                };
+                let input_data = if input_data.calculated_data.is_none()
+                    && input_data.calculated_data.is_none()
+                {
+                    None
+                } else {
+                    Some(input_data)
+                };
+                last_r = adder
+                    .maps(
+                        cid,
+                        behavior,
+                        MapParams {
+                            c: last_r.c,
+                            a: last_r.a,
+                            b: last_r.b,
+                            d: input_data,
+                        },
+                    )
+                    .await;
 
-                    calculated_output_vec.push(last_r.d);
+                calculated_output_vec.push(last_r.d);
 
-                    if let Stream::None = last_r.c {
-                        break;
-                    }
-                    if last_r.e.is_some() {
-                        break;
-                    }
+                if let Stream::None = last_r.c {
+                    break;
                 }
-                None => {
+                if last_r.e.is_some() {
                     break;
                 }
             }
+            None => {
+                break;
+            }
         }
-
-        return AccumulateResult {
-            a: last_r.a,
-            b: last_r.b,
-            c: last_r.c,
-            d: calculated_output_vec,
-            e: last_r.e,
-        };
     }
+
+    return AccumulateResult {
+        a: last_r.a,
+        b: last_r.b,
+        c: last_r.c,
+        d: calculated_output_vec,
+        e: last_r.e,
+    };
 }
+//}
 /*
 /// 类似 TcpInAccumulator , 这是一个作用很强的累加器，
 ///
