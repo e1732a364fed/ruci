@@ -19,6 +19,8 @@ use crate::{net::*, Name};
 use async_trait::async_trait;
 use log::{debug, log_enabled};
 use tokio::io::{AsyncRead, AsyncWrite};
+
+use macro_mapper::{mapper_ext_fields, MapperExt};
 /// takes ownership of base Conn, for counting
 pub struct CounterConn {
     pub data: CounterData,
@@ -101,7 +103,6 @@ impl AsyncWrite for CounterConn {
     }
 }
 
-use macro_mapper::{mapper_ext_fields, MapperExt};
 /// 通过 maps 给 base 添加 上传和下载的流量计数
 #[mapper_ext_fields]
 #[derive(Debug, Clone, Default, MapperExt)]

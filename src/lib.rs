@@ -7,7 +7,7 @@ uses tokio.
 
 See doc of mod map for the basic proxy progress abstraction.
 
-Refer to rucimp sub crate for config file format related implmetations and for more proxy protocol implements.
+Refer to rucimp sub crate for config file format related implements and for more proxy protocol implements.
 
 */
 
@@ -41,7 +41,7 @@ impl<T: Name + ?Sized> Name for &mut T {
     }
 }
 
-pub type AnyS = dyn Any + Send + Sync; // 加 Send+ Sync 以支持多线程
+pub type AnyS = dyn Any + Send + Sync; //  Send + Sync for multi-thread
 pub type AnyBox = Box<AnyS>;
 pub type AnyArc = Arc<Mutex<AnyS>>;
 
