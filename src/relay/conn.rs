@@ -3,7 +3,6 @@ use log::{info, log_enabled, warn};
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::AsyncWriteExt;
 
 use crate::map::*;
 use crate::net;
@@ -66,7 +65,7 @@ pub async fn handle_conn<'a>(
                 state
             );
             if let Some(c) = listen_result.c {
-                let _ = c.try_unwrap_tcp()?.shutdown().await;
+                let _ = c.try_shutdown().await;
             }
             return Err(io::Error::other(
                 "handshake in server succeed but got no target_addr",
@@ -94,33 +93,6 @@ pub async fn handle_conn<'a>(
     state.outc_name = outc_name.to_string();
 
     //todo: DNS 功能
-    /*
-    let socket_addr = match real_target_addr.get_socket_addr_or_resolve() {
-        Ok(t) => t,
-        Err(e) => {
-            warn!(
-                "{}, parse target addr failed, {} , {}",
-                state, real_target_addr, e
-            );
-            if let Some(c) = listen_result.c {
-                let _ = c.try_unwrap_tcp()?.shutdown().await;
-            }
-            return Err(e);
-        }
-    };
-
-
-    let out_tcp = match TcpStream::connect(socket_addr).await {
-        Ok(tcp) => tcp,
-        Err(e) => {
-            warn!("{}, handshake in server failed: {}", state, e);
-            if let Some(c) = listen_result.c {
-                let _ = c.try_unwrap_tcp()?.shutdown().await;
-            }
-            return Err(e);
-        }
-    };
-     */
 
     let out_stream = match real_target_addr.try_dial().await {
         Ok(t) => t,
@@ -130,7 +102,7 @@ pub async fn handle_conn<'a>(
                 state, real_target_addr, e
             );
             if let Some(c) = listen_result.c {
-                let _ = c.try_unwrap_tcp()?.shutdown().await;
+                let _ = c.try_shutdown().await;
             }
             return Err(e);
         }

@@ -26,6 +26,7 @@ use std::{
 };
 use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::net::UdpSocket;
 use tokio::net::UnixStream;
@@ -359,6 +360,12 @@ pub enum Stream {
     None,
 }
 impl Stream {
+    pub async fn try_shutdown(self) {
+        if let Stream::TCP(mut t) = self {
+            let _ = t.shutdown().await;
+        }
+    }
+
     pub fn try_unwrap_tcp(self) -> io::Result<Conn> {
         if let Stream::TCP(t) = self {
             return Ok(t);
