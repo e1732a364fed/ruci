@@ -6,7 +6,7 @@ use crate::{
 };
 use futures::{join, FutureExt};
 use log::info;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},

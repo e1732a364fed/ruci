@@ -2,7 +2,7 @@ use std::{net::Ipv4Addr, pin::Pin, task::Poll};
 
 use super::*;
 use bytes::{Buf, BufMut, BytesMut};
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use tokio::io::ReadBuf;
 
 use super::ConnTrait;
@@ -240,7 +240,7 @@ impl AsyncWrite for MockTcpStream {
         let mut x = Vec::from(buf);
 
         if let Some(swt) = &self.write_target {
-            let mut v = swt.lock().unwrap();
+            let mut v = swt.lock();
             v.append(&mut x);
         } else {
             if self.write_data.len() == 0 {
@@ -267,7 +267,7 @@ mod test {
     use super::*;
 
     use bytes::BufMut;
-    use std::sync::Mutex;
+    use parking_lot::Mutex;
     use tokio::io::AsyncReadExt;
 
     #[tokio::test]

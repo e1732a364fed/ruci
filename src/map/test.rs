@@ -1,8 +1,8 @@
 use crate::map::{MapParams, Mapper};
 use crate::net::helpers::MockTcpStream;
 
+use parking_lot::Mutex;
 use std::sync::Arc;
-use std::sync::Mutex;
 use tokio::io::AsyncWriteExt;
 
 use super::ProxyBehavior;
@@ -36,7 +36,7 @@ async fn test_adder1() -> std::io::Result<()> {
     {
         let mut buf = [1u8, 2, 3];
         r.write(&mut buf).await?;
-        let mut v = writevc.lock().unwrap();
+        let mut v = writevc.lock();
         println!("it     be {:?}", v);
         assert!(v.eq(&vec![3, 4, 5]));
         v.clear();
@@ -45,7 +45,7 @@ async fn test_adder1() -> std::io::Result<()> {
     {
         let mut buf = [253u8, 254, 255];
         r.write(&mut buf).await?;
-        let v = writevc.lock().unwrap();
+        let v = writevc.lock();
         println!("it     be {:?}", v);
         assert!(v.eq(&vec![255, 0, 1]));
     }
@@ -88,7 +88,7 @@ async fn test_counter1() -> std::io::Result<()> {
                     .write(&mut inital_data)
                     .await?;
 
-                let v = writevc.lock().unwrap();
+                let v = writevc.lock();
 
                 println!("it     be {:?}", v);
                 assert_eq!(v.len(), inital_data.len());

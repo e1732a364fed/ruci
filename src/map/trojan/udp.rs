@@ -128,8 +128,8 @@ mod test {
         helpers::MockTcpStream,
     };
     use super::*;
+    use parking_lot::Mutex;
     use std::sync::Arc;
-    use std::sync::Mutex;
 
     #[tokio::test]
     async fn test_w() -> std::io::Result<()> {

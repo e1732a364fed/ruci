@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bytes::{BufMut, BytesMut};
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use crate::map::{MapParams, Mapper, ProxyBehavior};
 use crate::net::{self, Addr};
