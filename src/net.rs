@@ -512,16 +512,10 @@ impl Display for Stream {
 
 impl Stream {
     pub fn is_none(&self) -> bool {
-        match self {
-            Stream::None => true,
-            _ => false,
-        }
+        matches!(self, Stream::None)
     }
     pub fn is_not_none(&self) -> bool {
-        match self {
-            Stream::None => false,
-            _ => true,
-        }
+        !matches!(self, Stream::None)
     }
     pub async fn try_shutdown(self) -> io::Result<()> {
         if let Stream::TCP(mut t) = self {

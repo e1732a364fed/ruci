@@ -35,7 +35,7 @@ fn load_certs(path: &PathBuf) -> io::Result<Vec<CertificateDer<'static>>> {
     Ok(certs(&mut BufReader::new(File::open(path)?))
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("{:?}", e)))?
         .into_iter()
-        .map(|u| CertificateDer::from(u))
+        .map(CertificateDer::from)
         .collect())
 }
 

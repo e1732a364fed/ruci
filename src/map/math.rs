@@ -44,9 +44,9 @@ impl AdderConn {
 
     //read self.base + add to self.wbuf
     fn read_to_rbuf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<()>> {
-        let mut abuf = &mut self.rbuf;
+        let abuf = &mut self.rbuf;
         abuf.resize(abuf.capacity(), 0);
-        let mut rb = ReadBuf::new(&mut abuf);
+        let mut rb = ReadBuf::new(abuf);
 
         let r = self.base.as_mut().poll_read(cx, &mut rb);
 
@@ -155,9 +155,10 @@ impl Name for Adder {
 impl ToMapper for i8 {
     /// AddDirection = Read
     fn to_mapper(&self) -> MapperBox {
-        let mut a = Adder::default();
-        a.addnum = *self;
-        Box::new(a)
+        Box::new(Adder {
+            addnum: *self,
+            ..Default::default()
+        })
     }
 }
 

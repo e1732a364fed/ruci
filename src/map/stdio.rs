@@ -73,7 +73,7 @@ impl Name for Stdio {
 
 impl Stdio {
     pub fn from(s: &str) -> MapperBox {
-        if s == "" {
+        if s.is_empty() {
             Box::new(Stdio { addr: None })
         } else {
             let a = net::Addr::from_network_addr_str(s).unwrap();

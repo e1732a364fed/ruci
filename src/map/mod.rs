@@ -155,7 +155,7 @@ impl MapResult {
     }
     pub fn oac(a: Option<net::Addr>, c: net::Conn) -> Self {
         MapResult {
-            a: a,
+            a,
             b: None,
             c: Stream::TCP(c),
             d: None,

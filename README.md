@@ -75,6 +75,7 @@ cp target/release/examples/suit2 .
 cp target/release/examples/chain .
 ```
 
+详见 [exmaples](rucimp/examples/readme.md)
 
 
 ## 开发

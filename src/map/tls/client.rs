@@ -32,7 +32,7 @@ impl Client {
                 .map(|ta| TrustAnchor {
                     subject: ta.subject.into(),
                     subject_public_key_info: ta.spki.into(),
-                    name_constraints: ta.name_constraints.map(|u| Der::from(u)),
+                    name_constraints: ta.name_constraints.map(Der::from),
                 }),
         );
         let mut config = ClientConfig::builder()
@@ -99,16 +99,14 @@ impl rustls::client::danger::ServerCertVerifier for SuperDanVer {
                 .map(|ta| TrustAnchor {
                     subject: ta.subject.into(),
                     subject_public_key_info: ta.spki.into(),
-                    name_constraints: ta.name_constraints.map(|u| Der::from_slice(u)),
+                    name_constraints: ta.name_constraints.map(Der::from_slice),
                 }),
         );
 
-        let x = WebPkiClientVerifier::builder(Arc::new(root_certs))
+        WebPkiClientVerifier::builder(Arc::new(root_certs))
             .build()
             .unwrap()
-            .supported_verify_schemes();
-
-        x
+            .supported_verify_schemes()
     }
 }
 
