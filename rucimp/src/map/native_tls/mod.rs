@@ -3,7 +3,7 @@ Defines [`ruci::map::Map`]s for TLS using `tokio_native_tls`.
 
  */
 
-use std::{fmt, fs::File, io::Read};
+use std::{fmt, path::PathBuf};
 
 use anyhow::Context;
 use async_trait::async_trait;
@@ -17,34 +17,35 @@ use ruci::{
 use macro_map::*;
 use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
 
-pub fn load(cert_path: &str, key_path: &str) -> anyhow::Result<Identity> {
-    let mut cert_file = File::open(cert_path)?;
-    let mut certs = vec![];
-    cert_file
-        .read_to_end(&mut certs)
-        .context("cert_file read failed")?;
+pub fn load(
+    cert_path: PathBuf,
+    key_path: PathBuf,
+    read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+) -> anyhow::Result<Identity> {
+    let cert_file = read_fn(cert_path)?;
 
-    let mut key_file = File::open(key_path)?;
-    let mut key = vec![];
-    key_file.read_to_end(&mut key)?;
-    let pkcs8 = Identity::from_pkcs8(&certs, &key).context("Identity::from_pkcs8 failed")?;
+    let key_file = read_fn(key_path)?;
+    let pkcs8 = Identity::from_pkcs8(cert_file.as_bytes(), key_file.as_bytes())
+        .context("Identity::from_pkcs8 failed")?;
 
     Ok(pkcs8)
 }
 
-#[derive(Debug, Clone)]
-pub struct ServerOptions {
-    pub cert_f_path: String,
-    pub key_f_path: String,
-}
-impl ServerOptions {
-    pub fn get_server(&self) -> anyhow::Result<Server> {
-        let id = load(&self.cert_f_path, &self.key_f_path).context("load cert or key failed")?;
+impl Server {
+    pub fn from(
+        sc: &ruci::map::tls::server::TlsServerOptions,
+        read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+    ) -> anyhow::Result<Server> {
+        let id =
+            load(sc.cert.clone(), sc.key.clone(), read_fn).context("load cert or key failed")?;
+
+        //native_tls 的 acceptor 的 builder 是不支持配置 alpn的，只有 connector 才支持
+        let ta =
+            tokio_native_tls::native_tls::TlsAcceptor::new(id).context("TlsAcceptor new failed")?;
+
+        let ta = TlsAcceptor::from(ta);
         Ok(Server {
-            ta: TlsAcceptor::from(
-                tokio_native_tls::native_tls::TlsAcceptor::new(id)
-                    .context("TlsAcceptor new failed")?,
-            ),
+            ta,
             ext_fields: Some(MapExtFields::default()),
         })
     }
@@ -113,9 +114,7 @@ impl map::Map for Server {
 #[map_ext_fields]
 #[derive(Clone, Debug, MapExt)]
 pub struct Client {
-    pub domain: Option<String>,
-    pub insecure: bool,
-    pub alpn: Option<Vec<String>>,
+    pub config: ruci::map::tls::client::TlsClientOptions,
 }
 
 impl Name for Client {
@@ -134,10 +133,10 @@ impl map::Map for Client {
     ) -> map::MapResult {
         let conn = params.c;
         if let ruci::net::Stream::Conn(conn) = conn {
-            let connector = if self.insecure {
+            let connector = if self.config.insecure {
                 let mut b = tokio_native_tls::native_tls::TlsConnector::builder();
 
-                if let Some(a) = &self.alpn {
+                if let Some(a) = &self.config.alpn {
                     let a: Vec<_> = a.iter().map(|s| s.as_str()).collect();
                     b.request_alpns(&a);
                 }
@@ -150,7 +149,7 @@ impl map::Map for Client {
                 )
             } else {
                 let mut b = tokio_native_tls::native_tls::TlsConnector::builder();
-                if let Some(a) = &self.alpn {
+                if let Some(a) = &self.config.alpn {
                     let a: Vec<_> = a.iter().map(|s| s.as_str()).collect();
                     b.request_alpns(&a);
                 }
@@ -161,7 +160,8 @@ impl map::Map for Client {
             let r = connector
                 .connect(
                     &self
-                        .domain
+                        .config
+                        .host
                         .as_ref()
                         .unwrap_or(&params.a.clone().unwrap().get_name().unwrap()),
                     conn,

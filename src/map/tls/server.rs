@@ -1,6 +1,5 @@
 use macro_map::*;
-
-use crate::map::{MapBox, ToMapBox};
+use serde::{Deserialize, Serialize};
 
 use self::map::{MapExtFields, CID};
 
@@ -13,27 +12,23 @@ pub struct ServerPEMOptions {
     pub alpn: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct ServerOptions {
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TlsServerOptions {
     pub cert: PathBuf,
     pub key: PathBuf,
     pub alpn: Option<Vec<String>>,
 }
 
 impl ServerPEMOptions {
-    pub fn from(opts: &ServerOptions) -> std::io::Result<Self> {
+    pub fn from(
+        opts: &TlsServerOptions,
+        read_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>>,
+    ) -> std::io::Result<Self> {
         Ok(Self {
-            cert: std::fs::read_to_string(opts.cert.clone())?,
-            key: std::fs::read_to_string(opts.key.clone())?,
+            cert: read_fn(opts.cert.clone())?,
+            key: read_fn(opts.key.clone())?,
             alpn: opts.alpn.clone(),
         })
-    }
-}
-
-impl ToMapBox for ServerOptions {
-    fn to_map_box(&self) -> MapBox {
-        let a = Server::new(self.clone());
-        Box::new(a)
     }
 }
 
@@ -41,7 +36,7 @@ impl ToMapBox for ServerOptions {
 #[map_ext_fields]
 #[derive(Clone, MapExt)]
 pub struct Server {
-    pub option_cache: ServerOptions,
+    pub option_cache: ServerPEMOptions,
     ta: TlsAcceptor,
 }
 
@@ -57,8 +52,8 @@ impl<IO> crate::Name for tokio_rustls::server::TlsStream<IO> {
 }
 
 impl Server {
-    pub fn new(c: ServerOptions) -> Self {
-        let config = load::load_ser_config(&c, None).expect("tls server config valid");
+    pub fn new(c: ServerPEMOptions) -> Self {
+        let config = load::load_ser_config_from_pem(&c, None).expect("tls server config valid");
         Server {
             ta: TlsAcceptor::from(Arc::new(config)),
             option_cache: c.clone(),

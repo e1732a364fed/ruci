@@ -1,5 +1,5 @@
 /*!
- * Define a MITM map, which unwrap tls stream at client and rewrap it at server.
+ * Define a MITM map, which unwrap tls stream at server.
  *
  * 原理是，解析用户的 tls 请求，对每一个 client_hello 中的 host 都生成一个 证书，然后用这个证书和私钥对用户的请求进行 tls 握手。
  *
@@ -87,7 +87,7 @@ impl Map for MITM {
                     // let alpn = { tls::extract_alpn_from_clinet_hello(&b) };
                     // debug!("MITM: client shown alpn is {:?}", alpn);
 
-                    let sc = crate::map::tls::load::load_ser_config_by_pem(
+                    let sc = crate::map::tls::load::load_ser_config_from_pem(
                         &self.sc,
                         Some(&Authority::from_maybe_shared(authority.clone()).unwrap()),
                     )

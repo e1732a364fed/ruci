@@ -462,7 +462,7 @@ pub struct LuaMap {
     pub lua_text: String,        //整个 lua文件的内容
     pub handshake_f_key: String, //lua文件中 对应的 map 函数的 函数名
 
-    pub file_source: Option<crate::utils::FileSource>,
+    pub file_source: Arc<Option<crate::utils::FileSource>>,
 }
 
 impl Name for LuaMap {
@@ -524,7 +524,7 @@ impl LuaMap {
             .unwrap();
         lua.globals().set("Warn_print", f).unwrap();
 
-        if let Some(fs) = &self.file_source {
+        if let Some(fs) = self.file_source.as_ref() {
             create_load_file_func(&lua, fs);
         }
 

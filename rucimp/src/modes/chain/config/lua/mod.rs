@@ -27,11 +27,13 @@ const CONFIG_KEY: &str = "Config";
 /// * `mlua::Result<StaticConfig>` - The parsed static chain configuration
 pub fn load_static(
     lua_text: &str,
-    file_source: Option<&crate::utils::FileSource>,
+    file_source: Arc<Option<crate::utils::FileSource>>,
 ) -> mlua::Result<StaticConfig> {
     let lua = Lua::new();
 
-    file_source.inspect(|file_source| crate::map::lua::create_load_file_func(&lua, file_source));
+    if let Some(file_source) = file_source.as_ref() {
+        crate::map::lua::create_load_file_func(&lua, file_source)
+    }
 
     lua.load(lua_text).exec()?;
 

@@ -20,7 +20,7 @@ pub type GMap = HashMap<String, LuaNextGenerator>;
 pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(move |lua, v: LuaValue| {
         let c = lua.from_value::<InMapConfig>(v)?;
-        let m = c.to_map_box(None);
+        let m = c.to_map_box(Arc::new(None));
         let m = MapWrapper(Arc::new(m));
         Ok(m)
     })?;
@@ -34,7 +34,7 @@ pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
 pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(move |lua, v: LuaValue| {
         let c = lua.from_value::<OutMapConfig>(v)?;
-        let m = c.to_map_box(None);
+        let m = c.to_map_box(Arc::new(None));
         let m = MapWrapper(Arc::new(m));
         Ok(m)
         // }
@@ -48,9 +48,9 @@ pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
 /// read INFINITE_CONFIG_FIELD  global variable
 pub fn load_infinite_io(
     lua_text: &str,
-    file_source: Option<&crate::utils::FileSource>,
+    file_source: Arc<Option<FileSource>>,
 ) -> anyhow::Result<(GMap, GMap)> {
-    let i = get_g_map_from(lua_text, ProxyBehavior::DECODE, file_source)?;
+    let i = get_g_map_from(lua_text, ProxyBehavior::DECODE, file_source.clone())?;
     let o = get_g_map_from(lua_text, ProxyBehavior::ENCODE, file_source)?;
     Ok((i, o))
 }
@@ -58,12 +58,15 @@ pub fn load_infinite_io(
 fn get_g_map_from(
     lua_text: &str,
     behavior: ProxyBehavior,
-    file_source: Option<&crate::utils::FileSource>,
+    file_source: Arc<Option<FileSource>>,
 ) -> anyhow::Result<GMap> {
     let mut g_map: GMap = HashMap::new();
 
     let lua = Lua::new();
-    file_source.inspect(|file_source| create_load_file_func(&lua, file_source));
+
+    if let Some(file_source) = file_source.as_ref() {
+        create_load_file_func(&lua, file_source)
+    }
 
     lua.load(lua_text).exec().context("eval lua failed")?;
 
@@ -165,7 +168,7 @@ impl InnerLuaNextGenerator {
         let ic: LuaResult<T> = self.lua.from_value(v);
         match ic {
             Ok(ic) => {
-                let mut mb = ic.to_map_box(None);
+                let mut mb = ic.to_map_box(Arc::new(None));
                 mb.set_chain_tag(&self.tag);
                 Some((i, Some(Arc::new(mb))))
             }

@@ -6,12 +6,13 @@ use crate::{
     map::{self, *},
     net::{self, AsyncConn, CID},
 };
+use tls::server::ServerPEMOptions;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
 };
 
-use super::client::ClientOptions;
+use super::client::TlsClientOptions;
 
 async fn dial_future(
     listen_host_str: &str,
@@ -22,9 +23,9 @@ async fn dial_future(
         .await
         .expect("dial tcp succeed");
 
-    let a = super::client::Client::new(ClientOptions {
-        domain: Some("test.domain".to_string()),
-        is_insecure: true,
+    let a = super::client::Client::new(TlsClientOptions {
+        host: Some("test.domain".to_string()),
+        insecure: true,
         ..Default::default()
     });
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.
@@ -69,12 +70,17 @@ async fn listen_future(
     let mut path2 = PathBuf::new();
     path2.push("test.key");
 
-    let a = super::server::Server::new(super::server::ServerOptions {
+    let sc = super::server::TlsServerOptions {
         // addr: "addr".to_string(),
         cert: path,
         key: path2,
         ..Default::default()
-    });
+    };
+
+    let a = super::server::Server::new(ServerPEMOptions::from(
+        &sc,
+        Box::new(std::fs::read_to_string),
+    )?);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
         .await

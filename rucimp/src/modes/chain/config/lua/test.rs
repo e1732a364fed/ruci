@@ -39,7 +39,7 @@ fn test_in() -> mlua::Result<()> {
         }
     "#;
 
-    let mut c: StaticConfig = load_static(text, None)?;
+    let mut c: StaticConfig = load_static(text, Arc::new(None))?;
 
     println!("{:#?}", c);
 
@@ -53,7 +53,7 @@ fn test_in() -> mlua::Result<()> {
     )
     .exec()?;
 
-    c = load_static(text, None)?;
+    c = load_static(text, Arc::new(None))?;
 
     let first_listen_group = c.inbounds.first().unwrap();
     let last_m = first_listen_group.chain.last().unwrap();
@@ -112,7 +112,7 @@ fn test_out() -> mlua::Result<()> {
             }
         "#;
 
-    let c: StaticConfig = load_static(text, None)?;
+    let c: StaticConfig = load_static(text, Arc::new(None))?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -166,7 +166,7 @@ fn test_out2() -> mlua::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text, None)?;
+    let c: StaticConfig = load_static(text, Arc::new(None))?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -218,7 +218,7 @@ fn test_out3() -> mlua::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text, None)?;
+    let c: StaticConfig = load_static(text, Arc::new(None))?;
 
     println!("{:#?}", c);
     let dial = c.outbounds;
@@ -278,14 +278,14 @@ fn test_tag_route() -> mlua::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text, None)?;
+    let c: StaticConfig = load_static(text, Arc::new(None))?;
 
     println!("{:#?}", c);
     let tr = c.get_tag_route();
     assert!(tr.is_some());
     println!("{:#?}", c.get_tag_route());
 
-    println!("{:#?}", c.get_default_and_outbounds_map(None));
+    println!("{:#?}", c.get_default_and_outbounds_map(Arc::new(None)));
 
     Ok(())
 }
@@ -404,13 +404,13 @@ fn test_rule_route() -> mlua::Result<()> {
         }
         "#;
 
-    let c: StaticConfig = load_static(text, None)?;
+    let c: StaticConfig = load_static(text, Arc::new(None))?;
 
     println!("{:#?}", c);
 
     #[cfg(feature = "route")]
     {
-        let tr = c.get_rule_route(&crate::utils::FileSource::default());
+        let tr = c.get_rule_route(Arc::new(None));
         assert!(tr.is_some());
         println!("{:#?}", tr);
     }
@@ -567,7 +567,7 @@ Infinite = {
 }
         "#;
 
-    let gm = load_infinite_io(text, None)?;
+    let gm = load_infinite_io(text, Arc::new(None))?;
     println!("{:?}", gm);
     Ok(())
 }

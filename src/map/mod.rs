@@ -289,7 +289,9 @@ pub trait ToMapBox {
     fn to_map_box(&self) -> MapBox;
 }
 
-//令 Map 实现 Send + Sync, 否则异步/多线程报错
+/// 令 Map 实现 Send + Sync, 否则异步/多线程报错
+///
+/// 且添加了 [`MapExt`]
 pub trait MapSync: MapExt + Send + Sync {}
 impl<T: MapExt + Send + Sync> MapSync for T {}
 

@@ -5,6 +5,7 @@ use rustls::{
     server::WebPkiClientVerifier,
     ClientConfig,
 };
+use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt;
 
 use self::{
@@ -34,18 +35,18 @@ fn default_cc() -> ClientConfig {
         .with_no_client_auth()
 }
 
-#[derive(Debug, Default)]
-pub struct ClientOptions {
-    pub domain: Option<String>,
-    pub is_insecure: bool,
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TlsClientOptions {
+    pub host: Option<String>,
+    pub insecure: bool,
     pub alpn: Option<Vec<String>>,
 }
 
 impl Client {
-    pub fn new(opt: ClientOptions) -> Self {
+    pub fn new(opt: TlsClientOptions) -> Self {
         let mut config = default_cc();
 
-        if opt.is_insecure {
+        if opt.insecure {
             config
                 .dangerous()
                 .set_certificate_verifier(Arc::new(SuperDanVer {}));
@@ -55,8 +56,8 @@ impl Client {
         }
 
         Client {
-            server_domain: opt.domain,
-            is_insecure: opt.is_insecure,
+            server_domain: opt.host,
+            is_insecure: opt.insecure,
             client_config: Arc::new(config),
             ext_fields: Some(MapExtFields::default()),
         }
@@ -126,7 +127,7 @@ impl Client {
                 ServerName::try_from(
                     self.server_domain
                         .clone()
-                        .unwrap_or(a.clone().unwrap().get_name().unwrap()),
+                        .unwrap_or(a.clone().unwrap_or_default().get_name().unwrap_or_default()),
                 )
                 .expect("domain string to serverName ok"),
                 conn,

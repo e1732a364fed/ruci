@@ -35,7 +35,9 @@ pub struct Engine {
     /// 存储关闭所有inbound 的 Sender
     ///
     ///  若有值说明 is running
-    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
+    ///
+    /// 约定, 所有对 engine的热更新都要先访问 此锁
+    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>,
     pub gtr: Arc<GlobalTrafficRecorder>,
 
     pub new_conn_recorder: OptNewInfoSender,
@@ -44,7 +46,9 @@ pub struct Engine {
     pub conn_info_updater: net::OptUpdater,
 
     /// 配置文件中有一些地方是指定文件名的，而 Engine 会从 file_source 中找到指定文件
-    pub file_source: FileSource,
+    ///
+    /// 这一项需要手动配置
+    pub file_source: Arc<Option<FileSource>>,
 
     inbounds: Vec<DMIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
@@ -77,6 +81,8 @@ impl Engine {
         }
     }
     /// 清空配置. reset 后 可以 接着调用 init_*
+    ///
+    /// 不会清空 file_source
     pub async fn reset(&mut self) {
         debug!("Engine reset called");
         let running = self.running.lock();
@@ -87,7 +93,6 @@ impl Engine {
             self.default_outbound = None;
             self.tag_routes = None;
             self.gtr = Arc::<GlobalTrafficRecorder>::default();
-            self.file_source = FileSource::default();
             info!("Engine reset successful");
         } else {
             warn!("Engine is running, can't be reset. Should call stop before reset.");
@@ -100,12 +105,12 @@ impl Engine {
 
         #[cfg(feature = "route")]
         {
-            self.rule_sets = sc.get_rule_route(&self.file_source);
+            self.rule_sets = sc.get_rule_route(self.file_source.clone());
         }
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) {
-        let inbounds = sc.get_inbounds(Some(&self.file_source));
+        let inbounds = sc.get_inbounds(self.file_source.clone());
         self.inbounds = inbounds
             .into_iter()
             .map(|v| {
@@ -116,7 +121,7 @@ impl Engine {
             })
             .collect();
 
-        let (d, m) = sc.get_default_and_outbounds_map(Some(&self.file_source));
+        let (d, m) = sc.get_default_and_outbounds_map(self.file_source.clone());
         self.default_outbound = Some(d);
         self.outbounds = Arc::new(m);
         self.load_routes_from(sc);
@@ -143,7 +148,7 @@ impl Engine {
         use anyhow::Context;
         debug!("trying init_lua_static");
 
-        let sc = lua::load_static(&lua_text, Some(&self.file_source))
+        let sc = lua::load_static(&lua_text, self.file_source.clone())
             .context("init_lua_static failed")?;
         self.init_static(sc);
         Ok(())
@@ -158,7 +163,7 @@ impl Engine {
 
         use crate::modes::chain::config::lua;
         let (sc, ibs, default_o, ods) =
-            lua::finite::load_finite_dynamic(&lua_text, Some(&self.file_source))
+            lua::finite::load_finite_dynamic(&lua_text, self.file_source.clone())
                 .context("Engine::init_lua_finite_dynamic: lua::load_finite_dynamic failed")?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);
@@ -174,7 +179,7 @@ impl Engine {
 
         info!("initializing lua infinite dynamic");
 
-        let g_maps = lua::infinite::load_infinite_io(&lua_text, Some(&self.file_source))?;
+        let g_maps = lua::infinite::load_infinite_io(&lua_text, self.file_source.clone())?;
 
         let gi = g_maps.0;
         let go = g_maps.1;
@@ -402,8 +407,13 @@ impl Engine {
     }
 
     /// A helper function to start an engine with a static config, run it until it got shutdown signal, then stop it.
-    pub async fn run_static_engine(sc: StaticConfig) -> anyhow::Result<()> {
+    pub async fn run_static_engine(
+        sc: StaticConfig,
+        file_source: Option<FileSource>,
+    ) -> anyhow::Result<()> {
         let mut e = Engine::new();
+
+        e.file_source = Arc::new(file_source);
 
         e.init_static(sc);
 

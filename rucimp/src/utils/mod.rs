@@ -12,6 +12,7 @@ use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
 
+/// Default will use [`crate::COMMON_DIRS`] as folders.
 #[derive(Clone, Debug)]
 pub enum FileSource {
     Folders(Vec<String>), //从指定的一组路径来寻找文件

@@ -13,30 +13,28 @@ use tracing::debug;
 use rustls_pemfile::{certs, read_one, Item};
 use std::io::{self, BufReader};
 
-use super::server::{ServerOptions, ServerPEMOptions};
+use super::server::{ServerPEMOptions, TlsServerOptions};
 
-pub fn load_ser_config_by_pem(
+/// if `opt_authority` is given, we will use the given cert as CA and generate a new cert for the
+/// authority.
+pub fn load_ser_config_from_pem(
     options: &ServerPEMOptions,
     opt_authority: Option<&http::uri::Authority>,
 ) -> anyhow::Result<ServerConfig> {
     let c_pem = options.cert.clone();
-    let certs = load_certs_from_pem(c_pem.as_bytes())?;
-    debug_assert!(!certs.is_empty());
 
     let key_pem = options.key.clone();
-    let key_der = load_key_from_pem(key_pem.as_bytes()).context("1")?;
 
-    let mut config = match opt_authority {
+    let (certs_der, key_ders) = match opt_authority {
         Some(authority) => {
             // 参考 rcgen/example/sign-leaf-with-ca.rs
 
             let cacert_pem = c_pem;
             let cakey_pem = key_pem;
 
+            // 重建CA
             let ca_key_pair = KeyPair::from_pem(&cakey_pem)?;
-
             let ca_params = rcgen::CertificateParams::from_ca_cert_pem(&cacert_pem)?;
-
             let ca = ca_params.self_signed(&ca_key_pair)?;
 
             use rand::thread_rng;
@@ -61,23 +59,29 @@ pub fn load_ser_config_by_pem(
                 rcgen::Ia5String::try_from(authority.host()).expect("Failed to create Ia5String"),
             ));
 
-            // 直接用 随机生成的 key_pair 会 在实际 tls 连接时报错 Illegal Parameters, 目前我不知道为什么
-            // let key_pair = KeyPair::generate().context("KeyPair::generate() failed")?;
+            let key_pair = KeyPair::generate_for(ca_key_pair.algorithm())
+                .context("KeyPair::generate() failed")?;
 
-            // 这里是参考了 hudsucker/ src/certificate_authority/rcgen_authority.rs 中的 gen_cert 函数
+            let cert = params.signed_by(&key_pair, &ca, &ca_key_pair)?;
 
-            let cert = params.signed_by(&ca_key_pair, &ca, &ca_key_pair)?;
+            let key_der = key_pair.serialize_der();
+            let key_der = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key_der));
 
-            rustls::ServerConfig::builder()
-                .with_client_cert_verifier(Arc::new(NoClientAuth))
-                .with_single_cert(vec![cert.der().to_owned()], key_der)
-                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?
+            (vec![cert.der().clone()], key_der)
         }
-        None => rustls::ServerConfig::builder()
-            .with_client_cert_verifier(Arc::new(NoClientAuth))
-            .with_single_cert(certs, key_der)
-            .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?,
+        None => {
+            let certs_der = load_certs_from_pem(c_pem.as_bytes())?;
+
+            let key_der = load_key_from_pem(key_pem.as_bytes()).context("1")?;
+
+            (certs_der, key_der)
+        }
     };
+
+    let mut config = rustls::ServerConfig::builder()
+        .with_client_cert_verifier(Arc::new(NoClientAuth))
+        .with_single_cert(certs_der, key_ders)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
     if let Some(a) = &options.alpn {
         config.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
@@ -89,11 +93,11 @@ pub fn load_ser_config_by_pem(
 /// if `opt_authority` is given, we will use the given cert as CA and generate a new cert for the
 /// authority.
 pub fn load_ser_config(
-    options: &ServerOptions,
+    options: &TlsServerOptions,
     opt_authority: Option<&http::uri::Authority>,
 ) -> anyhow::Result<ServerConfig> {
-    let pem_opts = ServerPEMOptions::from(options)?;
-    load_ser_config_by_pem(&pem_opts, opt_authority)
+    let pem_opts = ServerPEMOptions::from(options, Box::new(std::fs::read_to_string))?;
+    load_ser_config_from_pem(&pem_opts, opt_authority)
 }
 
 /// Load the passed certificates file
@@ -187,7 +191,7 @@ mod test {
         path2.push("test.key");
 
         let r = load_ser_config(
-            &ServerOptions {
+            &TlsServerOptions {
                 // addr: "addr".to_string(),
                 cert: path,
                 key: path2,

@@ -2,13 +2,14 @@ use std::{env::set_var, sync::Arc, time::Duration};
 
 use crate::{
     map::{
-        tls::{self, client::ClientOptions},
+        tls::{self, client::TlsClientOptions},
         Map, MapParams, CID,
     },
     net::{self, gen_random_higher_port, helpers::mock::MockTcpStream},
 };
 use futures::{join, FutureExt};
 use parking_lot::Mutex;
+use server::ServerPEMOptions;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -31,9 +32,9 @@ async fn dial_tls_in_mem() {
         write_target: Some(write_v),
     };
 
-    let a = tls::client::Client::new(ClientOptions {
-        domain: Some("www.baidu.com".to_string()),
-        is_insecure: true,
+    let a = tls::client::Client::new(TlsClientOptions {
+        host: Some("www.baidu.com".to_string()),
+        insecure: true,
         ..Default::default()
     });
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443).unwrap();
@@ -70,9 +71,9 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
         .await
         .unwrap();
 
-    let a = tls::client::Client::new(ClientOptions {
-        domain: Some("www.baidu.com".to_string()),
-        is_insecure: true,
+    let a = tls::client::Client::new(TlsClientOptions {
+        host: Some("www.baidu.com".to_string()),
+        insecure: true,
         ..Default::default()
     });
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.
@@ -114,12 +115,17 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Resul
     let mut path2 = PathBuf::new();
     path2.push("test.key");
 
-    let a = tls::server::Server::new(tls::server::ServerOptions {
+    let sc = tls::server::TlsServerOptions {
         // addr: "addr".to_string(),
         cert: path,
         key: path2,
         ..Default::default()
-    });
+    };
+
+    let a = tls::server::Server::new(ServerPEMOptions::from(
+        &sc,
+        Box::new(std::fs::read_to_string),
+    )?);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
         .await

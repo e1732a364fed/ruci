@@ -71,7 +71,7 @@ pub struct StaticConfig {
 
 impl StaticConfig {
     /// convert config chain to map chain
-    pub fn get_inbounds(&self, file_source: Option<&FileSource>) -> Vec<Vec<MapBox>> {
+    pub fn get_inbounds(&self, file_source: Arc<Option<FileSource>>) -> Vec<Vec<MapBox>> {
         let listens: Vec<_> = self
             .inbounds
             .iter()
@@ -80,7 +80,7 @@ impl StaticConfig {
                     .chain
                     .iter()
                     .map(|map_config| {
-                        let mut map = map_config.to_map_box(file_source);
+                        let mut map = map_config.to_map_box(file_source.clone());
                         map.set_chain_tag(config_chain.tag.as_deref().unwrap_or(""));
                         map
                     })
@@ -100,7 +100,7 @@ impl StaticConfig {
     }
 
     /// convert config chain to map chain
-    pub fn get_outbounds(&self, file_source: Option<&FileSource>) -> Vec<Vec<MapBox>> {
+    pub fn get_outbounds(&self, file_source: Arc<Option<FileSource>>) -> Vec<Vec<MapBox>> {
         self.outbounds
             .iter()
             .map(|config_chain| {
@@ -108,7 +108,7 @@ impl StaticConfig {
                     .chain
                     .iter()
                     .map(|map_config| {
-                        let mut map = map_config.to_map_box(file_source);
+                        let mut map = map_config.to_map_box(file_source.clone());
                         map.set_chain_tag(&config_chain.tag);
                         map
                     })
@@ -128,9 +128,9 @@ impl StaticConfig {
     /// (out_tag, outbound)
     pub fn get_default_and_outbounds_map(
         &self,
-        file_source: Option<&FileSource>,
+        file_source: Arc<Option<FileSource>>,
     ) -> (DMIterBox, HashMap<String, DMIterBox>) {
-        let obs = self.get_outbounds(file_source);
+        let obs = self.get_outbounds(file_source.clone());
 
         let mut first_o: Option<DMIterBox> = None;
 
@@ -173,7 +173,10 @@ impl StaticConfig {
     }
 
     #[cfg(feature = "route")]
-    pub fn get_rule_route(&self, file_source: &crate::utils::FileSource) -> Option<Vec<RuleSet>> {
+    pub fn get_rule_route(
+        &self,
+        file_source: Arc<Option<crate::utils::FileSource>>,
+    ) -> Option<Vec<RuleSet>> {
         let mut result = self.rule_route.clone().map(|rr| {
             let x: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
             x
@@ -181,17 +184,19 @@ impl StaticConfig {
         #[cfg(feature = "geoip")]
         {
             if let Some(mut rs_v) = result {
-                use crate::route::maxmind;
+                if let Some(fs) = file_source.as_ref() {
+                    use crate::route::maxmind;
 
-                let r = maxmind::open_mmdb("Country.mmdb", file_source);
-                match r {
-                    Ok(m) => {
-                        let am = Some(Arc::new(m));
+                    let r = maxmind::open_mmdb("Country.mmdb", fs);
+                    match r {
+                        Ok(m) => {
+                            let am = Some(Arc::new(m));
 
-                        rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
-                    }
-                    Err(e) => {
-                        warn!("no Country.mmdb: {e}");
+                            rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
+                        }
+                        Err(e) => {
+                            warn!("no Country.mmdb: {e}");
+                        }
                     }
                 }
 
@@ -322,10 +327,10 @@ pub enum InMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(TlsIn),
+    TLS(tls::server::TlsServerOptions),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(TlsIn),
+    NativeTLS(tls::server::TlsServerOptions),
     H2 {
         is_grpc: Option<bool>,
         http_config: Option<CommonConfig>,
@@ -361,7 +366,7 @@ pub enum InMapConfig {
         handshake_function: String, // 用于 handshake 的 函数名
     },
 
-    MITM(TlsIn),
+    MITM(tls::server::TlsServerOptions),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -374,7 +379,7 @@ pub enum OutMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(TlsOut),
+    TLS(ruci::map::tls::client::TlsClientOptions),
 
     #[cfg(feature = "sockopt")]
     OptDirect {
@@ -387,7 +392,7 @@ pub enum OutMapConfig {
     OptDialer(crate::map::opt_net::OptDialerOption),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(TlsOut),
+    NativeTLS(ruci::map::tls::client::TlsClientOptions),
 
     Http,
     Socks5(Socks5Out),
@@ -449,19 +454,19 @@ pub struct FileConfig {
     pub ext: Option<Ext>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TlsIn {
-    pub cert: String,
-    pub key: String,
-    pub alpn: Option<Vec<String>>,
-}
+// #[derive(Debug, Serialize, Deserialize, Clone)]
+// pub struct TlsIn {
+//     pub cert: String,
+//     pub key: String,
+//     pub alpn: Option<Vec<String>>,
+// }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct TlsOut {
-    pub host: Option<String>,
-    pub insecure: Option<bool>,
-    pub alpn: Option<Vec<String>>,
-}
+// #[derive(Debug, Serialize, Deserialize, Clone, Default)]
+// pub struct TlsOut {
+//     pub host: Option<String>,
+//     pub insecure: Option<bool>,
+//     pub alpn: Option<Vec<String>>,
+// }
 
 /// 明文密码配置
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -486,11 +491,25 @@ pub struct TrojanPassSet {
 }
 
 pub trait AdvancedToMapBox {
-    fn to_map_box(&self, file_source: Option<&FileSource>) -> MapBox;
+    fn to_map_box(&self, file_source: Arc<Option<FileSource>>) -> MapBox;
 }
 
 impl AdvancedToMapBox for InMapConfig {
-    fn to_map_box(&self, file_source: Option<&FileSource>) -> ruci::map::MapBox {
+    fn to_map_box(&self, file_source: Arc<Option<FileSource>>) -> ruci::map::MapBox {
+        let read_file_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>> = {
+            let fc = file_source.clone();
+
+            let f = move |s: PathBuf| match fc.as_ref() {
+                Some(fs) => fs
+                    .get_file_content(&s.to_string_lossy())
+                    .map(|(v, _)| String::from_utf8_lossy(v.as_slice()).to_string())
+                    .map_err(|e| std::io::Error::other(e)),
+                None => std::fs::read_to_string(s),
+            };
+
+            Box::new(f)
+        };
+
         match self {
             InMapConfig::Echo => Box::<Echo>::default(),
             InMapConfig::Stdio(sc) => sc.to_map_box(),
@@ -519,21 +538,16 @@ impl AdvancedToMapBox for InMapConfig {
             InMapConfig::Counter => Box::<Counter>::default(),
             InMapConfig::Recorder(c) => Box::new(RecorderMap::new(c.clone())),
 
-            InMapConfig::TLS(c) => tls::server::ServerOptions {
-                cert: PathBuf::from(c.cert.clone()),
-                key: PathBuf::from(c.key.clone()),
-                alpn: c.alpn.clone(),
+            InMapConfig::TLS(sc) => {
+                let sc = ServerPEMOptions::from(&sc, read_file_fn).unwrap();
+
+                Box::new(ruci::map::tls::server::Server::new(sc))
             }
-            .to_map_box(),
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             InMapConfig::NativeTLS(c) => Box::new(
-                crate::map::native_tls::ServerOptions {
-                    cert_f_path: c.cert.clone(),
-                    key_f_path: c.key.clone(),
-                }
-                .get_server()
-                .unwrap(),
+                crate::map::native_tls::Server::from(&c, read_file_fn)
+                    .expect("native_tls server config valid"),
             ),
 
             InMapConfig::Http(c) => {
@@ -654,7 +668,7 @@ impl AdvancedToMapBox for InMapConfig {
                         lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
-                        file_source: file_source.cloned(),
+                        file_source: file_source.clone(),
                     }),
                     Err(e) => panic!("get lua file content err {e}"),
                 }
@@ -664,13 +678,13 @@ impl AdvancedToMapBox for InMapConfig {
                 ext_fields: Some(MapExtFields::default()),
             }),
             InMapConfig::MITM(c) => {
-                let sc = tls::server::ServerOptions {
+                let sc = tls::server::TlsServerOptions {
                     cert: PathBuf::from(c.cert.clone()),
                     key: PathBuf::from(c.key.clone()),
                     alpn: c.alpn.clone(),
                 };
 
-                let sc = ServerPEMOptions::from(&sc).unwrap();
+                let sc = ServerPEMOptions::from(&sc, read_file_fn).unwrap();
 
                 Box::new(ruci::map::tls::mitm::MITM {
                     sc,
@@ -681,7 +695,7 @@ impl AdvancedToMapBox for InMapConfig {
     }
 }
 impl AdvancedToMapBox for OutMapConfig {
-    fn to_map_box(&self, file_source: Option<&FileSource>) -> ruci::map::MapBox {
+    fn to_map_box(&self, file_source: Arc<Option<FileSource>>) -> ruci::map::MapBox {
         match self {
             OutMapConfig::Stdio(sc) => sc.to_map_box(),
             OutMapConfig::Fileio(f) => {
@@ -710,19 +724,13 @@ impl AdvancedToMapBox for OutMapConfig {
             OutMapConfig::Recorder(c) => Box::new(RecorderMap::new(c.clone())),
 
             OutMapConfig::TLS(c) => {
-                let a = tls::client::Client::new(tls::client::ClientOptions {
-                    domain: c.host.clone(),
-                    is_insecure: c.insecure.unwrap_or_default(),
-                    alpn: c.alpn.clone(),
-                });
+                let a = tls::client::Client::new(c.clone());
                 Box::new(a)
             }
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
             OutMapConfig::NativeTLS(c) => Box::new(crate::map::native_tls::Client {
-                domain: c.host.clone(),
-                insecure: c.insecure.unwrap_or_default(),
-                alpn: c.alpn.clone(),
+                config: c.clone(),
                 ext_fields: Some(MapExtFields::default()),
             }),
             OutMapConfig::Http => Box::new(http_proxy::Client::default()),
@@ -820,7 +828,7 @@ impl AdvancedToMapBox for OutMapConfig {
                         lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
-                        file_source: file_source.cloned(),
+                        file_source: file_source.clone(),
                     }),
                     Err(_) => todo!(),
                 }
