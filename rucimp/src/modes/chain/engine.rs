@@ -43,6 +43,7 @@ pub struct Engine {
     #[cfg(feature = "trace")]
     pub conn_info_updater: net::OptUpdater,
 
+    /// 配置文件中有一些地方是指定文件名的，而 Engine 会从 file_source 中找到指定文件
     pub file_source: FileSource,
 
     inbounds: Vec<DMIterBox>,                   // 不为空

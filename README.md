@@ -202,7 +202,7 @@ o2node-.->collector
 - [x] chain配置格式 (动态链须为lua格式)
 - [x] static chain (静态链, 可为 lua/toml 格式)
 - [x] dynamic chain (finite, infinite) (动态链)(有限动态链, 完全动态链)
-- [x] rucimp/examples:   chain, etc.
+- [x] rucimp/examples
 - [x] rule_route 规则路由
 - [x] tproxy (with auto_route)
 - [x] native-tls
@@ -217,7 +217,7 @@ o2node-.->collector
 
 ### ruci-cmd
 
-- [x] chain mode support
+- [x] basic feature
 - [x] api_server
 - [x] api_client
 - [x] static file server 

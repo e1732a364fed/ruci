@@ -1,16 +1,16 @@
 define compile
-	cargo build --target ${BUILD_TRIPLET}  -F lua --release --example chain
+	cargo build --target ${BUILD_TRIPLET}  -F lua --release --example lua
 endef
 
 define copy
 	mkdir -p dist
-	cd ../target/${BUILD_TRIPLET}/release/examples && cp chain ../../../../rucimp/dist/
+	cd ../target/${BUILD_TRIPLET}/release/examples && cp lua ../../../../rucimp/dist/
 	cp -r ../resource dist/
 endef
 
 define copy_exe
 	mkdir -p dist
-	cd ../target/${BUILD_TRIPLET}/release/examples && cp chain.exe ../../../../rucimp/dist/
+	cd ../target/${BUILD_TRIPLET}/release/examples && cp lua.exe ../../../../rucimp/dist/
 	cp -r ../resource dist/
 endef
 

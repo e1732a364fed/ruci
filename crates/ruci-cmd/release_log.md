@@ -127,7 +127,7 @@ Mar 19, 2024
 
 修复了一个 危险的 trojan server 实现中的 无限循环的bug (在h2 连接发生错误的情况下会触发）
 
- 修复 http proxy 不可用的问题 http 头配置中的
+修复 http proxy 不可用的问题http 头配置中的
 
 host项改名为 authority, 这样语义更清晰
 

@@ -223,10 +223,10 @@ pub enum ProxyBehavior {
     #[default]
     UNSPECIFIED,
 
-    /// outbound's general behavior
+    /// outbound's general behavior (dial)
     ENCODE,
 
-    /// inbound's general behavior
+    /// inbound's general behavior (listen)
     DECODE,
 }
 
