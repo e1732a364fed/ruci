@@ -99,7 +99,7 @@ resource 文件夹中的内容有助于参考使用，建议保留。
 另一种使用 ruci 的方式是使用 gui, 来自 [ruci-webui](https://github.com/e1732a364fed/ruci-webui/) 项目，
 它使用 tauri 编译了 桌面和 安卓平台的 gui，内置了 ruci内核
 
-到 https://github.com/e1732a364fed/ruci-webui/releases/ 下载最新的编译版本。
+到 [https://github.com/e1732a364fed/ruci-webui/releases/](https://github.com/e1732a364fed/ruci-webui/releases/) 下载最新的编译版本。
 
 启动该gui后，可在 Control Panel 中 点击 “检查服务器状态”，它会显示 `服务器状态: {"status":"running"}`
 这表示 内核已经正在运行。然后 点击 “选择配置文件”，再点击 “启动引擎”，就可以运行 您的 ruci 配置了。

@@ -55,6 +55,8 @@ The project is work in progress, 功能会陆续添加与调整.
 - [x] DNS: client
 - [x] http1.1 识别
 - [x] MITM ( man in the middle)
+- [ ] MITM rewrite 功能
+- [ ] sniff
 
 ### rucimp
 
@@ -66,6 +68,7 @@ The project is work in progress, 功能会陆续添加与调整.
 - [x] rucimp/examples
 - [x] rule_route 规则路由
 - [x] clash 规则路由
+- [x] geosite-gfw (See [geosite-gfw](https://github.com/e1732a364fed/geosite-gfw/))
 - [x] tproxy (with auto_route)
 - [x] native-tls
 - [x] http_filter, websocket(including early data)
@@ -77,18 +80,21 @@ The project is work in progress, 功能会陆续添加与调整.
 - [x] Steganography Protocol Example1
 - [x] User-defined Lua protocol
 - [x] Embedder (Steganography Protocol)
+- [ ] shadow-tls
 
 ### ruci-cmd
 
 - [x] basic feature
-- [x] api_server
+- [x] api_server (with file server )
 - [x] api_client
-- [x] static file server 
 - [x] utils
+- [x] android support (jni)
 
 ### 其它生态
 
 [webui](https://github.com/e1732a364fed/ruci-webui)
+
+[geosite-gfw](https://github.com/e1732a364fed/geosite-gfw/)
 
 
 ## Structure

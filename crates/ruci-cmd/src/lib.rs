@@ -13,6 +13,9 @@ mod api;
 #[cfg(feature = "utils")]
 mod utils;
 
+#[cfg(feature = "api_server")]
+mod log_ws;
+
 mod mode;
 
 use anyhow::Context;
@@ -29,8 +32,6 @@ use parking_lot::RwLock;
 use rucimp::{modes::CoreArgs, DEFAULT_LUA_CONFIG_FILE_NAME};
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
-
-mod log_ws;
 
 #[derive(
     Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum,

@@ -5,7 +5,7 @@
 - [入门](get_started.md)
 
 - [ruci-cmd程序](app/cmd.md)
-- [订阅](app/subscrible.md)
+- [订阅](app/subscribe.md)
 - [lua配置](lua/lua.md)
   - [Config入门](lua/config_intro.md)
   - [MapConfig](lua/map_config.md)
