@@ -8,12 +8,9 @@ pub mod lua;
 #[cfg(feature = "lua")]
 pub mod dynamic;
 
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
-use ruci::{
-    map::{http, socks5, socks5http, tls, trojan, MapperSync, ToMapper},
-    net,
-};
+use ruci::{map::*, net};
 use serde::{Deserialize, Serialize};
 
 /// 静态配置中有初始化后即确定的listen/dial数量和行为
@@ -21,11 +18,13 @@ use serde::{Deserialize, Serialize};
 pub struct StaticConfig {
     pub inbounds: Vec<InMapperConfigChain>,
     pub outbounds: Option<Vec<OutMapperConfigChain>>,
+
+    pub tag_route: Option<Vec<(String, String)>>,
 }
 
 impl StaticConfig {
     /// convert config chain to mapper chain
-    pub fn get_inbounds(&self) -> Vec<Vec<Box<dyn MapperSync>>> {
+    pub fn get_inbounds(&self) -> Vec<Vec<MapperBox>> {
         let listens: Vec<_> = self
             .inbounds
             .iter()
@@ -49,7 +48,7 @@ impl StaticConfig {
     }
 
     /// convert config chain to mapper chain
-    pub fn get_outbounds(&self) -> Vec<Vec<Box<dyn MapperSync>>> {
+    pub fn get_outbounds(&self) -> Vec<Vec<MapperBox>> {
         match &self.outbounds {
             None => Vec::new(),
 
@@ -62,9 +61,7 @@ impl StaticConfig {
                             .iter()
                             .map(|mapper_config| {
                                 let mut mapper = mapper_config.to_mapper();
-                                mapper.set_chain_tag(
-                                    config_chain.tag.as_ref().unwrap_or(&String::new()),
-                                );
+                                mapper.set_chain_tag(&config_chain.tag);
                                 mapper
                             })
                             .collect::<Vec<_>>();
@@ -77,6 +74,32 @@ impl StaticConfig {
             }
         }
     }
+
+    /// (out_tag, outbound)
+    pub fn get_outbounds_map(&self) -> HashMap<String, MIterBox> {
+        self.get_outbounds()
+            .into_iter()
+            .map(|outbound| {
+                let tag = outbound.iter().next().unwrap().get_chain_tag();
+
+                let static_outbound = Box::leak(Box::new(outbound.clone()));
+                let static_outbound_iter: MIterBox = Box::new(static_outbound.iter());
+
+                (tag.to_string(), static_outbound_iter)
+            })
+            .collect()
+    }
+
+    /// panic if the given tag isn't presented in outbounds
+    pub fn get_tag_route(&self) -> Option<HashMap<String, String>> {
+        if self.tag_route.is_none() {
+            return None;
+        }
+        let route_tag_pairs = self.tag_route.clone().unwrap();
+        let route_tag_map = route_tag_pairs.into_iter().collect::<HashMap<_, _>>();
+
+        Some(route_tag_map)
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
@@ -87,7 +110,7 @@ pub struct InMapperConfigChain {
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct OutMapperConfigChain {
-    tag: Option<String>,
+    tag: String, //每个 out chain 都必须有一个 tag
     chain: Vec<OutMapperConfig>,
 }
 
@@ -293,6 +316,7 @@ mod test {
                 ],
             }],
             outbounds: None,
+            tag_route: None,
         };
         let toml = toml::to_string(&sc).unwrap();
         println!("{:#}", toml);

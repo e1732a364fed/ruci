@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::map::{AnyData, MIterBox};
 
@@ -18,14 +18,22 @@ impl OutSelector for FixedOutSelector {
 }
 
 pub struct TagOutSelector {
-    pub outbounds_map: HashMap<String, MIterBox>,
+    pub outbounds_route_map: HashMap<String, String>, // in -> out
+    pub outbounds_map: Arc<HashMap<String, MIterBox>>, //out_tag -> outbound
     pub default: MIterBox,
 }
+
 impl OutSelector for TagOutSelector {
     fn select(&self, in_chain_tag: &str, _params: Vec<Option<AnyData>>) -> MIterBox {
-        let ov = self.outbounds_map.get(in_chain_tag);
+        let ov = self.outbounds_route_map.get(in_chain_tag);
         match ov {
-            Some(v) => v.clone(),
+            Some(out_k) => {
+                let y = self.outbounds_map.get(out_k);
+                match y {
+                    Some(out) => out.clone(),
+                    None => self.default.clone(),
+                }
+            }
             None => self.default.clone(),
         }
     }

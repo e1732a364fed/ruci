@@ -186,4 +186,46 @@ mod test {
         assert!(!matches!(first_m, OutMapperConfig::Counter));
         Ok(())
     }
+
+    #[test]
+    fn test_route() -> Result<()> {
+        let lua = Lua::new();
+        let globals = lua.globals();
+
+        let text = r#"
+        listen = { Listener = { TcpListener = "0.0.0.0:1080" }  }
+        chain1 = {
+            listen,
+            { Socks5 = {   } },
+        }
+        
+        config = {
+            inbounds = {
+                {chain = chain1, tag = "listen1"},
+                {chain = { Stdio="myfake.com" }, tag = "listen2"},
+            },
+            outbounds = {
+                { 
+                    tag="dial1", chain = {
+                        { Dialer = { TcpDialer = "0.0.0.0:1080" }  }
+                    }
+                },
+
+                { 
+                    tag="dial2", chain = {
+                        "Direct"
+                    }
+                }
+            },
+            route = { { "listen1", "dial1" }, { "listen2", "dial2" }  }
+        }
+        "#;
+
+        let c: StaticConfig = load(text)?;
+
+        println!("{:#?}", c);
+        println!("{:#?}", c.get_tag_route());
+
+        Ok(())
+    }
 }
