@@ -132,3 +132,49 @@ pub async fn wait_close_sig_with_closer(
 
     Ok(())
 }
+
+#[cfg(all(any(feature = "lua", feature = "lua54"), feature = "repl"))]
+pub fn lua_repl() {
+    info!("Running lua repl. Press Ctrl+D to exit");
+    let lua = mlua::Lua::new();
+    let mut editor = rustyline::DefaultEditor::new().expect("Failed to create editor");
+
+    loop {
+        let mut prompt = "> ";
+        let mut line = String::new();
+
+        loop {
+            match editor.readline(prompt) {
+                Ok(input) => line.push_str(&input),
+                Err(_) => return,
+            }
+
+            match lua.load(&line).eval::<mlua::MultiValue>() {
+                Ok(values) => {
+                    editor.add_history_entry(line).unwrap();
+                    println!(
+                        "{}",
+                        values
+                            .iter()
+                            .map(|value| format!("{:#?}", value))
+                            .collect::<Vec<_>>()
+                            .join("\t")
+                    );
+                    break;
+                }
+                Err(mlua::Error::SyntaxError {
+                    incomplete_input: true,
+                    ..
+                }) => {
+                    // continue reading input and append it to `line`
+                    line.push_str("\n"); // separate input lines
+                    prompt = ">> ";
+                }
+                Err(e) => {
+                    eprintln!("error: {}", e);
+                    break;
+                }
+            }
+        }
+    }
+}

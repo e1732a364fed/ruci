@@ -85,6 +85,8 @@ smoltcp = { version = "0.11", optional = true, default-features = false, feature
 
 array-init = "2.1.0"
 
+rustyline = { version = "14.0.0", optional = true }
+
 [dev-dependencies]
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -102,6 +104,7 @@ trace = ["ruci/trace"]
 
 lua = ["mlua/luau"]
 lua54 = ["mlua/lua54", "mlua/vendored"]
+repl = ["rustyline"]
 
 route = ["ipnet", "iprange", "regex"]
 

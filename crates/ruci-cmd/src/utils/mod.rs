@@ -24,6 +24,10 @@ pub enum Commands {
 
     /// generate self signed root certificate
     GenCer { names: Vec<String> },
+
+    /// start a interactive lua shell, which is a read–eval–print loop (REPL).
+    #[cfg(any(feature = "lua", feature = "lua54"))]
+    Repl,
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -47,6 +51,8 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
 
             fs::write("generated_crt_and_key.crt", c)?;
         }
+        #[cfg(any(feature = "lua", feature = "lua54"))]
+        Commands::Repl => rucimp::utils::lua_repl(),
     };
     Ok(())
 }
