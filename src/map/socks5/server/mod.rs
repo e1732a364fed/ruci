@@ -3,9 +3,7 @@ Defines a Map for socks5 server.
 
 */
 
-/// udp 模块中, 使用同一端口监听 来自 user 和 others 的 信息
-// pub mod udp;
-pub mod udp2;
+pub mod udp;
 
 use super::*;
 
@@ -465,7 +463,7 @@ impl Server {
             });
         }
         if cmd == CMD_UDP_ASSOCIATE && self.support_udp {
-            let mut mr = udp2::udp_associate(cid, base, ad).await?;
+            let mut mr = udp::udp_associate(cid, base, ad).await?;
             mr.d = d;
             return Ok(mr);
         }

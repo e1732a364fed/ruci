@@ -1,5 +1,5 @@
 /*!
-Defines types returned by [`Map`].
+Defines types returned by [`Map`] that contain extra information about the new stream.
 */
 
 use std::{mem, time};
