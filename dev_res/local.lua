@@ -152,7 +152,7 @@ local websocket_out = {
 local dial_trojans_chain = { dial, tlsout, trojan_out }
 local optdial_trojans_chain = { opt_dial, tlsout, trojan_out }
 
-local dial_ws_trojan_chain = { dial, tlsout, websocket_out, trojan_out }
+local dial_ws_trojans_chain = { dial, tlsout, websocket_out, trojan_out }
 
 local h2_single_out = {
     H2Single = {
@@ -314,7 +314,7 @@ local config_3_tproxy2 = {
 }
 
 
-local config_4_trojan = {
+local config_4_trojans = {
     inbounds = { { chain = listen_socks5http, tag = "listen1" }, {
         chain = { listen_fixed_target },
         tag = "listen2"
@@ -350,7 +350,7 @@ local config_5_unix = {
 
 local config_6_ws = {
     inbounds = { { chain = listen_socks5http, tag = "listen1" } },
-    outbounds = { { tag = "dial1", chain = dial_ws_trojan_chain } },
+    outbounds = { { tag = "dial1", chain = dial_ws_trojans_chain } },
 
     -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+ws+trojan 的情况
 
@@ -378,7 +378,7 @@ local config_8_quic = {
     -- 演示 inbound 是 socks5http, outbound 是 quic 的情况
 }
 
-local config_9_stdin_adder = {
+local config_9_stdio_adder = {
 
     inbounds = {
         { chain = in_stdio_adder_chain, tag = "listen1" },
@@ -490,29 +490,29 @@ local config_13_route = {
         } }
     } },
 
-    ---[==[
+    --[==[
     tag_route = { { "l1", "d1" }, { "l2", "d2" }, { "l3", "d2" } },
 
     fallback_route = { { "l1", "fallback_d" } }
 
     -- ]==]
 
-    --[==[
+    ---[==[
 
-    rule_route = {{
+    rule_route = { {
         mode = "WhiteList",
         out_tag = "d1",
-        in_tags = {"l1"}
+        in_tags = { "l1" }
     }, {
         mode = "WhiteList",
         out_tag = "d2",
-        in_tags = {"l3","l2"}
+        in_tags = { "l3", "l2" }
     }, {
         mode = "WhiteList",
         out_tag = "fallback_d",
-        in_tags = {"l1"},
+        in_tags = { "l1" },
         is_fallback = true
-    }}
+    } }
 
     -- ]==]
 

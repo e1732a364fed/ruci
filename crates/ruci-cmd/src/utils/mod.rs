@@ -380,6 +380,15 @@ pub fn convert_config(
                     &lua_value,
                     "Config = ",
                 )?;
+
+                let s = s
+                    .lines()
+                    .filter(|s| {
+                        let s = s.trim_end();
+                        !(s.ends_with("= nil,") || s.contains("= nil"))
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
                 Ok(s)
             }
             #[cfg(not(any(feature = "lua", feature = "lua54")))]

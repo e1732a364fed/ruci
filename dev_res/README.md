@@ -1,0 +1,23 @@
+此文件夹包含若干ruci运行需要的文件
+
+local*.lua, remote.lua 为 chain 模式的示例配置文件
+
+test.crt, test.key 用于测试用于tls的自签名证书
+
+test.crt 为 pem 格式的 x509 证书, test.key 为 pem 格式的 EC key
+
+test2.key, test2.crt 为 自签名根证书, 比 test.crt/key 更好
+test2.crt中的 Subject Alternative Name 为 www.mytest.com 和 localhost,
+
+而 test_ca_cert.pem 和 test_ca_key.pem 则是 随机生成的一个 CA证书 和其密钥，可以用于 MITM 的配置。
+
+
+inspect.lua 是一个lua模块, 来自
+[inspect.lua](https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua)
+
+可以帮助在 lua中打印一个值的内容
+
+在ruci-cmd中, 下载的 Country.mmdb 和 wintun.dll 也会放在这里
+
+local.lua 和 remote.lua 中 默认 开启的实际 chain 随开发而经常变化，因此实际使用时不要
+直接依赖 此两个文件，而是要将这两个文件当作参考

@@ -141,13 +141,13 @@ local lua_example2 = { tcp, tls, trojan_in, { Lua = { file_name = "lua_protocol_
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
         { chain = trojans_chain, tag = "listen1" },
-        -- { chain = ws_trojans_chain,  tag = "listen1"  }
+        -- { chain = ws_trojans_chain, tag = "listen1" }
         -- { chain = in_h2_trojans_chain, tag = "listen1" }
         -- { chain = in_h2_socks5s_chain, tag = "listen1" }
         -- { chain = in_h2_https_chain, tag = "listen1" }
         -- { chain = in_quic_chain, tag = "listen1" }
-        -- { chain = socks5http_chain, tag = "listen1"} ,
-        -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
+        -- { chain = socks5http_chain, tag = "listen1" },
+        -- { chain = { unix, tls, trojan_in }, tag = "listen1" },
         -- { chain =  { tcp,tls, ws}, tag = "listen1"} ,
         --[[
         {
@@ -161,7 +161,7 @@ Config = {
         }
         -- ]]
         -- { chain = { tcp, spe1_in, trojan_in }, tag = "listen1" }
-        -- { chain = lua_example2, tag = "listen1" },
+        -- { chain = lua_example1, tag = "listen1" },
     },
 
     --[[
@@ -170,14 +170,19 @@ Config = {
     outbounds = { {
         tag = "dial1",
         chain = { { Direct = {} } }
-    }, {
-        tag = "fallback_d",
-        chain = { {
-            BindDialer = {
-                dial_addr = "tcp://0.0.0.0:80"
-            }
-        } }
-    } },
+    },
+
+        ---[=[
+        {
+            tag = "fallback_d",
+            chain = { {
+                BindDialer = {
+                    dial_addr = "tcp://0.0.0.0:80"
+                }
+            } }
+        }
+        --]=]
+    },
     -- ]]
 
     ---[[
@@ -189,7 +194,7 @@ Config = {
         tag = "dial1",
         chain = { {
             Direct = {
-                leak_target_addr = true
+                leak_target_addr = true -- 注意这里要设为 true, 这样才能把 目标地址进一步 传递到 TLS 层 (用于设置 SNI)
             }
         },
             {
@@ -203,7 +208,7 @@ Config = {
         tag = "fallback_d",
         chain = { {
             BindDialer = {
-                dial_addr = "tcp://0.0.0.0:80"
+                dial_addr = "tcp://0.0.0.0:4433" --mitm 的话，回落就是要到 https
             }
         },
         }

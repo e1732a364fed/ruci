@@ -17,11 +17,13 @@ pub mod route;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Common directories to search for configuration files
-pub const COMMON_DIRS: [&str; 6] = [
+pub const COMMON_DIRS: [&str; 8] = [
     "./",
     "ruci_config/",
     "resource/",
     "dev_res/",
+    "../dev_res/",
+    "../../dev_res/",
     "../resource/",
     "../../resource/",
 ];
