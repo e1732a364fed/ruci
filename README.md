@@ -28,9 +28,9 @@ ruci pronounced lucy。
 ## 整体结构
 整个项目分成三部分。
 
-ruci 是基础框架, 其中定义一些trait 和基本结构与方法，实现链式架构，实现了一些基本流映射函数, 提供转发方法
+ruci 是基础框架, 其中定义一些trait 和基本结构与方法，实现链式架构，实现了一些基本流【映射】(Mapper), 提供转发方法
 
-rucimp 中提供若干流映射函数, 定义多种配置文件格式, 并提供一些 example 程序.
+rucimp 中提供若干流映射, 定义多种配置文件格式, 并提供一些 example 程序.
 rucimp is the core.
 
 ruci-cmd 是最终的全功能的可执行文件，包含一些系统路由的配置功能 和 api-server
@@ -68,36 +68,44 @@ TDD。See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md)
 
 ## Chain Mode Explained
 
-ruci对代理的原理加以更高的抽象化，认为任何协议都可被认定为一个"函数"
+ruci对代理的原理加以更高的抽象化，认为任何协议都可被认定为一个"映射"
 
 有如下定义(伪代码)：
 
 单流发生器(stream generator)： function(args)->stream
 
+单射(normal stream mapper)： function(stream1, args...)-> (Option<stream2>, useful_data...) 
+
 多流发生器(multi-stream generator)：function( Option<stream> ,args...)->[channel->stream]
 
-流映射函数( stream mapping function)： function(stream1, args...)-> (Option<stream2>, useful_data...) 
 
 流由流发生器产生。
 
-流发生器是一种可不接受流参数的 流映射函数，是整个链的起点，是流的源。
+流发生器是一种接受不流参数的 流映射，是整个链的起点，是流的源。 是不接受流参数的无中生有。
 
-单流发生器可能是 Dialer, 文件, 或者 Stdio, 多流发生器可能是 Listener  或 mux
+单流发生器可能是 Dialer, 文件, 或者 Stdio.
 
-流映射函数可以改变流(如Tls)，也可以不改变而只是在内容上做修改(如Adder),
+多流发生器可能是 Listener (不接受流参数的无中生有) 或 inner mux (接受一个流，对其进行分支处理)
+
+流映射可以改变流(如Tls)，也可以不改变而只是在内容上做修改(如Adder),
 
 也可以完全不做修改而只提供副作用(如 Counter, 或Trojan/Socks5 先做握手然后不改变流) 
 
-也可以消耗掉流(如 Echo; 再如 relay 转发过程 将 in 和 out 调转对接, 同时消耗in 和 out 两个流)，消耗流的函数是整个链的终点 。
+也可以消耗掉流(如 Echo; 再如 relay 转发过程 将 in 和 out 调转对接, 同时消耗in 和 out 两个流)，
+消耗流的映射是整个链的终点 。
 
 也可以替换掉流的源(如socks5中的 udp associate, 是tcp变udp)。
 
 如此，整个架构由 suit 模式 的 扁平结构转化成了链式结构。这种抽象把代理分成了一个一个小模块，任由你拼接。
 
 
-虽然看起来没有什么区别，但是，你可以很方便地构建一些独特的结构，比如 TLS+TLS (用于分析 tls in tls, 你甚至可以累加N个，变成N*TLS)，比如 TCP-Counter-TLS-Counter-TLS-Counter-Socks5-Counter (Counter用于统计流量，并将数据原样传递，这样每一层的流量就都统计出来了)
+虽然看起来没有什么区别，但是，你可以很方便地构建一些独特的结构，比如 TLS+TLS (用于分析 tls in tls, 
+你甚至可以累加N个，变成N*TLS)，比如 TCP-Counter-TLS-Counter-TLS-Counter-Socks5-Counter 
+(Counter用于统计流量，并将数据原样传递，这样每一层的流量就都统计出来了)
 
-其它可能的情况比如 Socks5+WS+TLS+WS+Socks5+TLS.，甚至你可以造出一些逻辑结构，只要有最终出口就行，如 Socks5 - repeat N [TLS1-TLS2] - Socks5
+其它可能的情况比如 Socks5+WS+TLS+WS+Socks5+TLS.，甚至你可以造出一些逻辑结构，只要有最终出口就行，
+如 Socks5 - repeat N [TLS1-TLS2] - Socks5
+
 发挥你的想象力吧。
 
 而作为suit配置格式实际上也是运行在链式结构中的

@@ -58,7 +58,7 @@ config = {
 }
 ```
 
-要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 mapper (映射函数)
+要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 mapper (映射)
 
 rule_route 和 tag_route 同时出现时，程序只会采用 rule_route. 因为 rule_route 的内容涵盖了 tag_route 
 

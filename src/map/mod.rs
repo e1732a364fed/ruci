@@ -4,20 +4,20 @@ module map defines some important traits for proxy
 几个关键部分: [`Data`], [`MapParams`], [`MapResult`], [`Mapper`], 和 [`mod@fold`] 模块
 
 ruci 将任意代理行为分割成若干个不可再分的
-流映射函数, function map(stream1, args...)-> (stream2, useful_data...)
+流映射, function map(stream1, args...)-> (stream2, useful_data...)
 
-流映射函数 的提供者 在本包中被命名为 "Mapper", 映射的行为叫 "maps"
+流映射 的提供者 在本包中被命名为 "Mapper", 映射的行为叫 "maps"
 
 在本包中， 有时使用 “加法” 来指代 映射。以“累加”来指代迭代映射。
 即有时本包会以 "adder" 指代 [`Mapper`]
 
-按顺序执行若干映射函数 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
+按顺序执行若干映射 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
 
 之所以叫加法，是因为代理的映射只会增加信息（熵），不会减少信息
 
 按代理的方向, 逻辑上分 Encode 和 Decode 两种, 以 maps 方法的 behavior 参数加以区分.
 
-一个完整的代理链 是由 【生成 映射函数 的迭代器】生成的, 其在 [`fold`] 模块中有定义
+一个完整的代理链 是由 【生成 映射 的迭代器】生成的, 其在 [`fold`] 模块中有定义
 */
 
 pub mod data;
