@@ -40,7 +40,7 @@ impl Mode {
 }
 
 /// ruci command line parameters:
-#[derive(Parser, Clone)]
+#[derive(Parser, Clone, Default)]
 #[command(author = "e")]
 #[command(version, about, long_about = None)]
 pub struct Args {
