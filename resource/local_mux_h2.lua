@@ -5,7 +5,8 @@ dial = {
 }
 
 tlsout = {
-    TLS = {
+    NativeTLS = {
+    --TLS = {
         host = "www.1234.com",
         insecure = true,
         alpn = {"h2"}
