@@ -2,8 +2,6 @@
 Provides some helper functions to read a certain resource file or to wait the shutdown signal.
 */
 
-pub mod anti_replay;
-
 use std::io;
 
 use anyhow::Context;
@@ -275,23 +273,18 @@ impl FileSource {
 
             FileSource::Folders(possible_addrs) => {
                 for dir in possible_addrs {
-                    let real_file_name = String::from(dir) + file_name.as_ref().to_str().unwrap();
+                    let real_file_name = std::path::Path::new(dir).join(file_name.as_ref());
 
-                    // tracing::trace!("try to read file from {}", real_file_name);
-
-                    if std::path::Path::new(&real_file_name).exists() {
-                        if let Ok(mut file) = std::fs::File::open(real_file_name) {
-                            let mut v = vec![];
-                            use std::io::Read;
-                            file.read_to_end(&mut v)?;
-
-                            return Ok((v, Some(dir)));
-                        }
+                    if real_file_name.exists() {
+                        return std::fs::read(&real_file_name).map(|v| (v, Some(dir.as_str())));
                     }
                 }
                 Err(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    "not found",
+                    format!(
+                        "File not found in specified directories: {:?}",
+                        file_name.as_ref()
+                    ),
                 ))
             }
             FileSource::StdReadFile => {
@@ -302,43 +295,13 @@ impl FileSource {
     }
 }
 
-pub fn get_file_from_tar<P>(file_name: P, tar_binary: &Vec<u8>) -> io::Result<Vec<u8>>
-where
-    P: AsRef<std::path::Path>,
-{
-    let mut a = tar::Archive::new(std::io::Cursor::new(tar_binary));
-
-    debug!(
-        "finding {} from tar, tar whole size is {}",
-        file_name.as_ref().to_str().unwrap(),
-        tar_binary.len()
-    );
-
-    let mut e = a
-        .entries()
-        .unwrap()
-        .find(|a| {
-            a.as_ref()
-                .is_ok_and(|b| b.path().is_ok_and(|c| c == file_name.as_ref()))
-        })
-        .ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::NotFound,
-                format!(
-                    "get_file_from_tar: can't find the file, {}",
-                    file_name.as_ref().to_str().unwrap()
-                ),
-            )
-        })??;
-
-    debug!("found {}", file_name.as_ref().to_str().unwrap());
-
-    let mut result = vec![];
-    use std::io::Read;
-    e.read_to_end(&mut result)?;
-    Ok(result)
+/// generate an io::ErrorKind::Other
+pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
+    message: T,
+    message2: T2,
+) -> io::Error {
+    io::Error::new(io::ErrorKind::Other, format!("{} {}", message, message2))
 }
-
 /// helper function
 pub fn init_tls_server_pem_option(
     opts: &ruci_tls::server::TlsServerOptions,
@@ -350,11 +313,39 @@ pub fn init_tls_server_pem_option(
         alpn: opts.alpn.clone(),
     })
 }
+pub fn get_file_from_tar<P>(file_name_in_tar: P, tar_binary: &Vec<u8>) -> io::Result<Vec<u8>>
+where
+    P: AsRef<std::path::Path>,
+{
+    let mut a = tar::Archive::new(std::io::Cursor::new(tar_binary));
 
-/// generate an io::ErrorKind::Other
-pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
-    message: T,
-    message2: T2,
-) -> io::Error {
-    io::Error::new(io::ErrorKind::Other, format!("{} {}", message, message2))
+    debug!(
+        "finding {} from tar, tar whole size is {}",
+        file_name_in_tar.as_ref().to_str().unwrap(),
+        tar_binary.len()
+    );
+
+    let mut e = a
+        .entries()
+        .unwrap()
+        .find(|a| {
+            a.as_ref()
+                .is_ok_and(|b| b.path().is_ok_and(|c| c == file_name_in_tar.as_ref()))
+        })
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                format!(
+                    "get_file_from_tar: can't find the file, {}",
+                    file_name_in_tar.as_ref().to_str().unwrap()
+                ),
+            )
+        })??;
+
+    debug!("found {}", file_name_in_tar.as_ref().to_str().unwrap());
+
+    let mut result = vec![];
+    use std::io::Read;
+    e.read_to_end(&mut result)?;
+    Ok(result)
 }
