@@ -19,6 +19,8 @@ commit 谨慎，commit 的说明详细。每个commit 要完整地解释 该comm
 
 # 约定
 
+only use Box::leak if have to.
+
 ## 子项目
 
 ruci(定义) - rucimp（实现） - rucimple（可执行文件）

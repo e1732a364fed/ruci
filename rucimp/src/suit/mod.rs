@@ -6,6 +6,10 @@
  */
 pub mod config;
 pub mod engine;
+
+/// mock of engine, but uses listen_ser2 -> listen_tcp2 -> handle_conn_clonable
+pub mod engine2;
+
 #[cfg(test)]
 mod test;
 
@@ -217,6 +221,30 @@ pub async fn listen_ser(
                 )
             }
             listen_tcp(ins, outc, oti, shutdown_rx).await
+        }
+        _ => Err(io::Error::other(format!(
+            "such network not supported: {}",
+            n
+        ))),
+    }
+}
+
+pub async fn listen_ser2(
+    ins: &'static dyn Suit,
+    outc: &'static dyn Suit,
+    oti: Option<Arc<net::TransmissionInfo>>,
+    shutdown_rx: oneshot::Receiver<()>,
+) -> io::Result<()> {
+    let n = ins.network();
+    match n {
+        "tcp" => {
+            if outc.network() != "tcp" {
+                panic!(
+                    "not implemented for dialing network other than tcp: {}",
+                    outc.network()
+                )
+            }
+            listen_tcp2(ins, outc, oti, shutdown_rx).await
         }
         _ => Err(io::Error::other(format!(
             "such network not supported: {}",
