@@ -39,7 +39,7 @@ The project is divided to three main parts:
 ruci is the base framewark, defines some concepts like【映射】(Map), 动态Map迭代器 DMIter; 
 implements chain structure, implements some basic Maps; provides some useful relay facilities.
 
-rucimp provides more Maps, defines multiple config modes, provides some example binaries.
+rucimp provides more Maps, defines the config mode(and file format), provides some example binaries.
 rucimp is the core.
 
 ruci-cmd is the ultimate full feature executable, including utils, api-client and api-server
@@ -49,6 +49,7 @@ ruci-cmd is the ultimate full feature executable, including utils, api-client an
 ## Configuration Mode
 
 For lua configuration, see [local.lua](resource/local.lua), [remote.lua](resource/remote.lua)  和 [lua配置说明](doc/lua.md) 
+以及 [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
 
 ## Compile/Run
 
@@ -66,7 +67,7 @@ See [exmaples](rucimp/examples/README.md)
 
 # Dev
 
-TDD. See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md)
+TDD. See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md) for developper Contributing guidelines in 中文.
 
 ## What is "Proxy"
 
@@ -206,6 +207,7 @@ o2node-.->collector
 - [x] api_server
 - [x] api_client
 - [x] utils
+- [ ] tui: using ratatui
 
 #### Real Purpose of This Project?
 
