@@ -22,7 +22,7 @@
  */
 use std::{collections::HashMap, sync::Arc};
 
-use ruci::map::MapperBox;
+use ruci::map::{acc::DynIterator, MapperBox};
 
 use uuid::Uuid;
 
@@ -42,15 +42,21 @@ pub type IndexMapperBox = (usize, Arc<MapperBox>); //MapperBox 和它的 索引
 
 /// 如果产生的是新的, 则其index 为 cache_len
 pub trait IndexNextInMapperGenerator {
-    fn next_in_mapper(&self, this_index: usize, cache_len: usize) -> Option<IndexMapperBox>;
+    fn next_in_mapper(
+        &self,
+        this_index: usize,
+        cache_len: usize,
+        data: Option<Vec<ruci::map::OptVecData>>,
+    ) -> Option<IndexMapperBox>;
 }
 
-impl Iterator for IndexUnbounded {
-    type Item = Arc<MapperBox>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl DynIterator for IndexUnbounded {
+    fn next_with_data(
+        &mut self,
+        data: Option<Vec<ruci::map::OptVecData>>,
+    ) -> Option<Arc<MapperBox>> {
         let cl = self.cache.len();
-        let oi = self.selector.next_in_mapper(self.current_index, cl);
+        let oi = self.selector.next_in_mapper(self.current_index, cl, data);
         match oi {
             Some(ib) => {
                 let i = ib.0;
@@ -81,7 +87,11 @@ pub struct UuidUnbounded {
 pub type UUIDMapperBox = (Uuid, Arc<MapperBox>); //MapperBox 和它的 uuid
 
 pub trait UuidInfiniteNextInMapperGenerator {
-    fn next_in_mapper(&self, this_index: Uuid) -> Option<UUIDMapperBox>;
+    fn next_in_mapper(
+        &self,
+        this_index: Uuid,
+        data: Option<Vec<ruci::map::OptVecData>>,
+    ) -> Option<UUIDMapperBox>;
 }
 
 /// 有界部分动态链
@@ -101,14 +111,19 @@ pub struct Bounded {
 }
 
 pub trait NextPartSelector {
-    fn next_part(&self, this_part_index: usize) -> Option<usize>;
+    fn next_part(
+        &self,
+        this_part_index: usize,
+        data: Option<Vec<ruci::map::OptVecData>>,
+    ) -> Option<usize>;
 }
 
-impl Iterator for Bounded {
-    type Item = Arc<MapperBox>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let oi = self.selector.next_part(self.current_index);
+impl DynIterator for Bounded {
+    fn next_with_data(
+        &mut self,
+        data: Option<Vec<ruci::map::OptVecData>>,
+    ) -> Option<Arc<MapperBox>> {
+        let oi = self.selector.next_part(self.current_index, data);
         match oi {
             Some(i) => {
                 self.current_index = i;

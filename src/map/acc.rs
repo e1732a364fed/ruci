@@ -1,9 +1,9 @@
 /*!
 * provide facilities for accumulating dynamic chain
 
-trait: MIter, DMIter
+trait: DynIterator, MIter, DMIter
 
-struct DynMIterWrapper, AccumulateResult, AccumulateParams
+struct DynMIterWrapper, DynVecIterWrapper, AccumulateResult, AccumulateParams
 
 * function accumulate , accumulate_from_start
 */
