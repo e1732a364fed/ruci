@@ -2,6 +2,20 @@
 Defines a [`Map`] called [`Stack`] using user level tcp/ip stack based on `smoltcp`.
 
 The module is buggy. Do not use. Use mod tcp_ip_stack_smoltcp instead.
+
+cargo.toml:
+```toml
+smoltcp = { version = "0.12", optional = true, default-features = false, features = [
+  "std",
+  "log",
+  "medium-ip",
+  "proto-ipv4",
+  "proto-ipv6",
+  "socket-icmp",
+  "socket-udp",
+  "socket-tcp",
+] }
+```
  */
 pub mod device;
 pub mod ip_packet;
