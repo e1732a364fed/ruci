@@ -65,8 +65,6 @@ use self::addr_conn::AddrConn;
 /// 一种用于表示 Mapper 的生成的数据的类型
 #[derive(Debug, Clone)]
 pub enum AnyData {
-    //A(AnyArc),
-    //B(AnyBox),
     Bool(bool),
     CID(CID),
     String(String),
@@ -74,10 +72,8 @@ pub enum AnyData {
     I64(i64),
     F64(f64),
     AU64(Arc<AtomicU64>),
-
-    Addr(net::Addr),                //store raddr
-    RLAddr((net::Addr, net::Addr)), //store raddr and laddr
-    User(Box<dyn user::User>),      //store authed user
+    Addr(net::Addr),           //store raddr
+    User(Box<dyn user::User>), //store authed user
 }
 
 /// 一个 Mapper 实际生成的数据可能是一个单一的数据，也可能是一个数组

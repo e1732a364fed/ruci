@@ -64,8 +64,9 @@ async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::
                 laddr
             );
         }
-        let data = AnyData::RLAddr((raddr, laddr));
-        let output_data = VecAnyData::Data(data);
+        // let data = AnyData::RLAddr((raddr, laddr));
+        // let output_data = VecAnyData::Data(data);
+        let output_data = VecAnyData::Vec(vec![AnyData::Addr(raddr), AnyData::Addr(laddr)]);
 
         let r = tx
             .send(MapResult::builder().c(stream).d(output_data).build())

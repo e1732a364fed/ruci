@@ -116,15 +116,14 @@ impl Dialer {
         }
     }
 }
-fn get_addr_from_d(d: &AnyData) -> Option<net::Addr> {
+pub fn get_addr_from_d(d: &AnyData) -> Option<net::Addr> {
     match d {
         AnyData::Addr(a) => Some(a.clone()),
-        AnyData::RLAddr((r, _)) => Some(r.clone()),
         _ => None,
     }
 }
 
-fn get_addr_from_vvd(vd: Vec<Option<VecAnyData>>) -> Option<net::Addr> {
+pub fn get_addr_from_vvd(vd: Vec<Option<VecAnyData>>) -> Option<net::Addr> {
     for ovd in vd.iter() {
         match ovd {
             Some(vd) => match vd {
