@@ -14,7 +14,7 @@ async fn main() -> anyhow::Result<()> {
 
     let default_fn = "local.lua".to_string();
 
-    let contents = try_get_filecontent(&default_fn);
+    let contents = try_get_filecontent(&default_fn)?;
 
     let mut se = Engine::default();
     let sc = lua::load(&contents).expect("has valid lua codes in the file content");

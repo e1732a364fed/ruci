@@ -14,7 +14,7 @@ suit, chain 分为以不同的代码运行 suit模式和 chain 模式
 
 # chain mode
 cargo run --example chain -- local.lua
-cargo run --example chain -- remove.lua
+cargo run --example chain -- remote.lua
 
 # suit mode
 cargo run --example suit -- local.suit.toml

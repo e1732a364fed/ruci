@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
 
     let default_fn = "local.suit.toml".to_string();
 
-    let contents = try_get_filecontent(&default_fn);
+    let contents = try_get_filecontent(&default_fn)?;
 
     println!("{}", contents);
     let mut se = SuitEngine::new();

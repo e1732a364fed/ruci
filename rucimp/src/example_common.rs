@@ -4,8 +4,11 @@ use std::{
     path::PathBuf,
 };
 
+use anyhow::anyhow;
 use log::{debug, info, log_enabled, Level};
 use tokio::signal::{self};
+
+use crate::COMMON_DIRS;
 
 pub fn print_env_version(name: &str) {
     println!("rucimp~ {}\n", name);
@@ -35,8 +38,9 @@ pub fn print_env_version(name: &str) {
 /// try current folder and ruci_config, resource, ../resource folder
 ///
 /// try the default_file given or the first cmd argument
-pub fn try_get_filecontent(default_file: &str) -> String {
-    let cdir = std::env::current_dir().expect("has current directory");
+///
+/// and will set current dir to the directory
+pub fn try_get_filecontent(default_file: &str) -> anyhow::Result<String> {
     let args: Vec<String> = env::args().collect();
 
     let filename = if args.len() > 1 && args[1] != "-s" {
@@ -45,40 +49,32 @@ pub fn try_get_filecontent(default_file: &str) -> String {
         default_file
     };
 
-    let mut r_contents = fs::read_to_string(PathBuf::from(filename));
-    if r_contents.is_err() {
-        debug!("try ruci_config folder");
-        let mut cd = cdir.clone();
-        cd.push("ruci_config");
+    let mut last_e: Option<std::io::Error> = None;
+    for dir in &COMMON_DIRS {
+        let s = String::from(*dir) + filename;
 
-        if cd.exists() {
-            std::env::set_current_dir(cd).expect("set_current_dir ok");
-            r_contents = fs::read_to_string(filename);
+        let r = fs::read_to_string(PathBuf::from(s));
+        match r {
+            Ok(r) => {
+                let mut cd = std::env::current_dir().expect("has current directory");
+
+                cd.push(dir);
+
+                if cd.exists() {
+                    std::env::set_current_dir(cd).expect("set_current_dir ok");
+                    debug!("set current dir to {:?}", std::env::current_dir());
+                }
+
+                return Ok(r);
+            }
+            Err(e) => last_e = Some(e),
         }
     }
 
-    if r_contents.is_err() {
-        debug!("try resource folder");
-        let mut cd = cdir.clone();
-        cd.push("resource");
-
-        if cd.exists() {
-            std::env::set_current_dir(cd).expect("set_current_dir ok");
-            r_contents = fs::read_to_string(filename);
-        }
+    match last_e {
+        Some(e) => Err(e.into()),
+        None => Err(anyhow!("open {filename} failed and no result err")),
     }
-    if r_contents.is_err() {
-        debug!("try ../resource folder");
-
-        let mut cd = cdir.clone();
-        cd.push("../resource");
-
-        if cd.exists() {
-            std::env::set_current_dir(cd).expect("set_current_dir ok");
-            r_contents = fs::read_to_string(filename);
-        }
-    }
-    r_contents.expect(&format!("no such file: {}", filename))
 }
 
 pub async fn wait_close_sig() -> anyhow::Result<()> {

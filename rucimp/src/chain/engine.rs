@@ -132,7 +132,7 @@ impl Engine {
             tasks.push((t1, t2));
             shutdown_tx_vec.push(tx);
         });
-        debug!("chain engine will run with {} inbounds", tasks.len());
+        info!("chain engine will run with {} inbounds", tasks.len());
 
         *running = Some(shutdown_tx_vec);
         Ok(tasks)

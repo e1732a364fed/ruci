@@ -14,8 +14,8 @@ use anyhow::anyhow;
 use log::warn;
 use maxminddb::geoip2;
 
-pub const MMDB_DOWNLOAD_LINK: &str =
-    "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb";
+// pub const MMDB_DOWNLOAD_LINK: &str =
+//     "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb";
 
 /// try read file  in possible_addrs
 pub fn get_ip_iso(ip: IpAddr, filename: &str, possible_addrs: &[&str]) -> String {
