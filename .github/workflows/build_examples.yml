@@ -42,9 +42,25 @@ jobs:
         cp -r resource dist/
   
     - name: Archive production artifacts
+      if: ${{ runner.os == 'Linux' }}
       uses: actions/upload-artifact@v4
       with:
-        name: dist
+        name: ruci_linux
+        path: |
+          dist
+    - name: Archive production artifacts
+      if: ${{ runner.os == 'macOS' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ruci_macOS
         path: |
           dist
     
+    - name: Archive production artifacts
+      if: ${{ runner.os == 'Windows' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ruci_windows
+        path: |
+          dist
+        
