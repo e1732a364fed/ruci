@@ -134,6 +134,7 @@ wiremock = "0.6"
 default = ["sockopt"]
 steganography = []
 api_server = ["axum", "tower-http", "TinyUFO"]
+file_server = ["axum", "tower-http"]
 
 # quic = ["s2n-quic", "s2n-quic-rustls", "ruci-rustls21"]
 quinn = ["ruci-rustls21", "dep:quinn"]

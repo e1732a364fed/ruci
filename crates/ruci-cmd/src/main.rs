@@ -252,9 +252,13 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     use tracing_appender::{non_blocking, rolling};
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
+    #[cfg(debug_assertions)]
     let console_layer = fmt::layer()
         .with_line_number(true)
         .with_writer(std::io::stderr);
+
+    #[cfg(not(debug_assertions))]
+    let console_layer = fmt::layer().with_writer(std::io::stderr);
 
     let logger = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
@@ -293,8 +297,6 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     #[allow(unused_mut)]
     let mut features_list: Vec<&str> = vec![
-        #[cfg(feature = "file_server")]
-        "file_server",
         #[cfg(feature = "api_server")]
         "api_server",
         #[cfg(feature = "api_client")]

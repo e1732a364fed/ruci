@@ -282,6 +282,12 @@ pub async fn serve(
         "/stop_engine",
         get(stop_engine).with_state(s.close_engine_tx.clone()),
     );
+
+    #[cfg(feature = "file_server")]
+    {
+        app = app.nest_service("/dist", tower_http::services::ServeDir::new("dist"));
+    }
+
     app = app
         .route("/status", get(get_status))
         .route(

@@ -10,7 +10,7 @@ ruci-cmd 运行时产生的日志会自动创建并放在 logs 文件夹中, dai
 
 ```sh
 # run with api server
-cargo run --features "lua api_server api_client utils use-native-tls" --release -- -a
+cargo run --features "lua api_server api_client file_server utils use-native-tls steganography" --release -- -a
 
 ```
 
@@ -107,17 +107,11 @@ lua/json格式在静态链下是可以互相转换的
 
 ## 简易文件服务器
 
-    ./ruci-cmd utils serve-folder
-    ./ruci-cmd utils serve-folder 0.0.0.0:12345
+    ./ruci-cmd -a
 
-serve-folder 命令 会将 ruci-cmd 当前工作目录下的 "static" 文件夹 作为 文件服务器的根路径。
-
-它不会对用户打印出 static 文件夹中的任何文件，而只有当访问 static 中的用户指定的子文件夹时，才会显示其子文件夹的内容。
-这样就保护了根路径的内容。
+file_server feature 开启后，只要打开 api_server 命令 会将 ruci-cmd 当前工作目录下的 "dist" 文件夹 作为 文件服务器的根路径。
 
 这个文件夹名不可更改，这是为了防止错误地将私密文件暴露。
-
-如果不给出监听地址，会自动监听 "0.0.0.0:18143"。
 
 ## 打包
 
@@ -144,7 +138,7 @@ pack是打包为 tar 文件， pack-z 是在打包为 tar.zip 文件。
 
 # api server
 
-默认api 监听为 127.0.0.1:40681 , file_server 监听默认为 0.0.0.0:18143
+默认api 监听为 127.0.0.1:40681
 
 可用 --api-addr 和 --file-server-addr 改变
 

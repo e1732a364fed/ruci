@@ -119,7 +119,7 @@ pub async fn wait_close_sig_with_closer(
     let terminate2 = std::future::pending::<()>();
 
     tokio::select! {
-        _ = c.recv() => info!("GOT user close"),
+        _ = c.recv() => info!("got user close"),
         _ = ctrl_c => info!("got ctrl_c"),
         _ = terminate => info!("got terminate"),
         _ = terminate2 => info!("got interrupt"),

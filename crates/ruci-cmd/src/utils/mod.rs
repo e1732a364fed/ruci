@@ -7,8 +7,8 @@ use serde_value::Value;
 use tokio::sync::mpsc;
 use tracing::info;
 
-#[cfg(feature = "file_server")]
-pub mod folder_serve;
+// #[cfg(feature = "file_server")]
+// pub mod folder_serve;
 
 pub const WINTUN_DOWNLOAD_LINK: &str = "https://www.wintun.net/builds/wintun-0.14.1.zip";
 
@@ -53,12 +53,11 @@ pub enum Commands {
     /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
     PackZ { folder: String },
 
-    /// serve folder "static" in plain http.
-    ///
-    /// default listen is "0.0.0.0:18143"
-    #[cfg(feature = "file_server")]
-    ServeStatic { addr: Option<String> },
-
+    // /// serve folder "static" in plain http.
+    // ///
+    // /// default listen is "0.0.0.0:18143"
+    // #[cfg(feature = "file_server")]
+    // ServeStatic { addr: Option<String> },
     /// print the QrCode of a string in the console.
     QR { str: String },
 
@@ -162,12 +161,12 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             write_file(data, md5)?;
         }
 
-        #[cfg(feature = "file_server")]
-        Commands::ServeStatic { addr } => {
-            folder_serve::serve_static(addr).await;
+        // #[cfg(feature = "file_server")]
+        // Commands::ServeStatic { addr } => {
+        //     folder_serve::serve_static(addr).await;
 
-            let _ = rucimp::utils::wait_close_sig().await;
-        }
+        //     let _ = rucimp::utils::wait_close_sig().await;
+        // }
         Commands::QR { str } => print_qrcode_of(&str),
         Commands::ConvertFormat {
             mut input_file,

@@ -50,16 +50,16 @@ serde-value = "0.7"
 
 [features]
 lua = ["rucimp/lua"]
-
 lua54 = ["rucimp/lua54"]
+
 tun = ["rucimp/tun"]
 
 # quic = ["rucimp/quic"]
 quinn = ["rucimp/quinn"]
 
+file_server = ["rucimp/file_server"]
 api_server = ["chrono", "rucimp/api_server"]
 api_client = ["reqwest"]
-file_server = ["axum", "tower-http"]
 
 utils = ["reqwest", "rcgen", "qrcode"]
 trace = ["rucimp/trace"]
