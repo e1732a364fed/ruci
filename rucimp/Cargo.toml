@@ -28,6 +28,7 @@ maxminddb = { version = "0.24", optional = true }
 
 mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lot","luau","macros"] , optional = true }
 
+macro_mapper ={ path = "../crates/macro_mapper" }
 
 
 [features]

@@ -1158,6 +1158,7 @@ dependencies = [
  "iprange",
  "itertools 0.12.1",
  "log",
+ "macro_mapper",
  "maxminddb",
  "mlua",
  "parking_lot",
