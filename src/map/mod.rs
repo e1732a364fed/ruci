@@ -397,12 +397,3 @@ impl<T: MapperExt + Send + Sync + DynClone> MapperSync for T {}
 dyn_clone::clone_trait_object!(MapperSync);
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
-
-pub trait MIter: Iterator<Item = &'static MapperBox> + DynClone + Send + Sync + Debug {}
-impl<T: Iterator<Item = &'static MapperBox> + DynClone + Send + Sync + Debug> MIter for T {}
-dyn_clone::clone_trait_object!(MIter);
-
-pub type MIterBox = Box<dyn MIter>;
-
-//MIterBox 才是传统意义上的 一条代理链. 一个 MapperBox 只是链中的一环.
-//MIterBox 有静态的生命周期，因此其内存必须由程序手动管理

@@ -1,3 +1,4 @@
+use crate::map::acc::MIterBox;
 use crate::map::math::{AddDirection, Adder};
 use crate::map::network::Direct;
 use crate::map::{MapParams, Mapper, CID};
@@ -7,7 +8,7 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use super::{MIterBox, MapperBox, ProxyBehavior};
+use super::{MapperBox, ProxyBehavior};
 
 #[tokio::test]
 async fn test_adder_r() -> std::io::Result<()> {

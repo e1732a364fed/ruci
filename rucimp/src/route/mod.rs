@@ -26,7 +26,7 @@ use ipnet::*;
 use iprange::IpRange;
 use regex::RegexSet;
 use ruci::{
-    map::{AnyData, MIterBox},
+    map::{acc::MIterBox, AnyData},
     net::{self, *},
     relay::route::{self, *},
     user::*,
