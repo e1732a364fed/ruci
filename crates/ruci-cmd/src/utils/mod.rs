@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{fs, time::Duration};
 
 use super::*;
 use anyhow::{Context, Ok};
@@ -20,7 +20,13 @@ pub enum Commands {
     DownloadWINTUN,
 
     /// calculate trojan hash for a plain text password
-    CalcuTrojanHash { password: String },
+    CalcuTrojanHash {
+        password: String,
+    },
+
+    GenerateSelfSignedCert {
+        names: Vec<String>,
+    },
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -36,6 +42,16 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             download_wintun().await?;
         }
         Commands::CalcuTrojanHash { password } => calcu_trojan_hash(&password),
+        Commands::GenerateSelfSignedCert { names } => {
+            use rcgen::generate_simple_self_signed;
+
+            let cert = generate_simple_self_signed(names).unwrap();
+            let c = cert.serialize_pem()?;
+            let k = cert.serialize_private_key_pem();
+
+            fs::write("generated.crt", c)?;
+            fs::write("generated.key", k)?;
+        }
     };
     Ok(())
 }
