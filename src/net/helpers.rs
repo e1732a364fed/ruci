@@ -25,7 +25,9 @@ use std::cmp::min;
 ///max len is 2 + 2 + 255 (domain)
 pub const MAX_LEN_SOCKS5_BYTES: usize = 2 + 2 + 255;
 
-//todo: add unit test
+/// Read the buf, advance it and parse out the Addr
+///
+/// todo: add unit test
 pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> anyhow::Result<Addr> {
     if buf.len() < 7 {
         bail!("socks5_bytes_to_addr length wrong1, {}", buf.len());
@@ -487,6 +489,8 @@ impl BufContentLenProtocolReader {
                 "closed",
             ))),
             BufferReadState::ContinueReadLocalCache { from, to } => {
+                debug_assert!(from < to);
+
                 let rc = rc.unwrap();
 
                 debug_assert_eq!(rc.len(), self.read_cap);
@@ -624,6 +628,8 @@ impl BufContentLenProtocolReader {
         from: usize,
         to: usize,
     ) -> Poll<std::io::Result<Option<BufReadResult>>> {
+        debug_assert!(from < to);
+
         let data = &rc[from..to];
         let (content_len, body_start_index) = (self.content_len_body_start_index_parse_fn)(data)?;
         let real_len = data[body_start_index..].len();
@@ -695,7 +701,10 @@ impl AsyncRead for MockTcpStream {
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         //debug!("MockTcp: read called");
-        let size: usize = min(self.read_data.len(), buf.initialized().len());
+        let size: usize = min(self.read_data.len(), buf.remaining());
+        if size == 0 {
+            return Poll::Ready(Ok(()));
+        }
         buf.put(&self.read_data[..size]);
 
         let new_len = self.read_data.len() - size;
@@ -757,7 +766,11 @@ impl<'a> AsyncRead for MockTcpStream2<'a> {
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         //debug!("MockTcp: read called");
-        let size: usize = min(self.read_data.len(), buf.initialized().len());
+        let size: usize = min(self.read_data.len(), buf.remaining());
+        if size == 0 {
+            return Poll::Ready(Ok(()));
+        }
+
         buf.put(&self.read_data[..size]);
 
         let new_len = self.read_data.len() - size;

@@ -10,7 +10,7 @@ use std::{
 use tokio::{io::ReadBuf, net::UdpSocket};
 use tracing::info;
 
-use self::map::{addr_conn::MAX_DATAGRAM_SIZE, helpers::MAX_LEN_SOCKS5_BYTES};
+use self::map::helpers::MAX_LEN_SOCKS5_BYTES;
 
 use super::*;
 use crate::{
@@ -88,9 +88,7 @@ impl AsyncReadAddr for Conn {
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        let mut new_buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
-
-        let mut r_buf = ReadBuf::new(&mut new_buf);
+        let mut r_buf = ReadBuf::new(buf);
         let r = self.base.poll_recv_from(cx, &mut r_buf);
         match ready!(r) {
             Err(e) => Poll::Ready(Err(e)),
@@ -108,9 +106,13 @@ impl AsyncReadAddr for Conn {
                 match r {
                     Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
 
-                    Ok((mut actual_buf, a)) => {
+                    Ok((actual_buf, a)) => {
                         let w_len = min(buf.len(), actual_buf.len());
-                        actual_buf.copy_to_slice(&mut buf[..w_len]);
+
+                        let remaining_data = actual_buf.as_ref();
+
+                        // 将剩余数据拷贝到 buf 的首部
+                        buf[..remaining_data.len()].copy_from_slice(remaining_data);
 
                         // if tracing::enabled!(tracing::Level::DEBUG)  {
                         //     debug!("socks5 udp got msg,{w_len} {soa}, {:?}", &buf[..w_len])
