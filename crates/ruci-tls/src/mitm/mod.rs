@@ -197,9 +197,7 @@ impl Map for MITM {
                                 debug!(
                                     "MITM: first read client data success, len: {}, content: {}",
                                     n,
-                                    unsafe {
-                                        String::from_utf8_unchecked(b[..n.min(100)].to_vec())
-                                    }
+                                    b[..n.min(100)].escape_ascii()
                                 );
                                 b.truncate(n);
 

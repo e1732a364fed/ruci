@@ -10,3 +10,4 @@ testfile.txt
 *.mmdb
 wintun.*
 logs/
+record_dir/

@@ -3,7 +3,7 @@ print("this is a lua local config file")
 -- lua 的好处有很多, 你可以定义很多变量
 -- 真正的配置块是 接近文件底部的 Config 变量, 可以用搜索快速找到它
 
-local listen = {
+local listen_10800 = {
     Listener = { listen_addr = "0.0.0.0:10800" }
 }
 local listen_fixed_target = {
@@ -46,13 +46,13 @@ local tproxy_udp_listen = {
     }
 }
 
-local listen_socks5 = { listen, {
+local listen_socks5 = { listen_10800, {
     Socks5 = {}
 } }
-local listen_http = { listen, {
+local listen_http = { listen_10800, {
     Http = {}
 } }
-local listen_socks5http = { listen, {
+local listen_socks5http = { listen_10800, {
     Socks5Http = {}
 } }
 
@@ -106,7 +106,7 @@ local trojan_in = {
     }
 }
 
-local listen_trojan = { listen, trojan_in }
+local listen_trojan = { listen_10800, trojan_in }
 
 local dial = {
     BindDialer = {
@@ -702,12 +702,13 @@ local config_17_tcp_ip_stack = {
 -- Recorder 用于记录流量并写入单独的日志文件
 local config_18_recorder = {
     inbounds = { {
-        chain = { listen, {
+        chain = { listen_10800, {
             Recorder = {
                 label = "socks5",
                 output_file_extension = "Json", --"Cbor"
                 output_format = "Ruci",         --"Ruci", "Har"
                 record_mode = "Info",
+                output_dir = "record_dir",
                 -- piece_truncate_option = "NoTruncate",
                 -- session_truncate_option = "NoTruncate",
             }
@@ -719,17 +720,19 @@ local config_18_recorder = {
     },
     outbounds = { {
         tag = "dial1",
-        chain = { direct, {
-            Recorder = {
-                label = "direct",
-                output_file_extension = "Json",
-                output_format = "Ruci",
-                record_mode = "Info",
+        chain = { direct,
+            {
+                Recorder = {
+                    label = "direct",
+                    output_file_extension = "Json",
+                    output_format = "Ruci",
+                    record_mode = "Info",
+                    output_dir = "record_dir",
 
-                -- piece_truncate_option = "NoTruncate",
-                -- session_truncate_option = "NoTruncate",
-            }
-        } }
+                    -- piece_truncate_option = "NoTruncate",
+                    -- session_truncate_option = "NoTruncate",
+                }
+            } }
     } }
 
 }
@@ -760,7 +763,7 @@ local config_19_recorder_trojans = {
         {
             tag = "listen_socks5",
             chain = {
-                listen,
+                listen_10800,
                 get_recorder("socks5"),
                 {
                     Socks5Http = {},
@@ -896,7 +899,7 @@ local config_23_tcp_ip_stack_lwip = {
 local config_24_chain_mitm = {
     inbounds = { {
         chain = {
-            { Listener = { listen_addr = "0.0.0.0:10800" } },
+            listen_10800,
             { Socks5Http = {} },
             {
                 MITM = {
@@ -913,7 +916,7 @@ local config_24_chain_mitm = {
         chain = {
             { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
             {
-                TLS = {
+                NativeTLS = {
                     host = "www.google.com",
                     insecure = true,
                     alpn = { "h2", "http/1.1" }
@@ -924,8 +927,50 @@ local config_24_chain_mitm = {
     } }
 }
 
+local config_25_recorder_mitm = {
+    inbounds = { {
+        chain = { listen_10800,
+            { Socks5Http = {} },
+            {
+                MITM = {
+                    cert = "test_ca_cert.pem",
+                    key = "test_ca_key.pem",
+                    alpn = { "h2", "http/1.1" }
+                }
+            },
 
-Config = config_18_recorder
+            {
+                Recorder = {
+                    label = "mitm",
+                    output_file_extension = "Json", --"Cbor"
+                    output_format = "Ruci",         --"Ruci", "Har"
+                    record_mode = "Info",
+                    output_dir = "record_dir",
+                }
+            }, },
+        tag = "listen1"
+    },
+    },
+    outbounds = { {
+        tag = "dial1",
+        chain = { {
+            Direct = {
+                leak_target_addr = true -- 注意这里要设为 true, 这样才能把 目标地址进一步 传递到 TLS 层 (用于设置 SNI)
+            }
+        },
+            {
+                NativeTLS = {
+                    alpn = { "h2", "http/1.1" },
+                    insecure = false
+                }
+            }
+        }
+    } }
+
+}
+
+
+Config = config_25_recorder_mitm
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)

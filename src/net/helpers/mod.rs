@@ -360,7 +360,7 @@ impl AsyncWrite for PrintWrapper {
                     debug!(
                         "PrintWrapper write got e:{} {}, {e}",
                         buf.len(),
-                        String::from_utf8_lossy(&buf[..min(buf.len(), MAX_DISPLAY_LEN)])
+                        &buf[..min(buf.len(), MAX_DISPLAY_LEN)].escape_ascii()
                     );
                 }
                 BytesDisplayMode::Bytes => {
