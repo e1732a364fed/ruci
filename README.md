@@ -194,7 +194,8 @@ o2node-.->collector
 - [x] http_filter, websocket(including early data)
 - [x] h2, grpc
 - [x] quic
-- [ ] tcp/ip netstack (smoltcp)
+- [ ] vpn_test1
+- [ ] tcp/ip stack (smoltcp)
 - [ ] ss?, vmess?
 
 ### ruci-cmd
