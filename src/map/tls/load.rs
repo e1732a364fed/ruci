@@ -7,11 +7,11 @@ use rustls_pemfile::{certs, read_one, Item};
 use std::io::{self, BufReader};
 use std::path::Path;
 
-use super::ServerOptions;
+use super::server::ServerOptions;
 
 pub fn load_ser_config(options: &ServerOptions) -> io::Result<ServerConfig> {
     let certs = load_certs(&options.cert)?;
-    debug_assert!( certs.len() >0);
+    debug_assert!(certs.len() > 0);
     let key = load_keys(&options.key)?;
 
     //todo: we don't use client authentication yet
@@ -27,7 +27,7 @@ pub fn load_ser_config(options: &ServerOptions) -> io::Result<ServerConfig> {
 /// Load the passed certificates file
 fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
     Ok(certs(&mut BufReader::new(File::open(path)?))
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("{:?}",e)))?
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("{:?}", e)))?
         .into_iter()
         .map(Certificate)
         .collect())
@@ -35,64 +35,66 @@ fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
 
 fn load_keys(path: &Path) -> io::Result<PrivateKey> {
     match read_one(&mut BufReader::new(File::open(path)?)) {
-        Ok(Some(Item::RSAKey(data) | Item::PKCS8Key(data) | Item::ECKey(data)) ) => Ok(PrivateKey(data)),
+        Ok(Some(Item::RSAKey(data) | Item::PKCS8Key(data) | Item::ECKey(data))) => {
+            Ok(PrivateKey(data))
+        }
         Ok(x) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("invalid key in {}, {:?}", path.display(),x),
+            format!("invalid key in {}, {:?}", path.display(), x),
         )),
         Err(e) => Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
     }
 }
 
 #[cfg(test)]
-mod test{
+mod test {
     use std::path::PathBuf;
 
     use super::*;
 
     #[test]
-    fn test_load_key(){
+    fn test_load_key() {
         let mut path = PathBuf::new();
         path.push("test.key");
 
         let r = load_keys(&path);
         match r {
             Ok(pk) => {
-                println!("{:?}",pk);
-            },
-            Err(e) => panic!("failed, {}",e),
+                println!("{:?}", pk);
+            }
+            Err(e) => panic!("failed, {}", e),
         }
     }
 
     #[test]
-    fn test_load_cert(){
+    fn test_load_cert() {
         let mut path = PathBuf::new();
         path.push("test.crt");
 
         let r = load_certs(&path);
         match r {
             Ok(pk) => {
-                println!("{:?}",pk);
-            },
-            Err(e) => panic!("failed, {}",e),
+                println!("{:?}", pk);
+            }
+            Err(e) => panic!("failed, {}", e),
         }
     }
 
     #[test]
-    fn test_load_ser_config(){
-        let  mut path = PathBuf::new();
+    fn test_load_ser_config() {
+        let mut path = PathBuf::new();
         path.push("test.crt");
 
-        let mut  path2 = PathBuf::new();
+        let mut path2 = PathBuf::new();
         path2.push("test.key");
 
-        let r = load_ser_config(&ServerOptions{
+        let r = load_ser_config(&ServerOptions {
             addr: "todo!()".to_string(),
             cert: path,
             key: path2,
         });
 
-        println!("{:#?}",r);
+        println!("{:#?}", r);
     }
 }
 

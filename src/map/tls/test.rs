@@ -102,7 +102,7 @@ async fn listen_future(listen_host_str: &str, listen_port: u16) -> std::io::Resu
     let mut path2 = PathBuf::new();
     path2.push("test.key");
 
-    let a = tls::Server::new(ServerOptions {
+    let a = tls::server::Server::new(tls::server::ServerOptions {
         addr: "todo!()".to_string(),
         cert: path,
         key: path2,

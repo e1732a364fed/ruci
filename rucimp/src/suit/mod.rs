@@ -174,12 +174,12 @@ impl Suit for SuitStruct {
             }
             ProxyBehavior::DECODE => {
                 if self.has_tls() {
-                    let so = tls::ServerOptions {
+                    let so = tls::server::ServerOptions {
                         addr: "todo!()".to_string(),
                         cert: c.cert.unwrap().into(),
                         key: c.key.unwrap().into(),
                     };
-                    let sa = tls::Server::new(so);
+                    let sa = tls::server::Server::new(so);
                     self.inmappers.push(Box::new(sa));
                 }
             }
