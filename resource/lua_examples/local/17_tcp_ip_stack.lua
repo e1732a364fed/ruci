@@ -4,10 +4,9 @@ local sockopt_config = {
 }
 
 local outbound_opt_direct = {
-  chain = { {
+  {
     type = "OptDirect", sockopt = sockopt_config
-  } },
-  tag = "dial1"
+  },
 }
 
 local tun_config = {
@@ -22,15 +21,11 @@ local tun_config = {
   bind_addr = "ip://10.0.0.1:24#utun321"
 }
 
-local inbound_tun_stack = {
-  chain = {
-    tun_config,
-    { type = "Stack" }
-  },
-  tag = "listen1"
-}
+
 
 Config = {
-  outbounds = { outbound_opt_direct },
-  inbounds = { inbound_tun_stack }
+  outbounds = { dial1 = outbound_opt_direct },
+  inbounds = {
+    listen1 = { tun_config, { type = "Stack" } }
+  }
 }

@@ -1,6 +1,5 @@
 local outbound_direct = {
-  chain = { { type = "Direct" } },
-  tag = "dial1"
+  { type = "Direct" },
 }
 
 local tls_config = {
@@ -17,16 +16,13 @@ local lua_config = {
 }
 
 local inbound_lua_trojan = {
-  chain = {
-    { type = "Listener", listen_addr = "0.0.0.0:10801" },
-    tls_config,
-    { type = "Trojan",   password = "mypassword" },
-    lua_config
-  },
-  tag = "listen1"
+  { type = "Listener", listen_addr = "0.0.0.0:10801" },
+  tls_config,
+  { type = "Trojan",   password = "mypassword" },
+  lua_config
 }
 
 Config = {
-  outbounds = { outbound_direct },
-  inbounds = { inbound_lua_trojan }
+  outbounds = { dial1 = outbound_direct },
+  inbounds = { listen1 = inbound_lua_trojan }
 }

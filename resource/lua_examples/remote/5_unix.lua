@@ -1,23 +1,19 @@
 local outbound_direct = {
-  chain = { { type = "Direct" } },
-  tag = "dial1"
+  { type = "Direct" },
 }
 
 local inbound_unix_tls_trojan = {
-  chain = {
-    { type = "Listener", listen_addr = "unix://file1" },
-    {
-      type = "TLS",
-      key = "test2.key",
-      cert = "test2.crt",
-      alpn = { "h2", "http/1.1" }
-    },
-    { type = "Trojan",   password = "mypassword" }
+  { type = "Listener", listen_addr = "unix://file1" },
+  {
+    type = "TLS",
+    key = "test2.key",
+    cert = "test2.crt",
+    alpn = { "h2", "http/1.1" }
   },
-  tag = "listen1"
+  { type = "Trojan",   password = "mypassword" }
 }
 
 Config = {
-  outbounds = { outbound_direct },
-  inbounds = { inbound_unix_tls_trojan }
+  outbounds = { dial1 = outbound_direct },
+  inbounds = { listen1 = inbound_unix_tls_trojan }
 }

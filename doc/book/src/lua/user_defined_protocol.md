@@ -6,14 +6,12 @@ ruci 中提供 lua用户自定义协议方式来 大大提高使用的灵活性�
 
 ```lua
 local config_21_lua_example1 = {
-    inbounds = { {
-        chain = listen_socks5http,
-        tag = "listen1"
-    } },
-    outbounds = { {
-        tag = "dial1",
-        chain = { dial, tlsout, trojan_out, { Lua = { file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" } } }
-    } }
+    inbounds = {
+        listen1 = listen_socks5http,
+    },
+    outbounds = {
+        dial1 = { dial, tlsout, trojan_out, { Lua = { file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" } } }
+    }
 }
 ```
 

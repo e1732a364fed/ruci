@@ -1,17 +1,13 @@
 local outbound_direct = {
-  chain = { { type = "Direct" } },
-  tag = "dial1"
+  { type = "Direct" },
 }
 
 local inbound_socks_http = {
-  chain = {
-    { type = "Listener",  listen_addr = "0.0.0.0:10801" },
-    { type = "Socks5Http" }
-  },
-  tag = "listen1"
+  { type = "Listener",  listen_addr = "0.0.0.0:10801" },
+  { type = "Socks5Http" }
 }
 
 Config = {
-  outbounds = { outbound_direct },
-  inbounds = { inbound_socks_http }
+  outbounds = { dial1 = outbound_direct },
+  inbounds = { listen1 = inbound_socks_http }
 }

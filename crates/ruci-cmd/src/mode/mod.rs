@@ -125,42 +125,47 @@ pub async fn get_config_file(
 }
 #[cfg(test)]
 mod test {
-    use ruci::net::dns::{self, ClientConfig};
+    use std::collections::BTreeMap;
+
+    use ruci::net::dns::{self};
     use rucimp::modes::chain::config::PlainTextPassSet;
-    use rucimp::modes::chain::config::{
-        DirectConfig, InMapConfig, InMapConfigChain, OutMapConfig, OutMapConfigChain, StaticConfig,
-    };
+    use rucimp::modes::chain::config::{DirectConfig, InMapConfig, OutMapConfig, StaticConfig};
     use rucimp::serde_json;
 
     #[test]
     fn serialize() {
         let sa = std::net::SocketAddr::V4("114.114.114.114:53".parse().unwrap());
+
+        let c1 = vec![
+            InMapConfig::Listener {
+                listen_addr: "0.0.0.0:1080".to_string(),
+                ext: None,
+            },
+            InMapConfig::Counter,
+            InMapConfig::Adder { value: 3 },
+            InMapConfig::Socks5(PlainTextPassSet::default()),
+        ];
+        let mut inbounds = BTreeMap::new();
+        inbounds.insert("c1".to_string(), c1);
+
+        let c2 = vec![
+            OutMapConfig::Direct(DirectConfig::default()),
+            OutMapConfig::Direct(DirectConfig {
+                dns_client: Some(dns::ClientConfig {
+                    dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
+                    ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
+                    static_pairs: None,
+                }),
+                ..Default::default()
+            }),
+        ];
+
+        let mut outbounds = BTreeMap::new();
+        outbounds.insert("c2".to_string(), c2);
+
         let sc = StaticConfig {
-            inbounds: vec![InMapConfigChain {
-                tag: None,
-                chain: vec![
-                    InMapConfig::Listener {
-                        listen_addr: "0.0.0.0:1080".to_string(),
-                        ext: None,
-                    },
-                    InMapConfig::Counter,
-                    InMapConfig::Socks5(PlainTextPassSet::default()),
-                ],
-            }],
-            outbounds: vec![OutMapConfigChain {
-                tag: String::from("todo!()"),
-                chain: vec![
-                    OutMapConfig::Direct(DirectConfig::default()),
-                    OutMapConfig::Direct(DirectConfig {
-                        dns_client: Some(ClientConfig {
-                            dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
-                            ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
-                            ..Default::default()
-                        }),
-                        ..Default::default()
-                    }),
-                ],
-            }],
+            inbounds,
+            outbounds,
             ..Default::default()
         };
         let json = serde_json::to_string(&sc).expect("valid json");

@@ -8,26 +8,20 @@ local h2_config = {
 }
 
 local outbound_h2_trojan = {
-  chain = {
-    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
-    {
-      type = "TLS", host = "www.1234.com", insecure = true
-    },
-    h2_config,
-    { type = "Trojan",     password = "mypassword" }
+  { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
+  {
+    type = "TLS", host = "www.1234.com", insecure = true
   },
-  tag = "dial1"
+  h2_config,
+  { type = "Trojan",     password = "mypassword" }
 }
 
 local inbound_socks_http = {
-  chain = {
-    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
-    { type = "Socks5Http" }
-  },
-  tag = "listen1"
+  { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+  { type = "Socks5Http" }
 }
 
 Config = {
-  outbounds = { outbound_h2_trojan },
-  inbounds = { inbound_socks_http }
+  outbounds = { dial1 = outbound_h2_trojan },
+  inbounds = { listen1 = inbound_socks_http }
 }

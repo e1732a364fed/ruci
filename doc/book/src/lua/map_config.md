@@ -274,14 +274,8 @@ local tproxy_udp_listen = {
 }
 
 local tproxy_listen_inbounds = { 
-    {
-        chain = tproxy_listen_tcp_chain,
-        tag = "listen_tproxy_tcp"
-    },
-    {
-        chain = { tproxy_udp_listen },
-        tag = "listen_tproxy_udp"
-    }
+    listen_tproxy_tcp = tproxy_listen_tcp_chain,
+    listen_tproxy_udp = { tproxy_udp_listen },
 }
 
 ```

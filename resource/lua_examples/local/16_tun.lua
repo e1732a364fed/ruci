@@ -10,19 +10,16 @@ local ws_config = {
 }
 
 local outbound_ws_tls = {
-  chain = {
-    {
-      type = "OptDialer",
-      sockopt = sockopt_config,
-      dial_addr = "tcp://192.168.0.204:10801"
+  {
+    type = "OptDialer",
+    sockopt = sockopt_config,
+    dial_addr = "tcp://192.168.0.204:10801"
 
-    },
-    {
-      type = "TLS", host = "www.1234.com", insecure = true
-    },
-    ws_config
   },
-  tag = "dial1"
+  {
+    type = "TLS", host = "www.1234.com", insecure = true
+  },
+  ws_config
 }
 
 local tun_config = {
@@ -37,12 +34,8 @@ local tun_config = {
   bind_addr = "ip://10.0.0.1:24#utun321"
 }
 
-local inbound_tun = {
-  chain = { tun_config },
-  tag = "listen1"
-}
 
 Config = {
-  outbounds = { outbound_ws_tls },
-  inbounds = { inbound_tun }
+  outbounds = { dial1 = outbound_ws_tls },
+  inbounds = { listen1 = { tun_config } }
 }

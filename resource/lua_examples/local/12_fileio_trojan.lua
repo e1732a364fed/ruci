@@ -1,12 +1,9 @@
 local outbound_trojan = {
-  chain = {
-    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
-    {
-      type = "TLS", host = "www.1234.com", insecure = true
-    },
-    { type = "Trojan",     password = "mypassword" }
+  { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
+  {
+    type = "TLS", host = "www.1234.com", insecure = true
   },
-  tag = "dial1"
+  { type = "Trojan",     password = "mypassword" }
 }
 
 local fileio_config = {
@@ -18,14 +15,7 @@ local fileio_config = {
   ext = { fixed_target_addr = "fake.com:80" }
 }
 
-local inbound_fileio = {
-  chain = {
-    fileio_config
-  },
-  tag = "listen1"
-}
-
 Config = {
-  outbounds = { outbound_trojan },
-  inbounds = { inbound_fileio }
+  outbounds = { dial1 = outbound_trojan },
+  inbounds = { listen1 = { fileio_config } }
 }

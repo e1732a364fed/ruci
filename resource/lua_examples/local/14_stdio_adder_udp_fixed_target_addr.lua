@@ -1,9 +1,6 @@
 local outbound_socks5 = {
-  chain = {
-    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
-    { type = "Socks5" }
-  },
-  tag = "d1"
+  { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
+  { type = "Socks5" }
 }
 
 local stdio_config = {
@@ -15,14 +12,11 @@ local stdio_config = {
 }
 
 local inbound_stdio_adder = {
-  chain = {
-    stdio_config,
-    { type = "Adder", value = 1 }
-  },
-  tag = "in_stdio_adder_chain"
+  stdio_config,
+  { type = "Adder", value = 1 }
 }
 
 Config = {
-  outbounds = { outbound_socks5 },
-  inbounds = { inbound_stdio_adder }
+  outbounds = { d1 = outbound_socks5 },
+  inbounds = { in_stdio_adder_chain = inbound_stdio_adder }
 }

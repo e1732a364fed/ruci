@@ -18,7 +18,12 @@ pub mod lua;
 
 pub mod dynamic;
 
-use std::{collections::HashMap, path::Path, sync::Arc, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::Path,
+    sync::Arc,
+    time::Duration,
+};
 
 // #[cfg(feature = "s2n-quic")]
 // use crate::map::quic;
@@ -55,9 +60,8 @@ use crate::map::tproxy::{self, TcpResolver};
 /// 静态配置中有初始化后即确定的 Map 数量
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
-    pub inbounds: Vec<InMapConfigChain>,
-    pub outbounds: Vec<OutMapConfigChain>,
-
+    pub inbounds: BTreeMap<String, Vec<InMapConfig>>,
+    pub outbounds: BTreeMap<String, Vec<OutMapConfig>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tag_route: Option<Vec<(String, String)>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -85,9 +89,8 @@ impl StaticConfig {
         let listens: Vec<_> = self
             .inbounds
             .iter()
-            .map(|config_chain| {
+            .map(|(tag, config_chain)| {
                 let chain: anyhow::Result<Vec<_>> = config_chain
-                    .chain
                     .iter()
                     .map(|map_config| {
                         let config_with_fs = InMapConfigWithDataSource {
@@ -99,7 +102,7 @@ impl StaticConfig {
                             .try_into()
                             .context("config_with_fs.try_into failed");
                         map.map(|mut map| {
-                            map.set_chain_tag(config_chain.tag.as_deref().unwrap_or(""));
+                            map.set_chain_tag(tag.as_str());
                             map
                         })
                     })
@@ -109,7 +112,7 @@ impl StaticConfig {
                     if let Some(last_m) = chain.last_mut() {
                         last_m.set_is_tail_of_chain(true);
                     } else {
-                        warn!("the inbound chain has no maps, {:?}", config_chain.tag);
+                        warn!("the inbound chain has no maps, {:?}", tag);
                     }
                     chain
                 })
@@ -124,9 +127,8 @@ impl StaticConfig {
         use itertools::Itertools;
         self.outbounds
             .iter()
-            .map(|config_chain| {
+            .map(|(tag, config_chain)| {
                 let chain: anyhow::Result<Vec<_>> = config_chain
-                    .chain
                     .iter()
                     .map(|map_config| {
                         let config_with_fs = OutMapConfigWithDataSource {
@@ -136,7 +138,7 @@ impl StaticConfig {
 
                         let map: anyhow::Result<MapBox> = config_with_fs.try_into();
                         map.map(|mut map| {
-                            map.set_chain_tag(&config_chain.tag);
+                            map.set_chain_tag(tag.as_str());
                             map
                         })
                     })
@@ -146,7 +148,7 @@ impl StaticConfig {
                     if let Some(last_m) = chain.last_mut() {
                         last_m.set_is_tail_of_chain(true);
                     } else {
-                        warn!("the outbound chain has no maps, {:?}", config_chain.tag);
+                        warn!("the outbound chain has no maps, {:?}", tag);
                     }
                     chain
                 })
@@ -240,18 +242,6 @@ impl StaticConfig {
                 })
             })
     }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct InMapConfigChain {
-    pub tag: Option<String>,
-    pub chain: Vec<InMapConfig>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct OutMapConfigChain {
-    pub tag: String, //每个 out chain 都必须有一个 tag
-    pub chain: Vec<OutMapConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
@@ -562,7 +552,7 @@ pub struct TrojanPassSet {
     pub more: Option<Vec<String>>,
 }
 
-pub struct InMapConfigWithDataSource {
+pub(crate) struct InMapConfigWithDataSource {
     pub config: InMapConfig,
     pub data_source: Arc<DataSource>,
 }
@@ -762,7 +752,7 @@ impl TryFrom<InMapConfigWithDataSource> for MapBox {
         }
     }
 }
-pub struct OutMapConfigWithDataSource {
+pub(crate) struct OutMapConfigWithDataSource {
     pub config: OutMapConfig,
     pub data_source: Arc<DataSource>,
 }

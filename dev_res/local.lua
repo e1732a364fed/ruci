@@ -231,14 +231,12 @@ local direct_with_dns = {
 }
 
 local config_0_direct = {
-    inbounds = { {
-        chain = listen_socks5http,
-        tag = "listen1"
-    } },
-    outbounds = { {
-        tag = "dial1",
-        chain = { direct }
-    } }
+    inbounds = {
+        listen1 = listen_socks5http,
+    },
+    outbounds = {
+        dial1 = { direct }
+    }
 
     --[[
 演示 inbound 是 socks5http, outbound 是 direct 的情况
@@ -249,39 +247,27 @@ local config_0_direct = {
 }
 
 local config_1_direct_dns = {
-    inbounds = { {
-        chain = listen_socks5http,
-        tag = "listen1"
+    inbounds = {
+        listen1 = listen_socks5http,
+        listen2 = { listen_fixed_target },
     },
-        {
-            chain = { listen_fixed_target },
-            tag = "listen2"
-        },
-    },
-    outbounds = { {
-        tag = "dial1",
-        chain = { direct_with_dns }
-    } }
+
+    outbounds = {
+        dial1 = { direct_with_dns }
+    }
 
 }
 
-local tproxy_listen_inbounds = { {
-    chain = tproxy_listen_tcp_chain,
-    tag = "listen1"
-},
-    {
-        chain = { tproxy_udp_listen },
-        tag = "listen_udp1"
-    }
+local tproxy_listen_inbounds = {
+    listen1 = tproxy_listen_tcp_chain,
+    listen_udp1 = { tproxy_udp_listen },
 }
 
 local config_2_tproxy1 = {
     inbounds = tproxy_listen_inbounds,
-    outbounds = { {
-        tag = "direct",
-        chain = opt_direct_chain
-    } },
-
+    outbounds = {
+        direct = opt_direct_chain
+    },
     tag_route = { { "listen1", "direct" }, { "listen_udp1", "direct" } },
 
     --[[
@@ -294,10 +280,9 @@ local config_2_tproxy1 = {
 
 local config_3_tproxy2 = {
     inbounds = tproxy_listen_inbounds,
-    outbounds = { {
-        tag = "out",
-        chain = optdial_trojans_chain
-    } },
+    outbounds = {
+        out = optdial_trojans_chain
+    },
 
     tag_route = { { "listen1", "out" }, { "listen_udp1", "out" } },
 
@@ -315,11 +300,11 @@ local config_3_tproxy2 = {
 
 
 local config_4_trojans = {
-    inbounds = { { chain = listen_socks5http, tag = "listen1" }, {
-        chain = { listen_fixed_target },
-        tag = "listen2"
-    }, },
-    outbounds = { { tag = "dial1", chain = dial_trojans_chain } }
+    inbounds = {
+        listen1 = listen_socks5http,
+        listen2 = { listen_fixed_target },
+    },
+    outbounds = { dial1 = dial_trojans_chain }
 
     --[[
 演示 inbound 是 socks5http, outbound 是 trojan+tls 的情况
@@ -332,12 +317,9 @@ local config_4_trojans = {
 }
 
 local config_5_unix = {
-    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
+    inbounds = { listen1 = listen_socks5http },
     outbounds = {
-        {
-            tag = "dial1",
-            chain = { { type = "BindDialer", dial_addr = "unix://file1" }, tlsout, trojan_out }
-        }
+        dial1 = { { type = "BindDialer", dial_addr = "unix://file1" }, tlsout, trojan_out }
     }
 
     --[[
@@ -349,31 +331,26 @@ local config_5_unix = {
 }
 
 local config_6_ws = {
-    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
-    outbounds = { { tag = "dial1", chain = dial_ws_trojans_chain } },
-
+    inbounds = { listen1 = listen_socks5http },
+    outbounds = { dial1 = dial_ws_trojans_chain },
     -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+ws+trojan 的情况
-
-
 }
 
 local config_7_h2 = {
-    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
-    outbounds = { { tag = "dial1", chain = dial_h2_trojan_chain } },
+    inbounds = { listen1 = listen_socks5http },
+    outbounds = { dial1 = dial_h2_trojan_chain },
 
     -- 演示 inbound 是 socks5http, outbound 是 tcp+tls+h2+trojan 的情况
     -- (非多路复用. mux的情况见 local_mux_h2.lua 和 local_mux2_h2.lua)
 }
 
 local config_8_quic = {
-    inbounds = { {
-        chain = listen_socks5http,
-        tag = "listen1"
-    } },
-    outbounds = { {
-        tag = "dial1",
-        chain = quic_out_chain
-    } }
+    inbounds = {
+        listen1 = listen_socks5http,
+    },
+    outbounds = {
+        dial1 = quic_out_chain
+    }
 
     -- 演示 inbound 是 socks5http, outbound 是 quic 的情况
 }
@@ -381,7 +358,7 @@ local config_8_quic = {
 local config_9_stdio_adder = {
 
     inbounds = {
-        { chain = in_stdio_adder_chain, tag = "listen1" },
+        listen1 = in_stdio_adder_chain,
     },
 
     --[[
@@ -393,7 +370,7 @@ local config_9_stdio_adder = {
 
 --]]
 
-    outbounds = { { tag = "dial1", chain = out_stdio_chain } }
+    outbounds = { dial1 = out_stdio_chain }
 }
 
 local config_10_stdin_trojan = {
@@ -401,10 +378,10 @@ local config_10_stdin_trojan = {
     -- stdin + 1 -> trojan_out
 
     inbounds = {
-        { chain = in_stdio_adder_chain, tag = "listen1" },
+        listen1 = in_stdio_adder_chain,
     },
 
-    outbounds = { { tag = "dial1", chain = dial_trojans_chain } }
+    outbounds = { dial1 = dial_trojans_chain }
 }
 
 
@@ -413,12 +390,12 @@ local config_11_stdin_blackhole = {
     -- stdin + 1 -> blackhole
 
     inbounds = {
-        { chain = in_stdio_adder_chain, tag = "listen1" },
+        listen1 = in_stdio_adder_chain,
     },
 
     --expected warn: dial out client stream got consumed
 
-    outbounds = { { tag = "dial1", chain = { "Blackhole" } } }
+    outbounds = { dial1 = { "Blackhole" } }
 }
 
 
@@ -427,38 +404,32 @@ local config_12_fileio_trojan = {
     -- fileio -> trojan_out
 
     inbounds = {
-        {
-            chain = {
-                {
-                    type = "Fileio",
-                    i = "test.crt",
-                    o = "testfile.txt",
-                    sleep_interval = 500,
-                    bytes_per_turn = 10,
-                    ext = { fixed_target_addr = "fake.com:80" }
+        listen1 = {
+            {
+                type = "Fileio",
+                i = "test.crt",
+                o = "testfile.txt",
+                sleep_interval = 500,
+                bytes_per_turn = 10,
+                ext = { fixed_target_addr = "fake.com:80" }
 
-                }
-            },
-            tag = "listen1"
+            }
         },
     },
 
-    outbounds = { { tag = "dial1", chain = dial_trojans_chain } }
+    outbounds = { dial1 = dial_trojans_chain }
 }
+
 
 local config_13_route = {
     inbounds = {
-        {
-            chain = listen_socks5http,
-            tag = "l1"
-        },
+        l1 = listen_socks5http,
 
-        {
-            -- 测试: dig @127.0.0.1 -p 20800 www.baidu.com
+        -- 测试: dig @127.0.0.1 -p 20800 www.baidu.com
 
-            chain = {
-                listen_fixed_target, -- fixed_target_addr udp 为 将被多客户端连接 的情况
-                --[[
+        l2 = {
+            listen_fixed_target, -- fixed_target_addr udp 为 将被多客户端连接 的情况
+            --[[
             {
                 -- 只允许单客户端连接 该 fixed_target_addr udp 的情况(仅供测试使用)
 
@@ -471,24 +442,16 @@ local config_13_route = {
             }
             --]]
 
-            },
-            tag = "l2"
-        }, {
-        chain = { listen_ipv6, tlsin },
-        tag = "l3"
-    } },
-    outbounds = { {
-        tag = "d1",
-        chain = { direct }
-    }, {
-        tag = "d2",
-        chain = dial_trojans_chain
-    }, {
-        tag = "fallback_d",
-        chain = { {
+        },
+        l3 = { listen_ipv6, tlsin },
+    },
+    outbounds = {
+        d1 = { direct },
+        d2 = dial_trojans_chain,
+        fallback_d = { {
             type = "BindDialer", dial_addr = "tcp://127.0.0.1:80"
         } }
-    } },
+    },
 
     --[==[
     tag_route = { { "l1", "d1" }, { "l2", "d2" }, { "l3", "d2" } },
@@ -531,24 +494,20 @@ local config_13_route = {
 
 local config_14_stdio_adder_udp_fixed_target_addr = {
     inbounds = {
-        {
-            tag = "in_stdio_adder_chain",
+        in_stdio_adder_chain = {
+            {
+                type = "Stdio",
+                ext = {
+                    fixed_target_addr = "udp://127.0.0.1:20800",
+                    pre_defined_early_data = "abc"
 
-            chain = {
-                {
-                    type = "Stdio",
-                    ext = {
-                        fixed_target_addr = "udp://127.0.0.1:20800",
-                        pre_defined_early_data = "abc"
-
-                    }
-                },
-                { type = "Adder", value = 1 }
-            }
+                }
+            },
+            { type = "Adder", value = 1 }
         },
     },
     outbounds = {
-        { tag = "d1", chain = { dial, { type = "Socks5" } } },
+        d1 = { dial, { type = "Socks5" } },
     },
 
     --[[
@@ -562,31 +521,26 @@ local config_14_stdio_adder_udp_fixed_target_addr = {
 local config_15_tun_stdio_out = {
 
     inbounds = {
-
-        {
-            chain = { {
-                type = "BindDialer",
+        listen1 = { {
+            type = "BindDialer",
 
 
-                --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是用的 子网掩码的 CIDR 表示法,
-                -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
+            --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是用的 子网掩码的 CIDR 表示法,
+            -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
-                bind_addr = "ip://10.0.0.1:24#utun321",
+            bind_addr = "ip://10.0.0.1:24#utun321",
 
-                -- 自动配置 系统路由 以 代理全局
-                in_auto_route = {
-                    tun_dev_name = "utun321",
-                    tun_gateway = "10.0.0.1",
-                    router_ip = "192.168.0.1",
-                    original_dev_name = "enp0s1",
-                    dns_list = { "1.1.1.1" }
-                }
-
-            } },
-            tag = "listen1"
-        },
+            -- 自动配置 系统路由 以 代理全局
+            in_auto_route = {
+                tun_dev_name = "utun321",
+                tun_gateway = "10.0.0.1",
+                router_ip = "192.168.0.1",
+                original_dev_name = "enp0s1",
+                dns_list = { "1.1.1.1" }
+            }
+        } },
     },
-    outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
+    outbounds = { dial1 = out_stdio_show_bytes_chain }
 
     --[[
 
@@ -605,28 +559,23 @@ local config_15_tun_stdio_out = {
 local config_16_tun = {
 
     inbounds = {
+        listen1 = { {
+            type = "BindDialer",
+            bind_addr = "ip://10.0.0.1:24#utun321",
 
-        {
-            chain = { {
-                type = "BindDialer",
-                bind_addr = "ip://10.0.0.1:24#utun321",
+            in_auto_route = {
+                tun_dev_name = "utun321",
+                tun_gateway = "10.0.0.1",
+                router_ip = "192.168.0.1",
+                original_dev_name = "enp0s1", -- windows/macos 可不填 original_dev_name, linux 要填 original_dev_name
+                --direct_list = { "192.168.0.204" }, -- 服务端的ip要直连
+                dns_list = { "114.114.114.114" }
 
-                in_auto_route = {
-                    tun_dev_name = "utun321",
-                    tun_gateway = "10.0.0.1",
-                    router_ip = "192.168.0.1",
-                    original_dev_name = "enp0s1", -- windows/macos 可不填 original_dev_name, linux 要填 original_dev_name
-                    --direct_list = { "192.168.0.204" }, -- 服务端的ip要直连
-                    dns_list = { "114.114.114.114" }
-
-                }
-            } },
-            tag = "listen1"
-        },
+            }
+        } },
     },
-    outbounds = { {
-        tag = "dial1",
-        chain = { {
+    outbounds = {
+        dial1 = { {
             type = "OptDialer", -- 如果自动路由没写 direct_list, 也可以用 OptDialer+ bind_to_device 的方法
 
             -- 注: windows 上要用 OptDialer + bind_to_device 的方法
@@ -642,8 +591,9 @@ local config_16_tun = {
                 -- 以太网( windows, 中文系统 用网线联网的情况)
 
             }
-        }, tlsout, websocket_out }
-    } }
+        }, tlsout, websocket_out
+        }
+    }
 
     --[[
 
@@ -662,47 +612,42 @@ local config_16_tun = {
 local config_17_tcp_ip_stack = {
 
     inbounds = {
-        {
-            chain = { {
-                type = "BindDialer",
-                bind_addr = "ip://10.0.0.1:24#utun321",
+        listen1 = { {
+            type = "BindDialer",
+            bind_addr = "ip://10.0.0.1:24#utun321",
 
-                in_auto_route = {
-                    tun_dev_name = "utun321",
-                    tun_gateway = "10.0.0.1",
-                    router_ip = "192.168.0.1",
-                    original_dev_name = "en0", -- "以太网"
-                    dns_list = { "114.114.114.114" }
+            in_auto_route = {
+                tun_dev_name = "utun321",
+                tun_gateway = "10.0.0.1",
+                router_ip = "192.168.0.1",
+                original_dev_name = "en0", -- "以太网"
+                dns_list = { "114.114.114.114" }
 
-                }
-            }, "Stack" },
-            tag = "listen1"
-        },
+            }
+        }, "Stack" },
     },
-    --outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
-    outbounds = { {
-        tag = "dial1",
-        chain = opt_direct_chain
-    } }
+    --outbounds = { dial1 = out_stdio_show_bytes_chain }
+    outbounds = {
+        dial1 = opt_direct_chain
+    }
 
-    -- outbounds = { {
-    --     tag = "dial1",
-    --     chain = { {
+    -- outbounds = {
+    --     dial1 = { {
     --         type = "OptDialer",
-    --             dial_addr = "tcp://192.168.0.204:10801",
-    --             sockopt = {
-    --                 bind_to_device = "en0" -- "以太网"
-    --             }
-    --
+    --         dial_addr = "tcp://192.168.0.204:10801",
+    --         sockopt = {
+    --             bind_to_device = "en0"     -- "以太网"
+    --         }
+
     --     }, tlsout, trojan_out }
-    -- } }
+    -- }
 }
 --]]
 
 -- Recorder 用于记录流量并写入单独的日志文件
 local config_18_recorder = {
-    inbounds = { {
-        chain = { listen_10800, {
+    inbounds = {
+        listen1 = { listen_10800, {
             type = "Recorder",
             label = "socks5",
             output_file_extension = "Json", --"Cbor"
@@ -711,16 +656,11 @@ local config_18_recorder = {
             output_dir = "record_dir",
             -- piece_truncate_option = "NoTruncate",
             -- session_truncate_option = "NoTruncate",
-
-        }, {
-            type = "Socks5Http"
-        } },
-        tag = "listen1"
+        }, { type = "Socks5Http" },
+        },
     },
-    },
-    outbounds = { {
-        tag = "dial1",
-        chain = { direct,
+    outbounds = {
+        dial1 = { direct,
             {
                 type = "Recorder",
                 label = "direct",
@@ -732,8 +672,9 @@ local config_18_recorder = {
                 -- piece_truncate_option = "NoTruncate",
                 -- session_truncate_option = "NoTruncate",
 
-            } }
-    } }
+            }
+        }
+    }
 
 }
 
@@ -760,64 +701,52 @@ end
 local config_19_recorder_trojans = {
     tag_route = { { "listen_socks5", "dial_trojans" }, { "listen_trojans", "dial_direct" } },
     inbounds = {
-        {
-            tag = "listen_socks5",
-            chain = {
-                listen_10800,
-                get_recorder("socks5"),
-                {
-                    type = "Socks5Http",
-                }
-            },
+        listen_socks5 = {
+            listen_10800,
+            get_recorder("socks5"),
+            {
+                type = "Socks5Http",
+            }
         },
-        {
-            tag = "listen_trojans",
-            chain = { {
-                type = "Listener", listen_addr = "0.0.0.0:10801"
-            },
-                get_recorder("trojans"),
-                {
-                    type = "TLS",
-                    cert = "test.crt",
-                    key = "test.key",
-                    alpn = { "h2", "http/1.1" }
-
-
-                },
-                {
-                    type = "Trojan",
-                    password = "mypassword"
-
-                } },
+        listen_trojans = { {
+            type = "Listener", listen_addr = "0.0.0.0:10801"
         },
+            get_recorder("trojans"),
+            {
+                type = "TLS",
+                cert = "test.crt",
+                key = "test.key",
+                alpn = { "h2", "http/1.1" }
+
+
+            },
+            {
+                type = "Trojan",
+                password = "mypassword"
+
+            } },
     },
     outbounds = {
-        {
-            tag = "dial_direct",
-            chain = { direct, get_recorder("direct"), }
-        },
-        {
-            tag = "dial_trojans",
-            chain = {
-                {
-                    type = "BindDialer",
-                    dial_addr = "tcp://127.0.0.1:10801"
+        dial_direct = { direct, get_recorder("direct"), },
+        dial_trojans = {
+            {
+                type = "BindDialer",
+                dial_addr = "tcp://127.0.0.1:10801"
 
-                },
+            },
 
-                {
-                    type = "NativeTLS",
-                    --"TLS" = {
-                    host = random_host(), --"www.1234.com",
-                    insecure = true,
-                    alpn = { "http/1.1" }
+            {
+                type = "NativeTLS",
+                --"TLS" = {
+                host = random_host(), --"www.1234.com",
+                insecure = true,
+                alpn = { "http/1.1" }
 
 
-                },
-                get_recorder("trojan"),
-                trojan_out
+            },
+            get_recorder("trojan"),
+            trojan_out
 
-            }
         }
     }
 
@@ -825,36 +754,28 @@ local config_19_recorder_trojans = {
 
 -- steganography protocol example 1
 local config_20_spe1 = {
-    inbounds = { { chain = listen_socks5http, tag = "listen1" } },
+    inbounds = { listen1 = listen_socks5http },
     outbounds = {
-        {
-            tag = "dial1",
-            chain = { dial, { type = "SPE1", qa = { { "q1", "a1" }, { "q2", "a2" } } }, trojan_out }
-            -- chain = { dial, { type = "SPE1"}, trojan_out }
-        }
+        dial1 = { dial, { type = "SPE1", qa = { { "q1", "a1" }, { "q2", "a2" } } }, trojan_out }
     }
 }
 
 local config_21_lua_example1 = {
-    inbounds = { {
-        chain = listen_socks5http,
-        tag = "listen1"
-    } },
-    outbounds = { {
-        tag = "dial1",
-        chain = { dial, tlsout, trojan_out, { type = "Lua", file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" } }
-    } }
+    inbounds = {
+        listen1 = listen_socks5http,
+    },
+    outbounds = {
+        dial1 = { dial, tlsout, trojan_out, { type = "Lua", file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" } }
+    }
 }
 
 local config_22_lua_example2 = {
-    inbounds = { {
-        chain = listen_socks5http,
-        tag = "listen1"
-    } },
-    outbounds = { {
-        tag = "dial1",
-        chain = { dial, tlsout, trojan_out, { type = "Lua", file_name = "lua_protocol_e2_mathadd.lua", handshake_function = "Handshake" } }
-    } }
+    inbounds = {
+        listen_socks5http = "listen1"
+    },
+    outbounds = {
+        dial1 = { dial, tlsout, trojan_out, { type = "Lua", file_name = "lua_protocol_e2_mathadd.lua", handshake_function = "Handshake" } }
+    }
 }
 
 
@@ -862,29 +783,25 @@ local config_22_lua_example2 = {
 local config_23_tcp_ip_stack_lwip = {
 
     inbounds = {
-        {
-            chain = {
-                {
-                    BindDialer = {
-                        bind_addr = "ip://10.0.0.1:24#utun321",
+        listen1 = {
+            {
+                BindDialer = {
+                    bind_addr = "ip://10.0.0.1:24#utun321",
 
-                        in_auto_route = {
-                            tun_dev_name = "utun321",
-                            tun_gateway = "10.0.0.1",
-                            router_ip = "192.168.0.1",
-                            original_dev_name = "en0",
-                            dns_list = { "114.114.114.114" }
-                        }
+                    in_auto_route = {
+                        tun_dev_name = "utun321",
+                        tun_gateway = "10.0.0.1",
+                        router_ip = "192.168.0.1",
+                        original_dev_name = "en0",
+                        dns_list = { "114.114.114.114" }
                     }
-                },
-                "StackLwip" },
-            tag = "listen1"
-        },
+                }
+            },
+            "StackLwip" },
     },
 
-    outbounds = { {
-        tag = "dial1",
-        chain = { {
+    outbounds = {
+        dial1 = { {
             OptDialer = {
                 dial_addr = "tcp://192.168.0.10:10801",
                 sockopt = {
@@ -892,13 +809,13 @@ local config_23_tcp_ip_stack_lwip = {
                 }
             }
         }, tlsout, trojan_out }
-    } }
+    }
 }
 --]]
 
 local config_24_chain_mitm = {
-    inbounds = { {
-        chain = {
+    inbounds = {
+        listen1 = {
             listen_10800,
             { type = "Socks5Http" },
             {
@@ -909,11 +826,9 @@ local config_24_chain_mitm = {
 
             },
         },
-        tag = "listen1"
-    } },
-    outbounds = { {
-        tag = "dial1",
-        chain = {
+    },
+    outbounds = {
+        dial1 = {
             { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
             {
                 type = "NativeTLS",
@@ -923,13 +838,14 @@ local config_24_chain_mitm = {
 
             },
             { type = "Trojan",     password = "mypassword" }
+
         }
-    } }
+    }
 }
 
 local config_25_recorder_mitm = {
-    inbounds = { {
-        chain = { listen_10800,
+    inbounds = {
+        listen1 = { listen_10800,
             { type = "Socks5Http" },
             {
                 type = "MITM",
@@ -953,13 +869,11 @@ local config_25_recorder_mitm = {
                 output_dir = "record_dir",
                 prettify = true,
 
-            }, },
-        tag = "listen1"
+            },
+        },
     },
-    },
-    outbounds = { {
-        tag = "dial1",
-        chain = { {
+    outbounds = {
+        dial1 = { {
             type = "Direct",
             leak_target_addr = true -- 注意这里要设为 true, 这样才能把 目标地址进一步 传递到 TLS 层 (用于设置 SNI)
 
@@ -971,14 +885,14 @@ local config_25_recorder_mitm = {
 
             }
         }
-    } }
+    }
 
 }
 
 
 local config_26_chain_mitm_embedder = {
-    inbounds = { {
-        chain = {
+    inbounds = {
+        listen1 = {
             listen_10800,
             { type = "Socks5Http" },
             {
@@ -988,12 +902,10 @@ local config_26_chain_mitm_embedder = {
                 alpn = { "h2", "http/1.1" }
 
             },
-        },
-        tag = "listen1"
-    } },
-    outbounds = { {
-        tag = "dial1",
-        chain = {
+        }
+    },
+    outbounds = {
+        dial1 = {
             { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
             {
                 type = "NativeTLS",
@@ -1004,21 +916,20 @@ local config_26_chain_mitm_embedder = {
             },
             { type = "Embedder",   file_name = "record_dir1/1-2_mitm_ruci_info.json" },
             { type = "Trojan",     password = "mypassword",                          do_not_use_early_data = false }
+
         }
-    } }
+    }
 }
 
 local config_27_embedder = {
-    inbounds = { {
-        chain = {
+    inbounds = {
+        listen1 = {
             listen_10800,
             { type = "Socks5Http" },
-        },
-        tag = "listen1"
-    } },
-    outbounds = { {
-        tag = "dial1",
-        chain = {
+        }
+    },
+    outbounds = {
+        dial1 = {
             { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
             {
                 type = "NativeTLS",
@@ -1029,8 +940,9 @@ local config_27_embedder = {
             },
             { type = "Embedder",   file_name = "test_mitm_ruci_info.json" },
             { type = "Trojan",     password = "mypassword",               do_not_use_early_data = false }
+
         }
-    } }
+    }
 }
 
 Config = config_27_embedder

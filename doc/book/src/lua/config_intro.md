@@ -42,10 +42,10 @@ inbounds/outbounds 是 [inbound/outbound](#inboundoutbound) 的列表:
 
 每个 inbound/outbound 都由 一个 [chain](#chain) 和一个 tag 组成:
 
+如下面 tag 为 listen1
 ```lua
 {
-    chain = {},
-    tag = "listen1"
+    listen1 = {},
 }
 ```
 
@@ -53,7 +53,7 @@ inbounds/outbounds 是 [inbound/outbound](#inboundoutbound) 的列表:
 
 每个 chain 都是一个 列表:
 
-    chain = { {}, {}, {}, ..}
+    { {}, {}, {}, ..}
 
 它是 `MapConfig` 的列表.
 
@@ -90,7 +90,7 @@ Sock5Http 可读取 socks5 协议 和 http代理 协议
 合起来放到一个 chain 中：
 
 ```lua
-chain = {
+{
     {
         type = "Listener", listen_addr = "0.0.0.0:10800"
     },
@@ -102,15 +102,12 @@ chain = {
 再把它包起来变成一个 inbound ：
 
 ```lua
-{
-    tag = "listen1",
-    chain = {
-        {
-            type = "Listener", listen_addr = "0.0.0.0:10800"
-        },
-        {
-            type = "Socks5Http"
-        }
+listen1 = {
+    {
+        type = "Listener", listen_addr = "0.0.0.0:10800"
+    },
+    {
+        type = "Socks5Http"
     }
 }
 ```
@@ -121,15 +118,12 @@ chain = {
 ```lua
 Config = {
     inbounds = {
-        {
-            tag = "listen1",
-            chain = {
-                {
-                    type = "Listener", listen_addr = "0.0.0.0:10800"
-                },
-                {
-                    type = "Socks5Http"
-                }
+        listen1 = {
+            {
+                type = "Listener", listen_addr = "0.0.0.0:10800"
+            },
+            {
+                type = "Socks5Http"
             }
         }
     },
@@ -155,9 +149,7 @@ Direct 是最简单的 OutMap! 它就是直连：
 它 Direct 块 放入 chain 中：
 
 ```lua
-chain = {
-    { type = "Direct" },
-}
+{ type = "Direct" },
 ```
 
 再把它放入 Config 的 outbounds 中：
@@ -165,11 +157,8 @@ chain = {
 ```lua
 Config = {
     outbounds = {
-        {
-            tag = "direct",
-            chain =  {
-                { type = "Direct" },
-            }
+        direct =  {
+            { type = "Direct" },
         }
     },
 
@@ -181,24 +170,18 @@ Config = {
 ```lua
 Config = {
     inbounds = {
-        {
-            tag = "listen1",
-            chain = {
-                {
-                    type = "Listener", listen_addr = "0.0.0.0:10800"
-                },
-                {
-                    type = "Socks5Http"
-                }
+        listen1 = {
+            {
+                type = "Listener", listen_addr = "0.0.0.0:10800"
+            },
+            {
+                type = "Socks5Http"
             }
         }
     },
     outbounds = {
-        {
-            tag = "direct",
-            chain =  {
-                { type = "Direct" },
-            }
+        direct =  {
+            { type = "Direct" },
         }
     },
 }
@@ -211,7 +194,7 @@ Config = {
 我们把每个有意义的子块都给个 `变量名`：
 
 ```lua
-local direct = { type = "Direct" }
+local direct_map = { type = "Direct" }
 local listener = {  type = "Listener", listen_addr = "0.0.0.0:10800"  }
 local sock5http = { type = "Socks5Http" }
 
@@ -223,23 +206,15 @@ local sock5http = { type = "Socks5Http" }
 
 ```lua
 
-local direct = { type = "Direct" }
+local direct_map = { type = "Direct" }
 local listener = {  type = "Listener", listen_addr = "0.0.0.0:10800"  }
 local sock5http = { type = "Socks5Http" }
 
 Config = {
     inbounds = {
-        {
-            tag = "listen1",
-            chain = {   listener,  sock5http  }
-        }
+        listen1 = { listener, sock5http  }
     },
-    outbounds = {
-        {
-            tag = "direct",
-            chain =  {  direct,  }
-        }
-    },
+    outbounds = {  direct =  {  direct_map,  }  },
 }
 ```
 
@@ -248,12 +223,12 @@ Config = {
 再替换一次：
 
 ```lua
-local direct = { type = "Direct" }
+local direct_map = { type = "Direct" }
 local listener = {  type = "Listener", listen_addr = "0.0.0.0:10800"  }
 local sock5http = { type = "Socks5Http" }
 
-local listen_inbound = { tag = "listen1", chain = { listener, sock5http } }
-local direct_outbound = { tag = "direct", chain =  { direct, } }
+local listen_inbound = { listen1 = { listener, sock5http } }
+local direct_outbound = { direct =  { direct_map, } }
 
 Config = {
     inbounds = { listen_inbound },

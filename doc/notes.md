@@ -210,7 +210,7 @@ tun 是用 如下配置启用
         --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
         -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
-        {chain = { { BindDialer= { bind_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
+        listen1 = { { BindDialer= { bind_addr = "ip://10.0.0.1:24#utun321" } } } ,
     },
 ```
 

@@ -36,7 +36,7 @@ fn test_in() -> anyhow::Result<()> {
 
         Config = {
             inbounds = {
-                {chain = chain1, tag = "listen1"}
+                listen1 = chain1 
             },
             outbounds = {}
         }
@@ -67,16 +67,17 @@ fn test_in() -> anyhow::Result<()> {
 
     let first_listen_group = c
         .inbounds
-        .first()
+        .iter()
+        .next()
         .ok_or(anyhow::anyhow!("inbounds is empty"))?;
     let last_m = first_listen_group
-        .chain
+        .1
         .last()
         .ok_or(anyhow::anyhow!("chain is empty"))?;
     assert!(matches!(InMapConfig::Counter, last_m));
 
     let first_m = first_listen_group
-        .chain
+        .1
         .first()
         .ok_or(anyhow::anyhow!("chain is empty"))?;
     let str = "0.0.0.0:1080".to_string();
@@ -126,7 +127,7 @@ fn test_out() -> anyhow::Result<()> {
             Config = {
                 inbounds = {},
                 outbounds = {
-                    {chain = chain1, tag = "dial1"}
+                  dial1 = chain1 
                 }
             }
         "#;
@@ -135,11 +136,11 @@ fn test_out() -> anyhow::Result<()> {
 
     println!("{:#?}", c);
     let dial = c.outbounds;
-    let first_listen_group = dial.first().unwrap();
-    let last_m = first_listen_group.chain.last().unwrap();
+    let first_listen_group = dial.iter().next().unwrap();
+    let last_m = first_listen_group.1.last().unwrap();
     assert!(matches!(InMapConfig::Counter, last_m));
 
-    let first_m = first_listen_group.chain.first().unwrap();
+    let first_m = first_listen_group.1.first().unwrap();
     let str = "0.0.0.0:1080".to_string();
     // assert!(matches!(
     //     first_m,
@@ -173,14 +174,12 @@ fn test_out2() -> anyhow::Result<()> {
         
         Config = {
             inbounds = {
-                {chain = chain1, tag = "listen1"}
+                listen1 = chain1
             },
             outbounds = {
-                { 
-                    tag="dial1", chain = {
-                        { type = "BindDialer" , dial_addr = "0.0.0.0:1080" }
-                    } 
-                }
+                dial1= {
+                    { type = "BindDialer" , dial_addr = "0.0.0.0:1080" }
+                } 
             }
         }
         "#;
@@ -189,11 +188,11 @@ fn test_out2() -> anyhow::Result<()> {
 
     println!("{:#?}", c);
     let dial = c.outbounds;
-    let first_listen_group = dial.first().unwrap();
-    let last_m = first_listen_group.chain.last().unwrap();
+    let first_listen_group = dial.iter().next().unwrap();
+    let last_m = first_listen_group.1.last().unwrap();
     assert!(matches!(InMapConfig::Counter, last_m));
 
-    let first_m = first_listen_group.chain.first().unwrap();
+    let first_m = first_listen_group.1.first().unwrap();
     let str = "0.0.0.0:1080".to_string();
     // assert!(matches!(
     //     first_m,
@@ -228,10 +227,10 @@ fn test_out3() -> anyhow::Result<()> {
 
         Config = {
             inbounds = { 
-                {chain = ic, tag = "in_stdio_adder_chain"} , 
+               in_stdio_adder_chain = ic
             } ,
             outbounds = { 
-                { tag="d1", chain = out_socks5_c } , 
+              out_socks5_c= out_socks5_c
             },
         
         }
@@ -241,8 +240,8 @@ fn test_out3() -> anyhow::Result<()> {
 
     println!("{:#?}", c);
     let dial = c.outbounds;
-    let first_listen_group = dial.first().unwrap();
-    let last_m = first_listen_group.chain.last().unwrap();
+    let first_listen_group = dial.iter().next().unwrap();
+    let last_m = first_listen_group.1.last().unwrap();
     println!("{:#?}", last_m);
 
     // assert!(matches!(InMapConfig::Counter, last_m));
@@ -270,28 +269,24 @@ fn test_tag_route() -> anyhow::Result<()> {
         
         Config = {
             inbounds = {
-                {chain = chain1, tag = "listen1"},
-                {chain = { type = "Stdio", 
+                listen1 = chain1 ,
+                listen2 = { type = "Stdio", 
                      ext = {
                             fixed_target_addr = "myfake.com",
                             pre_defined_early_data = "abc"
                         }
                 
                 
-                 }, tag = "listen2"},
+                 } 
             },
             outbounds = {
-                { 
-                    tag="dial1", chain = {
+                   dial1 = {
                         { type = "BindDialer" , dial_addr = "0.0.0.0:1080" }
-                    }
-                },
+                    },
 
-                { 
-                    tag="dial2", chain = {
+                    dial2 = {
                         {type = "Direct"}
                     }
-                }
             },
             tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  }
         }
@@ -316,33 +311,36 @@ fn test_tag_route() -> anyhow::Result<()> {
 fn test_config1() -> anyhow::Result<()> {
     let sa = std::net::SocketAddr::V4("114.114.114.114:53".parse().unwrap());
 
+    let c1 = vec![
+        InMapConfig::Listener {
+            listen_addr: "0.0.0.0:1080".to_string(),
+            ext: None,
+        },
+        InMapConfig::Counter,
+        InMapConfig::Adder { value: 3 },
+        InMapConfig::Socks5(PlainTextPassSet::default()),
+    ];
+    let mut inbounds = BTreeMap::new();
+    inbounds.insert("c1".to_string(), c1);
+
+    let c2 = vec![
+        OutMapConfig::Direct(DirectConfig::default()),
+        OutMapConfig::Direct(DirectConfig {
+            dns_client: Some(dns::ClientConfig {
+                dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
+                ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
+                static_pairs: None,
+            }),
+            ..Default::default()
+        }),
+    ];
+
+    let mut outbounds = BTreeMap::new();
+    outbounds.insert("c2".to_string(), c2);
+
     let c = StaticConfig {
-        inbounds: vec![InMapConfigChain {
-            tag: None,
-            chain: vec![
-                InMapConfig::Listener {
-                    listen_addr: "0.0.0.0:1080".to_string(),
-                    ext: None,
-                },
-                InMapConfig::Counter,
-                InMapConfig::Adder { value: 3 },
-                InMapConfig::Socks5(PlainTextPassSet::default()),
-            ],
-        }],
-        outbounds: vec![OutMapConfigChain {
-            tag: String::from("todo!()"),
-            chain: vec![
-                OutMapConfig::Direct(DirectConfig::default()),
-                OutMapConfig::Direct(DirectConfig {
-                    dns_client: Some(dns::ClientConfig {
-                        dns_server_list: vec![(sa, dns::TheProtocol::Udp)],
-                        ip_strategy: Some(dns::TheLookupIpStrategy::Ipv4Only),
-                        static_pairs: HashMap::new(),
-                    }),
-                    ..Default::default()
-                }),
-            ],
-        }],
+        inbounds: inbounds,
+        outbounds: outbounds,
         ..Default::default()
     };
 
@@ -369,71 +367,37 @@ fn test_rule_route() -> anyhow::Result<()> {
         
         Config = {
             inbounds = {
-                {chain = chain1, tag = "listen1"},
-                {chain = { type = "Stdio" }, tag = "listen2"},
+                listen1 = chain1,
+                listen2 = { type = "Stdio" },
             },
             outbounds = {
-                { 
-                    tag="dial1", chain = {
+                dial1 = {
                         { type = "BindDialer",dial_addr = "0.0.0.0:1080" }
-                    }
                 },
-                { 
-                    tag="dial2", chain = {
-                        {
-                            type = "Direct"
+                dial2 = {
+                    {  type = "Direct" }
+                },
+                dial3 = {
+                    type = "Direct",
+                    dns_client = {
+                        dns_server_list = {
+                            {
+                            "127.0.0.1:20800", "udp"
+                            }
+                        },
+                        ip_strategy = "Ipv4Only",
+                        static_pairs = {
+                            ['www.baidu.com'] = "103.235.47.188"
                         }
-                    }
-                },
-                { 
-                    tag="dial3", chain = {
-                         {
-                            type = "Direct",
-                                dns_client = {
-                                    dns_server_list = {
-                                        {
-                                        "127.0.0.1:20800", "udp"
-                                        }
-                                    },
-                                    ip_strategy = "Ipv4Only",
-                                    static_pairs = {
-                                        ['www.baidu.com'] = "103.235.47.188"
-                                    }
-                                }
-                            
-                         }
                     }
                 }
             },
-            rule_route = { 
-                { 
-                    out_tag = "dial1", 
-                    mode = "WhiteList",
-                    in_tags = { "listen1" } ,
-                    userset = {
-                        { "plaintext:u0 p0", "trojan:my_password" },
-                        { "plaintext:u1 p1", "trojan:password1" },
-                    },
-                    ta_ip_countries = { "CN", "US" },
-                    ta_networks = { "tcp", "udp" },
-                    ta_ipv4 = { "192.168.1.0/24" },
-                    ta_domain_matcher = {
-                        domain_regex = {  "[a-z]+@[a-z]+",
-                        "[a-z]+" },
-                        domain_set = { "www.baidu.com" },
-                    }
-                } 
-            }
         }
         "#;
 
     let c: StaticConfig = load_static(text, Arc::new(DataSource::StdReadFile))?;
 
     println!("{:#?}", c);
-
-    // let tr = c.get_rule_route(Arc::new(DataSource::StdReadFile));
-    // assert!(tr.is_some());
-    // println!("{:#?}", tr);
 
     //println!("{:#?}", c.get_default_and_outbounds_map());
 

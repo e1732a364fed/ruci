@@ -1,36 +1,29 @@
 local outbound_trojan = {
-  chain = {
-    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
-    {
-      type = "TLS",
-      host = "www.1234.com",
-      insecure = true
+  { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
+  {
+    type = "TLS",
+    host = "www.1234.com",
+    insecure = true
 
-    },
-    { type = "Trojan",     password = "mypassword" }
   },
-  tag = "dial1"
+  { type = "Trojan",     password = "mypassword" }
 }
 
 local inbound_socks_http = {
-  chain = {
-    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
-    { type = "Socks5Http" }
-  },
-  tag = "listen1"
+  { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+  { type = "Socks5Http" }
 }
 
 local inbound_dns_proxy = {
-  chain = { {
+  {
     type = "Listener",
     listen_addr = "udp://0.0.0.0:20800",
     ext = { fixed_target_addr = "udp://8.8.8.8:53" }
 
-  } },
-  tag = "listen2"
+  },
 }
 
 Config = {
-  outbounds = { outbound_trojan },
-  inbounds = { inbound_socks_http, inbound_dns_proxy }
+  outbounds = { dial1 = outbound_trojan },
+  inbounds = { listen1 = inbound_socks_http, listen2 = inbound_dns_proxy }
 }

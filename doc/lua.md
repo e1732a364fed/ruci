@@ -30,9 +30,9 @@ end
 
 Config = {
     inbounds = {
-        {chain = chain1, tag = "listen1"}
+        listen1 = chain1
     },
-    outbounds = { tag = "d1", chain = { "Blackhole" } },
+    outbounds = { d1 = { "Blackhole" } },
 
     tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  },
 }

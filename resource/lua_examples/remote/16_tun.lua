@@ -15,27 +15,23 @@ local http_filter_config = {
 }
 
 local outbound_tun = {
-  chain = { tun_config },
-  tag = "dial1"
+  tun_config,
 }
 
 local inbound_ws_tls_trojan = {
-  chain = {
-    { type = "Listener", listen_addr = "0.0.0.0:10801" },
-    {
-      type = "TLS",
-      key = "test2.key",
-      cert = "test2.crt",
-      alpn = { "h2", "http/1.1" }
-    },
-    http_filter_config,
-    { type = "WebSocket" },
-    { type = "Trojan",   password = "mypassword" }
+  { type = "Listener", listen_addr = "0.0.0.0:10801" },
+  {
+    type = "TLS",
+    key = "test2.key",
+    cert = "test2.crt",
+    alpn = { "h2", "http/1.1" }
   },
-  tag = "listen1"
+  http_filter_config,
+  { type = "WebSocket" },
+  { type = "Trojan",   password = "mypassword" }
 }
 
 Config = {
-  outbounds = { outbound_tun },
-  inbounds = { inbound_ws_tls_trojan }
+  outbounds = { dial1 = outbound_tun },
+  inbounds = { listen1 = inbound_ws_tls_trojan }
 }

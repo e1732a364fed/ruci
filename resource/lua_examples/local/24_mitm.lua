@@ -1,18 +1,15 @@
 local tls_alpn = { "h2", "http/1.1" }
 
 local outbound_trojan = {
-  chain = {
-    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
-    {
-      type = "TLS",
-      host = "www.google.com",
-      insecure = true,
-      alpn = tls_alpn
+  { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
+  {
+    type = "TLS",
+    host = "www.google.com",
+    insecure = true,
+    alpn = tls_alpn
 
-    },
-    { type = "Trojan",     password = "mypassword" }
   },
-  tag = "dial1"
+  { type = "Trojan",     password = "mypassword" }
 }
 
 local mitm_config = {
@@ -23,15 +20,12 @@ local mitm_config = {
 }
 
 local inbound_mitm = {
-  chain = {
-    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
-    { type = "Socks5Http" },
-    mitm_config
-  },
-  tag = "listen1"
+  { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+  { type = "Socks5Http" },
+  mitm_config
 }
 
 Config = {
-  outbounds = { outbound_trojan },
-  inbounds = { inbound_mitm }
+  outbounds = { dial1 = outbound_trojan },
+  inbounds = { listen1 = inbound_mitm }
 }

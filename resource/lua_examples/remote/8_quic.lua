@@ -1,6 +1,5 @@
 local outbound_direct = {
-  chain = { { type = "Direct" } },
-  tag = "dial1"
+  { type = "Direct" },
 }
 
 local quic_config = {
@@ -12,14 +11,11 @@ local quic_config = {
 }
 
 local inbound_quic_trojan = {
-  chain = {
-    quic_config,
-    { type = "Trojan", password = "mypassword" }
-  },
-  tag = "listen1"
+  quic_config,
+  { type = "Trojan", password = "mypassword" }
 }
 
 Config = {
-  outbounds = { outbound_direct },
-  inbounds = { inbound_quic_trojan }
+  outbounds = { dial1 = outbound_direct },
+  inbounds = { listen1 = inbound_quic_trojan }
 }

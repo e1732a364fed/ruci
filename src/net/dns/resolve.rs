@@ -68,7 +68,7 @@ pub struct AsyncClient {
 pub struct ClientConfig {
     pub dns_server_list: Vec<(SocketAddr, Protocol)>,
     pub ip_strategy: Option<LookupIpStrategy>,
-    pub static_pairs: HashMap<String, IpAddr>,
+    pub static_pairs: Option<HashMap<String, IpAddr>>,
 }
 
 impl AsyncClient {
@@ -76,7 +76,7 @@ impl AsyncClient {
         let r = create_async_resolver(c.dns_server_list, c.ip_strategy);
         Self {
             r,
-            static_pairs: c.static_pairs,
+            static_pairs: c.static_pairs.unwrap_or_default(),
         }
     }
 
@@ -191,7 +191,7 @@ async fn test() {
     let cc = ClientConfig {
         dns_server_list: vec![(sa, TheProtocol::Udp)],
         ip_strategy: Some(TheLookupIpStrategy::Ipv4Only),
-        static_pairs: HashMap::new(),
+        static_pairs: None,
     };
 
     let ac = AsyncClient::new(cc);

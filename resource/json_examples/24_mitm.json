@@ -1,50 +1,46 @@
 {
-  "inbounds": [
-    {
-      "tag": "listen1",
-      "chain": [
-        {
-          "type": "Listener",
-          "listen_addr": "0.0.0.0:10800"
-        },
-        {
-          "type": "Socks5Http"
-        },
-        {
-          "type": "MITM",
-          "cert": "test_ca_cert.pem",
-          "key": "test_ca_key.pem",
-          "alpn": ["h2", "http/1.1"]
-        }
-      ]
-    }
-  ],
-  "outbounds": [
-    {
-      "tag": "dial1",
-      "chain": [
-        {
-          "type": "BindDialer",
-          "bind_addr": null,
-          "dial_addr": "tcp://127.0.0.1:10801",
-          "dns_client": null,
-          "in_auto_route": null,
-          "out_auto_route": null,
-          "ext": null
-        },
-        {
-          "type": "TLS",
-          "host": "www.google.com",
-          "insecure": true,
-          "alpn": ["h2", "http/1.1"],
-          "cert": null
-        },
-        {
-          "type": "Trojan",
-          "password": "mypassword",
-          "do_not_use_early_data": null
-        }
-      ]
-    }
-  ]
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10800"
+      },
+      {
+        "type": "Socks5Http"
+      },
+      {
+        "type": "MITM",
+        "cert": "test_ca_cert.pem",
+        "key": "test_ca_key.pem",
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ]
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "BindDialer",
+        "bind_addr": null,
+        "dial_addr": "tcp://127.0.0.1:10801",
+        "dns_client": null
+      },
+      {
+        "type": "TLS",
+        "host": "www.google.com",
+        "insecure": true,
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ],
+        "cert": null
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword"
+      }
+    ]
+  }
 }

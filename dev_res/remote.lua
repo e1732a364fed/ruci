@@ -143,49 +143,41 @@ local lua_example1 = { tcp, tls, trojan_in, { type = "Lua", file_name = "lua_pro
 local lua_example2 = { tcp, tls, trojan_in, { type = "Lua", file_name = "lua_protocol_e2_mathadd.lua", handshake_function = "Handshake" } }
 
 Config = {
-    inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
-        -- { chain = trojans_chain, tag = "listen1" },
-        { chain = { tcp, tls, embedder_in, trojan_in }, tag = "listen1" }
-        -- { chain = ws_trojans_chain, tag = "listen1" }
-        -- { chain = in_h2_trojans_chain, tag = "listen1" }
-        -- { chain = in_h2_socks5s_chain, tag = "listen1" }
-        -- { chain = in_h2_https_chain, tag = "listen1" }
-        -- { chain = in_quic_chain, tag = "listen1" }
-        -- { chain = socks5http_chain, tag = "listen1" },
-        -- { chain = { unix, tls, trojan_in }, tag = "listen1" },
-        -- { chain =  { tcp,tls, ws}, tag = "listen1"} ,
+    inbounds = {
+        --  listen1 = trojan_chain
+        -- listen1 = trojans_chain,
+        listen1 = { tcp, tls, embedder_in, trojan_in }
+        -- listen1 = ws_trojans_chain
+        -- listen1 = in_h2_trojans_chain
+        -- listen1 = in_h2_socks5s_chain
+        -- listen1 = in_h2_https_chain
+        -- listen1 = in_quic_chain
+        -- listen1 = socks5http_chain,
+        -- listen1 = { unix, tls, trojan_in },
+        -- listen1 =  { tcp,tls, ws},
         --[[
-        {
-            chain = {{
+            udp_echo = {{
                 type = "BindDialer",
                     bind_addr = "udp://127.0.0.1:20800"
 
             },{ type = "Echo"}},
-            tag = "udp_echo"
-
-        }
         -- ]]
-        -- { chain = { tcp, spe1_in, trojan_in }, tag = "listen1" }
-        -- { chain = lua_example1, tag = "listen1" },
+        -- listen1 = { tcp, spe1_in, trojan_in }
+        -- listen1 = lua_example1,
     },
 
     ---[[
     -- 一般情况下 的 outbound 配置
 
-    outbounds = { {
-        tag = "dial1",
-        chain = { { type = "Direct" } }
-    },
+    outbounds = {
+        dial1 = { { type = "Direct" } },
 
         ---[=[
-        {
-            tag = "fallback_d",
-            chain = { {
-                type = "BindDialer",
-                dial_addr = "tcp://0.0.0.0:80"
+        fallback_d = { {
+            type = "BindDialer",
+            dial_addr = "tcp://0.0.0.0:80"
 
-            } }
-        }
+        } }
         --]=]
     },
     -- ]]
@@ -195,11 +187,10 @@ Config = {
     -- 注意 direct 后面要加上 TLS 来重新包装数据，否则隐私信息会明文传递在 服务器 与 目标地址 的网络链路上
     -- 而且这里的 TLS 最好使用的是 NativeTLS, 以增强真实性
 
-    outbounds = { {
-        tag = "dial1",
-        chain = { {
+    outbounds = {
+        dial1 = { {
             type = "Direct",
-                leak_target_addr = true -- 注意这里要设为 true, 这样才能把 目标地址进一步 传递到 TLS 层 (用于设置 SNI)
+            leak_target_addr = true -- 注意这里要设为 true, 这样才能把 目标地址进一步 传递到 TLS 层 (用于设置 SNI)
 
         },
             {
@@ -208,15 +199,12 @@ Config = {
                     insecure = false
 
             }
-        }
-    }, {
-        tag = "fallback_d",
-        chain = { {
+    },
+        fallback_d = { {
             type = "BindDialer",
                 dial_addr = "tcp://0.0.0.0:4433" --mitm 的话，回落就是要到 https
 
         },
-        }
     },
     },
 
@@ -229,19 +217,17 @@ Config = {
 
     -- 不过这是 本示例中 单机自连的做法. 如果实现 remote.lua 部署在远程服务器上, 是不需要 OptDirect 的
 
-    outbounds = { {
-        tag = "dial1",
-        chain = opt_direct_chain
-    } },
+    outbounds = {
+        dial1 = opt_direct_chain
+    },
     --]]
 
     --[[
     -- 对应 local.lua 使用 tun 的 outbound 配置.
     --  注意, 不像 tproxy, tun 示例不能本机自连测试
 
-    outbounds = { {
-        tag = "dial1",
-        chain = {
+    outbounds = {
+        dial1 = {
             {
                 type = "BindDialer",
                     bind_addr = "ip://10.0.0.2:24#utun321",
@@ -259,12 +245,12 @@ Config = {
 
             }
         }
-    } },
+    },
     --]]
 
 
-    -- outbounds = { { tag="dial1", chain = out_stdio_chain  } }, --以命令行为出口
-    --outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } },
+    -- outbounds = { dial1 = out_stdio_chain }, --以命令行为出口
+    --outbounds = { dial1 = out_stdio_show_bytes_chain },
 
     fallback_route = { { "listen1", "fallback_d" } }
 

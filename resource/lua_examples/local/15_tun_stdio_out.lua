@@ -1,8 +1,5 @@
 local outbound_stdio = {
-  chain = { {
-    type = "Stdio", write_mode = "Bytes"
-  } },
-  tag = "dial1"
+  type = "Stdio", write_mode = "Bytes"
 }
 
 local tun_config = {
@@ -17,12 +14,8 @@ local tun_config = {
   bind_addr = "ip://10.0.0.1:24#utun321"
 }
 
-local inbound_tun = {
-  chain = { tun_config },
-  tag = "listen1"
-}
 
 Config = {
-  outbounds = { outbound_stdio },
-  inbounds = { inbound_tun }
+  outbounds = { dial1 = outbound_stdio },
+  inbounds = { listen1 = { tun_config } }
 }

@@ -1,6 +1,5 @@
 local outbound_direct = {
-  chain = { { type = "Direct" } },
-  tag = "dial1"
+  { type = "Direct" },
 }
 
 local h2_config = {
@@ -13,21 +12,18 @@ local h2_config = {
 }
 
 local inbound_h2_tls_trojan = {
-  chain = {
-    { type = "Listener", listen_addr = "0.0.0.0:10801" },
-    {
-      type = "TLS",
-      key = "test2.key",
-      cert = "test2.crt",
-      alpn = { "h2", "http/1.1" }
-    },
-    h2_config,
-    { type = "Trojan",   password = "mypassword" }
+  { type = "Listener", listen_addr = "0.0.0.0:10801" },
+  {
+    type = "TLS",
+    key = "test2.key",
+    cert = "test2.crt",
+    alpn = { "h2", "http/1.1" }
   },
-  tag = "listen1"
+  h2_config,
+  { type = "Trojan",   password = "mypassword" }
 }
 
 Config = {
-  outbounds = { outbound_direct },
-  inbounds = { inbound_h2_tls_trojan }
+  outbounds = { dial1 = outbound_direct },
+  inbounds = { listen1 = inbound_h2_tls_trojan }
 }
