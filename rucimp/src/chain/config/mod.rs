@@ -81,8 +81,7 @@ impl StaticConfig {
     pub fn get_default_and_outbounds_map(&self) -> (MIterBox, HashMap<String, MIterBox>) {
         let obs = self.get_outbounds();
 
-        //let first_o = obs.first().expect("has a outbound").clone();
-        let mut first_o: Option<MIterBox> = None; //= first_o.into_iter().map(|o| Arc::new(o)).collect();
+        let mut first_o: Option<MIterBox> = None;
 
         let omap = obs
             .into_iter()

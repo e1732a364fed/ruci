@@ -34,6 +34,7 @@ use crate::{
 };
 
 /// Send + Sync to use in async
+///
 /// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 MIterBox
 ///
 /// 选择出的 MIterBox 一般是用于 outbound,

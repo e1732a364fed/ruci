@@ -38,6 +38,12 @@ CommonMapperExt 要 配合 common_mapper_field 宏一起使用
 目前用起来tokio 和 async_std 的最大的区别是, tokio 的TcpStream 不支持 clone;
 async_std的 UdpSocket 少了 poll 方法 (until 24.2.18)
 
+## Cargo.lock
+
+本来作为类库是不应该有 Cargo.lock 的, 但我们同时也发布 examples, 为保证其能正常编译, 还是提
+供了 lock 文件
+
+
 
 ## 移除 static 借用的办法
 
