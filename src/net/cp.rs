@@ -18,7 +18,7 @@ pub type Updater = (UpdateSender, UpdateSender);
 pub type OptUpdater = Option<Updater>;
 
 /// may log debug or do other side-effect stuff with id.
-pub async fn copy<C1: ConnTrait, C2: ConnTrait>(
+pub async fn copy<C1: NamedConn, C2: NamedConn>(
     c1: C1,
     c2: C2,
     cid: &CID,
@@ -43,7 +43,7 @@ pub async fn copy<C1: ConnTrait, C2: ConnTrait>(
 }
 
 /// pure copy without any side effect
-pub async fn cp<C1: ConnTrait, C2: ConnTrait>(c1: C1, c2: C2) -> Result<u64, Error> {
+pub async fn cp<C1: AsyncConn, C2: AsyncConn>(c1: C1, c2: C2) -> Result<u64, Error> {
     let (mut c1_read, mut c1_write) = tokio::io::split(c1);
     let (mut c2_read, mut c2_write) = tokio::io::split(c2);
 
@@ -64,7 +64,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(c1: C1, c2: C2) -> Result<u64, Err
     }
 }
 
-pub async fn cp_with_gr<C1: ConnTrait, C2: ConnTrait>(
+pub async fn cp_with_gr<C1: NamedConn, C2: NamedConn>(
     c1: C1,
     c2: C2,
     cid: &CID,

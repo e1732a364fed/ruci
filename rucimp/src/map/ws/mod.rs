@@ -6,7 +6,7 @@ use std::{io, pin::Pin, task::Poll};
 use bytes::{Buf, Bytes, BytesMut};
 use futures::Sink;
 use futures_lite::{ready, StreamExt};
-use ruci::net::ConnTrait;
+use ruci::net::AsyncConn;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
@@ -16,19 +16,19 @@ pub const MAX_EARLY_DATA_LEN_BASE64: usize = 2732;
 pub const MAX_EARLY_DATA_LEN: usize = 2048;
 pub const EARLY_DATA_HEADER_KEY: &str = "Sec-WebSocket-Protocol";
 
-pub struct WsStreamToConnWrapper<T: ConnTrait> {
+pub struct WsStreamToConnWrapper<T: AsyncConn> {
     ws: Pin<Box<WebSocketStream<T>>>,
     r_buf: Option<Bytes>,
     w_buf: Option<BytesMut>,
 }
 
-impl<T: ConnTrait> ruci::Name for WsStreamToConnWrapper<T> {
+impl<T: AsyncConn> ruci::Name for WsStreamToConnWrapper<T> {
     fn name(&self) -> &str {
         "websocket_conn"
     }
 }
 
-impl<T: ConnTrait> AsyncRead for WsStreamToConnWrapper<T> {
+impl<T: AsyncConn> AsyncRead for WsStreamToConnWrapper<T> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut core::task::Context,
@@ -75,7 +75,7 @@ impl<T: ConnTrait> AsyncRead for WsStreamToConnWrapper<T> {
     }
 }
 
-impl<T: ConnTrait> AsyncWrite for WsStreamToConnWrapper<T> {
+impl<T: AsyncConn> AsyncWrite for WsStreamToConnWrapper<T> {
     fn poll_write(
         mut self: Pin<&mut Self>,
         cx: &mut core::task::Context,

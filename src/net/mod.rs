@@ -419,11 +419,14 @@ pub struct GlobalTrafficRecorder {
 
 /// ConnTrait 将 可异步读写的功能抽象出来。
 ///
-/// [`TcpStream`] 也实现了 ConnTrait
+/// [`TcpStream`] 也实现了 AsyncConn
 ///
+pub trait AsyncConn: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
+impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync> AsyncConn for T {}
+
 /// the Trait is massively used in ruci
-pub trait ConnTrait: AsyncRead + AsyncWrite + Unpin + Send + Sync + Name {}
-impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync + Name> ConnTrait for T {}
+pub trait NamedConn: AsyncConn + Name {}
+impl<T: AsyncConn + Name> NamedConn for T {}
 
 impl crate::Name for TcpStream {
     fn name(&self) -> &str {
@@ -439,4 +442,4 @@ impl crate::Name for UnixStream {
 }
 
 /// an important type in ruci
-pub type Conn = Box<dyn ConnTrait>;
+pub type Conn = Box<dyn NamedConn>;

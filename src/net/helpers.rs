@@ -5,8 +5,6 @@ use bytes::{Buf, BufMut, BytesMut};
 use parking_lot::Mutex;
 use tokio::io::ReadBuf;
 
-use super::ConnTrait;
-
 use futures::task::Context;
 
 use std::cmp::min;
@@ -112,7 +110,7 @@ pub struct EarlyDataWrapper {
 }
 
 impl EarlyDataWrapper {
-    pub fn from(bs: BytesMut, conn: Box<dyn ConnTrait>) -> Self {
+    pub fn from(bs: BytesMut, conn: Conn) -> Self {
         EarlyDataWrapper {
             ed: if bs.is_empty() { None } else { Some(bs) },
             base: Box::pin(conn),

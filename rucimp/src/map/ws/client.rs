@@ -142,7 +142,7 @@ struct EarlyConn {
     real_c: Option<Pin<net::Conn>>,
     base_c: Option<net::Conn>,
 
-    dial_f: Option<Pin<Box<dyn Future<Output = anyhow::Result<Box<dyn ConnTrait>>> + Send + Sync>>>,
+    dial_f: Option<Pin<Box<dyn Future<Output = anyhow::Result<Box<dyn NamedConn>>> + Send + Sync>>>,
     first_data_len: usize,
     left_first_w_data: Option<BytesMut>,
 }
