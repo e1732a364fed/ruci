@@ -28,6 +28,29 @@ pub struct Embedder {
     pub file: Arc<Vec<PayloadInfo>>,
 }
 
+impl Embedder {
+    pub fn new(file_content: Vec<u8>, file_name: String) -> anyhow::Result<Self> {
+        let ext = file_name
+            .split('.')
+            .last()
+            .unwrap_or_default()
+            .to_lowercase();
+        let extension = ext.as_str();
+
+        let extension = match extension {
+            "json" => crate::map::recorder::OutputFileExtension::Json,
+            "cbor" => crate::map::recorder::OutputFileExtension::Cbor,
+            _ => anyhow::bail!("invalid file extension: {}", extension),
+        };
+
+        let info_data = crate::map::recorder::InfoData::new(file_content, extension)?;
+        Ok(Self {
+            file: Arc::new(info_data.payload),
+            ext_fields: Default::default(),
+        })
+    }
+}
+
 impl Display for Embedder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "embedder")
@@ -57,11 +80,7 @@ impl Map for Embedder {
             current_packet_index: Arc::new(AtomicUsize::new(0)),
             behavior,
             write_state: None,
-            left_to_read_remote: 0,
-            read_buf: BytesMut::new(),
-            real_read_data_buf: BytesMut::new(),
-            read_buf_start_index: 0,
-            read_left_to_read_remote_reason: None,
+            read_state: Default::default(),
         };
 
         match behavior {
@@ -72,7 +91,8 @@ impl Map for Embedder {
                 }
             }
             ProxyBehavior::DECODE => {
-                info_conn.read_buf = ruci::utils::ob_to_buf(ob);
+                info_conn.read_state.cur_info_read_buf = ruci::utils::ob_to_buf(ob);
+                //第一个包被认为是完全的
             }
             ProxyBehavior::UNSPECIFIED => panic!("shoudn't happen"),
         }
@@ -97,19 +117,23 @@ pub struct EmbedConn {
     behavior: ProxyBehavior,
 
     write_state: Option<WriteState>,
-
-    read_left_to_read_remote_reason: Option<ReadLeftToReadRemoteReason>,
-
-    left_to_read_remote: usize,
-    read_buf: BytesMut,
-    read_buf_start_index: usize,
-
-    real_read_data_buf: BytesMut,
+    read_state: ReadState,
 }
 
-enum ReadLeftToReadRemoteReason {
-    NotEnoughForContentLen,
-    PacketData,
+#[derive(Default)]
+struct ReadState {
+    content_len: Option<usize>,
+    content_read_buf_filled_state: FilledState,
+    cur_info_read_buf: BytesMut,
+    content_read_buf: BytesMut,
+}
+#[derive(Default)]
+enum FilledState {
+    Full,
+    Partial,
+    #[default]
+    None,
+    Parse,
 }
 
 #[derive(Clone)]
@@ -139,21 +163,57 @@ impl EmbedConn {
         }
     }
 
-    fn read_from_base(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<usize>> {
-        let mut new_buf = ReadBuf::new(&mut self.read_buf[self.read_buf_start_index..]);
-        let r = self.base.as_mut().poll_read(cx, &mut new_buf);
+    /// read to cur_info_read_buf
+    fn read_from_base(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+        info_len: usize,
+    ) -> Poll<io::Result<usize>> {
+        let old_len = self.read_state.cur_info_read_buf.len();
+
+        let mut rbuf = {
+            self.read_state.cur_info_read_buf.resize(info_len, 0);
+            ReadBuf::new(&mut self.read_state.cur_info_read_buf[old_len..])
+        };
+        let r = self.base.as_mut().poll_read(cx, &mut rbuf);
+
+        let fl = rbuf.filled().len();
+
+        self.read_state.cur_info_read_buf.resize(fl + old_len, 0);
+
         Poll::Ready(match ready!(r) {
-            Ok(()) => Ok(new_buf.filled().len()),
+            Ok(()) => Ok(fl),
             Err(e) => Err(e),
         })
     }
+
+    fn reserve_cur_info_read_buf(&mut self) {
+        let buf = &mut self.read_state.cur_info_read_buf;
+        if buf.capacity() < CAP {
+            let additional = CAP - buf.capacity();
+            buf.reserve(additional);
+        }
+    }
+
+    fn cur_info_read_buf(&mut self) -> &mut BytesMut {
+        &mut self.read_state.cur_info_read_buf
+    }
 }
+
+impl ReadState {
+    fn put_cur_info_read_buf_to_content_buf(&mut self, cur_info_read_buf_len: usize) {
+        let rm = &self.cur_info_read_buf[..cur_info_read_buf_len];
+        self.content_read_buf.put_slice(rm);
+    }
+}
+
+const CAP: usize = 1024 * 1024;
 
 impl AsyncRead for EmbedConn {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-        buf: &mut tokio::io::ReadBuf<'_>,
+        rbuf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         loop {
             let current_packet_index = self
@@ -167,124 +227,163 @@ impl AsyncRead for EmbedConn {
                 return Poll::Pending;
             }
 
-            if !self.read_buf.is_empty() {
-                let remaining = buf.remaining();
-                if remaining < self.read_buf.len() {
-                    buf.put_slice(&self.read_buf[..remaining]);
-                    self.read_buf = self.read_buf.split_off(remaining);
-                    self.read_buf_start_index = 0;
-                } else {
-                    buf.put_slice(&self.read_buf);
-                    self.read_buf.clear();
-                    self.read_buf_start_index = 0;
-                }
+            let info_len = cur_info.length;
 
-                return Poll::Ready(Ok(()));
-            }
+            match self.read_state.content_len {
+                Some(content_len) => {
+                    match self.read_state.content_read_buf_filled_state {
+                        FilledState::Full => {
+                            // 此时仅剩一个任务，就是将 content_read_buf 中的剩余内容 复制到 rbuf中
 
-            let len_to_read = cur_info.length.min(buf.remaining());
+                            let len_to_put =
+                                rbuf.remaining().min(self.read_state.content_read_buf.len());
+                            rbuf.put_slice(&self.read_state.content_read_buf[..len_to_put]);
 
-            let is_buf_short = buf.remaining() < cur_info.length;
+                            self.read_state.content_read_buf.advance(len_to_put);
 
-            // 此时 本Conn 的 read_buf 应为 空
-            let cap = self.read_buf.capacity();
-            if cap < cur_info.length {
-                self.read_buf.reserve(cur_info.length - cap);
-            }
-            self.read_buf.resize(len_to_read, 0);
-            self.read_buf_start_index = 0;
+                            if self.read_state.content_read_buf.is_empty() {
+                                self.read_state.content_len = None;
+                            }
 
-            // 由于本协议的原理，在 server 端读到的数据长度 应 恰好 等于 预定义的 cur_info.length
+                            return Poll::Ready(Ok(()));
+                        }
+                        FilledState::Partial => {
+                            //此时要继续读取 remote 内容 并 解包、添充到 content_read_buf
 
-            // 如果读到的数据长度 小于 预定义的 cur_info.length，则只可能是
-            // 1. 因为调用方提供的 buf 长度 小于 预定义的 cur_info.length，
-            // 2. 因为网络原因，导致 读到的数据长度 小于 预定义的 cur_info.length，
-            // 这两种情况下， 需要 等待 下一次 poll_read
+                            let r = self.read_from_base(cx, info_len);
+                            match ready!(r) {
+                                Err(e) => return Poll::Ready(Err(e)),
 
-            match ready!(self.read_from_base(cx)) {
-                Ok(filled_len) => {
-                    if filled_len > 0 {
-                        // is_buf_short: 读满了 read_buf(buf的长度), 但是 预定义的 cur_info.length 大于 buf的长度
-                        // filled_len < len_to_read: 这种情况只可能是网络因素造成，
-
-                        // 这两种情况都需要 等待 下一次 poll_read
-                        if is_buf_short || filled_len < len_to_read {
-                            self.left_to_read_remote = cur_info.length - filled_len;
-                            self.read_buf_start_index = filled_len;
-
-                            self.read_left_to_read_remote_reason =
-                                Some(ReadLeftToReadRemoteReason::NotEnoughForContentLen);
-
-                            continue;
-                        } else {
-                            self.advance_packet_index();
-                            debug!("read ok, advance packet index");
-
-                            if self.left_to_read_remote > 0 {
-                                let rl = self.read_buf.len() - self.read_buf_start_index;
-                                if rl >= self.left_to_read_remote {
-                                    buf.put_slice(
-                                        &self.read_buf[self.read_buf_start_index
-                                            ..self.read_buf_start_index + self.left_to_read_remote],
-                                    );
-                                    self.read_buf.clear();
-                                    self.read_buf_start_index = 0;
-                                    self.left_to_read_remote = 0;
-                                } else {
-                                    buf.put_slice(&self.read_buf[self.read_buf_start_index..]);
-                                    self.read_buf.clear();
-                                    self.read_buf_start_index = 0;
-
-                                    self.left_to_read_remote -= rl;
-                                }
-
-                                return Poll::Ready(Ok(()));
-                            } else {
-                                if filled_len < 4 {
-                                    panic!("shouldn't happen");
-                                } else {
-                                    let packet_len = self.read_buf.get_u32() as usize;
-
-                                    if packet_len > self.read_buf.len() {
-                                        self.left_to_read_remote = packet_len - self.read_buf.len();
-
-                                        self.read_left_to_read_remote_reason =
-                                            Some(ReadLeftToReadRemoteReason::PacketData);
-
-                                        let remaining = buf.remaining();
-                                        if remaining < self.read_buf.len() {
-                                            buf.put_slice(&self.read_buf[..remaining]);
-                                            self.read_buf = self.read_buf.split_off(remaining);
-                                            self.read_buf_start_index = 0;
-                                        } else {
-                                            buf.put_slice(&self.read_buf);
-                                            self.read_buf.clear();
-                                            self.read_buf_start_index = 0;
-                                        }
-
-                                        return Poll::Ready(Ok(()));
+                                Ok(n) => {
+                                    if self.read_state.cur_info_read_buf.len() < info_len {
+                                        debug!("n < info_len ");
                                     } else {
-                                        self.left_to_read_remote = 0;
-                                        buf.put_slice(&self.read_buf[..packet_len]);
-                                        self.read_buf.clear();
-                                        self.read_buf_start_index = 0;
-                                        return Poll::Ready(Ok(()));
+                                        debug_assert_eq!(
+                                            self.read_state.cur_info_read_buf.len(),
+                                            info_len
+                                        );
+
+                                        let cbuflen = self.read_state.content_read_buf.len();
+                                        let need = content_len - cbuflen;
+
+                                        if n < need {
+                                            self.read_state.put_cur_info_read_buf_to_content_buf(n);
+                                        } else {
+                                            self.read_state
+                                                .put_cur_info_read_buf_to_content_buf(need);
+                                            self.read_state.content_read_buf_filled_state =
+                                                FilledState::Full;
+                                        }
                                     }
+                                    continue;
                                 }
                             }
                         }
-                    } else {
-                        // 读到 0 长度，是 base 的 EOF，这种情况就没办法了，只能直接返回
-                        // if is_buf_short {
-                        //     return Poll::Pending;
-                        // } else {
-                        debug!("read 0 length(EOF), return");
-                        return Poll::Ready(Ok(()));
-                        // }
+
+                        FilledState::None => {
+                            //此时是一个 info 包没读完的情况
+
+                            let r = self.read_from_base(cx, info_len);
+                            match ready!(r) {
+                                Err(e) => return Poll::Ready(Err(e)),
+
+                                Ok(n) => {
+                                    if n == 0 {
+                                        debug!("read got EOF2");
+                                        return Poll::Ready(Ok(()));
+                                    }
+                                    if self.cur_info_read_buf().len() == info_len {
+                                        self.read_state.content_read_buf_filled_state =
+                                            FilledState::Parse;
+                                    }
+                                    continue;
+                                }
+                            }
+                        }
+                        FilledState::Parse => {
+                            let cirb = self.cur_info_read_buf();
+
+                            let cirb_len = cirb.len();
+
+                            if content_len <= cirb_len {
+                                let remaining = rbuf.remaining();
+                                if remaining >= cirb_len {
+                                    // 最好的情况
+                                    rbuf.put_slice(&cirb[..content_len]);
+
+                                    cirb.clear();
+
+                                    self.advance_packet_index();
+                                    self.read_state.content_len = None;
+                                    return Poll::Ready(Ok(()));
+                                } else {
+                                    // 给的 rbuf 太短 的情况
+
+                                    rbuf.put_slice(&cirb[..remaining]);
+
+                                    self.read_state.content_read_buf_filled_state =
+                                        FilledState::Full;
+
+                                    self.read_state.content_read_buf =
+                                        self.read_state.cur_info_read_buf.split_to(remaining);
+
+                                    self.read_state.content_len = Some(content_len);
+
+                                    continue;
+                                }
+                            } else {
+                                // content_len 超过了 一个 info 包的长度 的情况
+
+                                self.read_state.content_len = Some(content_len);
+                                self.read_state.content_read_buf_filled_state =
+                                    FilledState::Partial;
+                                self.advance_packet_index();
+                                self.read_state
+                                    .put_cur_info_read_buf_to_content_buf(cirb_len);
+                                self.read_state.cur_info_read_buf.clear();
+
+                                continue;
+                            }
+                        }
                     }
                 }
-                Err(e) => return Poll::Ready(Err(e)),
-            } // end of match
+                None => {
+                    self.cur_info_read_buf().clear();
+                    self.reserve_cur_info_read_buf();
+
+                    //此时要读取包，得到第一个 info 中的 包头,每个包头为2字节,(即内容最大长度为64k)
+                    let r = self.read_from_base(cx, info_len);
+                    match ready!(r) {
+                        Err(e) => return Poll::Ready(Err(e)),
+
+                        Ok(n) => {
+                            if n == 0 {
+                                //EOF
+                                debug!("read got EOF");
+                                return Poll::Ready(Ok(()));
+                            }
+                            if n < 2 {
+                                self.cur_info_read_buf().clear();
+                                debug!("read got n < 2 ");
+                                continue;
+                            }
+                            let cl = self.cur_info_read_buf().get_u16() as usize;
+
+                            if n < info_len {
+                                // 一个 info 包 没有 读完整 的情况
+                                self.read_state.content_len = Some(cl);
+                                self.read_state.content_read_buf_filled_state = FilledState::None;
+                            } else {
+                                debug_assert_eq!(n, info_len);
+
+                                self.read_state.content_read_buf_filled_state = FilledState::Parse;
+                            }
+
+                            continue;
+                        } //Ok(n)
+                    } // match ready!
+                } //None
+            } //match content_len
         } // end of loop
     } // end of poll_read
 }
@@ -313,7 +412,7 @@ impl EmbedConn {
         is_first_buf: bool,
     ) -> Poll<WriteBufResult> {
         // 太小了就直接写入 padding 包
-        if cur_info.length < 4 {
+        if cur_info.length < 2 {
             let mut tmp = BytesMut::with_capacity(cur_info.length);
             tmp.resize(cur_info.length, 0);
             let r = self.base.as_mut().poll_write(cx, &mut tmp);
@@ -335,18 +434,18 @@ impl EmbedConn {
             }
         }
 
-        let actual_allowed_data_len = cur_info.length - 4;
+        let actual_allowed_data_len = cur_info.length - 2;
 
         // 写时，分两种情况
-        // 如果是 buf.len() <= cur_info.length - 4, 则 直接 加一个 4字节的包头 后写入, 且加上一个 padding, 使
+        // 如果是 buf.len() <= cur_info.length - 2, 则 直接 加一个 2字节的包头 后写入, 且加上一个 padding, 使
         // 实际写入的长度 正好等于 cur_info.length，
 
-        // 而如果不满足上面条件，则 只 截取 buf 中 长度为 cur_info.length - 4 的数据， 然后 加上一个 4字节的包头 后写入
+        // 而如果不满足上面条件，则 只 截取 buf 中 长度为 cur_info.length - 2 的数据， 然后 加上一个 2字节的包头 后写入
 
         let len_to_write_after_head = actual_allowed_data_len.min(buf.len());
 
         let mut fitted_buf = BytesMut::with_capacity(cur_info.length);
-        fitted_buf.put_u32(len_to_write_after_head as u32);
+        fitted_buf.put_u16(len_to_write_after_head as u16);
         fitted_buf.put_slice(&buf[..len_to_write_after_head]);
 
         if actual_allowed_data_len > buf.len() {

@@ -401,6 +401,11 @@ pub enum InMapConfig {
     },
 
     MITM(ruci_tls::server::TlsServerOptions),
+
+    #[cfg(feature = "steganography")]
+    Embedder {
+        file_name: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
@@ -458,6 +463,11 @@ pub enum OutMapConfig {
     Lua {
         file_name: String,          //如不给出，默认为直接使用该 lua 配置文件，但不建议
         handshake_function: String, // 用于 handshake 的 函数名
+    },
+
+    #[cfg(feature = "steganography")]
+    Embedder {
+        file_name: String,
     },
 }
 
@@ -712,6 +722,14 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                     ext_fields: None,
                 }))
             }
+            InMapConfig::Embedder { file_name } => {
+                let (fcontent, _) = file_source.get_file_content(&file_name)?;
+
+                let embedder =
+                    crate::map::steganography::embed::Embedder::new(fcontent, file_name)?;
+
+                Ok(Box::new(embedder))
+            }
         }
     }
 }
@@ -857,16 +875,21 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                 file_name,
                 handshake_function,
             } => {
-                let r = crate::utils::try_get_file_content("", Some(&file_name));
-                match r {
-                    Ok(lua_bytes) => Ok(Box::new(crate::map::lua::LuaMap {
-                        lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
-                        handshake_f_key: handshake_function.to_string(),
-                        ext_fields: Some(MapExtFields::default()),
-                        file_source: file_source.clone(),
-                    })),
-                    Err(_) => todo!(),
-                }
+                let lua_bytes = crate::utils::try_get_file_content("", Some(&file_name))?;
+                Ok(Box::new(crate::map::lua::LuaMap {
+                    lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
+                    handshake_f_key: handshake_function.to_string(),
+                    ext_fields: Some(MapExtFields::default()),
+                    file_source: file_source.clone(),
+                }))
+            }
+            OutMapConfig::Embedder { file_name } => {
+                let (fcontent, _) = file_source.get_file_content(&file_name)?;
+
+                let embedder =
+                    crate::map::steganography::embed::Embedder::new(fcontent, file_name)?;
+
+                Ok(Box::new(embedder))
             }
         }
     }

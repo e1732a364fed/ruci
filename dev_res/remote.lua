@@ -53,6 +53,12 @@ local trojan_in = {
 local trojan_chain = { tcp, trojan_in }
 local trojans_chain = { tcp, tls, trojan_in }
 
+local embedder_in = {
+    Embedder = {
+        file_name = "record_dir1/1-2_mitm_ruci_info.json"
+    }
+}
+
 local http_filter = {
     HttpFilter = {
         authority = "myhost",
@@ -140,7 +146,8 @@ local lua_example2 = { tcp, tls, trojan_in, { Lua = { file_name = "lua_protocol_
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
-        { chain = trojans_chain, tag = "listen1" },
+        -- { chain = trojans_chain, tag = "listen1" },
+        { chain = { tcp, tls, embedder_in, trojan_in }, tag = "listen1" }
         -- { chain = ws_trojans_chain, tag = "listen1" }
         -- { chain = in_h2_trojans_chain, tag = "listen1" }
         -- { chain = in_h2_socks5s_chain, tag = "listen1" }

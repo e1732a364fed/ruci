@@ -266,6 +266,21 @@ pub struct InfoData {
     pub payload: Vec<PayloadInfo>,
 }
 
+impl InfoData {
+    pub fn new(file_content: Vec<u8>, extension: OutputFileExtension) -> anyhow::Result<Self> {
+        match extension {
+            OutputFileExtension::Json => {
+                let data: InfoData = serde_json::from_slice(&file_content)?;
+                Ok(data)
+            }
+            OutputFileExtension::Cbor => {
+                let data: InfoData = serde_cbor::from_slice(&file_content)?;
+                Ok(data)
+            }
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct PayloadInfo {
     pub timestamp: u128,

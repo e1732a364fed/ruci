@@ -25,7 +25,7 @@ use ruci::{map, net::MTU};
 use std::fmt::Display;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
@@ -163,21 +163,26 @@ impl Map for MITM {
                         // params.a and authority should be the same
 
                         let ta = if let Some(a) = params.a {
-                            if a.get_name().unwrap() != authority {
-                                let e = anyhow!(
-                                    "MITM: authority not match, ta: {:?}, authority: {}",
-                                    a,
-                                    authority
-                                );
-                                error!("{}", e);
+                            debug!("MITM: ta: {:?}, authority: {}", a, authority);
 
-                                std::process::exit(1);
-                            } else {
-                                debug!(
-                                    "MITM TLS connection established, ta: {:?}, authority: {}",
-                                    a, authority
-                                );
-                            }
+                            //http 代理时，ta 直接是 authority;
+                            // socks5 代理时，ta 可能是 目标的tcp 地址 （如果没有 配置 使用 socks5 解析dns)
+
+                            // if a.get_name().unwrap() != authority {
+                            //     let e = anyhow!(
+                            //         "MITM: authority not match, ta: {:?}, authority: {}",
+                            //         a,
+                            //         authority
+                            //     );
+                            //     error!("{}", e);
+
+                            //     std::process::exit(1);
+                            // } else {
+                            //     debug!(
+                            //         "MITM TLS connection established, ta: {:?}, authority: {}",
+                            //         a, authority
+                            //     );
+                            // }
 
                             Some(a)
                         } else {
