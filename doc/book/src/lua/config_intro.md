@@ -261,4 +261,18 @@ Config = {
 
 怎么样，是不是一下子就变得 清晰起来了？爽！先来个 high-five 吧！
 
+配置您电脑的 系统代理 为 socks5或 http, 指向 `127.0.0.1:10800`， 
 
+然后运行
+
+    ./ruci_cmd -c local.lua
+
+windows:
+
+    ruci_cmd.exe -c local.lua
+
+测试成功！
+
+
+下一步，学习 [各个 `MapConfig` 的写法 ](./map_config.md)
+或者直接开始学 各个 route 的写法？
