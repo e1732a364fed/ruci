@@ -189,8 +189,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut r1: R1,
     mut w1: W1,
 ) -> Result<u64, Error> {
-    const CAP: usize = 1500; //todo: change this
-
+    const MAX_DATAGRAM_SIZE: usize = 65_507;
     let mut whole_write = 0;
 
     loop {
@@ -198,7 +197,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
 
         let sleepf = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
         let readf = async move {
-            let mut buf0 = Box::new([0u8; CAP]);
+            let mut buf0 = Box::new([0u8; MAX_DATAGRAM_SIZE]);
             let mut buf = ReadBuf::new(buf0.deref_mut());
             let r = r1ref.read(buf.initialized_mut()).await;
 
