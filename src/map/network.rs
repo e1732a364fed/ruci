@@ -80,7 +80,7 @@ impl Mapper for Direct {
                     Err(e) => return MapResult::from_err(e),
                 }
             }
-            Err(e) => return MapResult::from_err(e),
+            Err(e) => return MapResult::from_e(e),
         }
     }
 }

@@ -76,7 +76,7 @@ async fn auth() -> std::io::Result<()> {
 }
 
 #[tokio::test]
-async fn auth_tcp_in_mem_earlydata() -> std::io::Result<()> {
+async fn auth_tcp_in_mem_earlydata() -> anyhow::Result<()> {
     let a = new_3user_trojan_inadder().await;
     let name = "www.b";
     let port: u16 = 43;

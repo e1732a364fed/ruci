@@ -10,7 +10,7 @@
 测试了 发起长时间挂起的请求的情况 （非法）
  */
 
-use std::{env::set_var, io, sync::Arc, time::Duration};
+use std::{env::set_var, sync::Arc, time::Duration};
 
 use crate::net::CID;
 use bytes::{BufMut, BytesMut};
@@ -136,7 +136,7 @@ async fn f_dial_future_out_adder(
     listen_port: u16,
     the_target_name: &str,
     the_target_port: u16,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     info!("start run f_dial_future, {}", rid);
     tokio::time::sleep(Duration::from_millis(500)).await;
 
@@ -325,7 +325,7 @@ async fn get_socks5_mapper(lsuit: &SuitStruct) -> socks5::server::Server {
     .await
 }
 
-async fn lisen_ser() -> std::io::Result<(
+async fn lisen_ser() -> anyhow::Result<(
     impl Future<Output = ()>,
     Sender<()>,
     Arc<TransmissionInfo>,
@@ -368,7 +368,7 @@ async fn lisen_ser() -> std::io::Result<(
 /// 基本测试. 百度在遇到非http请求后会主动断开连接，其对于长挂起请求最多60秒后断开连接。
 /// 其对请求中不含\n 时会视为挂起
 #[tokio::test]
-async fn socks5_direct_and_request() -> std::io::Result<()> {
+async fn socks5_direct_and_request() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
@@ -414,7 +414,7 @@ async fn socks5_direct_and_request() -> std::io::Result<()> {
 }
 
 #[tokio::test]
-async fn socks5_direct_and_outadder() -> std::io::Result<()> {
+async fn socks5_direct_and_outadder() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
@@ -452,7 +452,7 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
 
 /// 不监视原始流量，性能会高一些
 #[tokio::test]
-async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()> {
+async fn socks5_direct_and_request_no_transmission_info() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
@@ -492,7 +492,7 @@ async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()>
 /// 注：这里就体现了链式代理的特点。可以里一层counter 外一层counter 如 counter - socks5 - counter 来分别记录原始流量
 /// 和实际流量
 #[tokio::test]
-async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
+async fn socks5_direct_and_request_counter() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
@@ -558,7 +558,7 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
 }
 
 #[tokio::test]
-async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
+async fn socks5_direct_and_request_earlydata() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
@@ -641,7 +641,7 @@ async fn socks5_direct_longwait_write_and_request() {
 
 /// 对 block_run 和 non_block run 各测一次
 #[tokio::test]
-async fn suit_engine_socks5_direct_and_request() -> std::io::Result<()> {
+async fn suit_engine_socks5_direct_and_request() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
@@ -654,7 +654,7 @@ async fn suit_engine_socks5_direct_and_request() -> std::io::Result<()> {
 
 async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     even: bool,
-) -> std::io::Result<()> {
+) -> anyhow::Result<()> {
     info!(
         "start suit_engine_socks5_direct_and_request_block_or_non_block test, {}",
         even
@@ -720,7 +720,7 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
 }
 
 #[tokio::test]
-async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Result<()> {
+async fn suit_engine_socks5_direct_and_request_block_3_listen() -> anyhow::Result<()> {
     let even = true;
 
     set_var("RUST_LOG", "debug");
@@ -788,7 +788,7 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
 }
 
 #[tokio::test]
-async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> std::io::Result<()> {
+async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Result<()> {
     let even = true;
 
     set_var("RUST_LOG", "debug");
@@ -887,7 +887,7 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> std::io::Res
 
 // 同时发起两个请求的情况
 #[tokio::test]
-async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
+async fn socks5_direct_and_request_2_async() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 

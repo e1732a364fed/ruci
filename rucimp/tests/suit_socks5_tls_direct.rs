@@ -11,7 +11,7 @@ use rucimp::suit::config::{
     adapter::{load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig},
     Config,
 };
-use std::{env::set_var, io, sync::Arc, time::Duration};
+use std::{env::set_var, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -49,7 +49,7 @@ async fn f_dial_future_tls_out_adder(
     listen_port: u16,
     the_target_name: &str,
     the_target_port: u16,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     tokio::time::sleep(Duration::from_millis(400)).await;
     info!("start run f_dial_future, {}", rid);
 
@@ -111,7 +111,7 @@ async fn f_dial_future_tls_out_adder(
 }
 
 #[tokio::test]
-async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
+async fn suit_engine_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
     std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../resource"))?;
@@ -167,7 +167,7 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
 }
 
 #[tokio::test]
-async fn suit_engine2_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
+async fn suit_engine2_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
     std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../resource"))?;

@@ -18,7 +18,7 @@ pub struct AccumulateResult {
     pub b: Option<BytesMut>,
     pub c: Stream,
     pub d: Vec<OptData>,
-    pub e: Option<io::Error>,
+    pub e: Option<anyhow::Error>,
 
     /// 代表 迭代完成后，最终的 cid
     pub id: Option<CID>,
@@ -162,7 +162,7 @@ pub async fn accumulate_from_start(
 
     mut inmappers: MIterBox,
     oti: Option<Arc<TransmissionInfo>>,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     let first = inmappers.next().expect("first inmapper");
     let r = first
         .maps(

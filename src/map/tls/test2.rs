@@ -1,6 +1,6 @@
 use self::map::MapParams;
 
-use std::{io, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::{
     map::{self, *},
@@ -15,7 +15,7 @@ async fn dial_future(
     listen_host_str: &str,
     listen_port: u16,
     layer_num: u8,
-) -> std::io::Result<Box<dyn ConnTrait>> {
+) -> anyhow::Result<Box<dyn ConnTrait>> {
     let cs = TcpStream::connect((listen_host_str, listen_port))
         .await
         .expect("dial tcp succeed");
@@ -55,7 +55,7 @@ async fn listen_future(
     listen_host_str: &str,
     listen_port: u16,
     layer_num: u8,
-) -> std::io::Result<()> {
+) -> anyhow::Result<()> {
     std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource"))?;
 
     let mut path = PathBuf::new();
@@ -108,13 +108,13 @@ async fn listen_future(
                 c.read(&mut VEC1).await?;
             }
         }
-        Ok::<(), io::Error>(())
+        Ok::<(), anyhow::Error>(())
     });
 
     Ok(())
 }
 
-pub async fn test_init(layer_num: u8) -> std::io::Result<Box<dyn ConnTrait>> {
+pub async fn test_init(layer_num: u8) -> anyhow::Result<Box<dyn ConnTrait>> {
     const HOST: &str = "127.0.0.1";
     const PORT: u16 = 23456;
 
@@ -123,7 +123,7 @@ pub async fn test_init(layer_num: u8) -> std::io::Result<Box<dyn ConnTrait>> {
     dial_future(HOST, PORT, layer_num).await
 }
 
-pub async fn test_batch_run(l: usize, layer_num: u8) -> std::io::Result<()> {
+pub async fn test_batch_run(l: usize, layer_num: u8) -> anyhow::Result<()> {
     let mut d = test_init(layer_num).await?;
     for _ in 0..l {
         test_write(&mut d).await?;
@@ -132,7 +132,7 @@ pub async fn test_batch_run(l: usize, layer_num: u8) -> std::io::Result<()> {
     Ok(())
 }
 
-pub async fn test_write(d: &mut Box<dyn ConnTrait>) -> std::io::Result<()> {
+pub async fn test_write(d: &mut Box<dyn ConnTrait>) -> anyhow::Result<()> {
     unsafe {
         d.write(&VEC2).await?;
     }

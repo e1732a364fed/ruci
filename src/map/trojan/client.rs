@@ -1,5 +1,3 @@
-use std::io;
-
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use macro_mapper::{common_mapper_field, CommonMapperExt};
@@ -34,7 +32,7 @@ impl Client {
         mut base: net::Conn,
         ta: net::Addr,
         first_payload: Option<BytesMut>,
-    ) -> io::Result<MapResult> {
+    ) -> anyhow::Result<MapResult> {
         let mut buf = BytesMut::with_capacity(1024);
         buf.put(self.u.hex.as_bytes());
         buf.put_u16(CRLF);

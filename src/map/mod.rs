@@ -47,7 +47,7 @@ use crate::{
     },
     AnyArc, AnyBox,
 };
-
+use anyhow::format_err;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
@@ -133,7 +133,7 @@ pub struct MapResult {
     ///extra data, 如果d为 AnyData::B, 则只能被外部调用;, 如果
     /// d为 AnyData::A, 可其可以作为 下一层的 InputData
     pub d: OptData,
-    pub e: Option<io::Error>,
+    pub e: Option<anyhow::Error>,
 
     /// 有值代表产生了与之前不同的 cid
     pub new_id: Option<CID>,
@@ -252,7 +252,7 @@ impl MapResult {
         }
     }
 
-    pub fn from_err(e: io::Error) -> Self {
+    pub fn from_e(e: anyhow::Error) -> Self {
         MapResult {
             a: None,
             b: None,
@@ -263,18 +263,29 @@ impl MapResult {
         }
     }
 
-    pub fn err_str(estr: &str) -> Self {
-        MapResult::from_err(io::Error::other(estr))
-    }
-
-    pub fn from_result(e: io::Result<MapResult>) -> Self {
-        match e {
-            Ok(v) => v,
-            Err(e) => MapResult::from_err(e),
+    pub fn from_err(e: io::Error) -> Self {
+        MapResult {
+            a: None,
+            b: None,
+            c: Stream::None,
+            d: None,
+            e: Some(e.into()),
+            new_id: None,
         }
     }
 
-    pub fn ebc(e: io::Error, buf: BytesMut, c: net::Conn) -> Self {
+    pub fn err_str(estr: &str) -> Self {
+        MapResult::from_e(format_err!("{}", estr))
+    }
+
+    pub fn from_result(e: anyhow::Result<MapResult>) -> Self {
+        match e {
+            Ok(v) => v,
+            Err(e) => MapResult::from_e(e),
+        }
+    }
+
+    pub fn ebc(e: anyhow::Error, buf: BytesMut, c: net::Conn) -> Self {
         MapResult {
             a: None,
             b: Some(buf),
@@ -284,7 +295,7 @@ impl MapResult {
             new_id: None,
         }
     }
-    pub fn buf_err(buf: BytesMut, e: io::Error) -> Self {
+    pub fn buf_err(buf: BytesMut, e: anyhow::Error) -> Self {
         MapResult {
             a: None,
             b: Some(buf),
@@ -295,7 +306,7 @@ impl MapResult {
         }
     }
     pub fn buf_err_str(buf: BytesMut, estr: &str) -> Self {
-        MapResult::buf_err(buf, io::Error::other(estr))
+        MapResult::buf_err(buf, format_err!("{}", estr))
     }
 }
 

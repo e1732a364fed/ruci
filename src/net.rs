@@ -12,11 +12,11 @@ pub mod udp;
 
 #[cfg(test)]
 mod test;
+use anyhow::{format_err, Result};
 use futures::pin_mut;
 use futures::{io::Error, FutureExt};
 use log::{debug, log_enabled};
 use rand::Rng;
-use std::io;
 use std::sync::atomic::AtomicU32;
 use std::{fmt::Debug, net::Ipv4Addr};
 use std::{
@@ -170,17 +170,14 @@ pub enum Network {
 }
 
 impl Network {
-    pub fn from_string(s: &str) -> io::Result<Self> {
+    pub fn from_string(s: &str) -> Result<Self> {
         match s {
             "ip" => Ok(Network::IP),
             "tcp" => Ok(Network::TCP),
             "udp" => Ok(Network::UDP),
             #[cfg(unix)]
             "unix" => Ok(Network::Unix),
-            _ => Err(io::Error::other(format!(
-                "not supported network string: {}",
-                s
-            ))),
+            _ => Err(format_err!("not supported network string: {}", s)),
         }
     }
 
@@ -230,7 +227,7 @@ impl Addr {
         host: Option<String>,
         ip: Option<IpAddr>,
         port: u16,
-    ) -> io::Result<Self> {
+    ) -> Result<Self> {
         let n = Network::from_string(network)?;
         match host {
             Some(h) => {
@@ -249,7 +246,7 @@ impl Addr {
             }
             None => Ok(Addr {
                 addr: NetAddr::Socket(SocketAddr::new(
-                    ip.ok_or(io::Error::other("neither of ip or host provided"))?,
+                    ip.ok_or(format_err!("neither of ip or host provided"))?,
                     port,
                 )),
                 network: n,
@@ -258,7 +255,7 @@ impl Addr {
     }
 
     // convert then calls "from"
-    pub fn from_strs(network: &str, host: &str, ip: &str, port: u16) -> io::Result<Self> {
+    pub fn from_strs(network: &str, host: &str, ip: &str, port: u16) -> Result<Self> {
         let mut host_is_ip = false;
 
         let ip = if ip.is_empty() {
@@ -287,28 +284,24 @@ impl Addr {
     }
 
     // tcp://127.0.0.1:80 or tcp://www.b.com:80. if :// is not present, use tcp as network
-    pub fn from_network_addr_str(s: &str) -> io::Result<Self> {
+    pub fn from_network_addr_str(s: &str) -> Result<Self> {
         let ns: Vec<_> = s.splitn(2, "://").collect();
         match ns.len() {
             1 => Addr::from_addr_str("tcp", s),
             2 => Addr::from_addr_str(ns[0], ns[1]),
-            _ => Err(io::Error::other(
+            _ => Err(format_err!(
                 "Addr::from_network_addr_str, split :// got len!=2 && len!=1",
             )),
         }
     }
 
     //127.0.0.1:80 or www.b.com:80
-    pub fn from_addr_str(network: &str, s: &str) -> io::Result<Self> {
+    pub fn from_addr_str(network: &str, s: &str) -> Result<Self> {
         let ns: Vec<_> = s.split(':').collect();
         if ns.len() != 2 {
-            return Err(io::Error::other(
-                "Addr::from_addr_str, split colon got len!=2",
-            ));
+            return Err(format_err!("Addr::from_addr_str, split colon got len!=2",));
         }
-        let port = ns[1]
-            .parse::<u16>()
-            .map_err(|e| io::Error::other(format!("{}", e)))?;
+        let port = ns[1].parse::<u16>().map_err(|e| format_err!("{}", e))?;
 
         let x = ns[0].parse::<IpAddr>();
         match x {
@@ -367,7 +360,7 @@ impl Addr {
 
     /// 如果没法从已有的 SocketAddr 转, 则尝试用系统方法解析域名, 并使用第一个值.
     /// 不适用于 UDS
-    pub fn get_socket_addr_or_resolve(&self) -> io::Result<SocketAddr> {
+    pub fn get_socket_addr_or_resolve(&self) -> Result<SocketAddr> {
         use std::net::ToSocketAddrs;
 
         if let NetAddr::Socket(s) = self.addr {
@@ -376,19 +369,17 @@ impl Addr {
             Ok(*so)
         } else if let NetAddr::Name(n, port) = &self.addr {
             let so = (format!("{}:{}", n, port)).to_socket_addrs();
-            so?.next().ok_or(io::Error::other(format!(
-                "resolve to empty socket_addr from {}",
-                self
-            )))
+            so?.next()
+                .ok_or(format_err!("resolve to empty socket_addr from {}", self))
         } else {
-            Err(io::Error::other(format!(
+            Err(format_err!(
                 "not possible convert to socket_addr from {}",
                 self
-            )))
+            ))
         }
     }
 
-    pub async fn try_dial(&self) -> io::Result<Stream> {
+    pub async fn try_dial(&self) -> Result<Stream> {
         match self.network {
             Network::TCP => {
                 let so = self.get_socket_addr_or_resolve()?;
@@ -437,10 +428,10 @@ impl Addr {
     }
 
     //127.0.0.1:80
-    pub fn from_ip_addr_str(network: &'static str, s: &str) -> io::Result<Self> {
+    pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
         let ns: Vec<_> = s.split(':').collect();
         if ns.len() != 2 {
-            return Err(io::Error::other(
+            return Err(format_err!(
                 "Addr::from_ip_addr_str, split colon got len!=2",
             ));
         }
@@ -448,9 +439,7 @@ impl Addr {
             network,
             "",
             ns[0],
-            ns[1]
-                .parse::<u16>()
-                .map_err(|e| io::Error::other(format!("{}", e)))?,
+            ns[1].parse::<u16>().map_err(|e| format_err!("{}", e))?,
         )
     }
 }
@@ -522,7 +511,7 @@ impl Stream {
     pub fn is_some(&self) -> bool {
         !matches!(self, Stream::None)
     }
-    pub async fn try_shutdown(self) -> io::Result<()> {
+    pub async fn try_shutdown(self) -> Result<()> {
         if let Stream::TCP(mut t) = self {
             t.shutdown().await?
         } else if let Stream::UDP(mut c) = self {
@@ -533,25 +522,25 @@ impl Stream {
         Ok(())
     }
 
-    pub fn try_unwrap_tcp(self) -> io::Result<Conn> {
+    pub fn try_unwrap_tcp(self) -> Result<Conn> {
         if let Stream::TCP(t) = self {
             return Ok(t);
         }
-        Err(io::Error::other("not tcp"))
+        Err(format_err!("not tcp"))
     }
 
-    pub fn try_unwrap_tcp_ref(&self) -> io::Result<&Conn> {
+    pub fn try_unwrap_tcp_ref(&self) -> Result<&Conn> {
         if let Stream::TCP(t) = self {
             return Ok(t);
         }
-        Err(io::Error::other("not tcp"))
+        Err(format_err!("not tcp"))
     }
 
-    pub fn try_unwrap_udp(self) -> io::Result<AddrConn> {
+    pub fn try_unwrap_udp(self) -> Result<AddrConn> {
         if let Stream::UDP(t) = self {
             return Ok(t);
         }
-        Err(io::Error::other("not udp"))
+        Err(format_err!("not udp"))
     }
 }
 

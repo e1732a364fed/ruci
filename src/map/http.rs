@@ -3,7 +3,6 @@
  */
 
 use std::cmp::min;
-use std::io::{self, Error};
 
 use base64::prelude::*;
 use bytes::BytesMut;
@@ -85,7 +84,7 @@ impl Server {
         cid: CID,
         mut base: Conn,
         pre_read_data: Option<bytes::BytesMut>,
-    ) -> io::Result<map::MapResult> {
+    ) -> anyhow::Result<map::MapResult> {
         let mut buf: BytesMut;
 
         let n: usize;
@@ -102,18 +101,18 @@ impl Server {
         let r = net::http::parse_h1_request(&buf[..n], true);
         if r.fail_reason != FailReason::None {
             if log_enabled!(log::Level::Debug) {
-                let e1 = Error::other(format!(
+                let e1 = anyhow::format_err!(
                     "{cid}, http proxy: get method/path failed: {:?}, buf as str: {}",
                     r.fail_reason,
                     String::from_utf8_lossy(&buf[..min(n, 256)])
-                ));
+                );
 
                 return Ok(MapResult::ebc(e1, buf, base));
             } else {
-                let e1 = Error::other(format!(
+                let e1 = anyhow::format_err!(
                     "{cid}, http proxy: get method/path failed: {:?}",
                     r.fail_reason
-                ));
+                );
 
                 return Ok(MapResult::ebc(e1, buf, base));
             }
@@ -126,10 +125,10 @@ impl Server {
             for rh in r.headers.iter() {
                 if rh.head == PROXY_AUTH_HEADER_STR {
                     if !rh.value.starts_with(BASIC_AUTH_VALUE_PREFIX) {
-                        let e1 = Error::other(format!(
+                        let e1 = anyhow::format_err!(
                             "{cid}, http proxy: auth value not start with BASIC_AUTH_VALUE_PREFIX: , {}",
                             &rh.value
-                        ));
+                        );
                         return Ok(MapResult::ebc(e1, buf, base));
                     }
                     let bsr = BASE64_STANDARD
@@ -137,10 +136,10 @@ impl Server {
                     let bs = match bsr {
                         Ok(b) => b,
                         Err(e) => {
-                            let e1 = Error::other(format!(
+                            let e1 = anyhow::format_err!(
                                 "{cid}, http proxy: base64 decode err: {e}, {}",
                                 &rh.value
-                            ));
+                            );
                             return Ok(MapResult::ebc(e1, buf, base));
                         }
                     };
@@ -149,7 +148,7 @@ impl Server {
                         Some(i) => i,
                         None => {
                             let e1 =
-                                Error::other(format!("{cid}, http proxy: no colon, {}", &rh.value));
+                                anyhow::format_err!("{cid}, http proxy: no colon, {}", &rh.value);
                             return Ok(MapResult::ebc(e1, buf, base));
                         }
                     };
@@ -171,7 +170,7 @@ impl Server {
             } //for header
 
             if !ok {
-                let e1 = Error::other(format!("{cid}, http proxy: auth failed ,{:?}", &r));
+                let e1 = anyhow::format_err!("{cid}, http proxy: auth failed ,{:?}", &r);
                 return Ok(MapResult::ebc(e1, buf, base));
             }
         }
@@ -183,9 +182,9 @@ impl Server {
             addr_str = r.path;
         } else {
             if self.only_connect {
-                let e = Error::other(format!(
+                let e = anyhow::format_err!(
                     "{cid}, http proxy: non-connect method not supported by config",
-                ));
+                );
 
                 return Ok(MapResult::ebc(e, buf, base));
             }
@@ -195,7 +194,7 @@ impl Server {
                 Ok(u) => u,
                 Err(e) => {
                     let e1 =
-                        Error::other(format!("{cid}, http proxy: invalid url: {e}, {}", &r.path));
+                        anyhow::format_err!("{cid}, http proxy: invalid url: {e}, {}", &r.path);
                     return Ok(MapResult::ebc(e1, buf, base));
                 }
             };
@@ -204,7 +203,7 @@ impl Server {
                 Some(h) => h.to_string(),
                 None => {
                     let e1 =
-                        Error::other(format!("{cid}, http proxy: no host in url: , {}", &r.path));
+                        anyhow::format_err!("{cid}, http proxy: no host in url: , {}", &r.path);
                     return Ok(MapResult::ebc(e1, buf, base));
                 }
             };
@@ -218,10 +217,10 @@ impl Server {
         let ta = match ta {
             Ok(a) => a,
             Err(e) => {
-                let e1 = Error::other(format!(
+                let e1 = anyhow::format_err!(
                     "{cid}, http proxy: invalid url, can't convert to Addr: {e}, {}",
                     &addr_str
-                ));
+                );
                 return Ok(MapResult::ebc(e1, buf, base));
             }
         };

@@ -3,8 +3,8 @@ use self::route2::OutSelector;
 
 use super::*;
 
+use anyhow::format_err;
 use log::{info, log_enabled, warn};
-use std::io;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -21,7 +21,7 @@ pub async fn handle_conn_clonable(
     ins_iterator: MIterBox,
     selector: Arc<Box<dyn OutSelector>>,
     ti: Option<Arc<net::TransmissionInfo>>,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
         None => CID::new(),
@@ -59,7 +59,7 @@ pub async fn handle_in_accumulate_result(
     out_selector: Arc<Box<dyn OutSelector>>,
 
     ti: Option<Arc<net::TransmissionInfo>>,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     let cid = listen_result
         .id
         .as_ref()
@@ -67,10 +67,10 @@ pub async fn handle_in_accumulate_result(
     let target_addr = match listen_result.a.take() {
         Some(ta) => ta,
         None => {
-            let e = io::Error::other(format!(
+            let e = format_err!(
                 "{cid}, handshake in server succeed but got no target_addr, e: {:?}",
                 listen_result.e
-            ));
+            );
             warn!("{}", e);
             let _ = listen_result.c.try_shutdown().await;
             return Err(e);

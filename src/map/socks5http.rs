@@ -1,7 +1,6 @@
 /*!
  * 先试 socks5, 不是 socks5协议的话, 再试 http proxy
  */
-use std::io::{self};
 
 use futures::executor::block_on;
 use log::debug;
@@ -84,7 +83,7 @@ impl Server {
         cid: CID,
         base: Conn,
         pre_read_data: Option<bytes::BytesMut>,
-    ) -> io::Result<map::MapResult> {
+    ) -> anyhow::Result<map::MapResult> {
         let r = self
             .socks5s
             .handshake(cid.clone(), base, pre_read_data)

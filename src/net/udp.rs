@@ -6,6 +6,7 @@ use super::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use super::*;
 use parking_lot::Mutex;
 use std::cmp::min;
+use std::io;
 use std::{
     pin::Pin,
     task::{Context, Poll},
@@ -48,7 +49,7 @@ impl AsyncWriteAddr for Conn {
         let sor = addr.get_socket_addr_or_resolve();
         match sor {
             Ok(so) => self.0.poll_send_to(cx, buf, so),
-            Err(e) => Poll::Ready(Err(e)),
+            Err(e) => Poll::Ready(Err(io::Error::other(e))),
         }
     }
 

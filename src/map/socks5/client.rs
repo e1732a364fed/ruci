@@ -21,7 +21,7 @@ impl Client {
         mut base: net::Conn,
         a: net::Addr,
         b: Option<BytesMut>,
-    ) -> io::Result<map::MapResult> {
+    ) -> anyhow::Result<map::MapResult> {
         //let mut base = params.c;
 
         const BUFLEN: usize = 1024; //todo: change this.
@@ -39,10 +39,11 @@ impl Client {
         let mut n = base.read(&mut buf).await?;
 
         if n != 2 || buf[0] != VERSION5 || buf[1] != adopted_method {
-            return Err(io::Error::other(format!(
+            return Err(format_err!(
                 "{}, socks5 client handshake,protocol err, {}",
-                cid, buf[1]
-            )));
+                cid,
+                buf[1]
+            ));
         }
 
         if adopted_method == AUTH_PASSWORD {
@@ -63,10 +64,11 @@ impl Client {
             n = base.read(&mut buf).await?;
 
             if n != 2 || buf[0] != 1 || buf[1] != 0 {
-                return Err(io::Error::other(format!(
+                return Err(format_err!(
                     "{}, socks5 client handshake,auth failed, {}",
-                    cid, buf[1]
-                )));
+                    cid,
+                    buf[1]
+                ));
             }
         }
         buf.clear();
@@ -78,10 +80,10 @@ impl Client {
         n = base.read(&mut buf).await?;
 
         if n < 10 || buf[0] != 5 || buf[1] != 0 || buf[2] != 0 {
-            return Err(io::Error::other(format!(
+            return Err(format_err!(
                 "{}, socks5 client handshake failed when reading response",
                 cid
-            )));
+            ));
         }
 
         if let Some(ed) = b {

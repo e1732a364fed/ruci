@@ -1101,6 +1101,7 @@ dependencies = [
 name = "rucimp"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "async-trait",
  "bytes",
  "dyn-clone",

@@ -44,7 +44,7 @@ pub async fn loop_listen_udp_for_certain_client(
     mut base: Conn,
     client_future_addr: net::Addr,
     udpso_created_to_listen_for_thisuser: UdpSocket,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     const CAP: usize = 1500; //todo: change this
 
     let mut buf2 = BytesMut::with_capacity(CAP);
@@ -155,7 +155,7 @@ pub async fn loop_listen_udp_for_certain_client(
 
                     let x= tx.send(( None,buf, so)).await;
                     if let Err(e) = x{
-                        return Err(io::Error::other(format!("{}",e)));
+                        return Err(format_err!("{}",e));
                     }
 
 
@@ -165,7 +165,7 @@ pub async fn loop_listen_udp_for_certain_client(
 
                     let r= tx.send(( Some(raddr),buf,SocketAddr::new(user_raddr,user_port))).await;
                     if let Err(e) = r{
-                        return Err(io::Error::other(format!("{}",e)));
+                        return Err(format_err!("{}",e));
                     }
                 }
             }

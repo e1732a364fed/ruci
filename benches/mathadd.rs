@@ -9,7 +9,7 @@ use ruci::{
 };
 use tokio::io::AsyncWriteExt;
 
-async fn test_adder_r(_l: usize) -> std::io::Result<()> {
+async fn test_adder_r(_l: usize) -> anyhow::Result<()> {
     let mut x = VEC2.lock();
     let x = &mut *x;
     let x = unsafe { std::mem::transmute::<&mut Vec<u8>, &'static mut Vec<u8>>(x) };

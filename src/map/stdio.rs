@@ -71,7 +71,7 @@ impl Name for Stdio {
 }
 
 impl Stdio {
-    pub fn from(network_addr_str: &str) -> io::Result<MapperBox> {
+    pub fn from(network_addr_str: &str) -> anyhow::Result<MapperBox> {
         if network_addr_str.is_empty() {
             Ok(Box::<Stdio>::default())
         } else {

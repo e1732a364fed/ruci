@@ -1,4 +1,4 @@
-use std::{net::Ipv4Addr, pin::Pin, task::Poll};
+use std::{io, net::Ipv4Addr, pin::Pin, task::Poll};
 
 use super::*;
 use bytes::{Buf, BufMut, BytesMut};
@@ -15,12 +15,12 @@ use std::cmp::min;
 pub const MAX_LEN_SOCKS5_BYTES: usize = 2 + 2 + 255;
 
 //todo: add unit test
-pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> io::Result<Addr> {
+pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> anyhow::Result<Addr> {
     if buf.len() < 7 {
-        return Err(io::Error::other(format!(
+        return Err(format_err!(
             "socks5_bytes_to_addr lenth wrong1, {}",
             buf.len()
-        )));
+        ));
     }
     let ipn: IPName;
     let at = buf[0];
@@ -31,20 +31,20 @@ pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> io::Result<Addr> {
     match at {
         ATYP_IP4 => {
             if buf.len() < 6 {
-                return Err(io::Error::other(format!(
+                return Err(format_err!(
                     "socks5_bytes_to_addr lenth wrong2, {}",
                     buf.len()
-                )));
+                ));
             }
             let num = buf.get_u32();
             ipn = IPName::IP(IpAddr::V4(Ipv4Addr::from(num)));
         }
         ATYP_IP6 => {
             if buf.len() < 18 {
-                return Err(io::Error::other(format!(
+                return Err(format_err!(
                     "socks5_bytes_to_addr lenth wrong3, {}",
                     buf.len()
-                )));
+                ));
             }
 
             let num = buf.get_u128();
@@ -52,30 +52,25 @@ pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> io::Result<Addr> {
         }
         ATYP_DOMAIN => {
             if buf.len() < 4 {
-                return Err(io::Error::other(format!(
+                return Err(format_err!(
                     "socks5_bytes_to_addr lenth wrong4, {}",
                     buf.len()
-                )));
+                ));
             }
 
             let dn = buf[0] as usize;
             buf.advance(1);
 
             if buf.len() < dn + 2 {
-                return Err(io::Error::other(format!(
+                return Err(format_err!(
                     "socks5_bytes_to_addr lenth wrong5, {}",
                     buf.len()
-                )));
+                ));
             }
             ipn = IPName::Name(String::from_utf8_lossy(&buf[..dn]).to_string());
             buf.advance(dn);
         }
-        _ => {
-            return Err(io::Error::other(format!(
-                "socks5_bytes_to_addr atyp wrong, {}",
-                at
-            )))
-        }
+        _ => return Err(format_err!("socks5_bytes_to_addr atyp wrong, {}", at)),
     }
 
     Ok(Addr::from_ipname(ipn, buf.get_u16()))

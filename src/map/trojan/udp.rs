@@ -68,7 +68,7 @@ impl AsyncReadAddr for Reader {
 
                                 Poll::Ready(Ok((real_len, ad)))
                             }
-                            Err(e) => Poll::Ready(Err(e)),
+                            Err(e) => Poll::Ready(Err(io::Error::other(e))),
                         }
                     }
                     Err(e) => Poll::Ready(Err(e)),

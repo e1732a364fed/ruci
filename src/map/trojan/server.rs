@@ -5,11 +5,11 @@ use crate::{
     user::{self, AsyncUserAuthenticator, UsersMap},
     Name,
 };
+use anyhow::format_err;
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
 use macro_mapper::DefaultMapperExt;
-use std::io::{self};
 use tokio::io::AsyncReadExt;
 
 #[derive(Default, Clone)]
@@ -52,7 +52,7 @@ impl Server {
         Server { um }
     }
 
-    pub async fn handshake(&self, _cid: CID, mut base: net::Conn) -> io::Result<MapResult> {
+    pub async fn handshake(&self, _cid: CID, mut base: net::Conn) -> anyhow::Result<MapResult> {
         //根据 https://www.ihcblog.com/a-better-tls-obfs-proxy/
         //trojan的 CRLF 是为了模拟http服务器的行为, 所以此时不要一次性Read，而是要Read到CRLF为止
 
@@ -81,10 +81,10 @@ impl Server {
             //根据下面回答，HTTP的最小长度恰好是16字节，但是是0.9版本。1.0是18字节，1.1还要更长。总之 可以直接不回落
             //https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089
 
-            return Err(io::Error::other(format!(
+            return Err(format_err!(
                 "fallback, msg too short, {}",
                 previous_read_len
-            )));
+            ));
         }
 
         if previous_read_len < PASS_LEN + 8 + 1 {

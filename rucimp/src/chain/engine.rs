@@ -1,3 +1,4 @@
+use anyhow;
 use futures::Future;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
@@ -6,7 +7,7 @@ use ruci::{
     net::TransmissionInfo,
     relay::{conn2::handle_in_accumulate_result, route2::*},
 };
-use std::{collections::HashMap, io, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{
     mpsc::{self, Receiver},
     oneshot::{self, Sender},
@@ -69,7 +70,7 @@ impl Engine {
     }
 
     /// non-blocking
-    pub async fn run(&self) -> io::Result<()> {
+    pub async fn run(&self) -> anyhow::Result<()> {
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
                 tokio::spawn(task.0);
@@ -81,7 +82,7 @@ impl Engine {
     /// blocking
     pub async fn block_run(
         &self,
-    ) -> io::Result<Vec<Result<io::Result<()>, tokio::task::JoinError>>> {
+    ) -> anyhow::Result<Vec<Result<anyhow::Result<()>, tokio::task::JoinError>>> {
         let mut hv = Vec::new();
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
@@ -95,23 +96,23 @@ impl Engine {
 
     pub async fn start_with_tasks(
         &self,
-    ) -> std::io::Result<
+    ) -> anyhow::Result<
         Vec<(
-            impl Future<Output = Result<(), std::io::Error>>,
-            impl Future<Output = Result<(), std::io::Error>>,
+            impl Future<Output = anyhow::Result<()>>,
+            impl Future<Output = anyhow::Result<()>>,
         )>,
     > {
         let m = self.running.clone();
         let mut running = m.lock();
         if running.is_none() {
         } else {
-            return Err(io::Error::other("already started!"));
+            return Err(anyhow::format_err!("already started!"));
         }
         if self.inbounds_count() == 0 {
-            return Err(io::Error::other("no inbound"));
+            return Err(anyhow::format_err!("no inbound"));
         }
         if self.outbounds_count() == 0 {
-            return Err(io::Error::other("no outbound"));
+            return Err(anyhow::format_err!("no outbound"));
         }
 
         let mut tasks = Vec::new();
@@ -141,7 +142,7 @@ impl Engine {
         mut arx: Receiver<acc2::AccumulateResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
         ti: Arc<TransmissionInfo>,
-    ) -> io::Result<()> {
+    ) -> anyhow::Result<()> {
         loop {
             let ar = arx.recv().await;
             if let Some(ar) = ar {

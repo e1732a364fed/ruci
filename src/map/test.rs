@@ -10,7 +10,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use super::{MapperBox, ProxyBehavior};
 
 #[tokio::test]
-async fn test_adder_r() -> std::io::Result<()> {
+async fn test_adder_r() -> anyhow::Result<()> {
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();
 
@@ -58,7 +58,7 @@ async fn test_adder_r() -> std::io::Result<()> {
 }
 
 #[tokio::test]
-async fn test_adder_w() -> std::io::Result<()> {
+async fn test_adder_w() -> anyhow::Result<()> {
     let client_tcps = MockTcpStream {
         read_data: vec![1, 2, 3],
         write_data: Vec::new(),
@@ -95,7 +95,7 @@ async fn test_adder_w() -> std::io::Result<()> {
 }
 
 #[tokio::test]
-async fn test_counter1() -> std::io::Result<()> {
+async fn test_counter1() -> anyhow::Result<()> {
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();
 
