@@ -1,7 +1,5 @@
 /*!
-
 Defines some different proxying modes.
-
  */
 
 pub mod chain;

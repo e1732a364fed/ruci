@@ -1,8 +1,8 @@
 /*!
- * suit defines a struct that impl SuitConfigHolder+ MappersVec
- *
- * 通过套装, 我们得以将一串固定套路的代理传播链扁平化
- *
+Defines a struct that impl SuitConfigHolder+ MappersVec
+
+通过套装, 我们得以将一串固定套路的代理传播链的配置扁平化
+
  */
 pub mod config;
 

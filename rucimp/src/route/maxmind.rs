@@ -17,7 +17,7 @@ use std::net::IpAddr;
 
 use anyhow::anyhow;
 use maxminddb::geoip2;
-use tracing::{debug, warn};
+use tracing::warn;
 
 /// try read file  in possible_addrs
 pub fn get_ip_iso(ip: IpAddr, filename: &str, possible_addrs: &[&str]) -> String {
@@ -58,7 +58,7 @@ pub fn get_ip_iso_by_reader(ip: IpAddr, reader: &maxminddb::Reader<Vec<u8>>) -> 
             return "".to_string();
         }
     };
-    debug!("got {:?}", c);
+    //debug!("got {:?}", c);
 
     if let Some(c) = c.country {
         c.iso_code.unwrap_or_default().to_string()

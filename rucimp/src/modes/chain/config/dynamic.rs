@@ -1,6 +1,7 @@
 /*!
+Defines Dynamic Chain.
 
-这里定义了动态链。动态链的 iter 每次调用时, 会动态地返回一种Mapper
+动态链的 iter 每次调用时, 会动态地返回一种Mapper
 只有运行时才能知晓一条链是由哪些 Mapper 所组成, 所以无法用 Vec等类型表示,
 只能用 Iterator 表示
 

@@ -70,7 +70,7 @@ impl DomainMatcherConfig {
 impl RuleSetConfig {
     pub fn to_rule_set(self) -> RuleSet {
         let userset = self.userset.map(|uss| {
-            let y: HashSet<UserVec> = uss
+            let us: HashSet<UserVec> = uss
                 .iter()
                 .map(|us_v| {
                     let z: Vec<UserBox> =
@@ -78,7 +78,7 @@ impl RuleSetConfig {
                     UserVec(z)
                 })
                 .collect();
-            y
+            us
         });
 
         let net_set = self.ta_networks.map(|hm| {

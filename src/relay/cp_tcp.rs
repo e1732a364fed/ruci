@@ -1,6 +1,6 @@
 /*!
- * cp_conn 包含4种情况, 对应有无earlydata 和 有无 [`Arc<GlobalTrafficRecorder>`]
- *
+cp_conn 包含4种情况, 对应有无earlydata 和 有无 [`Arc<GlobalTrafficRecorder>`]
+
 */
 
 use crate::net::CID;

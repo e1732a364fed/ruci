@@ -1,8 +1,9 @@
 /*!
- * chain 包定义了 chain 配置格式. 静态配置既可以使用 lua 也可以使用 toml
+Defines chain config format.
+
+StaticConfig can use lua or toml as config file format.
  */
 
-/// defines config formats for chain mode
 pub mod config;
 
 /// actual runnable engine for chain mode

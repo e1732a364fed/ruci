@@ -1,13 +1,15 @@
 /*!
-定义了静态链式配置 StaticConfig
+Defines config format for chain.
+
+主模块定义了静态链式配置 [`StaticConfig`]
 
 静态链是Mapper组成是运行前即知晓且依次按排列顺序执行的链,
 因此可以用 Vec 表示
 
-有限动态链的Mapper组成也可用 StaticConfig 定义, 但其状态转移函数在
-dynamic模块中定义
+有限动态链的Mapper组成也可用 [`StaticConfig`] 定义, 但其状态转移函数在
+[`dynamic`] 模块中定义
 
-完全动态链在 dynamic 模块中定义
+完全动态链在 [`dynamic`] 模块中定义
  */
 
 #[cfg(any(feature = "lua", feature = "lua54"))]
