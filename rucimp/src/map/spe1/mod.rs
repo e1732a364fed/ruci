@@ -157,7 +157,8 @@ impl QaData {
                         second_part.extend_from_within(0..half);
                     }
 
-                    println!("{} {}", first_part.len(), second_part.len());
+                    assert_eq!(first_part.len(), second_part.len());
+                    assert_eq!(first_part.len(), 128);
 
                     first_part.append(&mut second_part);
 
