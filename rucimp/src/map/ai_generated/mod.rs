@@ -120,6 +120,7 @@ impl AIGeneratedMap {
         target_addr: Option<&net::Addr>,
         early_data: Option<&[u8]>,
         is_handshake: bool,
+        is_read: bool,
     ) -> Result<AIResult> {
         let data_base64 = BASE64.encode(data);
         let target_addr_str = target_addr.map(|addr| addr.to_string());
@@ -131,8 +132,9 @@ impl AIGeneratedMap {
         } else {
             "客户端"
         };
+        let operation = if is_read { "读取" } else { "写入" };
         let system_prompt = format!(
-            "你是一个网络协议处理器的{}。你需要按照以下算法描述实现一个隐写协议：\n\
+            "你是一个网络协议处理器的{}。你需要按照以下算法描述实现一个隐写协议的{}操作：\n\
              {}\n\n\
              响应格式：\n\
              对于写序列，请返回：\n\
@@ -142,7 +144,7 @@ impl AIGeneratedMap {
              WRITE_PACKETS: [base64编码的响应数据包序列 w1,w2,...,wN]\n\
              READ_LENGTHS: [期望接收的数据包长度序列 r1,r2,...,rN]\n\
              TARGET_ADDR_*: [地址信息，仅在服务端握手时需要]",
-            role, self.config.algorithm_description
+            role, operation, self.config.algorithm_description
         );
 
         let operation_type = if is_handshake {
@@ -216,13 +218,19 @@ impl AIGeneratedMap {
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid API response format"))?;
 
-        // 解析AI的响应
-        if self.config.is_server {
-            // 服务端：解析客户端的写序列第一个包，生成读序列
+        if is_handshake && self.config.is_server {
+            // 握手阶段的服务端需要解析地址信息
             let (sequence, addr) = parse_ai_response_to_read_sequence(content)?;
             Ok(AIResult::Read { sequence, addr })
+        } else if is_read {
+            // 普通读取操作
+            let (sequence, _) = parse_ai_response_to_read_sequence(content)?;
+            Ok(AIResult::Read {
+                sequence,
+                addr: None,
+            })
         } else {
-            // 客户端：生成写序列
+            // 普通写入操作
             let sequence = parse_ai_response_to_write_sequence(content)?;
             Ok(AIResult::Write(sequence))
         }

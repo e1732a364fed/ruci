@@ -51,6 +51,7 @@ pub struct AIConn {
     pub state: ConnState,
     read_waker: Option<std::task::Waker>,  // 存储读操作的 waker
     write_waker: Option<std::task::Waker>, // 存储写操作的 waker
+    handshake_completed: bool,             // 新增字段
 }
 
 impl AIConn {
@@ -61,6 +62,7 @@ impl AIConn {
             state: ConnState::Ready,
             read_waker: None,
             write_waker: None,
+            handshake_completed: false,
         }
     }
 
@@ -69,15 +71,20 @@ impl AIConn {
     /// Will change self.state to ConnState::ProcessingAI
     fn initiate_ai_write_processing(&mut self, first_data: Vec<u8>) -> Result<()> {
         let ai_map = self.ai_map.clone();
+        // 只有客户端的第一个写操作是握手包
+        let is_handshake = !self.handshake_completed && !self.ai_map.config.is_server;
         let future = Box::pin(async move {
             ai_map
-                .generate_sequence_with_ai(&first_data, None, None, false)
+                .generate_sequence_with_ai(&first_data, None, None, is_handshake, false)
                 .await
         });
         self.state = ConnState::ProcessingAI {
             future: Arc::new(Mutex::new(future)),
             is_write: true,
         };
+        if is_handshake {
+            self.handshake_completed = true;
+        }
         Ok(())
     }
 
@@ -88,15 +95,20 @@ impl AIConn {
     /// will change self.state to ConnState::ProcessingAI
     fn initiate_ai_read_processing(&mut self, data: Vec<u8>) -> Result<()> {
         let ai_map = self.ai_map.clone();
+        // 只有服务端的第一个读操作是握手包
+        let is_handshake = !self.handshake_completed && self.ai_map.config.is_server;
         let future = Box::pin(async move {
             ai_map
-                .generate_sequence_with_ai(&data, None, None, false)
+                .generate_sequence_with_ai(&data, None, None, is_handshake, true)
                 .await
         });
         self.state = ConnState::ProcessingAI {
             future: Arc::new(Mutex::new(future)),
             is_write: false,
         };
+        if is_handshake {
+            self.handshake_completed = true;
+        }
         Ok(())
     }
 
@@ -308,13 +320,15 @@ impl AsyncRead for AIConn {
                         Ok(decrypted_data) => {
                             let len = decrypted_data.len().min(buf.remaining());
                             tracing::debug!(
-                                "AIConn::poll_read returning {} decrypted bytes to caller",
+                                "AIConn::poll_read completed read decoding sequence, returning {} decrypted bytes to caller",
                                 len
                             );
                             buf.put_slice(&decrypted_data[..len]);
                             this.state = ConnState::Ready;
                             // 通知等待的写操作
                             this.wake_pending_operation(false);
+
+                            tracing::debug!("AIConn::poll_read wake_pending_operation done");
                             return Poll::Ready(Ok(()));
                         }
                         Err(e) => {
