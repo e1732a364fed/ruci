@@ -16,7 +16,7 @@ use url::Url;
 use crate::map::{self, MapResult};
 use crate::net::http::Method;
 use crate::net::CID;
-use crate::user::{self, AsyncUserAuthenticator};
+use crate::user::{self, AsyncUserAuthenticator, User};
 use crate::{
     net::{self, http::FailReason, Conn},
     user::{PlainText, UsersMap},
@@ -119,6 +119,8 @@ impl Server {
             }
         }
         let mut authed_user: Option<PlainText> = None;
+
+        //todo: add test for auth
         if self.um.is_some() {
             let mut ok = false;
             for rh in r.headers.iter() {
@@ -235,7 +237,10 @@ impl Server {
             a: Some(ta),
             b: if buf.is_empty() { None } else { Some(buf) },
             c: map::Stream::TCP(base),
-            d: authed_user.map(|up| map::AnyData::B(Box::new(up))), //将 该登录的用户信息 作为 额外信息 传回
+            d: authed_user.map(|up| {
+                let b: Box<dyn User> = Box::new(up);
+                map::AnyData::B(Box::new(b))
+            }), //将 该登录的用户信息 作为 额外信息 传回
             e: None,
             new_id: None,
         })

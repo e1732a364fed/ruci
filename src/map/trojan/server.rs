@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
-    map::{self, MapResult, Mapper, MapperBox, ToMapper, CID},
+    map::{self, AnyData, MapResult, Mapper, MapperBox, ToMapper, CID},
     net::{self, helpers, Network},
-    user::{AsyncUserAuthenticator, UsersMap},
+    user::{self, AsyncUserAuthenticator, UsersMap},
     Name,
 };
 use async_trait::async_trait;
@@ -142,9 +142,8 @@ impl Server {
                     buf,
                     "no suffix crlf field, 1byte left",
                 ));
-            } else {
-                return Ok(MapResult::err_str("no suffix crlf field"));
             }
+            return Ok(MapResult::err_str("no suffix crlf field"));
         }
         let supposed_crlf = buf.get_u16();
         if supposed_crlf != CRLF {
@@ -154,11 +153,20 @@ impl Server {
             ));
         }
 
+        fn ou_to_od(opt_user: Option<User>) -> Option<AnyData> {
+            opt_user.map(|up| {
+                let b: Box<dyn user::User> = Box::new(up);
+                map::AnyData::B(Box::new(b))
+            })
+        }
+
         if is_udp {
             let u = udp::split_conn_to_trojan_udp_rw(base);
-            Ok(MapResult::udp_abc(ta, buf, u))
+            let mut mr = MapResult::udp_abc(ta, buf, u);
+            mr.d = ou_to_od(opt_user);
+            Ok(mr)
         } else {
-            Ok(MapResult::abc(ta, buf, base))
+            Ok(MapResult::abcod(ta, buf, base, ou_to_od(opt_user)))
         }
     }
 }

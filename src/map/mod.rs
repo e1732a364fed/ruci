@@ -172,6 +172,17 @@ impl MapResult {
         }
     }
 
+    pub fn abcod(a: net::Addr, b: BytesMut, c: net::Conn, d: Option<AnyData>) -> Self {
+        MapResult {
+            a: Some(a),
+            b: if b.is_empty() { None } else { Some(b) },
+            c: Stream::TCP(c),
+            d,
+            e: None,
+            new_id: None,
+        }
+    }
+
     pub fn oabc(a: Option<net::Addr>, b: Option<BytesMut>, c: net::Conn) -> Self {
         MapResult {
             a,

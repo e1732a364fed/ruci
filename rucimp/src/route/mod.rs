@@ -8,13 +8,6 @@ route 模块中的定义的是 比 ruci::route中的 InboundInfoOutSelector 更�
 有 WhiteList 和 BlackList 两种模式
 
 
-与 verysimple 一样, 我们直接使用 maxmind 的 数据 作为ip国别判断的数据库
-
-https://github.com/Loyalsoldier/geoip
-
-https://github.com/oschwald/maxminddb-rust
-
-
 
 */
 

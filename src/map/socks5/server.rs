@@ -3,9 +3,9 @@ pub mod udp;
 use super::*;
 
 use crate::{
-    map::{self, MapResult, MapperBox, ProxyBehavior, ToMapper, CID},
+    map::{self, AnyData, MapResult, MapperBox, ProxyBehavior, ToMapper, CID},
     net::{self, Addr, Conn},
-    user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
+    user::{self, AsyncUserAuthenticator, PlainText, User, UsersMap},
     Name,
 };
 use bytes::{Buf, BytesMut};
@@ -448,6 +448,13 @@ impl Server {
         }
         let ad = Addr::from("tcp", name, ip, port).map_err(|e| io::Error::other(e.to_string()))?;
 
+        fn ou_to_oad(ou: Option<PlainText>) -> Option<AnyData> {
+            ou.map(|up| {
+                let b: Box<dyn User> = Box::new(up);
+                map::AnyData::B(Box::new(b))
+            })
+        }
+
         if cmd == CMD_CONNECT {
             let _ = base.write(&*COMMMON_TCP_HANDSHAKE_REPLY).await?;
 
@@ -455,7 +462,7 @@ impl Server {
                 a: Some(ad),
                 b: if buf.is_empty() { None } else { Some(buf) },
                 c: map::Stream::TCP(base),
-                d: the_user.map(|up| map::AnyData::B(Box::new(up))), //将 该登录的用户信息 作为 额外信息 传回
+                d: ou_to_oad(the_user), //将 该登录的用户信息 作为 额外信息 传回
                 e: None,
                 new_id: None,
             });
@@ -469,7 +476,7 @@ impl Server {
                 c: net::Stream::None,
                 d: Some(map::AnyData::B(Box::new(map::NewConnectionOptData {
                     new_connection: map::NewConnection::UdpConnection,
-                    data: None,
+                    data: ou_to_oad(the_user),
                 }))), //标记我们 采用了新的udp连接
                 e: None,
                 new_id: None,
