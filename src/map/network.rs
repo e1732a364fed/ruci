@@ -1,4 +1,4 @@
-use tokio::net::TcpStream;
+use tokio::net::{TcpListener, TcpStream};
 
 use crate::Name;
 
@@ -7,6 +7,12 @@ use super::*;
 #[derive(Clone)]
 pub struct TcpDialer {
     addr: Option<net::Addr>,
+}
+
+impl Name for TcpDialer {
+    fn name(&self) -> &'static str {
+        "[tcp dialer]"
+    }
 }
 
 impl TcpDialer {
@@ -19,12 +25,6 @@ impl TcpDialer {
             }
             Err(e) => return MapResult::from_err(e),
         }
-    }
-}
-
-impl Name for TcpDialer {
-    fn name(&self) -> &'static str {
-        "[tcp dialer]"
     }
 }
 
@@ -92,5 +92,40 @@ impl Mapper for TcpDialer {
             }
         }
         unimplemented!()
+    }
+}
+
+#[derive(Clone)]
+pub struct TcpStreamGenerator {
+    addr: Option<net::Addr>,
+}
+
+impl Name for TcpStreamGenerator {
+    fn name(&self) -> &'static str {
+        "[tcp listener]"
+    }
+}
+impl TcpStreamGenerator {
+    pub async fn listen_addr(a: &net::Addr) {
+        let r = TcpListener::bind(a.clone().get_socket_addr().unwrap()).await;
+
+        match r {
+            Ok(listener) => {
+                tokio::spawn(async move {
+                    loop {
+                        let r = listener.accept().await;
+
+                        if r.is_err() {
+                            break;
+                        }
+                        let (tcpstream, raddr) = r.unwrap();
+                    }
+                });
+                // return MapResult(Box::new(c));
+            }
+            Err(e) => {
+                //    return MapResult::from_err(e)
+            }
+        }
     }
 }

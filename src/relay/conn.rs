@@ -36,7 +36,7 @@ pub async fn handle_conn<'a>(
     outc_addr: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
-    let mut state = State::new(network_str);
+    let mut state = RootState::new(network_str);
     state.ins_name = ins_name.to_string();
     state.cached_in_raddr = in_raddr;
 
@@ -49,13 +49,7 @@ pub async fn handle_conn<'a>(
             map::accumulate::<_, ExtraDataIterType>(
                 cid,
                 ProxyBehavior::DECODE,
-                MapResult {
-                    a: None,
-                    b: None,
-                    c: net::Stream::TCP(in_conn),
-                    d: None,
-                    e: None,
-                },
+                MapResult::c(in_conn),
                 ins_iterator,
                 None,
             )

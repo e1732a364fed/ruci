@@ -46,9 +46,22 @@ use std::{
     sync::Arc,
 };
 
-/// 描述一条代理连接
+/// 描述一条代理连接, 其可能来自一个 父连接
+///
+/// 考虑inner-mux 的情况
+///
+pub trait State: Display {
+    fn cid(&self) -> u32;
+    fn parent(&self) -> Option<Box<dyn State>>;
+    fn network(&self) -> &'static str;
+    fn ins_name(&self) -> String; // 入口名称
+    fn outc_name(&self) -> String; // 出口名称
+    fn cached_in_raddr(&self) -> String; // 进入程序时的 连接 的远端地址
+}
+
+/// 实现 State, 其没有 parent
 #[derive(Debug, Default, Clone)]
-pub struct State {
+pub struct RootState {
     pub cid: u32, //固定十进制位数的数
     pub network: &'static str,
     pub ins_name: String,        // 入口名称
@@ -56,7 +69,44 @@ pub struct State {
     pub cached_in_raddr: String, // 进入程序时的 连接 的远端地址
 }
 
-impl Display for State {
+impl RootState {
+    pub fn new(network: &'static str) -> RootState {
+        use rand::Rng;
+        const ID_RANGE_START: u32 = 100_000;
+
+        let mut s = RootState::default();
+        s.cid = rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1);
+        s.network = network;
+        s
+    }
+}
+impl State for RootState {
+    fn cid(&self) -> u32 {
+        self.cid
+    }
+
+    fn parent(&self) -> Option<Box<dyn State>> {
+        None
+    }
+
+    fn network(&self) -> &'static str {
+        self.network
+    }
+
+    fn ins_name(&self) -> String {
+        self.ins_name.clone()
+    }
+
+    fn outc_name(&self) -> String {
+        self.outc_name.clone()
+    }
+
+    fn cached_in_raddr(&self) -> String {
+        self.cached_in_raddr.clone()
+    }
+}
+
+impl Display for RootState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.outc_name == "" {
             write!(
@@ -71,18 +121,6 @@ impl Display for State {
                 self.cid, self.network, self.cached_in_raddr, self.ins_name, self.outc_name,
             )
         }
-    }
-}
-
-impl State {
-    pub fn new(network: &'static str) -> State {
-        use rand::Rng;
-        const ID_RANGE_START: u32 = 100_000;
-
-        let mut s = State::default();
-        s.cid = rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1);
-        s.network = network;
-        s
     }
 }
 
@@ -205,6 +243,17 @@ impl MapResult {
             e: None,
         }
     }
+
+    pub fn s(s: net::Stream) -> Self {
+        MapResult {
+            a: None,
+            b: None,
+            c: s,
+            d: None,
+            e: None,
+        }
+    }
+
     pub fn from_err(e: io::Error) -> Self {
         MapResult {
             a: None,
@@ -465,13 +514,7 @@ pub async fn iter_accumulate<IterMapperBoxRef, IterOptData>(
             let r = accumulate::<IterMapperBoxRef, IterOptData>(
                 cid,
                 ProxyBehavior::DECODE,
-                MapResult {
-                    a: None,
-                    b: None,
-                    c: stream,
-                    d: None,
-                    e: None,
-                },
+                MapResult::s(stream),
                 mc,
                 hvc,
             )
