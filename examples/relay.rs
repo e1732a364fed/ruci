@@ -44,6 +44,8 @@ async fn main() -> anyhow::Result<()> {
         None,
         None,
         None,
+        #[cfg(feature = "trace")]
+        None,
     )
     .await?;
 
