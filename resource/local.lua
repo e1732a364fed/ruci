@@ -35,7 +35,7 @@ out_stdio_chain = { { Stdio={} } }
 
 direct_out_chain = { "Direct" }
 
---[=[
+---[=[
 
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
@@ -243,7 +243,7 @@ config = {
 
 
 
----[=[
+--[=[
 config = {
 
     inbounds = { 
