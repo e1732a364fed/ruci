@@ -59,8 +59,20 @@ impl std::str::FromStr for Header {
     }
 }
 
+/// CommonHttp provies shared content in both request and response.
+///
+/// Neither does it have method/path from requests, nor does it have code/reason from responses.
+pub trait CommonHttp: HeaderContainer + ContentContainer {}
+impl<T: HeaderContainer + ContentContainer> CommonHttp for T {}
+
 pub trait HeaderContainer {
     fn get_header(&self, s: &str) -> Option<&Header>;
+}
+
+pub trait ContentContainer {
+    fn get_version(&self) -> &str;
+    fn get_body_start_index(&self) -> usize;
+    fn get_parse_result(&self) -> &Result<(), ParseError>;
 }
 
 #[derive(Debug)]
@@ -91,6 +103,19 @@ impl HeaderContainer for ParsedHttpRequest {
         self.headers.iter().find(|h| h.head.contains(s))
     }
 }
+impl ContentContainer for ParsedHttpRequest {
+    fn get_version(&self) -> &str {
+        &self.version
+    }
+
+    fn get_body_start_index(&self) -> usize {
+        self.body_start_index
+    }
+
+    fn get_parse_result(&self) -> &Result<(), ParseError> {
+        &self.parse_result
+    }
+}
 
 #[derive(Debug)]
 pub struct ParsedHttpResponse {
@@ -118,6 +143,19 @@ impl Default for ParsedHttpResponse {
 impl HeaderContainer for ParsedHttpResponse {
     fn get_header(&self, s: &str) -> Option<&Header> {
         self.headers.iter().find(|h| h.head.contains(s))
+    }
+}
+impl ContentContainer for ParsedHttpResponse {
+    fn get_version(&self) -> &str {
+        self.version.to_str()
+    }
+
+    fn get_body_start_index(&self) -> usize {
+        self.body_start_index
+    }
+
+    fn get_parse_result(&self) -> &Result<(), ParseError> {
+        &self.parse_result
     }
 }
 
@@ -159,6 +197,15 @@ pub enum H1Ver {
     #[default]
     V11,
 }
+impl H1Ver {
+    fn to_str(&self) -> &'static str {
+        match self {
+            H1Ver::V09 => "http/0.9",
+            H1Ver::V10 => "http/1.0",
+            H1Ver::V11 => "http/1.1",
+        }
+    }
+}
 
 pub const FAIL_NO_END_MARK: i32 = -12;
 
@@ -177,9 +224,7 @@ pub enum Method {
     Other(String),
 }
 
-///  <https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089>
-///
-///minimum valid request:
+/// For a minimum valid request, See <https://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes/25065089>
 ///
 ///```plaintext
 /// GET / HTTP/1.1<CR><LF>
@@ -427,6 +472,25 @@ pub fn parse_h1_response(bs: &[u8]) -> ParsedHttpResponse {
     }
 
     resp
+}
+
+pub fn common_parse(is_request: bool, bs: &[u8]) -> Box<dyn CommonHttp> {
+    if is_request {
+        Box::new(parse_h1_request(bs, false))
+    } else {
+        Box::new(parse_h1_response(bs))
+    }
+}
+
+/// unlike [`common_parse`], this function tries to parse as a request first, if it's not,
+/// then it tries to parse as a response.
+pub fn try_both_common_parse(bs: &[u8]) -> Box<dyn CommonHttp> {
+    let try1 = parse_h1_request(bs, false);
+    if try1.parse_result.is_err() {
+        Box::new(parse_h1_response(bs))
+    } else {
+        Box::new(try1)
+    }
 }
 
 #[cfg(test)]

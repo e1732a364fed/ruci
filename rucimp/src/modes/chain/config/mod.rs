@@ -808,6 +808,7 @@ impl AdvancedToMapBox for OutMapConfig {
 #[cfg(test)]
 mod test {
 
+    #[allow(unused)]
     use dns::ClientConfig;
 
     use super::*;

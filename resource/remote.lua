@@ -160,8 +160,8 @@ Config = {
 
         }
         -- ]]
-        -- { chain = { tcp, spe1_in, trojan_in }, tag = "listen1" }
-        { chain = lua_example2, tag = "listen1" },
+        { chain = { tcp, spe1_in, trojan_in }, tag = "listen1" }
+        -- { chain = lua_example2, tag = "listen1" },
     },
 
     ---[[

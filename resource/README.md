@@ -17,3 +17,5 @@ inspect.lua 是一个lua模块, 来自
 
 在ruci-cmd中, 下载的 Country.mmdb 和 wintun.dll 也会放在这里
 
+local.lua 和 remote.lua 中 默认 开启的实际 chain 随开发而经常变化，因此实际使用时不要
+直接依赖 此两个文件，而是要将这两个文件当作参考
