@@ -1,3 +1,10 @@
+use rustls::{
+    client::danger::ServerCertVerified,
+    pki_types::{CertificateDer, Der, ServerName, TrustAnchor, UnixTime},
+    server::WebPkiClientVerifier,
+    ClientConfig,
+};
+
 use self::map::CID;
 
 use super::*;
@@ -18,15 +25,17 @@ impl<IO> crate::Name for tokio_rustls::client::TlsStream<IO> {
 impl Client {
     pub fn new(domain: &str, is_insecure: bool) -> Self {
         let mut root_certs = rustls::RootCertStore::empty();
-        root_certs.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
-            OwnedTrustAnchor::from_subject_spki_name_constraints(
-                ta.subject,
-                ta.spki,
-                ta.name_constraints,
-            )
-        }));
+        root_certs.extend(
+            webpki_roots::TLS_SERVER_ROOTS
+                .0
+                .iter()
+                .map(|ta| TrustAnchor {
+                    subject: ta.subject.into(),
+                    subject_public_key_info: ta.spki.into(),
+                    name_constraints: ta.name_constraints.map(|u| Der::from(u)),
+                }),
+        );
         let mut config = ClientConfig::builder()
-            .with_safe_defaults()
             .with_root_certificates(root_certs)
             .with_no_client_auth();
 
@@ -44,23 +53,62 @@ impl Client {
     }
 }
 
+#[derive(Debug)]
 struct SuperDanVer {}
 
-impl ServerCertVerifier for SuperDanVer {
+impl rustls::client::danger::ServerCertVerifier for SuperDanVer {
     fn verify_server_cert(
         &self,
-        _end_entity: &rustls::Certificate,
-        _intermediates: &[rustls::Certificate],
-        _server_name: &rustls::ServerName,
-        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
         _ocsp_response: &[u8],
-        _now: std::time::SystemTime,
-    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
+        _now: UnixTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
         debug!("superdanver called");
         //if !server_name.eq(&self.domain) {}//server_name是client自己提供的，
         //在不验证cert的情况下，没有必要和自己比较
 
-        Ok(rustls::client::ServerCertVerified::assertion())
+        Ok(ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        _message: &[u8],
+        _cert: &CertificateDer<'_>,
+        _dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        _message: &[u8],
+        _cert: &CertificateDer<'_>,
+        _dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        let mut root_certs = rustls::RootCertStore::empty();
+        root_certs.extend(
+            webpki_roots::TLS_SERVER_ROOTS
+                .0
+                .iter()
+                .map(|ta| TrustAnchor {
+                    subject: ta.subject.into(),
+                    subject_public_key_info: ta.spki.into(),
+                    name_constraints: ta.name_constraints.map(|u| Der::from_slice(u)),
+                }),
+        );
+
+        let x = WebPkiClientVerifier::builder(Arc::new(root_certs))
+            .build()
+            .unwrap()
+            .supported_verify_schemes();
+
+        x
     }
 }
 
@@ -77,10 +125,7 @@ impl Client {
         let connector = TlsConnector::from(self.client_config.clone());
 
         let mut new_c = connector
-            .connect(
-                rustls::ServerName::try_from(self.domain.as_str()).unwrap(),
-                conn,
-            )
+            .connect(ServerName::try_from(self.domain.clone()).unwrap(), conn)
             .await?;
 
         if let Some(ed) = b {

@@ -1,23 +1,29 @@
 //https://github.com/async-rs/async-tls/blob/master/examples/server/src/main.rs
 
-use rustls::{Certificate, PrivateKey, ServerConfig};
-use std::fs::File;
+use rustls::{
+    pki_types::{
+        CertificateDer, PrivateKeyDer, PrivatePkcs1KeyDer, PrivatePkcs8KeyDer, PrivateSec1KeyDer,
+    },
+    server::NoClientAuth,
+    ServerConfig,
+};
+use std::{fs::File, path::PathBuf, sync::Arc};
 
 use rustls_pemfile::{certs, read_one, Item};
 use std::io::{self, BufReader};
-use std::path::Path;
 
 use super::server::ServerOptions;
 
 pub fn load_ser_config(options: &ServerOptions) -> io::Result<ServerConfig> {
-    let certs = load_certs(&options.cert)?;
+    let c = options.cert.clone();
+    let certs = load_certs(&c)?;
     debug_assert!(!certs.is_empty());
-    let key = load_keys(&options.key)?;
+    let k = options.key.clone();
+    let key = load_keys(&k)?;
 
     //todo: we don't use client authentication yet
     let config = rustls::ServerConfig::builder()
-        .with_safe_defaults()
-        .with_no_client_auth()
+        .with_client_cert_verifier(Arc::new(NoClientAuth))
         .with_single_cert(certs, key)
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
@@ -25,22 +31,22 @@ pub fn load_ser_config(options: &ServerOptions) -> io::Result<ServerConfig> {
 }
 
 /// Load the passed certificates file
-fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
+fn load_certs(path: &PathBuf) -> io::Result<Vec<CertificateDer<'static>>> {
     Ok(certs(&mut BufReader::new(File::open(path)?))
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("{:?}", e)))?
         .into_iter()
-        .map(Certificate)
+        .map(|u| CertificateDer::from(u))
         .collect())
 }
 
-fn load_keys(path: &Path) -> io::Result<PrivateKey> {
+fn load_keys(path: &PathBuf) -> io::Result<PrivateKeyDer<'static>> {
     match read_one(&mut BufReader::new(File::open(path)?)) {
-        Ok(Some(Item::RSAKey(data) | Item::PKCS8Key(data) | Item::ECKey(data))) => {
-            Ok(PrivateKey(data))
-        }
+        Ok(Some(Item::PKCS8Key(data))) => Ok(PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(data))),
+        Ok(Some(Item::RSAKey(data))) => Ok(PrivateKeyDer::Pkcs1(PrivatePkcs1KeyDer::from(data))),
+        Ok(Some(Item::ECKey(data))) => Ok(PrivateKeyDer::Sec1(PrivateSec1KeyDer::from(data))),
         Ok(x) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("invalid key in {}, {:?}", path.display(), x),
+            format!("invalid key in {:?}, {:?}", &path, x),
         )),
         Err(e) => Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
     }
