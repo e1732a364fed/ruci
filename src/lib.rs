@@ -1,11 +1,11 @@
 /*!
- * 
-异步库用 async-std
+ *
+异步库用 tokio
 */
 
-pub mod relay;
 pub mod map;
-pub mod user;
 pub mod net;
+pub mod relay;
+pub mod user;
 
-pub const VERSION:&str = "0.0.0";
+pub const VERSION: &str = "0.0.0";
