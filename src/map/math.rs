@@ -107,6 +107,13 @@ impl Name for Adder {
     }
 }
 
+impl ToMapper for i8 {
+    fn to_mapper(&self) -> MapperBox {
+        let a = Adder { addnum: *self };
+        Box::new(a)
+    }
+}
+
 #[async_trait]
 impl crate::map::Mapper for Adder {
     async fn maps(

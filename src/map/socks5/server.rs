@@ -4,13 +4,13 @@ pub mod udp;
 use super::*;
 
 use crate::{
-    map::{self, MapResult, ProxyBehavior},
+    map::{self, MapResult, MapperBox, ProxyBehavior, ToMapper},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, UserPass, UsersMap},
     Name,
 };
 use bytes::{Buf, BytesMut};
-use futures::select;
+use futures::{executor::block_on, select};
 use log::{debug, log_enabled, warn};
 use std::{
     collections::HashMap,
@@ -24,11 +24,18 @@ use tokio::{
     task,
 };
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Config {
     pub support_udp: bool,
     pub user_whitespace_pass: Option<String>,
     pub user_passes: Option<Vec<UserPass>>,
+}
+
+impl ToMapper for Config {
+    fn to_mapper(&self) -> MapperBox {
+        let a = block_on(Server::new(self.clone()));
+        Box::new(a)
+    }
 }
 
 /// Server  未实现bind 命令。

@@ -307,6 +307,10 @@ pub trait Mapper: crate::Name {
     ) -> MapResult;
 }
 
+pub trait ToMapper {
+    fn to_mapper(&self) -> MapperBox;
+}
+
 //令 Mapper 实现 Sync，否则报错
 pub trait MapperSync: Mapper + Send + Sync + Debug {}
 impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}

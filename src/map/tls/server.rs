@@ -1,3 +1,5 @@
+use crate::map::{MapperBox, ToMapper};
+
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -5,6 +7,13 @@ pub struct ServerOptions {
     pub addr: String,
     pub cert: PathBuf,
     pub key: PathBuf,
+}
+
+impl ToMapper for ServerOptions {
+    fn to_mapper(&self) -> MapperBox {
+        let a = Server::new(self.clone());
+        Box::new(a)
+    }
 }
 
 // todo: 添加 alpn 和 tls_minv

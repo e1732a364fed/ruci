@@ -48,7 +48,7 @@ mod test {
         .eval()?;
         let c: LuaTable = lua.globals().get("config")?;
 
-        let car: StaticConfig = lua.from_value(
+        let c: StaticConfig = lua.from_value(
             Value::Table(c), // lua.load(
                              //     r#"
 
@@ -57,8 +57,8 @@ mod test {
                              // .eval()?,
         )?;
 
-        println!("{:#?}", car);
-        let first_listen_group = car.listen.first().unwrap();
+        println!("{:#?}", c);
+        let first_listen_group = c.listen.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
         assert!(matches!(InMapper::Counter, last_m));
 

@@ -5,6 +5,10 @@
 #[cfg(feature = "lua")]
 pub mod lua;
 
+use std::path::PathBuf;
+
+use futures::executor::block_on;
+use ruci::map::{socks5, tls, trojan, ToMapper};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
@@ -86,6 +90,46 @@ pub struct TrojanIn {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TrojanOut(String);
+
+impl ToMapper for InMapper {
+    fn to_mapper(&self) -> ruci::map::MapperBox {
+        match self {
+            InMapper::Listener(_) => todo!(),
+            InMapper::Adder(i) => i.to_mapper(),
+            InMapper::Counter => Box::new(ruci::map::counter::Counter),
+            InMapper::TLS(c) => tls::server::ServerOptions {
+                addr: "todo!()".to_string(),
+                cert: PathBuf::from(c.cert.clone()),
+                key: PathBuf::from(c.key.clone()),
+            }
+            .to_mapper(),
+            InMapper::Socks5(c) => {
+                let mut so = socks5::server::Config::default();
+                so.user_whitespace_pass = c.userpass.clone();
+                let ruci_userpass = c.more.as_ref().map_or(None, |up_v| {
+                    Some(
+                        up_v.iter()
+                            .map(|up| ruci::user::UserPass::from(up.to_string()))
+                            .collect::<Vec<_>>(),
+                    )
+                });
+                so.user_passes = ruci_userpass;
+
+                so.to_mapper()
+            }
+            InMapper::Trojan(c) => {
+                let mut so = trojan::server::Config::default();
+                so.pass = c.password.clone();
+                let ruci_userpass = c.more.as_ref().map_or(None, |up_v| {
+                    Some(up_v.iter().map(|up| up.clone()).collect::<Vec<_>>())
+                });
+                so.passes = ruci_userpass;
+
+                so.to_mapper()
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {

@@ -1,19 +1,27 @@
 use super::*;
 use crate::{
-    map::{self, MapResult, Mapper},
+    map::{self, MapResult, Mapper, MapperBox, ToMapper},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
     Name,
 };
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
+use futures::executor::block_on;
 use std::io::{self};
 use tokio::io::AsyncReadExt;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Config {
     pub pass: Option<String>,
     pub passes: Option<Vec<String>>,
+}
+
+impl ToMapper for Config {
+    fn to_mapper(&self) -> MapperBox {
+        let a = block_on(Server::new(self.clone()));
+        Box::new(a)
+    }
 }
 
 #[derive(Debug)]
