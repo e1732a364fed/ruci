@@ -754,10 +754,6 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     );
     se.load_config(rucimp::Config { proxy_config: c });
 
-    let ti = net::TransmissionInfo::default();
-    let arc_ti = Arc::new(ti);
-    let arc_tic = arc_ti.clone();
-
     let listen_future = async {
         info!("try start listen");
         if even {
@@ -786,9 +782,9 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     select! {
 
         () = dial_future => {
-            info!("dial finished first, will return , {:?}",arc_tic);
+            info!("dial finished first, will return , {:?}", se.ti);
             tokio::time::sleep(Duration::from_millis(400)).await;
-            info!("dial finished first ,print again, {:?}",arc_tic);
+            info!("dial finished first ,print again, {:?}",se.ti);
 
         },
         () = listen_future => {
@@ -822,10 +818,6 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
     );
     se.load_config(rucimp::Config { proxy_config: c });
 
-    let ti = net::TransmissionInfo::default();
-    let arc_ti = Arc::new(ti);
-    let arc_tic = arc_ti.clone();
-
     let listen_future = async {
         info!("try start listen");
         if even {
@@ -854,9 +846,9 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
     select! {
 
         () = dial_future => {
-            info!("dial finished first, will return , {:?}",arc_tic);
+            info!("dial finished first, will return , {:?}",se.ti);
             tokio::time::sleep(Duration::from_millis(400)).await;
-            info!("dial finished first ,print again, {:?}",arc_tic);
+            info!("dial finished first ,print again, {:?}",se.ti);
 
         },
         () = listen_future => {

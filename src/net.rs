@@ -454,7 +454,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     let tt = info.ub.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
-                        debug!("cp, cid: {}, u, ub, {}, {}",cid,n,tt);
+                        debug!("cp, cid: {}, u, ub, {}, {}",cid,n,tt+n);
                     }
                 }
 
@@ -468,7 +468,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         let tt = info.db.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
-                            debug!("cp, cid: {}, u, db, {}, {}",cid, n,tt);
+                            debug!("cp, cid: {}, u, db, {}, {}",cid, n,tt+n);
                         }
                     }
                 }
@@ -487,7 +487,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     let tt = info.db.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
-                        debug!("cp, cid: {}, d, db, {}, {}",cid, n,tt);
+                        debug!("cp, cid: {}, d, db, {}, {}",cid, n,tt+n);
                     }
                 }
 
@@ -497,7 +497,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         let tt = info.ub.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
-                            debug!("cp, cid: {}, d, ub, {}, {}",cid,n,tt);
+                            debug!("cp, cid: {}, d, ub, {}, {}",cid,n,tt+n);
                         }
                     }
                 }

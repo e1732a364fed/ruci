@@ -36,13 +36,12 @@ where
     FInadder: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
     FOutadder: Fn(&str, LDConfig) -> Option<MapperBox> + 'static,
 {
-    running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
+    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
+    pub ti: Arc<TransmissionInfo>,
 
     servers: Vec<Arc<dyn Suit>>,
     clients: Vec<Arc<dyn Suit>>,
     default_c: Option<Arc<dyn Suit>>,
-
-    ti: Arc<TransmissionInfo>,
 
     load_inmappers_func: FInadder,
     load_outmappers_func: FOutadder,
