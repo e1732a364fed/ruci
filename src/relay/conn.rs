@@ -47,17 +47,14 @@ pub async fn handle_conn<'a>(
 
     let cid = state.cid();
 
-    type ExtraDataIterType = std::vec::IntoIter<OptData>;
-
     let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            map::accumulate::<_, ExtraDataIterType>(
+            map::accumulate::<_>(
                 cidc,
                 ProxyBehavior::DECODE,
                 MapResult::c(in_conn),
                 ins_iterator,
-                None,
             )
             .await
         })
@@ -119,7 +116,7 @@ pub async fn handle_conn<'a>(
         let cidc = cid.clone();
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                map::accumulate::<_, ExtraDataIterType>(
+                map::accumulate::<_>(
                     cidc,
                     ProxyBehavior::ENCODE,
                     MapResult {
@@ -131,7 +128,6 @@ pub async fn handle_conn<'a>(
                         id: None,
                     },
                     outc_iterator,
-                    None,
                 )
                 .await
             })
@@ -181,17 +177,14 @@ where
         None => CID::new(),
     };
 
-    type ExtraDataIterType = std::vec::IntoIter<OptData>;
-
     let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            map::accumulate::<_, ExtraDataIterType>(
+            map::accumulate::<_>(
                 cidc,
                 ProxyBehavior::DECODE,
                 MapResult::c(in_conn),
                 ins_iterator,
-                None,
             )
             .await
         })
@@ -259,7 +252,7 @@ pub trait OutSelector<'a, T>: Send + Sync
 where
     T: Iterator<Item = &'a MapperBox>,
 {
-    fn select(&self, params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>);
+    fn select(&self, params: Vec<Option<AnyData>>) -> T;
 }
 
 pub async fn handle_in_accumulate_result<'a, T, T2>(
@@ -294,8 +287,12 @@ where
         )
     }
 
-    let (outc_iterator, outc_addr) = out_selector.select(listen_result.d);
+    let mut outc_iterator = out_selector.select(listen_result.d);
 
+    let outc_addr = match outc_iterator.by_ref().last() {
+        Some(oi) => oi.get_target_addr(),
+        None => None,
+    };
     let is_direct: bool;
 
     let real_target_addr = if outc_addr.is_some() {
@@ -330,9 +327,7 @@ where
         let cidc = cid.clone();
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                type ExtraDataIterType = std::vec::IntoIter<OptData>;
-
-                map::accumulate::<_, ExtraDataIterType>(
+                map::accumulate::<_>(
                     cidc,
                     ProxyBehavior::ENCODE,
                     MapResult {
@@ -344,7 +339,6 @@ where
                         id: None,
                     },
                     outc_iterator,
-                    None,
                 )
                 .await
             })

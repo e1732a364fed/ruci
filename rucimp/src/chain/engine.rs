@@ -4,8 +4,9 @@ use parking_lot::Mutex;
 use ruci::{
     map::*,
     net::{TransmissionInfo, CID},
+    relay::conn::handle_in_accumulate_result,
 };
-use std::{io, sync::Arc};
+use std::{default, io, sync::Arc};
 use tokio::{
     sync::{
         mpsc,
@@ -40,10 +41,16 @@ impl StaticEngine {
     pub fn client_count(&self) -> usize {
         self.clients.len()
     }
+
     /*
         pub async fn start_with_tasks(
             &self,
-        ) -> std::io::Result<Vec<impl Future<Output = Result<(), std::io::Error>>>> {
+        ) -> std::io::Result<
+            Vec<(
+                impl Future<Output = Result<(), std::io::Error>>,
+                impl Future<Output = Result<(), std::io::Error>>,
+            )>,
+        > {
             let mut running = self.running.lock();
             if let None = *running {
             } else {
@@ -56,6 +63,8 @@ impl StaticEngine {
                 return Err(io::Error::other("no client"));
             }
 
+            let defaultc = self.clients.last().unwrap();
+
             //let defaultc = self.default_c.clone().unwrap();
 
             //todo: 因为没实现路由功能，所以现在只能用一个 client, 即 default client
@@ -64,13 +73,38 @@ impl StaticEngine {
             let mut tasks = Vec::new();
             let mut shutdown_tx_vec = Vec::new();
 
+            let selector = FixedOutSelector {
+                mappers: defaultc.iter(),
+            };
+            let selector = Box::new(selector);
+            let selector = Box::leak(selector);
+
             self.servers.iter().for_each(|inmappers| {
                 let (tx, rx) = oneshot::channel(); //todo: change this
 
                 //in_iter_accumulate(CID::default(), rx, tx, inmappers, None);
 
+                let (atx, arx) = mpsc::channel(100);
+
+                let t1 = async {
+                    accumulate_from_start::<_>(atx, rx, inmappers.iter());
+                    Ok(())
+                };
+
+                let t2 = async {
+                    loop {
+                        let ar = arx.recv().await;
+                        if ar.is_none() {
+                            break;
+                        }
+                        let ar = ar.unwrap();
+                        handle_in_accumulate_result(ar, selector, Some(self.ti.clone()));
+                    }
+                    Ok(())
+                };
+
                 // let task = listen_ser((*s).clone(), defaultc.clone(), Some(self.ti.clone()), rx);
-                // tasks.push(task);
+                tasks.push((t1, t2));
                 shutdown_tx_vec.push(tx);
             });
             debug!("engine will run with {} listens", tasks.len());
@@ -99,5 +133,21 @@ impl StaticEngine {
         //     s.stop();
         // }
         info!("stopped");
+    }
+}
+
+pub struct FixedOutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox> + Clone + Send,
+{
+    pub mappers: T,
+}
+
+impl<'a, T> ruci::relay::conn::OutSelector<'a, T> for FixedOutSelector<'a, T>
+where
+    T: Iterator<Item = &'a MapperBox> + Clone + Send + Sync,
+{
+    fn select(&self, _params: Vec<Option<AnyData>>) -> T {
+        self.mappers.clone()
     }
 }

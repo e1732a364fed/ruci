@@ -407,6 +407,10 @@ pub trait Mapper: crate::Name + DynClone {
     /// 与 InAdder 一样，它返回一个可选的额外数据  OptData
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult;
+
+    fn get_target_addr(&self) -> Option<net::Addr> {
+        None
+    }
 }
 
 pub trait ToMapper {
@@ -459,16 +463,14 @@ where
 ///
 /// 能生成 Stream::Generator 说明其 behavior 为 DECODE
 ///
-pub async fn accumulate<'a, IterMapperBoxRef, IterOptData>(
+pub async fn accumulate<'a, IterMapperBoxRef>(
     cid: CID,
     behavior: ProxyBehavior,
     initial_state: MapResult,
     mut mappers: IterMapperBoxRef,
-    mut hyperparameter_vec: Option<IterOptData>,
 ) -> AccumulateResult<'a, IterMapperBoxRef>
 where
     IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
-    IterOptData: Iterator<Item = OptData>,
 {
     let mut last_r: MapResult = initial_state;
 
@@ -491,11 +493,12 @@ where
                         },
                         None => None,
                     },
-                    hyperparameter: if let Some(v) = hyperparameter_vec.as_mut() {
-                        v.next().unwrap()
-                    } else {
-                        None
-                    },
+                    // hyperparameter: if let Some(v) = hyperparameter_vec.as_mut() {
+                    //     v.next().unwrap()
+                    // } else {
+                    //     None
+                    // },
+                    hyperparameter: None,
                 };
                 let input_data = if input_data.calculated_data.is_none()
                     && input_data.calculated_data.is_none()
@@ -555,15 +558,13 @@ where
 }
 
 /// 先调用第一个 mapper 生成 流，然后调用 in_iter_accumulate
-pub async fn accumulate_from_start<IterMapperBoxRef, IterOptData>(
+pub async fn accumulate_from_start<IterMapperBoxRef>(
     tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
     shutdown_rx: oneshot::Receiver<()>,
 
     mut inmappers: IterMapperBoxRef,
-    _hyperparameter_vec: Option<IterOptData>,
 ) where
     IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
-    IterOptData: Iterator<Item = OptData> + Clone + Send + 'static,
 {
     let first = inmappers.next().unwrap();
     let r = first
@@ -585,14 +586,7 @@ pub async fn accumulate_from_start<IterMapperBoxRef, IterOptData>(
         return;
     }
     if let Stream::Generator(rx) = r.c {
-        in_iter_accumulate_forever::<IterMapperBoxRef, IterOptData>(
-            CID::default(),
-            rx,
-            tx,
-            inmappers,
-            None,
-        )
-        .await;
+        in_iter_accumulate_forever::<IterMapperBoxRef>(CID::default(), rx, tx, inmappers).await;
     } else {
         warn!("accumulate_from_start, not a stream generator");
 
@@ -692,15 +686,13 @@ pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去;
 /// block until rx got closed.
 /// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
-pub async fn in_iter_accumulate_forever<IterMapperBoxRef, IterOptData>(
+pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
     cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
     tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
     inmappers: IterMapperBoxRef,
-    hyperparameter_vec: Option<IterOptData>,
 ) where
     IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
-    IterOptData: Iterator<Item = OptData> + Clone + Send + 'static,
 {
     loop {
         let opt_stream = rx.recv().await;
@@ -711,26 +703,23 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef, IterOptData>(
 
         let mc = inmappers.clone();
         let txc = tx.clone();
-        let hvc = hyperparameter_vec.clone();
         let cid = cid.clone();
         tokio::spawn(async move {
-            let r = accumulate::<IterMapperBoxRef, IterOptData>(
+            let r = accumulate::<IterMapperBoxRef>(
                 cid,
                 ProxyBehavior::DECODE,
                 MapResult::s(stream),
                 mc,
-                hvc,
             )
             .await;
             if r.e.is_none() {
                 if let Stream::Generator(s_rx) = r.c {
                     let cid = r.id.unwrap();
-                    let _ = in_iter_accumulate_forever::<IterMapperBoxRef, IterOptData>(
+                    let _ = in_iter_accumulate_forever::<IterMapperBoxRef>(
                         cid,
                         s_rx,
                         txc,
                         r.left_mappers_iter,
-                        None,
                     );
 
                     return;

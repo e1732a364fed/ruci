@@ -325,15 +325,14 @@ where
     T: Iterator<Item = &'a MapperBox> + Clone + Send,
 {
     pub mappers: T,
-    pub addr: Option<net::Addr>,
 }
 
 impl<'a, T> relay::conn::OutSelector<'a, T> for FixedOutSelector<'a, T>
 where
     T: Iterator<Item = &'a MapperBox> + Clone + Send + Sync,
 {
-    fn select(&self, _params: Vec<Option<AnyData>>) -> (T, Option<net::Addr>) {
-        (self.mappers.clone(), self.addr.clone())
+    fn select(&self, _params: Vec<Option<AnyData>>) -> T {
+        self.mappers.clone()
     }
 }
 
@@ -354,10 +353,9 @@ async fn listen_tcp2(
 
     let selector = FixedOutSelector {
         mappers: outc.get_mappers_vec().iter(),
-        addr: outc.addr(),
     };
-    let f = Box::new(selector);
-    let f = Box::leak(f);
+    let selector = Box::new(selector);
+    let selector = Box::leak(selector);
 
     tokio::select! {
         r = async {
@@ -377,7 +375,7 @@ async fn listen_tcp2(
                 tokio::spawn( relay::conn::handle_conn_clonable(
                         Box::new(tcpstream),
                         ins.get_mappers_vec().iter(),
-                        f,
+                        selector,
                         ti,
                     )
                 );
