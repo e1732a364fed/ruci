@@ -1,9 +1,9 @@
 define compile
-	cargo build --target ${BUILD_TRIPLET} -F api_server -F api_client -F utils -F use-native-tls --release 
+	cargo build --target ${BUILD_TRIPLET} -F lua -F api_server -F api_client -F utils -F use-native-tls --release 
 endef
 
-define compile_vendor
-	cargo build --target ${BUILD_TRIPLET} -F api_server -F api_client -F utils -F native-tls-vendored --release 
+define compile_cross
+	cargo build --target ${BUILD_TRIPLET} -F lua54 -F api_server -F api_client -F utils -F native-tls-vendored --release 
 endef
 
 
@@ -35,7 +35,7 @@ exe:
 	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
 
 vendor:
-	$(call compile_vendor)
+	$(call compile_cross)
 	$(call copy)
 	$(call xz,${BUILD_VERSION},${BUILD_TRIPLET})
 

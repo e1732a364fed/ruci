@@ -1,5 +1,5 @@
 define compile
-	cargo build --target ${BUILD_TRIPLET} --release --example chain --example suit
+	cargo build --target ${BUILD_TRIPLET}  -F lua --release --example chain --example suit
 endef
 
 define copy

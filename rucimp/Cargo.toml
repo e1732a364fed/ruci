@@ -30,7 +30,7 @@ iprange = {version = "0.6.7" , optional = true }
 regex = {version = "1.10.3" , optional = true }
 maxminddb = { version = "0.24", optional = true }
 
-mlua = { version = "0.9.5" , features = ["serialize","async","parking_lot","luau","macros","unstable"] , optional = true }
+mlua = { version = "0.9.5" , features = ["serialize","async","parking_lot","macros","unstable"] , optional = true }
 
 libc = { version = "0.2", optional = true }
 
@@ -50,12 +50,13 @@ serde_json = "1.0.114"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [features]
-default = ["lua", "route","geoip"]
+default = ["route","geoip"]
 
 tun = ["ruci/tun"]
 trace = ["ruci/trace"]
 
-lua = ["mlua"]
+lua = ["mlua/luau"]
+lua54 = ["mlua/lua54"]
 
 route = ["ipnet" ,"iprange" ,"regex"]
 
