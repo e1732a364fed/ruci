@@ -22,7 +22,7 @@ async fn test_adder_r() -> anyhow::Result<()> {
     };
 
     let mut a = Adder::default();
-    a.addnum = 2;
+    a.add_num = 2;
     a.direction = AddDirection::Write;
 
     let r = a
@@ -67,7 +67,7 @@ async fn test_adder_w() -> anyhow::Result<()> {
     };
 
     let mut a = Adder::default();
-    a.addnum = 2;
+    a.add_num = 2;
     a.direction = AddDirection::Read;
 
     let r = a

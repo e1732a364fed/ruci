@@ -37,7 +37,7 @@ struct Args {
     #[arg(short, long)]
     log_level: Option<tracing::Level>,
 
-    /// specifiy the log file prefix name.
+    /// specify the log file prefix name.
     ///
     /// if empty string is given, no log file will be generated;
     ///
@@ -45,7 +45,7 @@ struct Args {
     #[arg(long)]
     log_file: Option<String>,
 
-    /// specifiy the directory where log files would be in
+    /// specify the directory where log files would be in
     ///
     /// if empty string is given, log file will be generated in default folder
     ///
@@ -145,8 +145,8 @@ async fn main() -> anyhow::Result<()> {
 
 fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> {
     println!("ruci-cmd");
-    let cdir = std::env::current_dir().expect("has current directory");
-    println!("working dir: {:?}", cdir);
+    let c_dir = std::env::current_dir().expect("has current directory");
+    println!("working dir: {:?}", c_dir);
 
     println!("Mode: {:?}", args.mode);
     println!("Config: {}", args.config);

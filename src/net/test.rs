@@ -8,7 +8,7 @@ use super::*;
 const TEST_DOMAIN: &str = "www.baidu.com";
 
 #[test]
-fn print_cidchain() {
+fn print_cid_chain() {
     let cc = CIDChain {
         id_list: vec![1, 2, 3],
     };
@@ -16,14 +16,14 @@ fn print_cidchain() {
 }
 
 #[test]
-fn randomport() {
+fn random_port() {
     let x = gen_random_higher_port();
     println!("{:?}", x);
 }
 
 #[test]
 #[should_panic]
-fn try_parseip_fromstr() {
+fn try_parse_ip_from_str() {
     use std::str::FromStr;
     let x = IpAddr::from_str(TEST_DOMAIN);
     println!("{}", x.as_ref().err().unwrap());
@@ -31,7 +31,7 @@ fn try_parseip_fromstr() {
 }
 
 #[test]
-fn try_resolvehost() {
+fn try_resolve_host() {
     let x = (TEST_DOMAIN.to_string() + ":80").to_socket_addrs();
     println!("{:?}", x);
     x.unwrap();

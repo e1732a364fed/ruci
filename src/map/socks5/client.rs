@@ -32,7 +32,7 @@ impl Client {
         b: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
         //let mut base = params.c;
-        let isudp = a.network == Network::UDP;
+        let is_udp = a.network == Network::UDP;
         if !a.network.is_tcp_or_udp() {
             bail!(
                 "trojan client: target_addr's network can't be proxied: {} ",
@@ -40,8 +40,8 @@ impl Client {
             )
         }
 
-        const BUFLEN: usize = 1024; //todo: change this.
-        let mut buf = BytesMut::with_capacity(BUFLEN);
+        const BUF_LEN: usize = 1024; //todo: change this.
+        let mut buf = BytesMut::with_capacity(BUF_LEN);
 
         let adopted_method = if self.up.is_some() {
             AUTH_PASSWORD
@@ -51,7 +51,7 @@ impl Client {
         buf.extend_from_slice(&[VERSION5, 1, adopted_method][..]);
 
         base.write_all(&buf[..]).await?;
-        buf.resize(BUFLEN, 0);
+        buf.resize(BUF_LEN, 0);
         let mut n = base.read(&mut buf).await?;
 
         if n != 2 || buf[0] != VERSION5 || buf[1] != adopted_method {
@@ -77,7 +77,7 @@ impl Client {
 
             base.write_all(&buf).await?;
 
-            buf.resize(BUFLEN, 0);
+            buf.resize(BUF_LEN, 0);
             n = base.read(&mut buf).await?;
 
             if n != 2 || buf[0] != 1 || buf[1] != 0 {
@@ -102,8 +102,8 @@ impl Client {
             }
         }
 
-        if isudp {
-            buf.extend_from_slice(&[VERSION5, CMD_UDPASSOCIATE, 0][..]);
+        if is_udp {
+            buf.extend_from_slice(&[VERSION5, CMD_UDP_ASSOCIATE, 0][..]);
             net::helpers::addr_to_socks5_bytes(&Addr::default(), &mut buf);
             base.write_all(&buf).await?;
 
@@ -147,7 +147,7 @@ impl Client {
             net::helpers::addr_to_socks5_bytes(&a, &mut buf);
             base.write_all(&buf).await?;
 
-            buf.resize(BUFLEN, 0);
+            buf.resize(BUF_LEN, 0);
             n = base.read(&mut buf).await?;
 
             if n < 10 || buf[0] != 5 || buf[1] != 0 || buf[2] != 0 {

@@ -21,7 +21,7 @@ use ruci::map::socks5::*;
 use ruci::net::GlobalTrafficRecorder;
 use ruci::{map::Mapper, net, user::PlainText};
 use rucimp::modes::suit::config::adapter::{
-    load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
+    load_in_mappers_by_str_and_ld_config, load_out_mappers_by_str_and_ld_config,
 };
 use rucimp::modes::suit::config::{Config, LDConfig};
 use rucimp::modes::suit::engine::{listen_ser, SuitEngine};
@@ -113,7 +113,7 @@ async fn f_dial_future(
 
     let n = cs.read(&mut readbuf[..]).await.unwrap();
     info!("client{} read, {:?}", rid, &readbuf[..n]);
-    assert_eq!(&readbuf[..n], &*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+    assert_eq!(&readbuf[..n], &*socks5::COMMON_TCP_HANDSHAKE_REPLY);
 
     info!("client{} writing hello...", rid,);
     //发送测试数据
@@ -267,7 +267,7 @@ async fn f_dial_future_earlydata(
 
     let n = cs.read(&mut readbuf[..]).await.unwrap();
     info!("client{} read, {:?}", rid, &readbuf[..n]);
-    assert_eq!(&readbuf[..n], &*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+    assert_eq!(&readbuf[..n], &*socks5::COMMON_TCP_HANDSHAKE_REPLY);
 
     //info!("client{} writing hello...", rid,);
     //发送测试数据
@@ -326,7 +326,7 @@ fn get_nl_config(listener_num: u8) -> Config {
 
 async fn get_socks5_mapper(lsuit: &SuitStruct) -> socks5::server::Server {
     socks5::server::Server::new(
-        rucimp::modes::suit::config::adapter::get_socks5_server_option_from_ldconfig(
+        rucimp::modes::suit::config::adapter::get_socks5_server_option_from_ld_config(
             lsuit.get_config().unwrap().clone(),
         ),
     )
@@ -674,8 +674,8 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     let mut se = SuitEngine::default();
     se.load_config(
         c,
-        load_in_mappers_by_str_and_ldconfig,
-        load_out_mappers_by_str_and_ldconfig,
+        load_in_mappers_by_str_and_ld_config,
+        load_out_mappers_by_str_and_ld_config,
     );
 
     let listen_future = async {
@@ -745,8 +745,8 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> anyhow::Resul
     let mut se = SuitEngine::default();
     se.load_config(
         c,
-        load_in_mappers_by_str_and_ldconfig,
-        load_out_mappers_by_str_and_ldconfig,
+        load_in_mappers_by_str_and_ld_config,
+        load_out_mappers_by_str_and_ld_config,
     );
 
     let listen_future = async {
@@ -816,8 +816,8 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
         let mut lo = se.lock();
         lo.load_config(
             c,
-            load_in_mappers_by_str_and_ldconfig,
-            load_out_mappers_by_str_and_ldconfig,
+            load_in_mappers_by_str_and_ld_config,
+            load_out_mappers_by_str_and_ld_config,
         );
     }
     let sec = se.clone();

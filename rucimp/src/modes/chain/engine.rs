@@ -31,7 +31,7 @@ pub struct Engine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
     pub gtr: Arc<GlobalTrafficRecorder>,
 
-    pub newconn_recorder: OptNewInfoSender,
+    pub new_conn_recorder: OptNewInfoSender,
 
     #[cfg(feature = "trace")]
     pub conn_info_updater: net::OptUpdater,
@@ -139,10 +139,10 @@ impl Engine {
 
         info!("initializing lua infinite dynamic");
 
-        let gmaps = lua::load_infinite_io(&config_string)?;
+        let g_maps = lua::load_infinite_io(&config_string)?;
 
-        let gi = gmaps.0;
-        let go = gmaps.1;
+        let gi = g_maps.0;
+        let go = g_maps.1;
 
         self.inbounds = Vec::from_iter(gi.into_iter().map(|(tag, g)| {
             let g = IndexInfinite::new(tag, Box::new(g));
@@ -244,7 +244,7 @@ impl Engine {
                 arx,
                 out_selector.clone(),
                 self.gtr.clone(),
-                self.newconn_recorder.clone(),
+                self.new_conn_recorder.clone(),
                 #[cfg(feature = "trace")]
                 self.conn_info_updater.clone(),
             );
@@ -287,7 +287,7 @@ impl Engine {
         #[cfg(feature = "route")]
         {
             if self.rule_sets.is_some() {
-                self.get_rulesets_out_selector()
+                self.get_rule_sets_out_selector()
             } else if self.tag_routes.is_some() {
                 self.get_tag_route_out_selector()
             } else {
@@ -305,7 +305,7 @@ impl Engine {
     }
 
     #[cfg(feature = "route")]
-    fn get_rulesets_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
+    fn get_rule_sets_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
         let s = RuleSetOutSelector {
             outbounds_rules_vec: self.rule_sets.clone().expect("has rule_sets"),
             outbounds_map: self.outbounds.clone(),

@@ -261,7 +261,7 @@ pub async fn accumulate_from_start(
     shutdown_rx: oneshot::Receiver<()>,
 
     mut inmappers: DMIterBox,
-    ogtr: Option<Arc<GlobalTrafficRecorder>>,
+    o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
     let first = inmappers
         .next_with_data(in_cid.clone(), None)
@@ -290,7 +290,7 @@ pub async fn accumulate_from_start(
             rx,
             tx,
             dmiter: inmappers,
-            ogtr,
+            o_gtr,
 
             #[cfg(feature = "trace")]
             trace: vec![first.name().to_string()],
@@ -311,7 +311,7 @@ pub async fn accumulate_from_start(
                 );
             }
         }
-        let cid = in_cid.clone_push(ogtr);
+        let cid = in_cid.clone_push(o_gtr);
         tokio::spawn(async move {
             let r = accumulate(AccumulateParams {
                 cid,
@@ -334,7 +334,7 @@ struct InIterAccumulateForeverParams {
     rx: tokio::sync::mpsc::Receiver<MapResult>,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     dmiter: DMIterBox,
-    ogtr: Option<Arc<GlobalTrafficRecorder>>,
+    o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,
@@ -357,7 +357,7 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
     let cid = params.cid;
     let tx = params.tx;
     let dmiter = params.dmiter;
-    let ogtr = params.ogtr;
+    let o_gtr = params.o_gtr;
 
     loop {
         let opt_stream_info = rx.recv().await;
@@ -366,7 +366,7 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
             Some(s) => s,
             None => break,
         };
-        let new_cid = cid.clone_push(ogtr.clone());
+        let new_cid = cid.clone_push(o_gtr.clone());
 
         if tracing::enabled!(Level::DEBUG) {
             info!(
@@ -381,7 +381,7 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
             new_stream_info,
             miter: dmiter.clone(),
             tx: tx.clone(),
-            ogtr: ogtr.clone(),
+            o_gtr: o_gtr.clone(),
 
             #[cfg(feature = "trace")]
             trace: params.trace.clone(),
@@ -394,7 +394,7 @@ struct SpawnAccForeverParams {
     new_stream_info: MapResult,
     miter: DMIterBox,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
-    ogtr: Option<Arc<GlobalTrafficRecorder>>,
+    o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>,
@@ -407,7 +407,7 @@ fn spawn_acc_forever(params: SpawnAccForeverParams) {
     let cid = params.cid;
     let tx = params.tx;
     let miter = params.miter;
-    let ogtr = params.ogtr;
+    let o_gtr = params.o_gtr;
 
     tokio::spawn(async move {
         let r = accumulate(AccumulateParams {
@@ -431,7 +431,7 @@ fn spawn_acc_forever(params: SpawnAccForeverParams) {
                 rx,
                 tx,
                 dmiter: r.left_mappers_iter.clone(),
-                ogtr,
+                o_gtr,
 
                 #[cfg(feature = "trace")]
                 trace: r.trace,

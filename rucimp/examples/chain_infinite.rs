@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let contents = try_get_filecontent(&default_fn, arg_f)?;
+    let contents = try_get_file_content(&default_fn, arg_f)?;
 
     let mut se = Engine::default();
 

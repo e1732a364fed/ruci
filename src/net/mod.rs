@@ -72,8 +72,8 @@ pub fn new_rand_cid() -> u32 {
     rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
 }
 
-pub fn new_ordered_cid(lastid: &AtomicU32) -> u32 {
-    lastid.fetch_add(1, Ordering::Relaxed) + 1
+pub fn new_ordered_cid(last_id: &AtomicU32) -> u32 {
+    last_id.fetch_add(1, Ordering::Relaxed) + 1
 }
 
 /// # Example
@@ -179,8 +179,8 @@ impl CID {
     }
 
     /// new with ordered id
-    pub fn new_ordered(lastid: &std::sync::atomic::AtomicU32) -> CID {
-        let li = new_ordered_cid(lastid);
+    pub fn new_ordered(last_id: &std::sync::atomic::AtomicU32) -> CID {
+        let li = new_ordered_cid(last_id);
         CID::Unit(li)
     }
 
@@ -225,7 +225,7 @@ impl CID {
     ///
     /// ```
     pub fn push(&mut self, ogtr: Option<Arc<GlobalTrafficRecorder>>) {
-        let newidnum = match ogtr.as_ref() {
+        let new_id_num = match ogtr.as_ref() {
             Some(gtr) => new_ordered_cid(&gtr.last_connection_id),
             None => new_rand_cid(),
         };
@@ -234,14 +234,14 @@ impl CID {
             CID::Unit(u) => {
                 let x = *u;
                 if x == 0 {
-                    *self = CID::Unit(newidnum);
+                    *self = CID::Unit(new_id_num);
                 } else {
                     *self = CID::Chain(CIDChain {
-                        id_list: vec![x, newidnum],
+                        id_list: vec![x, new_id_num],
                     })
                 }
             }
-            CID::Chain(c) => c.id_list.push(newidnum),
+            CID::Chain(c) => c.id_list.push(new_id_num),
         };
     }
     /// won't change self
@@ -257,7 +257,7 @@ impl CID {
         cid.pop()
     }
 
-    /// change self, collapse to Unit if the chain lenth=1 after pop
+    /// change self, collapse to Unit if the chain length=1 after pop
     pub fn pop(&mut self) -> CID {
         match self {
             CID::Unit(u) => {
@@ -452,14 +452,14 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync + Name> ConnTrait for T {}
 
 impl crate::Name for TcpStream {
     fn name(&self) -> &str {
-        "tcpstream"
+        "tcp_stream"
     }
 }
 
 #[cfg(unix)]
 impl crate::Name for UnixStream {
     fn name(&self) -> &str {
-        "unixstream"
+        "unix_stream"
     }
 }
 

@@ -30,7 +30,7 @@ pub(crate) async fn run(
     {
         use anyhow::Context;
 
-        let contents = rucimp::utils::try_get_filecontent("local.lua", Some(f))
+        let contents = rucimp::utils::try_get_file_content("local.lua", Some(f))
             .with_context(|| format!("run chain engine try get file {} failed", f))?;
 
         if args.infinite {
@@ -88,7 +88,7 @@ async fn setup_api_server_with_chain_engine(
 ) {
     e.gtr = gtr;
 
-    setup_record_newconn_info(e, api_ser).await;
+    setup_record_new_conn_info(e, api_ser).await;
     #[cfg(feature = "trace")]
     if args.trace {
         setup_trace_flux(e, api_ser).await;
@@ -97,12 +97,12 @@ async fn setup_api_server_with_chain_engine(
 
 /// 记录新连接信息
 #[cfg(feature = "api_server")]
-async fn setup_record_newconn_info(e: &mut Engine, api_ser: &mut api::server::Server) {
+async fn setup_record_new_conn_info(e: &mut Engine, api_ser: &mut api::server::Server) {
     let (nci_tx, mut nci_rx) = mpsc::channel(100);
 
-    e.newconn_recorder = Some(nci_tx);
+    e.new_conn_recorder = Some(nci_tx);
 
-    let aci = api_ser.newconn_info_map.clone();
+    let aci = api_ser.new_conn_info_map.clone();
 
     tokio::spawn(async move {
         loop {
@@ -132,8 +132,8 @@ async fn setup_trace_flux(se: &mut Engine, s: &mut api::server::Server) {
 
     se.conn_info_updater = Some((ub_tx, db_tx));
 
-    let imcs = s.flux_trace.is_monitoring.clone();
-    let imcs2 = imcs.clone();
+    let imc = s.flux_trace.is_monitoring.clone();
+    let imc2 = imc.clone();
 
     let dc = s.flux_trace.d_cache.clone();
     let uc = s.flux_trace.u_cache.clone();
@@ -144,7 +144,7 @@ async fn setup_trace_flux(se: &mut Engine, s: &mut api::server::Server) {
 
     fn spawn_for(
         mut rx: mpsc::Receiver<(CID, u64)>,
-        is_moniting: Arc<atomic::AtomicBool>,
+        is_monitoring: Arc<atomic::AtomicBool>,
         cache: Arc<tinyufo::TinyUfo<CID, Vec<(Instant, u64)>>>,
     ) {
         tokio::spawn(async move {
@@ -152,7 +152,7 @@ async fn setup_trace_flux(se: &mut Engine, s: &mut api::server::Server) {
                 let x = rx.recv().await;
                 match x {
                     Some(info) => {
-                        if is_moniting.load(atomic::Ordering::SeqCst) {
+                        if is_monitoring.load(atomic::Ordering::SeqCst) {
                             let e = (Instant::now(), info.1);
 
                             let v = cache.get(&info.0);
@@ -177,6 +177,6 @@ async fn setup_trace_flux(se: &mut Engine, s: &mut api::server::Server) {
         });
     }
 
-    spawn_for(db_rx, imcs, dc);
-    spawn_for(ub_rx, imcs2, uc);
+    spawn_for(db_rx, imc, dc);
+    spawn_for(ub_rx, imc2, uc);
 }

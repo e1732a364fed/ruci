@@ -28,7 +28,7 @@ use std::path::PathBuf;
 
 use super::{MapResult, ProxyBehavior};
 
-pub fn defaultrcs() -> rustls::RootCertStore {
+pub fn default_rcs() -> rustls::RootCertStore {
     let mut root_certs = rustls::RootCertStore::empty();
     root_certs.extend(
         webpki_roots::TLS_SERVER_ROOTS

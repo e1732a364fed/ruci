@@ -34,7 +34,7 @@ pub const AUTH_NO_ACCEPTABLE: u8 = 0xff;
 
 pub const CMD_CONNECT: u8 = 1;
 pub const CMD_BIND: u8 = 2;
-pub const CMD_UDPASSOCIATE: u8 = 3;
+pub const CMD_UDP_ASSOCIATE: u8 = 3;
 
 pub const ATYP_IP4: u8 = 1;
 pub const ATYP_DOMAIN: u8 = 3;
@@ -49,7 +49,7 @@ use lazy_static::lazy_static;
 use super::Network;
 
 lazy_static! {
-    pub static ref COMMMON_TCP_HANDSHAKE_REPLY: [u8; 10] = {
+    pub static ref COMMON_TCP_HANDSHAKE_REPLY: [u8; 10] = {
         [
             VERSION5, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ]
@@ -59,7 +59,7 @@ lazy_static! {
 //todo: 支持 fragment
 pub fn decode_udp_diagram(buf: &mut BytesMut) -> anyhow::Result<net::Addr> {
     if buf.len() < 11 {
-        return Err(anyhow!("udp diagram lenth wrong, {}", buf.len()));
+        return Err(anyhow!("udp diagram length wrong, {}", buf.len()));
     }
     let first2bytes = buf.get_u16();
     if first2bytes != 0 {

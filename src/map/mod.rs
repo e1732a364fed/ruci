@@ -111,8 +111,8 @@ impl MapParams {
         if self.d.is_empty() {
             rb.build()
         } else {
-            let olast = self.d.last();
-            match olast {
+            let o_last = self.d.last();
+            match o_last {
                 Some(last) => rb.d(last.clone()).build(),
                 _ => rb.build(),
             }
@@ -204,10 +204,10 @@ pub enum ProxyBehavior {
     #[default]
     UNSPECIFIED,
 
-    /// outbound's general behabior
+    /// outbound's general behavior
     ENCODE,
 
-    /// inbound's general behabior
+    /// inbound's general behavior
     DECODE,
 }
 

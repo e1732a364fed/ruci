@@ -28,15 +28,15 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let contents = try_get_filecontent(&default_fn, arg_f)?;
+    let contents = try_get_file_content(&default_fn, arg_f)?;
 
     println!("{}", contents);
     let mut se = SuitEngine::default();
 
     se.load_config_from_str(
         &contents,
-        load_in_mappers_by_str_and_ldconfig,
-        load_out_mappers_by_str_and_ldconfig,
+        load_in_mappers_by_str_and_ld_config,
+        load_out_mappers_by_str_and_ld_config,
     );
     let r = se.block_run().await;
 

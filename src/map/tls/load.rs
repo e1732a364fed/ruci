@@ -111,10 +111,10 @@ mod test {
 
 // see https://github.com/async-rs/async-tls/blob/master/examples/client/src/main.rs
 // 但是我发现对新版的 rustls_pemfile 来说，内部要 map 一下再 unwrap
-// pub async fn client_connector_for_ca_file(cafile: &Path) -> io::Result<TlsConnector> {
+// pub async fn client_connector_for_ca_file(ca_file: &Path) -> io::Result<TlsConnector> {
 //     let mut root_store = rustls::RootCertStore::empty();
 
-//     let ca_bytes = async_std::fs::read(cafile).await?;
+//     let ca_bytes = async_std::fs::read(ca_file).await?;
 
 //     let cert: Vec<_> = certs(&mut BufReader::new(Cursor::new(ca_bytes)))
 //         .map(|x| x.unwrap())

@@ -20,7 +20,7 @@ impl ToMapperBox for ServerOptions {
     }
 }
 
-// todo: 添加 alpn 和 tls_minv
+// todo: 添加 alpn 和 tls_min_v
 #[derive(Clone, NoMapperExt)]
 pub struct Server {
     pub option_cache: ServerOptions,

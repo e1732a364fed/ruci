@@ -126,7 +126,7 @@ async fn auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
             assert_eq!(ad.get_port(), port);
             assert_eq!(r.b, None);
 
-            let mut vf = Vec::from(&*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+            let mut vf = Vec::from(&*socks5::COMMON_TCP_HANDSHAKE_REPLY);
             let vhead = vec![VERSION5, AUTH_PASSWORD, 1, 0];
             vf.splice(0..0, vhead);
             println!("should be {:?}", vf);
@@ -208,7 +208,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> anyhow::Result<()> {
             assert_eq!(ad.get_port(), port);
             assert_eq!(r.b, None);
 
-            let mut vf = Vec::from(&*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+            let mut vf = Vec::from(&*socks5::COMMON_TCP_HANDSHAKE_REPLY);
             let vhead = vec![VERSION5, AUTH_PASSWORD, 1, 0];
             vf.splice(0..0, vhead);
             println!("should be {:?}", vf);
@@ -340,7 +340,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
 
         let n = cs.read(&mut readbuf[..]).await.expect("read3 ok");
         println!("client read, {:?}", &readbuf[..n]);
-        assert_eq!(&readbuf[..n], &*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+        assert_eq!(&readbuf[..n], &*socks5::COMMON_TCP_HANDSHAKE_REPLY);
 
         //发送测试数据
         cs.write(&b"hello"[..]).await.expect("write3 ok");
@@ -447,7 +447,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> anyhow::
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
-        assert_eq!(&readbuf[..n], &*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+        assert_eq!(&readbuf[..n], &*socks5::COMMON_TCP_HANDSHAKE_REPLY);
 
         //发送测试数据
         cs.write(&b"hello"[..]).await.unwrap();
@@ -552,7 +552,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> anyhow::
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
-        assert_eq!(&readbuf[..n], &*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+        assert_eq!(&readbuf[..n], &*socks5::COMMON_TCP_HANDSHAKE_REPLY);
 
         //发送测试数据
         cs.write(&b"hello"[..]).await.unwrap();
@@ -614,7 +614,7 @@ async fn no_auth_tcp_handshake_in_mem() -> anyhow::Result<()> {
 
             //收到的应为两个 reply 相加, 第一个为5 0, 第二个为 COMMMON_TCP_HANDSHAKE_REPLY
 
-            let mut vf = Vec::from(&*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+            let mut vf = Vec::from(&*socks5::COMMON_TCP_HANDSHAKE_REPLY);
             let vhead = vec![VERSION5, AUTH_NONE];
             vf.splice(0..0, vhead);
 
@@ -683,7 +683,7 @@ async fn no_auth_tcp_handshake_in_mem_stick_hello() -> anyhow::Result<()> {
             assert_eq!(r.a.unwrap().get_name().unwrap(), name);
             assert_eq!(r.b.unwrap(), b"hello"[..]);
 
-            let mut vf = Vec::from(&*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
+            let mut vf = Vec::from(&*socks5::COMMON_TCP_HANDSHAKE_REPLY);
             let vhead = vec![VERSION5, AUTH_NONE];
             vf.splice(0..0, vhead);
 

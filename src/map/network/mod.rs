@@ -132,7 +132,7 @@ pub fn get_addr_from_vvd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
 
 #[async_trait]
 impl Mapper for Dialer {
-    /// try the paramater first, if no addr was given, use configured addr.
+    /// try the parameter first, if no addr was given, use configured addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {

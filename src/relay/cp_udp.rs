@@ -110,8 +110,8 @@ where
     loop {
         let r1ref = &mut r1;
 
-        let sleepf = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
-        let readf = async move {
+        let sleep_f = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
+        let read_f = async move {
             let mut buf0 = Box::new([0u8; MAX_DATAGRAM_SIZE]);
             let mut buf = ReadBuf::new(buf0.deref_mut());
             let r = r1ref.read(buf.initialized_mut()).await;
@@ -119,15 +119,15 @@ where
             (r, buf0)
         }
         .fuse();
-        pin_mut!(sleepf, readf);
+        pin_mut!(sleep_f, read_f);
 
         select! {
-            _ = sleepf =>{
+            _ = sleep_f =>{
                 debug!("read addrconn timeout");
 
                 break;
             }
-            r = readf =>{
+            r = read_f =>{
                 let (r,  buf0) = r;
                 match r {
                     Err(_) => break,
@@ -142,12 +142,12 @@ where
 
                                 let r = w1.flush().await;
                                 if r.is_err(){
-                                    debug!("cp_addr_to_conn, write  flush notok ");
+                                    debug!("cp_addr_to_conn, write  flush not ok ");
                                     break;
                                 }
 
                             }else{
-                                debug!("cp_addr_to_conn, write notok ");
+                                debug!("cp_addr_to_conn, write not ok ");
                                 break;
                             }
 

@@ -51,7 +51,7 @@ pub type LoadFiniteDynamicResult = (
 pub fn load_finite_dynamic(lua_text: &str) -> mlua::Result<LoadFiniteDynamicResult> {
     let (sc, sm) = load_finite_config_and_selector_map(lua_text)?;
 
-    let (ibs, fb, obm) = get_iobounds_by_config_and_selector_map(sc.clone(), sm);
+    let (ibs, fb, obm) = get_io_bounds_by_config_and_selector_map(sc.clone(), sm);
     Ok((sc, ibs, fb, obm))
 }
 
@@ -101,7 +101,7 @@ fn load_finite_config_and_selector_map(
 }
 
 /// returns inbounds, first_outbound, outbound_map
-fn get_iobounds_by_config_and_selector_map(
+fn get_io_bounds_by_config_and_selector_map(
     c: StaticConfig,
     mut selector_map: HashMap<String, LuaNextSelector>,
 ) -> (Vec<DMIterBox>, DMIterBox, Arc<HashMap<String, DMIterBox>>) {
@@ -127,7 +127,7 @@ fn get_iobounds_by_config_and_selector_map(
 
     let mut first_o: Option<DMIterBox> = None;
 
-    let omap: HashMap<String, DMIterBox> = obs
+    let o_map: HashMap<String, DMIterBox> = obs
         .into_iter()
         .map(|outbound| {
             let tag = outbound
@@ -154,7 +154,7 @@ fn get_iobounds_by_config_and_selector_map(
         })
         .collect();
 
-    (v, first_o.expect("has an outbound"), Arc::new(omap))
+    (v, first_o.expect("has an outbound"), Arc::new(o_map))
 }
 
 /// used by load_infinite,
@@ -166,26 +166,26 @@ const INFINITE_CONFIG_FIELD: &str = "infinite";
 ///
 /// read INFINITE_CONFIG_FIELD  global variable
 pub fn load_infinite_io(text: &str) -> anyhow::Result<(GMap, GMap)> {
-    let i = get_infinite_gmap_from(text, ProxyBehavior::DECODE)?;
-    let o = get_infinite_gmap_from(text, ProxyBehavior::ENCODE)?;
+    let i = get_infinite_g_map_from(text, ProxyBehavior::DECODE)?;
+    let o = get_infinite_g_map_from(text, ProxyBehavior::ENCODE)?;
     Ok((i, o))
 }
 
-fn get_infinite_gmap_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMap> {
-    let mut gmap: GMap = HashMap::new();
+fn get_infinite_g_map_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMap> {
+    let mut g_map: GMap = HashMap::new();
 
     let lua = Lua::new();
     lua.load(text).eval()?;
 
     let ct: LuaTable = lua.globals().get(INFINITE_CONFIG_FIELD)?;
 
-    let tkey = match behavior {
+    let t_key = match behavior {
         ProxyBehavior::UNSPECIFIED => todo!(),
         ProxyBehavior::DECODE => "inbounds",
         ProxyBehavior::ENCODE => "outbounds",
     };
 
-    let table: LuaTable = ct.get(tkey)?;
+    let table: LuaTable = ct.get(t_key)?;
     let ibc = table.len()?;
 
     for i in 1..ibc + 1 {
@@ -194,7 +194,7 @@ fn get_infinite_gmap_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result
 
         let (key, tag) = {
             let ct: LuaTable = lua.globals().get(INFINITE_CONFIG_FIELD)?;
-            let table: LuaTable = ct.get(tkey)?;
+            let table: LuaTable = ct.get(t_key)?;
 
             let chain: LuaTable = table.get(i)?;
             let tag: String = chain.get("tag")?;
@@ -207,9 +207,9 @@ fn get_infinite_gmap_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result
 
         let lng = LuaNextGenerator::new(tag.clone(), lua, key, behavior);
 
-        gmap.insert(tag, lng);
+        g_map.insert(tag, lng);
     }
-    Ok(gmap)
+    Ok(g_map)
 }
 
 /// implements dynamic::NextSelector
@@ -407,10 +407,13 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                 let r = {
                     let t = mg.thread_map.get(&cid).expect("ok");
                     if let LuaThreadStatus::Resumable = t.status() {
-                        let cidv = mg.lua.to_value(&cid).ok()?;
+                        let cid_v = mg.lua.to_value(&cid).ok()?;
 
-                        let r =
-                            t.resume::<_, (i64, Value)>((cidv, this_index, mg.lua.to_value(&data)));
+                        let r = t.resume::<_, (i64, Value)>((
+                            cid_v,
+                            this_index,
+                            mg.lua.to_value(&data),
+                        ));
 
                         let r = r.ok()?;
                         match r.1 {
@@ -444,9 +447,9 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                         let l = &mg.lua;
                         let t = l.create_thread(f.to_ref()).ok()?;
 
-                        let cidv = mg.lua.to_value(&cid).ok()?;
+                        let cid_v = mg.lua.to_value(&cid).ok()?;
 
-                        let r = t.resume::<_, (i64, Value)>((cidv, this_index, l.to_value(&data)));
+                        let r = t.resume::<_, (i64, Value)>((cid_v, this_index, l.to_value(&data)));
 
                         let r = r.ok()?;
 
@@ -481,11 +484,11 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
 
         let r = {
             let l = &mg.lua;
-            let cidv = l.to_value(&cid).ok()?;
+            let cid_v = l.to_value(&cid).ok()?;
             let r = l
                 .registry_value::<LuaFunction>(&mg.key)
                 .expect("must get generator from lua")
-                .call::<_, (i64, Value)>((cidv, this_index, l.to_value(&data)));
+                .call::<_, (i64, Value)>((cid_v, this_index, l.to_value(&data)));
             let r = r.ok()?;
 
             let v = match r.1 {

@@ -154,7 +154,7 @@ impl Server {
                     );
 
                     if let Some(um) = &self.um {
-                        if let Some(u) = um.auth_user_by_authstr(u.auth_strs()).await {
+                        if let Some(u) = um.auth_user_by_authstr(u.auth_str()).await {
                             ok = true;
                             authed_user = Some(u);
                         };

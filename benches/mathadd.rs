@@ -25,7 +25,7 @@ async fn test_adder_r(_l: usize) -> anyhow::Result<()> {
     };
 
     let mut a = Adder::default();
-    a.addnum = 2;
+    a.add_num = 2;
     a.direction = AddDirection::Write;
 
     let r = a

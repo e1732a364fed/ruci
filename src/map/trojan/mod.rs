@@ -66,7 +66,7 @@ where
     }
 }
 
-pub fn sha224_hexstring_lower_case(pass: &str) -> String {
+pub fn sha224_hex_string_lower_case(pass: &str) -> String {
     let mut hasher = Sha224::new();
     hasher.update(pass);
     let bs = &hasher.finalize()[..];
@@ -83,7 +83,7 @@ pub struct User {
 
 impl User {
     pub fn new(plain_text: &str) -> Self {
-        let hex = sha224_hexstring_lower_case(plain_text);
+        let hex = sha224_hex_string_lower_case(plain_text);
         User {
             plain_text_pass: plain_text.to_string(),
             hex: hex.clone(),

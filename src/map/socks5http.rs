@@ -55,8 +55,8 @@ impl Server {
             }
         }
 
-        let mut opt_userpasses = option.user_passes.clone();
-        if let Some(vu) = opt_userpasses.as_mut().filter(|vu| !vu.is_empty()) {
+        let mut opt_user_passes = option.user_passes.clone();
+        if let Some(vu) = opt_user_passes.as_mut().filter(|vu| !vu.is_empty()) {
             while let Some(u) = vu.pop() {
                 let uup = user::PlainText::new(u.user, u.pass);
                 um.add_user(uup).await;

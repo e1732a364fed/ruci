@@ -29,7 +29,7 @@ pub trait UserTrait: Debug + Send + Sync {
     fn auth_bytes(&self) -> &[u8]; //与 auth_str 类似; 对于程序来说,bytes更方便处理; 可以与 auth_str 相同, 也可以不同.
 }
 
-/// 如果User的supertrait 是 Clone, 则 Box<dyn User> 会报错, says
+/// 如果User的super trait 是 Clone, 则 Box<dyn User> 会报错, says
 /// can't make into object; 但是用 DynClone 就可以
 pub trait User: UserTrait + DynClone {}
 
@@ -138,7 +138,7 @@ impl PlainText {
     }
 
     ///plaintext:{user}\n{pass}, like plaintext:u1\np1
-    pub fn auth_strs(&self) -> &str {
+    pub fn auth_str(&self) -> &str {
         self.astr.as_str()
     }
 }
@@ -165,7 +165,7 @@ impl UserTrait for PlainText {
 /// store User, impl AsyncUserAuthenticator
 #[derive(Debug)]
 pub struct UsersMap<T: UserTrait + Clone> {
-    m: Mutex<InnerUsersmapStruct<T>>,
+    m: Mutex<InnerUsersMapStruct<T>>,
 }
 
 impl<T: UserTrait + Clone> Clone for UsersMap<T> {
@@ -177,16 +177,16 @@ impl<T: UserTrait + Clone> Clone for UsersMap<T> {
 }
 
 #[derive(Debug, Clone)]
-struct InnerUsersmapStruct<T: UserTrait + Clone> {
-    idmap: HashMap<String, T>, // id map
-    amap: HashMap<String, T>,  //auth map
+struct InnerUsersMapStruct<T: UserTrait + Clone> {
+    id_map: HashMap<String, T>, // id map
+    a_map: HashMap<String, T>,  //auth map
 }
 
-impl<T: UserTrait + Clone> InnerUsersmapStruct<T> {
+impl<T: UserTrait + Clone> InnerUsersMapStruct<T> {
     fn new() -> Self {
-        InnerUsersmapStruct {
-            idmap: HashMap::new(),
-            amap: HashMap::new(),
+        InnerUsersMapStruct {
+            id_map: HashMap::new(),
+            a_map: HashMap::new(),
         }
     }
 }
@@ -200,23 +200,23 @@ impl<T: UserTrait + Clone> Default for UsersMap<T> {
 impl<T: UserTrait + Clone> UsersMap<T> {
     pub fn new() -> Self {
         UsersMap {
-            m: Mutex::new(InnerUsersmapStruct::new()),
+            m: Mutex::new(InnerUsersMapStruct::new()),
         }
     }
 
     pub async fn add_user(&mut self, u: T) {
         let uc = u.clone();
         let mut inner = self.m.lock();
-        inner.idmap.insert(u.identity_str(), u);
-        inner.amap.insert(uc.auth_str(), uc);
+        inner.id_map.insert(u.identity_str(), u);
+        inner.a_map.insert(uc.auth_str(), uc);
     }
 
     pub async fn len(&self) -> usize {
-        self.m.lock().idmap.len()
+        self.m.lock().id_map.len()
     }
 
     pub async fn is_empty(&self) -> bool {
-        self.m.lock().idmap.is_empty()
+        self.m.lock().id_map.is_empty()
     }
 }
 
@@ -225,7 +225,7 @@ impl<T: UserTrait + Clone> AsyncUserAuthenticator<T> for UsersMap<T> {
     async fn auth_user_by_authstr(&self, authstr: &str) -> Option<T> {
         let inner = self.m.lock();
         let s = authstr.to_string();
-        inner.amap.get(&s).cloned()
+        inner.a_map.get(&s).cloned()
     }
 }
 

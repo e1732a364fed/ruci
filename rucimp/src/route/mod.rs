@@ -379,7 +379,7 @@ mod test {
 
     fn get_miter_ab() -> DMIterBox {
         let mut a = Adder::default();
-        a.addnum = 1;
+        a.add_num = 1;
         let a: MapperBox = Box::new(a);
 
         let b = Adder::default();
@@ -392,7 +392,7 @@ mod test {
     }
     fn get_miter_a() -> DMIterBox {
         let mut a = Adder::default();
-        a.addnum = 2;
+        a.add_num = 2;
         let a: MapperBox = Box::new(a);
 
         let v = vec![a];

@@ -7,7 +7,7 @@ use ruci::{
     user::PlainText,
 };
 use rucimp::modes::suit::config::{
-    adapter::{load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig},
+    adapter::{load_in_mappers_by_str_and_ld_config, load_out_mappers_by_str_and_ld_config},
     Config,
 };
 use std::{env::set_var, sync::Arc, time::Duration};
@@ -135,8 +135,8 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
 
     se.lock().load_config(
         c,
-        load_in_mappers_by_str_and_ldconfig,
-        load_out_mappers_by_str_and_ldconfig,
+        load_in_mappers_by_str_and_ld_config,
+        load_out_mappers_by_str_and_ld_config,
     );
 
     let se = &se;
@@ -191,8 +191,8 @@ async fn suit_engine2_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
 
     se.lock().load_config(
         c,
-        load_in_mappers_by_str_and_ldconfig,
-        load_out_mappers_by_str_and_ldconfig,
+        load_in_mappers_by_str_and_ld_config,
+        load_out_mappers_by_str_and_ld_config,
     );
 
     //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future

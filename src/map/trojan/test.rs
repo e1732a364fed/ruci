@@ -16,7 +16,7 @@ use super::*;
 
 #[test]
 fn test224() {
-    let str = sha224_hexstring_lower_case("pass");
+    let str = sha224_hex_string_lower_case("pass");
     assert_eq!(str.len(), PASS_LEN);
     assert_eq!(
         str,
@@ -26,7 +26,7 @@ fn test224() {
 
 #[test]
 fn test224_print() {
-    let str = sha224_hexstring_lower_case("pass3");
+    let str = sha224_hex_string_lower_case("pass3");
     println!("{}", str)
 }
 
@@ -85,7 +85,7 @@ async fn auth_tcp_in_mem_earlydata() -> anyhow::Result<()> {
     let name = "www.b";
     let port: u16 = 43;
     let mut buf = BytesMut::with_capacity(100);
-    let str = sha224_hexstring_lower_case("pass3");
+    let str = sha224_hex_string_lower_case("pass3");
     buf.put(str.as_bytes());
     buf.put_u16(CRLF);
     buf.put_u8(CMD_CONNECT);

@@ -286,8 +286,8 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     loop {
         let r1ref = &mut r1;
 
-        let sleepf = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
-        let readf = async move {
+        let sleep_f = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
+        let read_f = async move {
             let mut buf0 = Box::new([0u8; MAX_DATAGRAM_SIZE]);
             let mut buf = ReadBuf::new(buf0.deref_mut());
             let r = r1ref.read(buf.initialized_mut()).await;
@@ -295,15 +295,15 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
             (r, buf0)
         }
         .fuse();
-        pin_mut!(sleepf, readf);
+        pin_mut!(sleep_f, read_f);
 
         futures::select! {
-            _ = sleepf =>{
+            _ = sleep_f =>{
                 debug!("read addrconn timeout");
 
                 break;
             }
-            r = readf =>{
+            r = read_f =>{
                 let (r,  buf0) = r;
                 match r {
                     Err(_) => break,
@@ -311,12 +311,12 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
                         if m > 0 {
                             //写udp 是不会卡住的, 但addr_conn底层可能不是 udp
 
-                            let sleepf2 = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
+                            let sleep_f2 = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
                             let wf = w1.write(&buf0[..m], &ad).fuse();
 
-                            pin_mut!(sleepf2, wf);
+                            pin_mut!(sleep_f2, wf);
                             futures::select!{
-                                _ = sleepf2 =>{
+                                _ = sleep_f2 =>{
                                      debug!("write addrconn timeout");
                                 }
                                 r = wf =>{
@@ -456,7 +456,7 @@ mod test {
     }
     impl crate::Name for MyType {
         fn name(&self) -> &str {
-            "mytype"
+            "my_type"
         }
     }
 

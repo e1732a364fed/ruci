@@ -63,16 +63,16 @@ impl Server {
             let n = base.read(&mut buf[previous_read_len..]).await?;
 
             let mut index_crlf = -1;
-            let newlen = previous_read_len + n;
-            for i in previous_read_len..newlen {
+            let new_len = previous_read_len + n;
+            for i in previous_read_len..new_len {
                 if buf[i..].starts_with(&[CR, LF]) {
                     index_crlf = i as i16;
                     break;
                 }
             }
-            previous_read_len = newlen;
+            previous_read_len = new_len;
 
-            if newlen >= CAP || index_crlf > 0 {
+            if new_len >= CAP || index_crlf > 0 {
                 break;
             }
         }
@@ -108,10 +108,10 @@ impl Server {
                 &format!("crlf wrong, {} ", crlf),
             ));
         }
-        let cmdb = buf.get_u8();
+        let cmd_b = buf.get_u8();
         let mut is_udp = false;
 
-        match cmdb {
+        match cmd_b {
             CMD_CONNECT => {}
             CMD_UDPASSOCIATE => {
                 is_udp = true;
@@ -122,7 +122,7 @@ impl Server {
             _ => {
                 return Ok(MapResult::buf_err_str(
                     buf,
-                    &format!("cmd byte wrong, {}", cmdb),
+                    &format!("cmd byte wrong, {}", cmd_b),
                 ));
             }
         }

@@ -69,7 +69,7 @@ pub struct Server {
     //pub global_traffic: Arc<ruci::net::GlobalTrafficRecorder>,
     pub close_tx: mpsc::Sender<()>,
 
-    pub newconn_info_map: NewConnInfoMap,
+    pub new_conn_info_map: NewConnInfoMap,
 
     #[cfg(feature = "trace")]
     pub flux_trace: TracePart,
@@ -84,7 +84,7 @@ impl Server {
         let s = Server {
             listen_addr,
             close_tx: tx,
-            newconn_info_map: Arc::new(RwLock::new(BTreeMap::new())),
+            new_conn_info_map: Arc::new(RwLock::new(BTreeMap::new())),
 
             #[cfg(feature = "trace")]
             flux_trace: TracePart {
@@ -117,9 +117,9 @@ async fn disable_monitor(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> &
     "ok"
 }
 
-async fn get_conn_infos(State(allconn): State<NewConnInfoMap>) -> String {
+async fn get_conn_infos(State(all_conn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
-    let m = allconn.read();
+    let m = all_conn.read();
     for i in m.iter() {
         let x = i.1 .0.to_string();
         s.push_str(&x);
@@ -133,7 +133,7 @@ async fn get_conn_infos(State(allconn): State<NewConnInfoMap>) -> String {
 
 async fn get_conn_infos_range(
     Path(cid): Path<String>,
-    State(allconn): State<NewConnInfoMap>,
+    State(all_conn): State<NewConnInfoMap>,
 ) -> String {
     use std::str::FromStr;
     let cid = CID::from_str(&cid);
@@ -143,7 +143,7 @@ async fn get_conn_infos_range(
     };
 
     let mut s = String::new();
-    let m = allconn.read();
+    let m = all_conn.read();
     for i in m.range(cid..) {
         let x = i.1 .0.to_string();
         s.push_str(&x);
@@ -155,19 +155,19 @@ async fn get_conn_infos_range(
     s
 }
 
-async fn get_last_ok_cid(State(allconn): State<NewConnInfoMap>) -> String {
+async fn get_last_ok_cid(State(all_conn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
-    let m = allconn.read();
-    let lastkv = m.last_key_value();
-    match lastkv {
+    let m = all_conn.read();
+    let last_kv = m.last_key_value();
+    match last_kv {
         Some(e) => s.push_str(&e.0.to_string()),
         None => {}
     }
     s
 }
 
-async fn get_conn_count(State(allconn): State<NewConnInfoMap>) -> String {
-    format!("{}", allconn.read().len())
+async fn get_conn_count(State(all_conn): State<NewConnInfoMap>) -> String {
+    format!("{}", all_conn.read().len())
 }
 
 async fn get_alive_conn_count(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
@@ -186,9 +186,9 @@ async fn get_gt_d(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> Str
     format!("{}", s.db.load(Ordering::Relaxed))
 }
 
-async fn get_conn_info(Path(cid): Path<String>, State(allconn): State<NewConnInfoMap>) -> String {
+async fn get_conn_info(Path(cid): Path<String>, State(all_conn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
-    let m = allconn.read();
+    let m = all_conn.read();
     use std::str::FromStr;
     let cid = CID::from_str(&cid);
     let cid = match cid {
@@ -225,11 +225,11 @@ async fn get_flux_for(Path(cid): Path<String>, State(cache): State<FluxCache>) -
         None => return String::from("None"),
     };
 
-    instant_data_tostr(x)
+    instant_data_to_str(x)
 }
 
 #[cfg(feature = "trace")]
-fn instant_data_tostr(v: Vec<(tokio::time::Instant, u64)>) -> String {
+fn instant_data_to_str(v: Vec<(tokio::time::Instant, u64)>) -> String {
     let mut s = String::new();
     for x in v {
         s.push_str("{ -");
@@ -269,23 +269,23 @@ pub async fn serve(s: &Server, global_traffic: Arc<ruci::net::GlobalTrafficRecor
         .route("/gt/d", get(get_gt_d).with_state(global_traffic.clone()))
         .route(
             "/allc",
-            get(get_conn_infos).with_state(s.newconn_info_map.clone()),
+            get(get_conn_infos).with_state(s.new_conn_info_map.clone()),
         )
         .route(
             "/gt/loci",
-            get(get_last_ok_cid).with_state(s.newconn_info_map.clone()),
+            get(get_last_ok_cid).with_state(s.new_conn_info_map.clone()),
         )
         .route(
             "/cr/:cid",
-            get(get_conn_infos_range).with_state(s.newconn_info_map.clone()),
+            get(get_conn_infos_range).with_state(s.new_conn_info_map.clone()),
         )
         .route(
             "/cc",
-            get(get_conn_count).with_state(s.newconn_info_map.clone()),
+            get(get_conn_count).with_state(s.new_conn_info_map.clone()),
         )
         .route(
             "/c/:cid",
-            get(get_conn_info).with_state(s.newconn_info_map.clone()),
+            get(get_conn_info).with_state(s.new_conn_info_map.clone()),
         );
 
     #[cfg(feature = "trace")]

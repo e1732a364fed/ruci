@@ -59,7 +59,7 @@ impl Mapper for Echo {
                                 }
                             }
                             Err(e) => {
-                                info!(cid = %cid, "echo read stoped by: {e}");
+                                info!(cid = %cid, "echo read stopped by: {e}");
                                 break;
                             }
                         }
@@ -74,7 +74,7 @@ impl Mapper for Echo {
                         let r = u.w.write(&b, &a).await;
 
                         if let Err(e) = r {
-                            let e = anyhow!("echo write ed stoped by: {e}");
+                            let e = anyhow!("echo write ed stopped by: {e}");
 
                             return MapResult::from_e(e);
                         }
@@ -99,14 +99,14 @@ impl Mapper for Echo {
 
                                 let r = u.w.write(&buf[..n], &a).await;
                                 if let Err(e) = r {
-                                    info!(cid = %cid, "echo write stoped by: {e}");
+                                    info!(cid = %cid, "echo write stopped by: {e}");
 
                                     break;
                                 }
                                 //debug!("echo write n ok,{}", n);
                             }
                             Err(e) => {
-                                info!(cid = %cid, "echo read stoped by: {e}");
+                                info!(cid = %cid, "echo read stopped by: {e}");
                                 break;
                             }
                         }

@@ -67,7 +67,7 @@ impl DomainMatcherConfig {
 }
 
 impl RuleSetConfig {
-    pub fn to_ruleset(self) -> RuleSet {
+    pub fn to_rule_set(self) -> RuleSet {
         let userset = self.userset.map(|uss| {
             let y: HashSet<UserVec> = uss
                 .iter()
@@ -80,7 +80,7 @@ impl RuleSetConfig {
             y
         });
 
-        let netset = self.ta_networks.map(|hm| {
+        let net_set = self.ta_networks.map(|hm| {
             let hs: HashSet<Network> = hm
                 .iter()
                 .map(|ns| Network::from_string(ns).unwrap_or_default())
@@ -110,7 +110,7 @@ impl RuleSetConfig {
             userset,
             in_tags: self.in_tags,
             ta_ip_countries: self.ta_ip_countries,
-            ta_networks: netset,
+            ta_networks: net_set,
             ta_ipv4: ip4,
             ta_ipv6: ip6,
             ta_domain_matcher: dm,

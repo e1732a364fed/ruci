@@ -24,8 +24,8 @@ pub struct AdderConn {
     pub direction: AddDirection,
 
     base: Pin<net::Conn>,
-    wbuf: BytesMut,
-    rbuf: BytesMut,
+    w_buf: BytesMut,
+    r_buf: BytesMut,
 }
 
 //todo: 考虑使用 simd 或 rayon; 可以在rucimp包中实现
@@ -39,24 +39,24 @@ pub enum AddDirection {
 }
 
 impl AdderConn {
-    //write self.wbuf to  self.base
-    fn write_by_wbuf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<usize>> {
-        self.base.as_mut().poll_write(cx, &self.wbuf)
+    //write self.w_buf to  self.base
+    fn write_by_w_buf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<usize>> {
+        self.base.as_mut().poll_write(cx, &self.w_buf)
     }
 
-    //read self.base + add to self.wbuf
-    fn read_to_rbuf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<()>> {
-        let abuf = &mut self.rbuf;
-        abuf.resize(abuf.capacity(), 0);
-        let mut rb = ReadBuf::new(abuf);
+    //read self.base + add to self.w_buf
+    fn read_to_r_buf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<()>> {
+        let a_buf = &mut self.r_buf;
+        a_buf.resize(a_buf.capacity(), 0);
+        let mut rb = ReadBuf::new(a_buf);
 
         let r = self.base.as_mut().poll_read(cx, &mut rb);
 
         let x = rb.filled().len();
-        self.rbuf.resize(x, 0);
+        self.r_buf.resize(x, 0);
 
         let x: i16 = self.add as i16;
-        for a in self.rbuf.iter_mut() {
+        for a in self.r_buf.iter_mut() {
             *a = (x + *a as i16) as u8;
         }
 
@@ -82,10 +82,10 @@ impl AsyncRead for AdderConn {
         match self.direction {
             AddDirection::Write => self.base.as_mut().poll_read(cx, buf),
             _ => {
-                let r = self.read_to_rbuf(cx);
+                let r = self.read_to_r_buf(cx);
 
                 if let Poll::Ready(Ok(_)) = &r {
-                    buf.put_slice(&self.rbuf);
+                    buf.put_slice(&self.r_buf);
                 }
                 r
             }
@@ -105,15 +105,15 @@ impl AsyncWrite for AdderConn {
                 let x: i16 = self.add as i16;
 
                 {
-                    let abuf = &mut self.wbuf;
-                    abuf.clear();
-                    abuf.extend_from_slice(buf);
+                    let a_buf = &mut self.w_buf;
+                    a_buf.clear();
+                    a_buf.extend_from_slice(buf);
 
-                    for a in abuf.iter_mut() {
+                    for a in a_buf.iter_mut() {
                         *a = (x + *a as i16) as u8;
                     }
                 }
-                self.write_by_wbuf(cx)
+                self.write_by_w_buf(cx)
             }
         }
     }
@@ -136,7 +136,7 @@ impl AsyncWrite for AdderConn {
 /// maps generates an AdderConn stream, which does add or sub for the input
 #[derive(Debug, Clone, Copy, Default, NoMapperExt)]
 pub struct Adder {
-    pub addnum: i8,
+    pub add_num: i8,
     pub direction: AddDirection,
 }
 impl Name for Adder {
@@ -146,7 +146,7 @@ impl Name for Adder {
 }
 impl std::fmt::Display for Adder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "adder {:?} {}", self.direction, self.addnum)
+        write!(f, "adder {:?} {}", self.direction, self.add_num)
     }
 }
 
@@ -154,7 +154,7 @@ impl ToMapperBox for i8 {
     /// AddDirection = Read
     fn to_mapper_box(&self) -> MapperBox {
         Box::new(Adder {
-            addnum: *self,
+            add_num: *self,
             ..Default::default()
         })
     }
@@ -167,10 +167,10 @@ impl crate::map::Mapper for Adder {
             Stream::Conn(c) => {
                 let cc = AdderConn {
                     cid,
-                    add: self.addnum,
+                    add: self.add_num,
                     base: Box::pin(c),
-                    wbuf: BytesMut::with_capacity(1024), //todo change this
-                    rbuf: BytesMut::with_capacity(1024), //todo change this
+                    w_buf: BytesMut::with_capacity(1024), //todo change this
+                    r_buf: BytesMut::with_capacity(1024), //todo change this
                     direction: self.direction,
                 };
 

@@ -279,7 +279,7 @@ impl Server {
                     `failure' (STATUS value other than X'00') status, it MUST close the connection.
                     */
                     if let Some(um) = &self.um {
-                        if um.auth_user_by_authstr(thisup.auth_strs()).await.is_some() {
+                        if um.auth_user_by_authstr(thisup.auth_str()).await.is_some() {
                             authed = true;
                             opt_e = None;
 
@@ -298,7 +298,7 @@ impl Server {
                         .await;
 
                     buf.truncate(n);
-                    let e = anyhow!("socks5: auth failed, {}", thisup.auth_strs());
+                    let e = anyhow!("socks5: auth failed, {}", thisup.auth_str());
                     return Ok(MapResult::ebc(e, buf, base));
                 }
                 _ => {} //忽视其它的 auth method
@@ -350,7 +350,7 @@ impl Server {
             return Ok(MapResult::ebc(e, buf, base));
         }
 
-        if cmd != CMD_UDPASSOCIATE && cmd != CMD_CONNECT {
+        if cmd != CMD_UDP_ASSOCIATE && cmd != CMD_CONNECT {
             let e = anyhow!("socks5: unsuppoted command, {}", cmd);
 
             buf.truncate(n);
@@ -435,7 +435,7 @@ impl Server {
         let d = ou_to_oad(the_user);
 
         if cmd == CMD_CONNECT {
-            let _ = base.write(&*COMMMON_TCP_HANDSHAKE_REPLY).await?;
+            let _ = base.write(&*COMMON_TCP_HANDSHAKE_REPLY).await?;
 
             return Ok(MapResult {
                 a: Some(ad),
@@ -445,7 +445,7 @@ impl Server {
                 ..Default::default()
             });
         }
-        if cmd == CMD_UDPASSOCIATE && self.support_udp {
+        if cmd == CMD_UDP_ASSOCIATE && self.support_udp {
             let mut mr = udp2::udp_associate(cid, base, ad).await?;
             mr.d = d;
             return Ok(mr);

@@ -32,9 +32,9 @@ impl AsyncReadAddr for Reader {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        mut rbuf: &mut [u8],
+        mut r_buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        let mut inner = BytesMut::zeroed(rbuf.len() + helpers::MAX_LEN_SOCKS5_BYTES);
+        let mut inner = BytesMut::zeroed(r_buf.len() + helpers::MAX_LEN_SOCKS5_BYTES);
         let mut buf2 = ReadBuf::new(&mut inner[..]);
 
         let r = self.base.as_mut().poll_read(cx, &mut buf2);
@@ -50,13 +50,13 @@ impl AsyncReadAddr for Reader {
                             Ok(mut ad) => {
                                 if buf2.len() < 2 {
                                     return Poll::Ready(Err(io::Error::other(
-                                        "buf len short of data lenth part",
+                                        "buf len short of data length part",
                                     )));
                                 }
 
                                 let l = buf2.get_u16() as usize;
                                 if buf2.len() - 2 < l {
-                                    return Poll::Ready(Err(io::Error::other(format!("buf len short of data , marked lenth+2:{}, real length: {}", l+2, buf2.len()))));
+                                    return Poll::Ready(Err(io::Error::other(format!("buf len short of data , marked length+2:{}, real length: {}", l+2, buf2.len()))));
                                 }
                                 let crlf = buf2.get_u16();
                                 if crlf != CRLF {
@@ -67,9 +67,9 @@ impl AsyncReadAddr for Reader {
                                 }
                                 buf2.truncate(l);
 
-                                let real_len = min(l, rbuf.len());
+                                let real_len = min(l, r_buf.len());
 
-                                rbuf.put(&buf2[..real_len]);
+                                r_buf.put(&buf2[..real_len]);
                                 ad.network = Network::UDP;
 
                                 Poll::Ready(Ok((real_len, ad)))

@@ -17,7 +17,7 @@ pub const MAX_LEN_SOCKS5_BYTES: usize = 2 + 2 + 255;
 //todo: add unit test
 pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> anyhow::Result<Addr> {
     if buf.len() < 7 {
-        return Err(anyhow!("socks5_bytes_to_addr lenth wrong1, {}", buf.len()));
+        return Err(anyhow!("socks5_bytes_to_addr length wrong1, {}", buf.len()));
     }
     let ipn: IPName;
     let at = buf[0];
@@ -28,14 +28,14 @@ pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> anyhow::Result<Addr> {
     match at {
         ATYP_IP4 => {
             if buf.len() < 6 {
-                return Err(anyhow!("socks5_bytes_to_addr lenth wrong2, {}", buf.len()));
+                return Err(anyhow!("socks5_bytes_to_addr length wrong2, {}", buf.len()));
             }
             let num = buf.get_u32();
             ipn = IPName::IP(IpAddr::V4(Ipv4Addr::from(num)));
         }
         ATYP_IP6 => {
             if buf.len() < 18 {
-                return Err(anyhow!("socks5_bytes_to_addr lenth wrong3, {}", buf.len()));
+                return Err(anyhow!("socks5_bytes_to_addr length wrong3, {}", buf.len()));
             }
 
             let num = buf.get_u128();
@@ -43,14 +43,14 @@ pub fn socks5_bytes_to_addr(buf: &mut BytesMut) -> anyhow::Result<Addr> {
         }
         ATYP_DOMAIN => {
             if buf.len() < 4 {
-                return Err(anyhow!("socks5_bytes_to_addr lenth wrong4, {}", buf.len()));
+                return Err(anyhow!("socks5_bytes_to_addr length wrong4, {}", buf.len()));
             }
 
             let dn = buf[0] as usize;
             buf.advance(1);
 
             if buf.len() < dn + 2 {
-                return Err(anyhow!("socks5_bytes_to_addr lenth wrong5, {}", buf.len()));
+                return Err(anyhow!("socks5_bytes_to_addr length wrong5, {}", buf.len()));
             }
             ipn = IPName::Name(String::from_utf8_lossy(&buf[..dn]).to_string());
             buf.advance(dn);
@@ -186,7 +186,7 @@ pub struct MockTcpStream {
 }
 impl crate::Name for MockTcpStream {
     fn name(&self) -> &str {
-        "mock_tcpstream"
+        "mock_tcp_stream"
     }
 }
 
@@ -248,7 +248,7 @@ pub struct MockTcpStream2<'a> {
 }
 impl<'a> crate::Name for MockTcpStream2<'a> {
     fn name(&self) -> &str {
-        "mock_tcpstream2"
+        "mock_tcp_stream2"
     }
 }
 

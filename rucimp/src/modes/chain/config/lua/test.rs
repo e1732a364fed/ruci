@@ -7,7 +7,7 @@ use ruci::user::PlainText;
 pub const INSPECT: &str = include_str!("../../../../../../resource/inspect.lua");
 
 #[test]
-fn testin() -> mlua::Result<()> {
+fn test_in() -> mlua::Result<()> {
     let text = r#"
     
         tls = { TLS = {  cert = "test.cert", key = "test.key" } }
@@ -58,7 +58,7 @@ fn testin() -> mlua::Result<()> {
 }
 
 #[test]
-fn testout() -> mlua::Result<()> {
+fn test_out() -> mlua::Result<()> {
     let text = r#"
     
             tls = { TLS = {  host = "my.com", insecure = true } }
@@ -110,7 +110,7 @@ fn testout() -> mlua::Result<()> {
 }
 
 #[test]
-fn testout2() -> mlua::Result<()> {
+fn test_out2() -> mlua::Result<()> {
     let text = r#"
         listen = { Listener =  "0.0.0.0:1080"   }
         chain1 = {
@@ -153,16 +153,16 @@ fn testout2() -> mlua::Result<()> {
 }
 
 #[test]
-fn testout3() -> mlua::Result<()> {
+fn test_out3() -> mlua::Result<()> {
     let text = r#"
 
-        isac2 = { { Stdio={ fixed_target_addr= "udp://127.0.0.1:20800", pre_defined_early_data = "abc" } } , { Adder = 1 } } 
+        ic = { { Stdio={ fixed_target_addr= "udp://127.0.0.1:20800", pre_defined_early_data = "abc" } } , { Adder = 1 } } 
 
         out_socks5_c = {{ Socks5 = {} }}
 
         config = {
             inbounds = { 
-                {chain = isac2, tag = "in_stdio_adder_chain"} , 
+                {chain = ic, tag = "in_stdio_adder_chain"} , 
             } ,
             outbounds = { 
                 { tag="d1", chain = out_socks5_c } , 
@@ -205,7 +205,7 @@ fn test_tag_route() -> mlua::Result<()> {
         config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"},
-                {chain = { Stdio="myfake.com" }, tag = "listen2"},
+                {chain = { Stdio="my_fake.com" }, tag = "listen2"},
             },
             outbounds = {
                 { 
@@ -248,7 +248,7 @@ fn test_rule_route() -> mlua::Result<()> {
         config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"},
-                {chain = { Stdio="myfake.com" }, tag = "listen2"},
+                {chain = { Stdio="my_fake.com" }, tag = "listen2"},
             },
             outbounds = {
                 { 
@@ -269,7 +269,7 @@ fn test_rule_route() -> mlua::Result<()> {
                     mode = "WhiteList",
                     in_tags = { "listen1" } ,
                     userset = {
-                        { "plaintext:u0 p0", "trojan:mypassword" },
+                        { "plaintext:u0 p0", "trojan:my_password" },
                         { "plaintext:u1 p1", "trojan:password1" },
                     },
                     ta_ip_countries = { "CN", "US" },
@@ -410,7 +410,7 @@ infinite = {
                         Listener = "0.0.0.0:10800"
                     },
                     new_thread_fn = function(this_index, data)
-                        local newi, new_data = coroutine.yield(1, {
+                        local new_i, new_data = coroutine.yield(1, {
                             Socks5 = {}
                         })
                         return -1, {}

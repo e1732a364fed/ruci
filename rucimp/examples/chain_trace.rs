@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let contents = try_get_filecontent(&default_fn, arg_f)?;
+    let contents = try_get_file_content(&default_fn, arg_f)?;
 
     let mut se = Engine::default();
     // let sc = lua::load_static(&contents).expect("has valid lua codes in the file content");
@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
 
     let (nci_tx, mut nci_rx) = tokio::sync::mpsc::channel(100);
 
-    se.newconn_recorder = Some(nci_tx);
+    se.new_conn_recorder = Some(nci_tx);
 
     #[cfg(feature = "trace")]
     {

@@ -11,7 +11,7 @@ use crate::COMMON_DIRS;
 /// try the default_file given or the first cmd argument
 ///
 /// and will set current dir to the directory
-pub fn try_get_filecontent(default_file: &str, arg_file: Option<&str>) -> anyhow::Result<String> {
+pub fn try_get_file_content(default_file: &str, arg_file: Option<&str>) -> anyhow::Result<String> {
     let filename = match arg_file.as_ref() {
         Some(a) => a,
         None => default_file,

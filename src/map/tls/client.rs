@@ -28,15 +28,15 @@ impl<IO> crate::Name for tokio_rustls::client::TlsStream<IO> {
     }
 }
 
-fn defaultcc() -> ClientConfig {
+fn default_cc() -> ClientConfig {
     ClientConfig::builder()
-        .with_root_certificates(defaultrcs())
+        .with_root_certificates(default_rcs())
         .with_no_client_auth()
 }
 
 impl Client {
     pub fn new(domain: &str, is_insecure: bool) -> Self {
-        let mut config = defaultcc();
+        let mut config = default_cc();
 
         if is_insecure {
             config
@@ -91,7 +91,7 @@ impl rustls::client::danger::ServerCertVerifier for SuperDanVer {
     }
 
     fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        let root_certs = defaultrcs();
+        let root_certs = default_rcs();
 
         WebPkiClientVerifier::builder(Arc::new(root_certs))
             .build()

@@ -38,28 +38,28 @@ impl SuitEngine {
     }
 
     /// convert and calls load_config
-    pub fn load_config_from_str<FInadder, FOutadder>(
+    pub fn load_config_from_str<FInMapper, FOutMapper>(
         &mut self,
         s: &str,
-        load_inmappers_func: FInadder,
-        load_outmappers_func: FOutadder,
+        load_in_mappers_func: FInMapper,
+        load_out_mappers_func: FOutMapper,
     ) where
-        FInadder: Fn(&str, LDConfig) -> Option<MapperBox>,
-        FOutadder: Fn(&str, LDConfig) -> Option<MapperBox>,
+        FInMapper: Fn(&str, LDConfig) -> Option<MapperBox>,
+        FOutMapper: Fn(&str, LDConfig) -> Option<MapperBox>,
     {
         //todo: 修改 suit::config::Config 的结构后要改这里
         let c: super::config::Config = super::config::Config::from_toml(s);
-        self.load_config(c, load_inmappers_func, load_outmappers_func);
+        self.load_config(c, load_in_mappers_func, load_out_mappers_func);
     }
 
-    pub fn load_config<FInadder, FOutadder>(
+    pub fn load_config<FInMapper, FOutMapper>(
         &mut self,
         c: super::config::Config,
-        load_inmappers_func: FInadder,
-        load_outmappers_func: FOutadder,
+        load_in_mappers_func: FInMapper,
+        load_out_mappers_func: FOutMapper,
     ) where
-        FInadder: Fn(&str, LDConfig) -> Option<MapperBox>,
-        FOutadder: Fn(&str, LDConfig) -> Option<MapperBox>,
+        FInMapper: Fn(&str, LDConfig) -> Option<MapperBox>,
+        FOutMapper: Fn(&str, LDConfig) -> Option<MapperBox>,
     {
         self.clients = c
             .dial
@@ -68,9 +68,9 @@ impl SuitEngine {
                 let mut s = SuitStruct::from(lc.clone());
                 s.set_behavior(ProxyBehavior::ENCODE);
                 s.generate_upper_mappers();
-                let r_proxy_outadder = load_outmappers_func(s.protocol(), s.config.clone());
-                if let Some(proxy_outadder) = r_proxy_outadder {
-                    s.push_mapper(Arc::new(proxy_outadder));
+                let r_proxy_out_mapper = load_out_mappers_func(s.protocol(), s.config.clone());
+                if let Some(proxy_out_mapper) = r_proxy_out_mapper {
+                    s.push_mapper(Arc::new(proxy_out_mapper));
                 }
                 let x: Box<dyn Suit> = Box::new(s);
                 Arc::new(x)
@@ -94,9 +94,9 @@ impl SuitEngine {
                 s.set_behavior(ProxyBehavior::DECODE);
 
                 s.generate_upper_mappers();
-                let r_proxy_inadder = load_inmappers_func(s.protocol(), s.config.clone());
-                if let Some(proxy_inadder) = r_proxy_inadder {
-                    s.push_mapper(Arc::new(proxy_inadder));
+                let r_proxy_in_mapper = load_in_mappers_func(s.protocol(), s.config.clone());
+                if let Some(proxy_in_mapper) = r_proxy_in_mapper {
+                    s.push_mapper(Arc::new(proxy_in_mapper));
                 }
                 let x: Box<dyn Suit> = Box::new(s);
                 Arc::new(x)
@@ -116,19 +116,13 @@ impl SuitEngine {
         })
     }
 
-    /// blocking, return only if all servers stoped listening.
+    /// blocking, return only if all servers stopped listening.
     /// calls start_with_tasks
     ///
     /// 该方法不能用 block_on 调用, 只能用 await
     pub async fn block_run(&self) -> io::Result<Vec<io::Result<()>>> {
-        let rtasks = self.start_with_tasks().await?;
-        Ok(futures::future::join_all(rtasks).await)
-
-        // use futures_lite::future::FutureExt;
-
-        // let rtasks = self.start_with_tasks().await?;
-        // let (result, _, _remaining_tasks) =
-        //     select_all(rtasks.into_iter().map(|task| task.boxed())).await;
+        let r_tasks = self.start_with_tasks().await?;
+        Ok(futures::future::join_all(r_tasks).await)
     }
 
     /// called by block_run and run. Must call after calling load_config
@@ -196,20 +190,20 @@ impl SuitEngine {
 
 pub async fn listen_ser(
     ins: Arc<Box<dyn Suit>>,
-    outc: Arc<Box<dyn Suit>>,
+    out_c: Arc<Box<dyn Suit>>,
     ogtr: Option<Arc<net::GlobalTrafficRecorder>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
     let n = ins.network();
     match n {
         "tcp" => {
-            if outc.network() != "tcp" {
+            if out_c.network() != "tcp" {
                 panic!(
                     "not implemented for dialing network other than tcp: {}",
-                    outc.network()
+                    out_c.network()
                 )
             }
-            listen_tcp(ins, outc, ogtr, shutdown_rx).await
+            listen_tcp(ins, out_c, ogtr, shutdown_rx).await
         }
         _ => Err(io::Error::other(format!(
             "such network not supported: {}",
@@ -221,7 +215,7 @@ pub async fn listen_ser(
 /// blocking loop listen ins tcp。calls handle_conn_clonable inside the loop.
 async fn listen_tcp(
     ins: Arc<Box<dyn Suit>>,
-    outc: Arc<Box<dyn Suit>>,
+    out_c: Arc<Box<dyn Suit>>,
     ogtr: Option<Arc<net::GlobalTrafficRecorder>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
@@ -233,7 +227,7 @@ async fn listen_tcp(
 
     let clone_ogtr = move || ogtr.clone();
 
-    let iter = outc.get_mappers_vec().into_iter();
+    let iter = out_c.get_mappers_vec().into_iter();
     let ib = Box::new(DynVecIterWrapper(iter));
     let selector: Box<dyn OutSelector> = Box::new(FixedOutSelector { default: ib });
     let selector = Arc::new(selector);
@@ -241,7 +235,7 @@ async fn listen_tcp(
     tokio::select! {
         r = async {
             loop {
-                let (tcpstream, raddr) = listener.accept().await?;
+                let (tcp_stream, raddr) = listener.accept().await?;
 
                 let gtr = clone_ogtr();
                 if tracing::enabled!(tracing::Level::DEBUG)  {
@@ -253,7 +247,7 @@ async fn listen_tcp(
 
                 let slt = selector.clone();
                 tokio::spawn(  relay::handle_in_stream(
-                        Stream::c(Box::new(tcpstream)),
+                        Stream::c(Box::new(tcp_stream)),
                         ib,
                         slt,
                         gtr,

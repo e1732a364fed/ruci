@@ -101,7 +101,7 @@ async fn download_mmdb() -> anyhow::Result<()> {
 }
 
 async fn download_wintun() -> anyhow::Result<()> {
-    const WINTUNZIP: &str = "wintun.zip";
-    dl_url(WINTUN_DOWNLOAD_LINK, WINTUNZIP).await?;
+    const WINTUN_ZIP: &str = "wintun.zip";
+    dl_url(WINTUN_DOWNLOAD_LINK, WINTUN_ZIP).await?;
     Ok(())
 }

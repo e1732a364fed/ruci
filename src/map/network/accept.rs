@@ -44,7 +44,7 @@ pub async fn loop_accept_forever(listener: Listener) -> Receiver<MapResult> {
 
 /// blocking
 async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::Result<()> {
-    let lastr;
+    let last_r;
 
     loop {
         let r = listener.accept().await;
@@ -54,7 +54,7 @@ async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::
             Err(e) => {
                 let e = anyhow!("listen tcp ended by listen e: {}", e);
                 info!("{}", e);
-                lastr = Err(e);
+                last_r = Err(e);
                 break;
             }
         };
@@ -76,9 +76,9 @@ async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::
         if let Err(e) = r {
             let e = anyhow!("listen tcp ended by tx e: {}", e);
             info!("{}", e);
-            lastr = Err(e);
+            last_r = Err(e);
             break;
         }
     }
-    lastr
+    last_r
 }

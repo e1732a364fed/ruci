@@ -34,7 +34,7 @@ pub enum FailReason {
     Is11ProxyButNot11,
     NoSlash,
     EarlyLinefeed,
-    FirstlineLessThan10,
+    FirstLineLessThan10,
     StrHttpNotFoundInRightPlace,
     NoEndMark,
     NoEndMark2,
@@ -158,7 +158,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
         return request;
     }
 
-    //一般请求样式类似 GET /sdfdsffs.html HTTP/1.1
+    //一般请求样式类似 GET /some_path.html HTTP/1.1
     //所以找到第二个空格的位置即可，
 
     let mut last = bs.len();
@@ -179,7 +179,7 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
             // 空格后面至少还有 HTTP/1.1\r\n 这种字样，也就是说空格后长度至少为 10
 
             if bs.len() - i - 1 < 10 {
-                request.fail_reason = FailReason::FirstlineLessThan10;
+                request.fail_reason = FailReason::FirstLineLessThan10;
                 return request;
             }
 

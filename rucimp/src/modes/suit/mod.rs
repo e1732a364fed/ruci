@@ -1,5 +1,5 @@
 /*!
- * suit defines a struct that impls SuitConfigHolder+ MappersVec
+ * suit defines a struct that impl SuitConfigHolder+ MappersVec
  *
  * 通过套装, 我们得以将一串固定套路的代理传播链扁平化
  *
@@ -75,8 +75,8 @@ pub struct SuitStruct {
 
     pub config: config::LDConfig,
 
-    pub inmappers: Vec<Arc<MapperBox>>,
-    pub outmappers: Vec<Arc<MapperBox>>,
+    pub in_mappers: Vec<Arc<MapperBox>>,
+    pub out_mappers: Vec<Arc<MapperBox>>,
 
     addr: Option<Addr>,
     protocol_str: String,
@@ -149,16 +149,16 @@ impl SuitConfigHolder for SuitStruct {
 
 impl MappersVec for SuitStruct {
     fn get_mappers_vec(&self) -> Vec<Arc<MapperBox>> {
-        self.inmappers.clone()
+        self.in_mappers.clone()
     }
 
     /// 添加 mapper 到尾部。会自动推导出 whole_name.
     ///
     /// 可多次调用, 每次都会更新 whole_name
     fn push_mapper(&mut self, mapper: Arc<MapperBox>) {
-        self.inmappers.push(mapper);
+        self.in_mappers.push(mapper);
         self.whole_name = self
-            .inmappers
+            .in_mappers
             .iter()
             .map(|a| a.name())
             .collect::<Vec<_>>()
@@ -194,7 +194,7 @@ impl Suit for SuitStruct {
                         key: c.key.expect("need key file in config").into(),
                     };
                     let sa = tls::server::Server::new(so);
-                    self.inmappers.push(Arc::new(Box::new(sa)));
+                    self.in_mappers.push(Arc::new(Box::new(sa)));
                 }
             }
             ProxyBehavior::UNSPECIFIED => {}

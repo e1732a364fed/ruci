@@ -45,9 +45,9 @@ impl FileIOConn {
 
                 let rbf = rb.filled();
                 if !rbf.is_empty() {
-                    let minl = min(rbf.len(), buf.remaining());
+                    let min_l = min(rbf.len(), buf.remaining());
 
-                    buf.put_slice(&rbf[..minl]);
+                    buf.put_slice(&rbf[..min_l]);
                 }
                 r
             }
@@ -122,8 +122,8 @@ impl AsyncWrite for FileIOConn {
 #[mapper_ext_fields]
 #[derive(Debug, MapperExt)]
 pub struct FileIO {
-    pub iname: String,
-    pub oname: String,
+    pub i_name: String,
+    pub o_name: String,
 
     pub sleep_interval: Option<Duration>,
     pub bytes_per_turn: Option<usize>,
@@ -140,11 +140,11 @@ impl FileIO {
         sleep_interval: Option<Duration>,
         bytes_per_turn: Option<usize>,
     ) -> anyhow::Result<FileIOConn> {
-        let i = File::open(&self.iname).await?;
+        let i = File::open(&self.i_name).await?;
         let o = File::options()
             .append(true)
             .create(true)
-            .open(&self.oname)
+            .open(&self.o_name)
             .await?;
         Ok(FileIOConn {
             i: Box::pin(i),

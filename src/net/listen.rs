@@ -29,8 +29,8 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
         }
         #[cfg(unix)]
         net::Network::Unix => {
-            let filen = a.get_name().expect("a has a name");
-            let p = PathBuf::from(filen.clone());
+            let file_n = a.get_name().expect("a has a name");
+            let p = PathBuf::from(file_n.clone());
 
             // is_file returns false for unix domain socket
 
@@ -43,7 +43,7 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
             }
             let r = UnixListener::bind(p).context("unix listen failed")?;
 
-            Ok(Listener::UNIX((r, filen)))
+            Ok(Listener::UNIX((r, file_n)))
         }
         _ => bail!("listen not implemented for this network: {}", a.network),
     }
@@ -87,8 +87,8 @@ impl Listener {
     pub fn clean_up(&self) {
         match self {
             #[cfg(unix)]
-            Listener::UNIX((_, filen)) => {
-                let p = PathBuf::from(filen.clone());
+            Listener::UNIX((_, file_n)) => {
+                let p = PathBuf::from(file_n.clone());
                 if p.exists() && !p.is_dir() {
                     warn!("unix clean up:  will delete {:?}", p);
                     let r = remove_file(p.clone()).context("unix clean up delete file failed");

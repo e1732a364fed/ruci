@@ -45,11 +45,11 @@ pub async fn handle_in_stream(
         None => CID::new_random(),
     };
 
-    let cidc = cid.clone();
+    let cid_c = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             acc::accumulate(AccumulateParams {
-                cid: cidc,
+                cid: cid_c,
                 behavior: ProxyBehavior::DECODE,
                 initial_state: MapResult::builder().c(in_conn).build(),
                 mappers: ins_iterator,
@@ -149,12 +149,12 @@ pub async fn handle_in_accumulate_result(
         .select(&target_addr, &listen_result.chain_tag, &listen_result.d)
         .await;
 
-    let cidc = cid.clone();
+    let cid_c = cid.clone();
     let ta_clone = target_addr.clone();
     let dial_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             acc::accumulate(AccumulateParams {
-                cid: cidc,
+                cid: cid_c,
                 behavior: ProxyBehavior::ENCODE,
                 initial_state: MapResult {
                     a: Some(ta_clone),

@@ -97,7 +97,7 @@ impl DynIterator for IndexInfinite {
                 match i.cmp(&cl) {
                     Ordering::Greater => ib.1,
                     Ordering::Equal => {
-                        let mb = ib.1.expect("should have a mapperbox");
+                        let mb = ib.1.expect("should have a mapper_box");
                         self.cache.push(mb.clone());
                         Some(mb)
                     }

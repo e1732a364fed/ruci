@@ -32,7 +32,7 @@ pub enum FallbackItem {
 /// LDConfig 是 listen 和 dial 共用的 配置结构，配置是扁平化的
 ///
 /// tls 的最低版本号配置填在这里：
-///extra = { tls_minv = "1.2" }, 或 extra.tls_minv = "1.2"
+///extra = { tls_min_v = "1.2" }, 或 extra.tls_min_v = "1.2"
 ///
 ///
 #[allow(unused)]
@@ -59,9 +59,9 @@ pub struct LDConfig {
     pub early_data: Option<bool>,
 
     /// listen part
-    //noroute 意味着 传入的数据 不会被分流，一定会被转发到默认的 dial
-    // 这一项是针对 分流功能的. 如果不设noroute, 则所有listen 得到的流量都会被 试图 进行分流
-    pub noroute: Option<bool>,
+    //no_route 意味着 传入的数据 不会被分流，一定会被转发到默认的 dial
+    // 这一项是针对 分流功能的. 如果不设 no_route, 则所有listen 得到的流量都会被 试图 进行分流
+    pub no_route: Option<bool>,
     pub fallback: Option<FallbackItem>, //默认回落的地址，一般可为 ip:port,数字port or unix socket的文件名
 
     pub users: Option<Vec<UserPass>>,

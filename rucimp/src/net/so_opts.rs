@@ -74,7 +74,7 @@ pub fn set_tproxy_socket_opts<T: AsRawFd>(v4: bool, is_udp: bool, socket: &T) ->
     Ok(())
 }
 
-pub fn tproxy_get_oridst_addr<T>(s: &T) -> Result<SocketAddr>
+pub fn tproxy_get_ori_dst_addr<T>(s: &T) -> Result<SocketAddr>
 where
     T: AsRawFd,
 {

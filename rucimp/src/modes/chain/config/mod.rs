@@ -102,7 +102,7 @@ impl StaticConfig {
 
         let mut first_o: Option<DMIterBox> = None;
 
-        let omap = obs
+        let o_map = obs
             .into_iter()
             .map(|outbound| {
                 let tag = outbound
@@ -122,7 +122,7 @@ impl StaticConfig {
                 (ts, outbound_iter)
             })
             .collect();
-        (first_o.expect("has an outbound"), omap)
+        (first_o.expect("has an outbound"), o_map)
     }
 
     /// panic if the given tag isn't presented in outbounds
@@ -136,7 +136,7 @@ impl StaticConfig {
     #[cfg(feature = "route")]
     pub fn get_rule_route(&self) -> Option<Vec<RuleSet>> {
         let mut result = self.rule_route.clone().map(|rr| {
-            let x: Vec<RuleSet> = rr.into_iter().map(|r| r.to_ruleset()).collect();
+            let x: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
             x
         });
         #[cfg(feature = "geoip")]
@@ -213,14 +213,14 @@ pub struct Ext {
 }
 impl Ext {
     fn to_ext_fields(&self) -> MapperExtFields {
-        let mut extf = MapperExtFields::default();
+        let mut ext_f = MapperExtFields::default();
         if let Some(ta) = self.fixed_target_addr.as_ref() {
-            extf.fixed_target_addr = net::Addr::from_network_addr_str(ta).ok();
+            ext_f.fixed_target_addr = net::Addr::from_network_addr_str(ta).ok();
         }
         if let Some(s) = self.pre_defined_early_data.as_ref() {
-            extf.pre_defined_early_data = Some(BytesMut::from(s.as_bytes()));
+            ext_f.pre_defined_early_data = Some(BytesMut::from(s.as_bytes()));
         }
-        extf
+        ext_f
     }
 }
 
@@ -272,16 +272,16 @@ impl ToMapperBox for InMapperConfig {
         match self {
             InMapperConfig::Echo => Box::<Echo>::default(),
             InMapperConfig::Stdio(ext) => {
-                let extf = ext.to_ext_fields();
+                let ext_f = ext.to_ext_fields();
 
                 let mut s = ruci::map::stdio::Stdio::boxed();
-                s.set_ext_fields(Some(extf));
+                s.set_ext_fields(Some(ext_f));
                 s
             }
             InMapperConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
-                    iname: f.i.clone(),
-                    oname: f.o.clone(),
+                    i_name: f.i.clone(),
+                    o_name: f.o.clone(),
                     sleep_interval: f.sleep_interval.map(Duration::from_millis),
                     bytes_per_turn: f.bytes_per_turn,
                     ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
@@ -363,16 +363,16 @@ impl ToMapperBox for OutMapperConfig {
     fn to_mapper_box(&self) -> ruci::map::MapperBox {
         match self {
             OutMapperConfig::Stdio(ext) => {
-                let extf = ext.to_ext_fields();
+                let ext_f = ext.to_ext_fields();
 
                 let mut s = ruci::map::stdio::Stdio::boxed();
-                s.set_ext_fields(Some(extf));
+                s.set_ext_fields(Some(ext_f));
                 s
             }
             OutMapperConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
-                    iname: f.i.clone(),
-                    oname: f.o.clone(),
+                    i_name: f.i.clone(),
+                    o_name: f.o.clone(),
                     sleep_interval: f.sleep_interval.map(Duration::from_millis),
                     bytes_per_turn: f.bytes_per_turn,
                     ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),

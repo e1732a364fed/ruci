@@ -36,16 +36,16 @@ impl Name for Conn {
 
 impl Conn {
     pub fn new(u: UdpSocket, peer_soa: SocketAddr) -> Self {
-        Conn::newa(Arc::new(u), peer_soa)
+        Conn::new_a(Arc::new(u), peer_soa)
     }
 
-    pub fn newa(u: Arc<UdpSocket>, peer_soa: SocketAddr) -> Self {
+    pub fn new_a(u: Arc<UdpSocket>, peer_soa: SocketAddr) -> Self {
         Conn { base: u, peer_soa }
     }
 }
 
-pub fn new_addr_conn(u: UdpSocket, peersoa: SocketAddr) -> AddrConn {
-    let a = Box::new(Conn::new(u, peersoa));
+pub fn new_addr_conn(u: UdpSocket, peer_soa: SocketAddr) -> AddrConn {
+    let a = Box::new(Conn::new(u, peer_soa));
     let b = a.clone();
     AddrConn::new(a, b)
 }
@@ -104,8 +104,8 @@ impl AsyncReadAddr for Conn {
     ) -> Poll<io::Result<(usize, Addr)>> {
         let mut new_buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
 
-        let mut rbuf = ReadBuf::new(&mut new_buf);
-        let r = self.base.poll_recv_from(cx, &mut rbuf);
+        let mut r_buf = ReadBuf::new(&mut new_buf);
+        let r = self.base.poll_recv_from(cx, &mut r_buf);
         match r {
             Poll::Pending => Poll::Pending,
 
@@ -119,7 +119,7 @@ impl AsyncReadAddr for Conn {
                             return Poll::Pending;
                         }
 
-                        let bs = rbuf.filled();
+                        let bs = r_buf.filled();
 
                         let r = decode_read(bs);
 
@@ -127,15 +127,15 @@ impl AsyncReadAddr for Conn {
                             Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
 
                             Ok((mut actual_buf, soa)) => {
-                                let wlen = min(buf.len(), actual_buf.len());
-                                actual_buf.copy_to_slice(&mut buf[..wlen]);
+                                let w_len = min(buf.len(), actual_buf.len());
+                                actual_buf.copy_to_slice(&mut buf[..w_len]);
 
                                 // if tracing::enabled!(tracing::Level::DEBUG)  {
-                                //     debug!("socks5 udp got msg,{wlen} {soa}, {:?}", &buf[..wlen])
+                                //     debug!("socks5 udp got msg,{w_len} {soa}, {:?}", &buf[..w_len])
                                 // }
 
                                 Poll::Ready(Ok::<(usize, net::Addr), io::Error>((
-                                    wlen,
+                                    w_len,
                                     crate::net::Addr {
                                         addr: NetAddr::Socket(soa),
                                         network: Network::UDP,
@@ -172,7 +172,7 @@ mod test {
 
         let u = UdpSocket::bind("127.0.0.1:0").await?;
         let ula = u.local_addr()?;
-        println!("binded to , {}", ula);
+        println!("bound to , {}", ula);
 
         let so12345 = Addr::from_ip_addr_str("udp", "127.0.0.1:12345")
             .unwrap()
@@ -214,10 +214,10 @@ mod test {
         nu.send_to(b"abc", ula).await?;
         println!("ok send");
 
-        let readr = rx.recv().await;
+        let read_r = rx.recv().await;
 
-        println!("readr: {:?}", readr);
-        assert!(readr.unwrap().is_err());
+        println!("read_r: {:?}", read_r);
+        assert!(read_r.unwrap().is_err());
         let mut buf = BytesMut::with_capacity(100);
         crate::map::socks5::encode_udp_diagram(
             &Addr::from_addr_str("udp", "1.2.3.4:56").unwrap(),
@@ -229,10 +229,10 @@ mod test {
         nu.send_to(&buf, ula).await?;
         println!("ok send2");
 
-        let readr = rx.recv().await;
+        let read_r = rx.recv().await;
 
-        println!("readr: {:?}", readr);
-        assert!(readr.unwrap().is_ok());
+        println!("read_r: {:?}", read_r);
+        assert!(read_r.unwrap().is_ok());
 
         let n = nu.recv(&mut buf).await?;
 
