@@ -1,6 +1,7 @@
 use anyhow::bail;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
+use fmt::Display;
 use macro_map::{map_ext_fields, MapExt};
 use tokio::io::AsyncWriteExt;
 use tracing::debug;
@@ -17,6 +18,12 @@ use super::*;
 #[derive(Debug, Clone, MapExt, Default)]
 pub struct Client {
     pub u: User,
+}
+
+impl Display for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "trojan_client")
+    }
 }
 
 impl Client {
@@ -78,11 +85,6 @@ impl Client {
         }
     }
 }
-// impl Name for Client {
-//     fn name(&self) -> &'static str {
-//         "trojan_client"
-//     }
-// }
 
 #[async_trait]
 impl Map for Client {

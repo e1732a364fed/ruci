@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use ::http::{HeaderValue, Uri};
 use anyhow::{bail, Context};
 use async_trait::async_trait;
@@ -22,11 +24,11 @@ pub struct Client {
     use_early_data: bool,
 }
 
-// impl ruci::Name for Client {
-//     fn name(&self) -> &str {
-//         "websocket_client"
-//     }
-// }
+impl Display for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "websocket_client")
+    }
+}
 
 impl Client {
     pub fn new(c: CommonConfig) -> Self {

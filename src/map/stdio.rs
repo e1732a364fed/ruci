@@ -109,11 +109,11 @@ pub struct Stdio {
     pub write_mode: WriteMode,
 }
 
-// impl Name for Stdio {
-//     fn name(&self) -> &'static str {
-//         "stdio"
-//     }
-// }
+impl Display for Stdio {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "stdio")
+    }
+}
 
 #[async_trait]
 impl Map for Stdio {

@@ -53,7 +53,7 @@ use tokio::sync::oneshot;
 use typed_builder::TypedBuilder;
 
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Display},
     sync::{atomic::AtomicU64, Arc},
 };
 
@@ -286,8 +286,10 @@ pub trait Map {
 /// 令 Map 实现 Send + Sync, 否则异步/多线程报错
 ///
 /// 且添加了 [`MapExt`] 等 对代码 必要的 trait
-pub trait MapSync: Debug + MapExt + Send + Sync {}
-impl<T: Debug + MapExt + Send + Sync> MapSync for T {}
+///
+/// 添加 Display 是为了必要的 调试输出
+pub trait MapSync: Display + Debug + MapExt + Send + Sync {}
+impl<T: Display + Debug + MapExt + Send + Sync> MapSync for T {}
 
 /// 代码最终使用的是 MapBox
 pub type MapBox = Box<dyn MapSync>;

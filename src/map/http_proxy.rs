@@ -7,6 +7,7 @@ https://datatracker.ietf.org/doc/html/rfc7540#section-8.3
  */
 
 use std::cmp::min;
+use std::fmt::Display;
 
 use anyhow::{anyhow, bail};
 use base64::prelude::*;
@@ -39,11 +40,11 @@ pub struct Server {
     pub only_connect: bool,
 }
 
-// impl Name for Server {
-//     fn name(&self) -> &'static str {
-//         "http_proxy_server"
-//     }
-// }
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "http_proxy_server")
+    }
+}
 
 #[derive(Default, Clone)]
 pub struct ServerConfig {
@@ -279,11 +280,11 @@ impl Client {
     }
 }
 
-// impl Name for Client {
-//     fn name(&self) -> &'static str {
-//         "http_proxy_client"
-//     }
-// }
+impl Display for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "http_proxy_client")
+    }
+}
 impl Client {
     pub async fn handshake(
         &self,

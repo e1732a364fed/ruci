@@ -130,11 +130,11 @@ pub struct FileIO {
     pub bytes_per_turn: Option<usize>,
 }
 
-// impl Name for FileIO {
-//     fn name(&self) -> &'static str {
-//         "fileio"
-//     }
-// }
+impl Display for FileIO {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "fileio")
+    }
+}
 impl FileIO {
     async fn get_conn(
         &self,

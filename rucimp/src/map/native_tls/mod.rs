@@ -3,7 +3,10 @@ Defines [`ruci::map::Map`]s for TLS using `tokio_native_tls`.
 
  */
 
-use std::{fmt, path::PathBuf};
+use std::{
+    fmt::{self, Display},
+    path::PathBuf,
+};
 
 use anyhow::Context;
 use async_trait::async_trait;
@@ -59,11 +62,11 @@ impl fmt::Debug for Server {
     }
 }
 
-// impl Name for Server {
-//     fn name(&self) -> &'static str {
-//         "native_tls_server"
-//     }
-// }
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "native_tls_server")
+    }
+}
 
 impl Server {
     async fn handshake(
@@ -113,11 +116,11 @@ pub struct Client {
     pub config: ruci_tls::client::TlsClientOptions,
 }
 
-// impl Name for Client {
-//     fn name(&self) -> &'static str {
-//         "native_tls_client"
-//     }
-// }
+impl Display for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "native_tls_client")
+    }
+}
 
 #[async_trait]
 impl map::Map for Client {

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use ::h2::server;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -22,11 +24,11 @@ pub struct Server {
 
     pub http_config: Option<CommonConfig>,
 }
-// impl ruci::Name for Server {
-//     fn name(&self) -> &str {
-//         "h2_server"
-//     }
-// }
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "h2_server")
+    }
+}
 
 impl Server {
     pub fn new(is_grpc: Option<bool>, http_config: Option<CommonConfig>) -> Self {

@@ -4,6 +4,8 @@ Defines a [`Map`] that can accept both socks5 and http proxy request.
 It will try socks5 first . If not socks5, fallbacks to http proxy
  */
 
+use std::fmt::Display;
+
 use futures::executor::block_on;
 use macro_map::*;
 use map::Stream;
@@ -39,11 +41,11 @@ pub struct Server {
     pub socks5_s: socks5::server::Server,
 }
 
-// impl Name for Server {
-//     fn name(&self) -> &'static str {
-//         "socks5http_server"
-//     }
-// }
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "socks5http_server")
+    }
+}
 
 impl Server {
     pub async fn new(option: Config) -> Self {

@@ -3,6 +3,8 @@ Defines a Map for socks5 client.
 
 */
 
+use std::fmt::Display;
+
 use bytes::BufMut;
 use macro_map::*;
 use map::{helpers, Addr, Network};
@@ -26,6 +28,12 @@ pub struct Client {
     pub up: Option<PlainText>, //todo: make sure len <= 255
 
     pub use_earlydata: bool, //todo: implement this.
+}
+
+impl Display for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "socks5_client")
+    }
 }
 
 impl Client {
@@ -175,12 +183,6 @@ impl Client {
         }
     }
 }
-
-// impl crate::Name for Client {
-//     fn name(&self) -> &'static str {
-//         "socks5_client"
-//     }
-// }
 
 #[async_trait::async_trait]
 impl map::Map for Client {

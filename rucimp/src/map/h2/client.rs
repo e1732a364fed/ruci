@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
 
 use anyhow::{anyhow, bail};
 use async_trait::async_trait;
@@ -28,11 +28,11 @@ pub struct SingleClient {
 
     req: Option<Request<()>>,
 }
-// impl ruci::Name for SingleClient {
-//     fn name(&self) -> &str {
-//         "h2_single_client"
-//     }
-// }
+impl Display for SingleClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "h2_single_client")
+    }
+}
 
 impl SingleClient {
     pub fn new(is_grpc: bool, http_config: Option<CommonConfig>) -> Self {
@@ -178,11 +178,11 @@ pub struct MuxClient {
 
     cache: Arc<Mutex<Option<SendRequest<Bytes>>>>,
 }
-// impl ruci::Name for MuxClient {
-//     fn name(&self) -> &str {
-//         "h2_mux_client"
-//     }
-// }
+impl Display for MuxClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "h2_mux_client")
+    }
+}
 
 impl MuxClient {
     pub fn new(is_grpc: bool, http_config: Option<CommonConfig>) -> Self {

@@ -4,26 +4,25 @@ Defines [`Map`]s that can either generate basic Stream(s) like ip/tcp/udp/uds, o
 
 pub mod accept;
 
+use super::*;
+use crate::map;
+use anyhow::Result;
 use macro_map::*;
+use std::fmt::Display;
 use tokio::sync::mpsc::Receiver;
 use tracing::debug;
 use tracing::info;
-
-use super::*;
-use crate::map;
-// use crate::Name;
-use anyhow::Result;
 
 /// BlackHole drops the connection instantly
 #[map_ext_fields]
 #[derive(MapExt, Debug, Default, Clone)]
 pub struct BlackHole {}
 
-// impl Name for BlackHole {
-//     fn name(&self) -> &str {
-//         "blackhole"
-//     }
-// }
+impl Display for BlackHole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "blackhole")
+    }
+}
 
 impl BlackHole {
     pub fn boxed() -> MapBox {
@@ -54,11 +53,11 @@ pub struct Direct {
     pub leak_target_addr: bool,
     pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
-// impl Name for Direct {
-//     fn name(&self) -> &'static str {
-//         "direct"
-//     }
-// }
+impl Display for Direct {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "direct")
+    }
+}
 
 #[async_trait]
 impl Map for Direct {
@@ -158,11 +157,11 @@ pub struct BindDialer {
     auto_route_state: Arc<parking_lot::Mutex<AutoRouteState>>,
 }
 
-// impl Name for BindDialer {
-//     fn name(&self) -> &'static str {
-//         "bind_dialer"
-//     }
-// }
+impl Display for BindDialer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "bind_dialer")
+    }
+}
 
 #[cfg(feature = "tun")]
 impl Drop for BindDialer {
@@ -374,11 +373,11 @@ pub struct Listener {
     pub listen_addr: net::Addr,
 }
 
-// impl Name for Listener {
-//     fn name(&self) -> &'static str {
-//         "listener"
-//     }
-// }
+impl Display for Listener {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "listener")
+    }
+}
 impl Listener {
     pub async fn listen_addr(
         a: &net::Addr,

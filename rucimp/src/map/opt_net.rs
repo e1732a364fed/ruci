@@ -1,6 +1,7 @@
 /*!
 similar to [`ruci::map::network`], but with [`SockOpt`].
  */
+use std::fmt::Display;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -25,11 +26,11 @@ pub struct TcpOptListener {
     pub sopt: SockOpt,
 }
 
-// impl Name for TcpOptListener {
-//     fn name(&self) -> &'static str {
-//         "tcp_opt_listener"
-//     }
-// }
+impl Display for TcpOptListener {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tcp_opt_listener")
+    }
+}
 impl TcpOptListener {
     pub async fn listen_addr(
         &self,
@@ -100,11 +101,11 @@ pub struct OptDirect {
 
     pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
-// impl Name for OptDirect {
-//     fn name(&self) -> &'static str {
-//         "opt_direct"
-//     }
-// }
+impl Display for OptDirect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "opt_direct")
+    }
+}
 impl OptDirect {
     #[allow(unused)]
     pub fn new(
@@ -228,11 +229,11 @@ pub struct OptDialer {
     pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
 
-// impl Name for OptDialer {
-//     fn name(&self) -> &'static str {
-//         "opt_dialer"
-//     }
-// }
+impl Display for OptDialer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "opt_dialer")
+    }
+}
 
 impl OptDialer {
     pub fn new(opt: OptDialerOption) -> anyhow::Result<Self> {

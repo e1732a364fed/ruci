@@ -7,6 +7,7 @@ see rucimp/src/modes/chain/config/lua.
 The module wraps Rust functionality to make it accessible from Lua code.
 */
 
+use std::fmt::Display;
 use std::future::Future;
 use std::io;
 use std::os::raw::c_void;
@@ -464,11 +465,11 @@ pub struct LuaMap {
     pub file_source: Arc<crate::utils::FileSource>,
 }
 
-// impl Name for LuaMap {
-//     fn name(&self) -> &'static str {
-//         "lua_map"
-//     }
-// }
+impl Display for LuaMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "lua_map")
+    }
+}
 
 impl LuaMap {
     /// 向 lua 插入 若干函数，并提取出 handshake 函数

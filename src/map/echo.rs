@@ -13,11 +13,11 @@ use tracing::{debug, info, warn};
 #[derive(Clone, Debug, Default, MapExt)]
 pub struct Echo {}
 
-// impl Name for Echo {
-//     fn name(&self) -> &'static str {
-//         "echo"
-//     }
-// }
+impl Display for Echo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "echo")
+    }
+}
 
 impl Echo {
     pub fn boxed() -> MapBox {

@@ -10,6 +10,7 @@ pub mod data;
 mod tcp;
 mod udp;
 
+use std::fmt::Display;
 use std::time;
 
 use addr_conn::AddrConn;
@@ -52,11 +53,11 @@ impl RecorderMap {
         }
     }
 }
-// impl Name for RecorderMap {
-//     fn name(&self) -> &'static str {
-//         "recorder"
-//     }
-// }
+impl Display for RecorderMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "recorder")
+    }
+}
 
 #[async_trait]
 impl Map for RecorderMap {

@@ -8,6 +8,7 @@ use crate::{
 use anyhow::{anyhow, bail, Context};
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
+use fmt::Display;
 use futures::executor::block_on;
 use macro_map::*;
 use tokio::io::AsyncReadExt;
@@ -31,6 +32,12 @@ impl From<Config> for MapBox {
 pub struct Server {
     pub um: UsersMap<User>,
 }
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "trojan_server")
+    }
+}
+
 impl Server {
     pub async fn new(option: Config) -> Self {
         let mut um = UsersMap::new();
@@ -254,11 +261,6 @@ impl Server {
         }
     }
 }
-// impl Name for Server {
-//     fn name(&self) -> &'static str {
-//         "trojan_server"
-//     }
-// }
 
 #[async_trait]
 impl Map for Server {

@@ -20,6 +20,7 @@ use macro_map::*;
 use map::Stream;
 use std::{
     cmp::min,
+    fmt::Display,
     io::{self, Error},
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     time::Duration,
@@ -55,6 +56,12 @@ impl From<Config> for MapBox {
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,
     pub support_udp: bool,
+}
+
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "socks5_server")
+    }
 }
 
 impl Server {
@@ -475,11 +482,7 @@ impl Server {
         })
     }
 }
-// impl Name for Server {
-//     fn name(&self) -> &'static str {
-//         "socks5_server"
-//     }
-// }
+
 #[async_trait::async_trait]
 impl map::Map for Server {
     async fn maps(

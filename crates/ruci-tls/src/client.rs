@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
 
 use macro_map::{map_ext_fields, MapExt};
 use rustls::{
@@ -29,6 +29,12 @@ pub struct Client {
     pub server_domain: Option<String>,
     pub is_insecure: bool,
     client_config: Arc<ClientConfig>,
+}
+
+impl Display for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tls_client")
+    }
 }
 
 // impl<IO> ruci::Name for tokio_rustls::client::TlsStream<IO> {
@@ -166,11 +172,6 @@ impl Client {
     }
 }
 
-// impl Name for Client {
-//     fn name(&self) -> &'static str {
-//         "tls_client"
-//     }
-// }
 #[async_trait]
 impl map::Map for Client {
     async fn maps(

@@ -7,6 +7,8 @@ http_filter 与 http_proxy 完全不同, 不要搞混
 
  */
 
+use std::fmt::Display;
+
 use crate::{map, net};
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -22,11 +24,13 @@ use super::{http::CommonConfig, Map, MapResult, ProxyBehavior};
 pub struct Server {
     pub config: Option<CommonConfig>,
 }
-// impl crate::Name for Server {
-//     fn name(&self) -> &str {
-//         "http_filter"
-//     }
-// }
+
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "http_filter")
+    }
+}
+
 #[async_trait]
 impl Map for Server {
     async fn maps(

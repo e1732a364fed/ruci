@@ -6,6 +6,7 @@ pub mod ip_packet;
 pub mod tcp;
 pub mod udp;
 
+use std::fmt::Display;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -23,11 +24,11 @@ use tracing::debug;
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Stack {}
 
-// impl Name for Stack {
-//     fn name(&self) -> &'static str {
-//         "smoltcp_stack"
-//     }
-// }
+impl Display for Stack {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "smoltcp_stack")
+    }
+}
 
 #[async_trait]
 impl Map for Stack {

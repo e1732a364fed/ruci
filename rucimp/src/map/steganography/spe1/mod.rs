@@ -28,6 +28,7 @@ id+1; 如此便可区别不同的客户端 以及 不同的请求连接。
 目前暂未实现分段
 */
 
+use std::fmt::Display;
 use std::io::Result;
 use std::task::ready;
 use std::{
@@ -753,11 +754,11 @@ pub struct ClientOrServer {
     pub is_server: bool,
 }
 
-// impl ruci::Name for ClientOrServer {
-//     fn name(&self) -> &'static str {
-//         "spe1"
-//     }
-// }
+impl Display for ClientOrServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "spe1")
+    }
+}
 
 impl ClientOrServer {
     fn connect_with_rw(

@@ -2,6 +2,7 @@ use crate::utils::FileSource;
 use anyhow::Context;
 use quinn::Endpoint;
 
+use std::fmt::Display;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -28,11 +29,11 @@ pub struct Client {
     server_name: String,
 }
 
-// impl Name for Client {
-//     fn name(&self) -> &'static str {
-//         "quic_client"
-//     }
-// }
+impl Display for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "quic_client")
+    }
+}
 
 impl Client {
     pub fn new(c: quic_common::ClientConfig, file_source: &FileSource) -> anyhow::Result<Self> {

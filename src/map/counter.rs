@@ -109,11 +109,11 @@ impl Counter {
     }
 }
 
-// impl Name for Counter {
-//     fn name(&self) -> &'static str {
-//         "counter"
-//     }
-// }
+impl Display for Counter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "counter")
+    }
+}
 
 #[async_trait]
 impl Map for Counter {

@@ -22,6 +22,7 @@ use ruci::net::helpers::EarlyDataWrapper;
 use ruci::net::CID;
 // use ruci::Name;
 use ruci::{map, net::MTU};
+use std::fmt::Display;
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tracing::{debug, error, info};
@@ -32,11 +33,11 @@ pub struct MITM {
     pub sc: crate::server::ServerPEMOptions,
 }
 
-// impl Name for MITM {
-//     fn name(&self) -> &'static str {
-//         "mitm_server"
-//     }
-// }
+impl Display for MITM {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "mitm_server")
+    }
+}
 
 #[async_trait]
 impl Map for MITM {

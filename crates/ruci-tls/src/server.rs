@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{fmt::Display, path::PathBuf, sync::Arc};
 
 use macro_map::*;
 use ruci::{
@@ -41,11 +41,18 @@ pub struct Server {
     ta: TlsAcceptor,
 }
 
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "ruci::tls::Server")
+    }
+}
+
 impl std::fmt::Debug for Server {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "ruci::tls::Server, {:?}", self.option_cache)
     }
 }
+
 // impl<IO> ruci::Name for tokio_rustls::server::TlsStream<IO> {
 //     fn name(&self) -> &str {
 //         "tokio_rustls_server_stream"
@@ -85,11 +92,6 @@ impl Server {
 
 // pub struct SeverTLSConnDescriber {}
 
-// impl Name for Server {
-//     fn name(&self) -> &'static str {
-//         "tls_server"
-//     }
-// }
 #[async_trait]
 impl map::Map for Server {
     async fn maps(

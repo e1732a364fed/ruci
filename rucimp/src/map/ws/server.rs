@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use async_trait::async_trait;
 use bytes::BytesMut;
 use macro_map::*;
@@ -22,11 +24,11 @@ pub struct Server {
     pub config: Option<CommonConfig>,
 }
 
-// impl ruci::Name for Server {
-//     fn name(&self) -> &str {
-//         "websocket_server"
-//     }
-// }
+impl Display for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "websocket_server")
+    }
+}
 
 use lazy_static::lazy_static;
 lazy_static! {
