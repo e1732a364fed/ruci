@@ -70,11 +70,11 @@ pub async fn loop_listen_udp_for_certain_client(
     let mut user_raddr: IpAddr = client_future_addr.get_ip().unwrap();
     let mut user_port: u16 = client_future_addr.get_port();
 
-    use futures::channel::mpsc::channel;
-    use futures::sink::SinkExt;
-    use futures::stream::StreamExt;
+    use tokio::sync::mpsc::channel;
+    // use futures::sink::SinkExt;
+    // use futures::stream::StreamExt;
     use futures::FutureExt;
-    let (mut tx, mut rx) = channel::<(Option<SocketAddr>, BytesMut, SocketAddr)>(20);
+    let (tx, mut rx) = channel::<(Option<SocketAddr>, BytesMut, SocketAddr)>(20);
 
     let udpso_created_to_listen_for_thisuser = Arc::new(udpso_created_to_listen_for_thisuser);
 
@@ -85,10 +85,18 @@ pub async fn loop_listen_udp_for_certain_client(
         let mut buf_w = BytesMut::with_capacity(CAP);
 
         loop {
-            let x = rx.next().await;
+            let x = rx.recv().await;
             match x {
+                None => break,
+
                 Some((msg_was_from, buf, send_to)) => {
                     match msg_was_from {
+                        None => {
+                            // from the user, to remote. the buf is already decoded
+                            if udp.send_to(&buf, send_to).await.is_err() {
+                                break;
+                            }
+                        }
                         Some(from) => {
                             // from a remote, to the user. the send_to is the user's address
 
@@ -110,20 +118,11 @@ pub async fn loop_listen_udp_for_certain_client(
                                 break;
                             }
                         }
-                        None => {
-                            // from the user, to remote. the buf is already decoded
-                            let r = udp.send_to(&buf, send_to).await;
-
-                            if r.is_err() {
-                                break;
-                            }
-                        }
-                    }
-                }
-                None => break,
-            }
-        }
-    });
+                    } //match
+                } //Some
+            } //match
+        } // loop
+    }); //task
 
     //loop read from user or remote
     loop {
@@ -138,7 +137,7 @@ pub async fn loop_listen_udp_for_certain_client(
                 if result.is_err(){
                     debug!("cid: {}, socks5 server, will end loop listen udp because of the read err of the tcp conn, {}", cid, result.unwrap());
 
-                    let _ = tx.close().await;
+                    //let _ = tx.close().await;
 
                     break;
                 }
@@ -153,7 +152,6 @@ pub async fn loop_listen_udp_for_certain_client(
                 if user_raddr.is_unspecified() || raddr.ip().eq(&user_raddr) {
 
                     //user write to remote
-
 
                     if user_raddr.is_unspecified() {
                         user_raddr = raddr.ip();
@@ -179,8 +177,8 @@ pub async fn loop_listen_udp_for_certain_client(
 
                     // new data from some remote
 
-                    let x= tx.send(( Some(raddr),buf,SocketAddr::new(user_raddr,user_port))).await;
-                    if let Err(e) = x{
+                    let r= tx.send(( Some(raddr),buf,SocketAddr::new(user_raddr,user_port))).await;
+                    if let Err(e) = r{
                         return Err(io::Error::other(format!("{}",e)));
                     }
                 }
