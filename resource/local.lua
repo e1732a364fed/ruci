@@ -3,17 +3,23 @@ print("this is a lua config file")
 -- lua 的好处有很多，你可以定义很多变量
 
 listen = { Listener = { TcpListener = "0.0.0.0:10800" }  }
+l2 = { Listener = { TcpListener = "0.0.0.0:20800" }  }
+l3 = { Listener = { TcpListener = "0.0.0.0:30800" }  }
+
 listen_socks5 = { listen, { Socks5 = {} }, }
 listen_http = { listen, { Http = {} }, }
 listen_socks5http = { listen, { Socks5Http = {} }, }
 
-tls = { TLS = { host = "www.1234.com", insecure = true } }
+tlsout = { TLS = { host = "www.1234.com", insecure = true } }
+
+tlsin = { TLS = {  cert = "test.crt", key = "test.key" } }
+
 
 listen_trojan = { listen, { Trojan = { password = "mypassword" } }, }
 
 dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
 
-dial_trojan_chain = { dial,tls,  { Trojan = "mypassword"} }
+dial_trojan_chain = { dial,tlsout,  { Trojan = "mypassword"} }
 
 stdio_socks5_chain = { { Stdio="fake.com:80" } , { Socks5 = {} } }
 
@@ -43,7 +49,8 @@ config = {
 
 
 
----[=[
+--[=[
+-- default counterpart for remote.lua
 
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
@@ -119,3 +126,28 @@ config = {
 }
 
 --]]
+
+
+
+---[=[
+
+config = {
+    inbounds = { 
+        {chain = listen_socks5http, tag = "l1"}, {chain = {l2,tlsin}, tag = "l2"} , 
+        {chain = {l3,tlsin}, tag = "l3"} 
+    } ,
+    outbounds = { 
+        { tag="d1", chain = { "Direct" } } ,  { tag="d2", chain = { dial, tlsout } } 
+    },
+
+    tag_route = {  { "l1","d1" },{ "l2","d2"},{"l3","d2"} }
+
+--[[
+这个 config 块是演示 多in多out的情况, 只要outbounds有多个，您就应该考虑使用路由配置
+该 tag_route 示例明确指出，l1将被路由到d1, l2 -> d2, l3 -> d2
+--]]
+
+}
+
+--]=]
+

@@ -6,7 +6,7 @@ use ruci::{
     net::TransmissionInfo,
     relay::{
         conn::handle_in_accumulate_result,
-        route::{FixedOutSelector, OutSelector},
+        route::{FixedOutSelector, OutSelector, TagOutSelector},
     },
 };
 use std::{collections::HashMap, io, sync::Arc};
@@ -157,7 +157,22 @@ impl StaticEngine {
     }
 
     fn get_out_selector(&mut self) -> &'static dyn OutSelector {
-        self.get_fixed_out_selector()
+        if self.tag_routes.is_some() {
+            self.get_tag_route_out_selector()
+        } else {
+            self.get_fixed_out_selector()
+        }
+    }
+    fn get_tag_route_out_selector(&mut self) -> &'static dyn OutSelector {
+        let t = TagOutSelector {
+            outbounds_route_map: self.tag_routes.clone().unwrap(),
+            outbounds_map: self.outbounds.clone(),
+            default: self.default_outbound.clone().unwrap(),
+        };
+
+        //todo: do the same as try_drop_fixed_selector
+        let t = Box::leak(Box::new(t));
+        t
     }
 
     fn get_fixed_out_selector(&mut self) -> &'static dyn OutSelector {

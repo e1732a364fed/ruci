@@ -6,7 +6,7 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use super::ProxyBehavior;
+use super::{MIterBox, MapperBox, ProxyBehavior};
 
 #[tokio::test]
 async fn test_adder_r() -> std::io::Result<()> {
@@ -143,4 +143,28 @@ async fn test_counter1() -> std::io::Result<()> {
         }
         _ => panic!("need AsyncAnyData::B"),
     }
+}
+
+#[test]
+fn test_miter() {
+    let a = Adder::default();
+    let a: MapperBox = Box::new(a);
+
+    let b = Adder::default();
+
+    let v = vec![a, Box::new(b)];
+    let v = Box::leak(Box::new(v));
+    let m: MIterBox = Box::new(v.iter());
+    println!("{:?}", m);
+    assert!(m.count() == 2);
+
+    //drop the leaked mem
+
+    unsafe {
+        let boxed = Box::from_raw(v as *const Vec<MapperBox> as *mut Vec<MapperBox>);
+        std::mem::drop(boxed);
+    }
+    //after dropping , we can't access it any more
+    // println!("{:?}", m);
+    // assert!(m.count() == 2);
 }
