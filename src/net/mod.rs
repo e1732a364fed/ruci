@@ -8,7 +8,7 @@
 CID, Network ,Addr ,Stream
 
  structs:
- CIDChain, GlobalTrafficRecorder,
+ CID, GlobalTrafficRecorder,
 
 trait: ConnTrait
 
@@ -77,23 +77,29 @@ pub fn new_ordered_cid(last_id: &AtomicU32) -> u32 {
     last_id.fetch_add(1, Ordering::Relaxed) + 1
 }
 
+/// stream id ('c' for conn as convention)
+///
+/// default is CID::unit(0) which means no connection yet
+///
+/// CID is massively used in ruci. //首项为根id, 末项为末端stream的id
+///
 /// # Example
 ///
 /// ```
-/// use ruci::net::CIDChain;
+/// use ruci::net::CID;
 ///
-/// let cc = CIDChain {
+/// let cc = CID {
 ///       id_list: smallvec::smallvec![1, 2, 3],
 ///  };
 ///  println!("{}", cc)
 /// ```
 ///
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct CIDChain {
-    pub id_list: SmallVec<[u32; 2]>, //首项为根id, 末项为末端stream的id
+#[derive(Default, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct CID {
+    pub id_list: SmallVec<[u32; 2]>,
 }
 
-impl Display for CIDChain {
+impl Display for CID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match (self.id_list).len() {
             0 => {
@@ -120,37 +126,13 @@ impl Display for CIDChain {
     }
 }
 
-/// stream id ('c' for conn as convention)
-///
-/// default is CID::Unit(0) which means no connection yet
-///
-/// CID is massively used in ruci.
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum CID {
-    Unit(u32),
-    Chain(CIDChain),
-}
-
-impl Default for CID {
-    fn default() -> Self {
-        CID::Unit(0)
-    }
-}
-
-impl Display for CID {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CID::Unit(u) => write!(f, "{u}"),
-            CID::Chain(c) => Display::fmt(c, f),
-        }
-    }
-}
-
 impl std::str::FromStr for CID {
     fn from_str(s: &str) -> anyhow::Result<Self> {
         let u = s.parse::<u32>();
         if let Ok(u) = u {
-            return Ok(CID::Unit(u));
+            return Ok(CID {
+                id_list: smallvec![u],
+            });
         }
         let v: Vec<_> = s.split('-').collect();
 
@@ -169,39 +151,33 @@ impl std::str::FromStr for CID {
 }
 
 impl CID {
-    /// show the number(s) only
-    pub fn str(&self) -> String {
-        match self {
-            CID::Unit(u) => u.to_string(),
-            CID::Chain(c) => c.to_string(),
+    pub fn new(n: u32) -> Self {
+        CID {
+            id_list: smallvec![n],
         }
     }
-    pub fn new_random() -> CID {
-        CID::Unit(new_rand_cid())
+
+    pub fn new_random() -> Self {
+        Self::new(new_rand_cid())
     }
 
     /// new with ordered id
-    pub fn new_ordered(last_id: &std::sync::atomic::AtomicU32) -> CID {
-        let li = new_ordered_cid(last_id);
-        CID::Unit(li)
+    pub fn new_ordered(last_id: &std::sync::atomic::AtomicU32) -> Self {
+        Self::new(new_ordered_cid(last_id))
     }
 
-    pub fn new_by_ogtr(ogtr: Option<Arc<GlobalTrafficRecorder>>) -> CID {
+    pub fn new_by_ogtr(ogtr: Option<Arc<GlobalTrafficRecorder>>) -> Self {
         match ogtr {
-            Some(gtr) => CID::new_ordered(&gtr.last_connection_id),
-            None => CID::new_random(),
+            Some(gtr) => Self::new_ordered(&gtr.last_connection_id),
+            None => Self::new_random(),
         }
     }
 
-    /// is Unit(0) or can collapse to it
     pub fn is_zero(&self) -> bool {
-        match self {
-            CID::Unit(u) => *u == 0,
-            CID::Chain(chain) => match chain.id_list.len() {
-                0 => true,
-                1 => chain.id_list[0] == 0,
-                _ => false,
-            },
+        match self.id_list.len() {
+            0 => true,
+            1 => self.id_list[0] == 0,
+            _ => false,
         }
     }
 
@@ -241,19 +217,7 @@ impl CID {
 
     /// push_num add a new number to self.
     pub fn push_num(&mut self, new_id_num: u32) {
-        match self {
-            CID::Unit(u) => {
-                let x = *u;
-                if x == 0 {
-                    *self = CID::Unit(new_id_num);
-                } else {
-                    *self = CID::Chain(CIDChain {
-                        id_list: smallvec![x, new_id_num],
-                    })
-                }
-            }
-            CID::Chain(c) => c.id_list.push(new_id_num),
-        };
+        self.id_list.push(new_id_num)
     }
 
     /// won't change self
@@ -264,39 +228,30 @@ impl CID {
     }
 
     /// won't change self
-    pub fn clone_pop(&self) -> CID {
+    pub fn clone_pop(&self) -> Self {
         let mut cid = self.clone();
         cid.pop()
     }
 
     /// change self, collapse to Unit if the chain length=1 after pop
-    pub fn pop(&mut self) -> CID {
-        match self {
-            CID::Unit(u) => {
-                let u = *u;
-                *self = CID::Unit(0);
-                CID::Unit(u)
-            }
-            CID::Chain(chain) => {
-                let last = chain.id_list.pop();
-                match last {
-                    Some(last) => {
-                        match chain.id_list.len() {
-                            0 => {
-                                *self = CID::Unit(0);
-                            }
-                            1 => {
-                                let l = chain.id_list.pop().expect("ok");
-                                *self = CID::Unit(l)
-                            }
-                            _ => {}
-                        }
-
-                        CID::Unit(last)
+    pub fn pop(&mut self) -> Self {
+        let last = self.id_list.pop();
+        match last {
+            Some(last) => {
+                match self.id_list.len() {
+                    0 => {
+                        *self = Self::new(0);
                     }
-                    None => CID::Unit(0),
+                    1 => {
+                        let l = self.id_list.pop().expect("ok");
+                        *self = Self::new(l)
+                    }
+                    _ => {}
                 }
+
+                Self::new(last)
             }
+            None => Self::new(0),
         }
     }
 }

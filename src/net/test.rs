@@ -9,20 +9,31 @@ use super::*;
 const TEST_DOMAIN: &str = "www.baidu.com";
 
 #[test]
-fn print_cid_chain() {
-    let cc = CIDChain {
-        id_list: smallvec![1, 2],
-    };
+fn test_cid() {
+    let mut c = CID::default();
+    c.push_num(1);
+    c.push_num(2);
 
-    let mut c = CID::Chain(cc);
     c.push_num(3);
     println!("{}", c);
     let s = c.to_string();
+    c.pop();
+    println!("{}", c);
+    c.pop();
+    println!("{}", c);
+    c.pop();
+    println!("{}", c);
 
     let cc_new = CID::from_str(&s);
     println!("{}", cc_new.unwrap());
 
     let cc_new = CID::from_str("123");
+    println!("{}", cc_new.unwrap());
+
+    let cc_new = CID::from_str("1-23");
+    println!("{}", cc_new.unwrap());
+
+    let cc_new = CID::from_str("1-2-3");
     println!("{}", cc_new.unwrap());
 
     let cc_new = CID::from_str("123x");

@@ -234,7 +234,7 @@ impl Engine {
 
             let (atx, arx) = mpsc::channel(100); //todo: change this
 
-            let cid = CID::Unit(index);
+            let cid = CID::new(index);
             debug!(inbound_index = index, "accumulate_from_start");
             let t1 =
                 acc::accumulate_from_start(cid, atx, rx, miter.clone(), Some(self.gtr.clone()));
