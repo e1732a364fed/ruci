@@ -52,7 +52,10 @@ pub struct LuaBytesMut(pub BytesMut);
 
 impl UserData for LuaBytesMut {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method_mut("put_u16", |_, b, u| Ok(b.0.put_u16(u)));
+        methods.add_method_mut("put_u16", |_, b, u| {
+            b.0.put_u16(u);
+            Ok(())
+        });
     }
 }
 

@@ -392,25 +392,29 @@ mod test {
     }
 
     fn get_miter_ab() -> DMIterBox {
-        let mut a = Adder::default();
-        a.add_num = 1;
+        let a = Adder {
+            add_num: 1,
+            ..Default::default()
+        };
         let a: MapBox = Box::new(a);
 
         let b = Adder::default();
         let b: MapBox = Box::new(b);
 
         let v = vec![a, b];
-        let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
+        let v: Vec<_> = v.into_iter().map(Arc::new).collect();
         let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
         m
     }
     fn get_miter_a() -> DMIterBox {
-        let mut a = Adder::default();
-        a.add_num = 2;
+        let a = Adder {
+            add_num: 2,
+            ..Default::default()
+        };
         let a: MapBox = Box::new(a);
 
         let v = vec![a];
-        let v: Vec<_> = v.into_iter().map(|b| Arc::new(b)).collect();
+        let v: Vec<_> = v.into_iter().map(Arc::new).collect();
         let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
 
         m
@@ -425,8 +429,10 @@ mod test {
         outbounds_map.insert("d1".to_string(), m);
         let outbounds_map = Arc::new(outbounds_map);
 
-        let mut rs = RuleSet::default();
-        rs.out_tag = "d1".to_string();
+        let mut rs = RuleSet {
+            out_tag: "d1".to_string(),
+            ..Default::default()
+        };
         let mut hs = HashSet::new();
         hs.insert("listen1".to_string());
         rs.in_tags = Some(hs);

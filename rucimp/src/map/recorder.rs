@@ -83,8 +83,7 @@ impl From<&mut RecordData> for SimplifiedRecordData {
         let truncate = !d.no_truncate.unwrap_or(false);
 
         let convert = |d: Vec<DataPiece>, i: i8| -> Vec<(i8, u128, Vec<u8>)> {
-            return d
-                .into_iter()
+            d.into_iter()
                 .map(|dp| {
                     let mut data = match dp.data {
                         PayloadData::Pure(d) => d,
@@ -95,7 +94,7 @@ impl From<&mut RecordData> for SimplifiedRecordData {
                     }
                     (i, dp.nanos_since_start, data)
                 })
-                .collect();
+                .collect()
         };
 
         let mut dd = Vec::new();
@@ -228,7 +227,7 @@ impl RecordData {
             Ok(serde_cbor::to_writer(f, &self)?)
         } else {
             let sd = SimplifiedRecordData::from(self);
-            if sd.data.len() > 0 {
+            if !sd.data.is_empty() {
                 let f = std::fs::File::create(name).unwrap();
 
                 serde_cbor::to_writer(f, &sd)?
@@ -244,7 +243,7 @@ impl RecordData {
             Ok(serde_json::to_writer_pretty(f, &self)?)
         } else {
             let sd = SimplifiedRecordData::from(self);
-            if sd.data.len() > 0 {
+            if !sd.data.is_empty() {
                 let f = std::fs::File::create(name).unwrap();
 
                 serde_json::to_writer_pretty(f, &sd)?
@@ -586,12 +585,12 @@ mod test {
         let sgd = SerializableGlobalData::from(&gd);
         println!("sgd {:?}  ", sgd.instance_start_time);
 
-        let gd2: GlobalData;
-        gd2 = (&sgd).into();
+        
+        let gd2: GlobalData = (&sgd).into();
         println!("gd2   {:?}", gd2.instance_start_time);
 
-        let sgd2: SerializableGlobalData;
-        sgd2 = SerializableGlobalData::from(&gd2);
+        
+        let sgd2: SerializableGlobalData = SerializableGlobalData::from(&gd2);
         println!("sgd2   {:?}", sgd2.instance_start_time);
 
         assert_eq!(sgd2.instance_start_time, sgd.instance_start_time)

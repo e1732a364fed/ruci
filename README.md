@@ -186,6 +186,7 @@ o2node-.->collector
 - [x] 路由 (tag_route)
 - [x] 回落
 - [x] DNS: client
+- [x] http1.1 识别
 
 ### rucimp
 
@@ -203,6 +204,7 @@ o2node-.->collector
 - [x] tcp/ip stack (smoltcp) (测试阶段，暂不稳定)
 - [ ] ss
 - [ ] vmess
+- [x] Steganography Protocol Example1
 
 ### ruci-cmd
 

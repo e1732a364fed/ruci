@@ -27,7 +27,7 @@ pub fn print_env_version_and_init_log(name: &str) {
 
     println!(
         "Log Level(env): {:?}",
-        std::env::var(RL).map_or_else(|_| String::new(), |v| v)
+        std::env::var(RL).unwrap_or_else(|_| String::new())
     );
 
     info!("version: rucimp_{}", rucimp::VERSION,)

@@ -5,8 +5,9 @@ See <https://datatracker.ietf.org/doc/html/rfc2616>
 
 */
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, str::FromStr};
 
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 /// used by various Maps in ruci that has a http layer
@@ -36,21 +37,24 @@ pub struct Header {
     pub value: String,
 }
 
-impl Header {
+impl std::str::FromStr for Header {
+    type Err = anyhow::Error;
+
     // init from strings like "h:v" or "h: v"
-    pub fn from_str(s: &str) -> Option<Self> {
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let r = s.split_once(":");
 
         match r {
             Some((head, mut value)) => {
                 value = value.trim_start();
 
-                Some(Header {
+                Ok(Header {
                     head: head.to_string(),
                     value: value.to_string(),
                 })
             }
-            None => None,
+            None => Err(anyhow!("Header:from_str: format wrong")),
         }
     }
 }
@@ -392,10 +396,10 @@ pub fn parse_h1_response(bs: &[u8]) -> ParsedHttpResponse {
                 return resp;
             }
 
-            for i in 1..x.len() {
-                match Header::from_str(x[i]) {
-                    Some(h) => resp.headers.push(h),
-                    None => {
+            for xi in x.iter().skip(1) {
+                match Header::from_str(xi) {
+                    Ok(h) => resp.headers.push(h),
+                    Err(_) => {
                         resp.parse_result = Err(ParseError::HeaderNoColonOrColonNotFollowedBySpace);
                         return resp;
                     }

@@ -351,8 +351,8 @@ pub struct Conn {
     read_state: ReadState,
 }
 
-pub const READ_CAP: usize = 1048576; //1MB
-const SERVER_QUESTION_PROMPT: &'static str = "\nYou can also ask these questions:\n";
+pub const READ_CAP: usize = 1024 * 1024;
+const SERVER_QUESTION_PROMPT: &str = "\nYou can also ask these questions:\n";
 
 impl Conn {
     fn server_read(
@@ -381,12 +381,12 @@ impl Conn {
                 match self.base.as_mut().poll_read(cx, &mut rb) {
                     Poll::Pending => {
                         let _ = self.read_cache.insert(rc);
-                        return Poll::Pending;
+                        Poll::Pending
                     }
                     Poll::Ready(r) => match r {
                         Err(e) => {
                             let _ = self.read_cache.insert(rc);
-                            return Poll::Ready(Err(e));
+                            Poll::Ready(Err(e))
                         }
                         Ok(_) => {
                             let data = rb.filled();
@@ -411,14 +411,13 @@ impl Conn {
                                     );
 
                                     let _ = self.read_cache.insert(rc);
-                                    return Poll::Ready(Err(io_e));
+                                    Poll::Ready(Err(io_e))
                                 }
                                 Ok(_) => {
                                     match pr
                                         .headers
                                         .iter()
-                                        .filter(|h| h.head.contains("Content-Length"))
-                                        .next()
+                                        .find(|h| h.head.contains("Content-Length"))
                                     {
                                         None => {
                                             let io_e = std::io::Error::new(
@@ -427,7 +426,7 @@ impl Conn {
                                             );
 
                                             let _ = self.read_cache.insert(rc);
-                                            return Poll::Ready(Err(io_e));
+                                            Poll::Ready(Err(io_e))
                                         }
                                         Some(h) => {
                                             let clr: Result<usize, _> = h.value.parse();
@@ -439,7 +438,7 @@ impl Conn {
                                                     );
 
                                                     let _ = self.read_cache.insert(rc);
-                                                    return Poll::Ready(Err(io_e));
+                                                    Poll::Ready(Err(io_e))
                                                 }
                                                 Ok(content_len) => {
                                                     let si = pr.body_start_index;
@@ -457,7 +456,7 @@ impl Conn {
 
                                                         let _ = self.read_cache.insert(rc);
 
-                                                        return self.server_read(cx, buf);
+                                                        self.server_read(cx, buf)
                                                     } else {
                                                         let r = self.server_real_read(
                                                             si,
@@ -486,12 +485,12 @@ impl Conn {
                 match self.base.as_mut().poll_read(cx, &mut rb) {
                     Poll::Pending => {
                         let _ = self.read_cache.insert(rc);
-                        return Poll::Pending;
+                        Poll::Pending
                     }
                     Poll::Ready(r) => match r {
                         Err(e) => {
                             let _ = self.read_cache.insert(rc);
-                            return Poll::Ready(Err(e));
+                            Poll::Ready(Err(e))
                         }
                         Ok(_) => {
                             let data = rb.filled();
@@ -509,7 +508,7 @@ impl Conn {
 
                                 let _ = self.read_cache.insert(rc);
 
-                                return self.server_read(cx, buf);
+                                self.server_read(cx, buf)
                             } else {
                                 let real_data =
                                     &data[body_start_index..body_start_index + content_len];
@@ -552,24 +551,22 @@ impl Conn {
                 buf.put_slice(&bm.0);
                 self.server_cached_answers = bm.1.unwrap();
 
-                return Poll::Ready(Ok(()));
+                Poll::Ready(Ok(()))
             }
             Err(e) => {
                 let io_e = std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("spe1: question string to bytes err: {}", e.to_string()),
+                    format!("spe1: question string to bytes err: {e}"),
                 );
 
-                return Poll::Ready(Err(io_e));
+                Poll::Ready(Err(io_e))
             }
         }
     }
 
-    fn server_response_to_2_answer_parts(s: &str) -> Option<(&str, &str)> {
-        match s.split_once(SERVER_QUESTION_PROMPT) {
-            Some(parts) => Some((parts.0, parts.1)),
-            None => None,
-        }
+    fn server_response_to_2_parts(s: &str) -> Option<(&str, &str)> {
+        s.split_once(SERVER_QUESTION_PROMPT)
+            .map(|parts| (parts.0, parts.1))
     }
 
     fn client_read(
@@ -597,12 +594,12 @@ impl Conn {
                 match self.base.as_mut().poll_read(cx, &mut rb) {
                     Poll::Pending => {
                         let _ = self.read_cache.insert(rc);
-                        return Poll::Pending;
+                        Poll::Pending
                     }
                     Poll::Ready(r) => match r {
                         Err(e) => {
                             let _ = self.read_cache.insert(rc);
-                            return Poll::Ready(Err(e));
+                            Poll::Ready(Err(e))
                         }
                         Ok(_) => {
                             let data = rb.filled();
@@ -624,14 +621,13 @@ impl Conn {
                                     );
 
                                     let _ = self.read_cache.insert(rc);
-                                    return Poll::Ready(Err(io_e));
+                                    Poll::Ready(Err(io_e))
                                 }
                                 Ok(_) => {
                                     match pr
                                         .headers
                                         .iter()
-                                        .filter(|h| h.head.contains("Content-Length"))
-                                        .next()
+                                        .find(|h| h.head.contains("Content-Length"))
                                     {
                                         None => {
                                             let io_e = std::io::Error::new(
@@ -640,7 +636,7 @@ impl Conn {
                                             );
 
                                             let _ = self.read_cache.insert(rc);
-                                            return Poll::Ready(Err(io_e));
+                                            Poll::Ready(Err(io_e))
                                         }
                                         Some(h) => {
                                             let clr: Result<usize, _> = h.value.parse();
@@ -652,7 +648,7 @@ impl Conn {
                                                     );
 
                                                     let _ = self.read_cache.insert(rc);
-                                                    return Poll::Ready(Err(io_e));
+                                                    Poll::Ready(Err(io_e))
                                                 }
                                                 Ok(content_len) => {
                                                     let si = pr.body_start_index;
@@ -670,7 +666,7 @@ impl Conn {
 
                                                         let _ = self.read_cache.insert(rc);
 
-                                                        return self.client_read(cx, buf);
+                                                        self.client_read(cx, buf)
                                                     } else {
                                                         let r = self.client_real_read(
                                                             si,
@@ -700,13 +696,13 @@ impl Conn {
                 match self.base.as_mut().poll_read(cx, &mut rb) {
                     Poll::Pending => {
                         let _ = self.read_cache.insert(rc);
-                        return Poll::Pending;
+                        Poll::Pending
                     }
                     Poll::Ready(r) => match r {
                         Err(e) => {
                             let _ = self.read_cache.insert(rc);
                             self.read_state = ReadState::ReadyForNew;
-                            return Poll::Ready(Err(e));
+                            Poll::Ready(Err(e))
                         }
                         Ok(_) => {
                             let data = rb.filled();
@@ -721,7 +717,7 @@ impl Conn {
 
                                 let _ = self.read_cache.insert(rc);
 
-                                return self.client_read(cx, buf);
+                                self.client_read(cx, buf)
                             } else {
                                 let r =
                                     self.client_real_read(body_start_index, content_len, data, buf);
@@ -750,7 +746,7 @@ impl Conn {
 
         trace!( cid=%self.cid,"spe1client read finish ");
 
-        match Self::server_response_to_2_answer_parts(&real_string) {
+        match Self::server_response_to_2_parts(&real_string) {
             Some(answers_questions) => {
                 //舍弃 part1, 只使用 part2
 
@@ -761,15 +757,15 @@ impl Conn {
                     Ok(bm) => {
                         buf.put_slice(&bm.0);
 
-                        return Poll::Ready(Ok(()));
+                        Poll::Ready(Ok(()))
                     }
                     Err(e) => {
                         let io_e = std::io::Error::new(
                             std::io::ErrorKind::Other,
-                            format!("questions string to bytes err: {}", e.to_string()),
+                            format!("questions string to bytes err: {e}"),
                         );
 
-                        return Poll::Ready(Err(io_e));
+                        Poll::Ready(Err(io_e))
                     }
                 }
             }
@@ -824,7 +820,9 @@ impl AsyncWrite for Conn {
                     }
                     write_cache.clear();
 
-                    let _ =write_cache.write_str(&format!("http/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n",content_buf.len()));
+                    let _ =write_cache.write_str("http/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Type: text/plain\r\nContent-Length: ");
+                    let _ = write_cache.write_str(&content_buf.len().to_string());
+                    let _ = write_cache.write_str("\r\n\r\n");
 
                     write_cache.extend_from_slice(&content_buf[..]);
 
@@ -839,38 +837,38 @@ impl AsyncWrite for Conn {
                             Err(e) => {
                                 let _ = self.write_cache.insert(write_cache);
 
-                                return Poll::Ready(Err(e));
+                                Poll::Ready(Err(e))
                             }
 
-                            Ok(n) => {
-                                if n == write_cache.len() {
+                            Ok(n) => match n.cmp(&write_cache.len()) {
+                                std::cmp::Ordering::Less => {
+                                    trace!( cid=%self.cid,
+                                        "spe1server partial write {n}, {}",
+                                        write_cache.len()
+                                    );
+
+                                    write_cache.advance(n);
+                                    self.write_state = WriteState::Previous;
+                                    let _ = self.write_cache.insert(write_cache);
+
+                                    self.poll_write(cx, buf)
+                                }
+                                std::cmp::Ordering::Equal => {
                                     let _ = self.write_cache.insert(write_cache);
 
                                     trace!( cid=%self.cid,"spe1server  write ok {n}");
 
-                                    return Poll::Ready(Ok(buf.len()));
-                                } else {
-                                    if n > write_cache.len() {
-                                        let cl = write_cache.len();
-                                        let _ = self.write_cache.insert(write_cache);
-
-                                        return Poll::Ready(Err(io::Error::other(format!(
-                                            "write len not right, {n}, {cl}",
-                                        ))));
-                                    } else {
-                                        trace!( cid=%self.cid,
-                                            "spe1server partial write {n}, {}",
-                                            write_cache.len()
-                                        );
-
-                                        write_cache.advance(n);
-                                        self.write_state = WriteState::Previous;
-                                        let _ = self.write_cache.insert(write_cache);
-
-                                        self.poll_write(cx, buf)
-                                    }
+                                    Poll::Ready(Ok(buf.len()))
                                 }
-                            }
+                                std::cmp::Ordering::Greater => {
+                                    let cl = write_cache.len();
+                                    let _ = self.write_cache.insert(write_cache);
+
+                                    Poll::Ready(Err(io::Error::other(format!(
+                                        "write len not right, {n}, {cl}",
+                                    ))))
+                                }
+                            },
                         },
                     }
                 }
@@ -889,40 +887,40 @@ impl AsyncWrite for Conn {
                                 self.write_state = WriteState::ReadyForNew;
                                 let _ = self.write_cache.insert(write_cache);
 
-                                return Poll::Ready(Err(e));
+                                Poll::Ready(Err(e))
                             }
-                            Ok(n) => {
-                                if n == write_cache.len() {
+                            Ok(n) => match n.cmp(&write_cache.len()) {
+                                std::cmp::Ordering::Less => {
+                                    trace!( cid=%self.cid,
+                                        "spe1server partial write2 {n}, {}",
+                                        write_cache.len()
+                                    );
+
+                                    write_cache.advance(n);
+                                    let _ = self.write_cache.insert(write_cache);
+
+                                    self.write_state = WriteState::Previous;
+
+                                    self.poll_write(cx, buf)
+                                }
+                                std::cmp::Ordering::Equal => {
                                     let _ = self.write_cache.insert(write_cache);
                                     self.write_state = WriteState::ReadyForNew;
 
                                     trace!( cid=%self.cid,"spe1server partial write2 finish");
 
-                                    return Poll::Ready(Ok(buf.len()));
-                                } else {
-                                    if n > write_cache.len() {
-                                        let cl = write_cache.len();
-                                        let _ = self.write_cache.insert(write_cache);
-                                        self.write_state = WriteState::ReadyForNew;
-
-                                        return Poll::Ready(Err(io::Error::other(format!(
-                                            "write len not right, {n}, {cl}",
-                                        ))));
-                                    } else {
-                                        trace!( cid=%self.cid,
-                                            "spe1server partial write2 {n}, {}",
-                                            write_cache.len()
-                                        );
-
-                                        write_cache.advance(n);
-                                        let _ = self.write_cache.insert(write_cache);
-
-                                        self.write_state = WriteState::Previous;
-
-                                        self.poll_write(cx, buf)
-                                    }
+                                    Poll::Ready(Ok(buf.len()))
                                 }
-                            }
+                                std::cmp::Ordering::Greater => {
+                                    let cl = write_cache.len();
+                                    let _ = self.write_cache.insert(write_cache);
+                                    self.write_state = WriteState::ReadyForNew;
+
+                                    Poll::Ready(Err(io::Error::other(format!(
+                                        "write len not right, {n}, {cl}",
+                                    ))))
+                                }
+                            },
                         },
                     }
                 }
@@ -935,8 +933,6 @@ impl AsyncWrite for Conn {
                     let s = self.qa.bytes_to_questions_text(buf);
                     content_buf.extend_from_slice(s.as_bytes());
 
-                    // let mut real_buf = BytesMut::new();
-
                     let mut write_cache = self.write_cache.take().unwrap();
 
                     if write_cache.capacity() < READ_CAP {
@@ -944,7 +940,9 @@ impl AsyncWrite for Conn {
                     }
                     write_cache.clear();
 
-                    let _ = write_cache.write_str(&format!("POST /ask HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\nContent-Length: {}\r\nContent-Type: text/plain\r\n\r\n",content_buf.len()));
+                    let _ = write_cache.write_str("POST /ask HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\nContent-Length: ");
+                    let _ = write_cache.write_str(&content_buf.len().to_string());
+                    let _ = write_cache.write_str("\r\nContent-Type: text/plain\r\n\r\n");
 
                     write_cache.extend_from_slice(&content_buf[..]);
 
@@ -969,11 +967,6 @@ impl AsyncWrite for Conn {
                                     let _ = self.write_cache.insert(write_cache);
                                     Poll::Ready(Ok(buf.len()))
                                 } else {
-                                    // Poll::Ready(Err(io::Error::other(format!(
-                                    //     "write len not right {}, {}",
-                                    //     n,
-                                    //     real_buf.len()
-                                    // ))))
                                     write_cache.advance(n);
                                     let _ = self.write_cache.insert(write_cache);
 
@@ -1000,40 +993,40 @@ impl AsyncWrite for Conn {
                                 self.write_state = WriteState::ReadyForNew;
                                 let _ = self.write_cache.insert(write_cache);
 
-                                return Poll::Ready(Err(e));
+                                Poll::Ready(Err(e))
                             }
-                            Ok(n) => {
-                                if n == write_cache.len() {
+                            Ok(n) => match n.cmp(&write_cache.len()) {
+                                std::cmp::Ordering::Less => {
+                                    trace!( cid=%self.cid,
+                                        "spe1client partial write2 {n}, {}",
+                                        write_cache.len()
+                                    );
+
+                                    write_cache.advance(n);
+                                    let _ = self.write_cache.insert(write_cache);
+
+                                    self.write_state = WriteState::Previous;
+
+                                    self.poll_write(cx, buf)
+                                }
+                                std::cmp::Ordering::Equal => {
                                     let _ = self.write_cache.insert(write_cache);
                                     self.write_state = WriteState::ReadyForNew;
 
                                     trace!( cid=%self.cid,"spe1client partial write2 finish");
 
-                                    return Poll::Ready(Ok(buf.len()));
-                                } else {
-                                    if n > write_cache.len() {
-                                        let cl = write_cache.len();
-                                        let _ = self.write_cache.insert(write_cache);
-                                        self.write_state = WriteState::ReadyForNew;
-
-                                        return Poll::Ready(Err(io::Error::other(format!(
-                                            "write len not right, {n}, {cl}",
-                                        ))));
-                                    } else {
-                                        trace!( cid=%self.cid,
-                                            "spe1client partial write2 {n}, {}",
-                                            write_cache.len()
-                                        );
-
-                                        write_cache.advance(n);
-                                        let _ = self.write_cache.insert(write_cache);
-
-                                        self.write_state = WriteState::Previous;
-
-                                        self.poll_write(cx, buf)
-                                    }
+                                    Poll::Ready(Ok(buf.len()))
                                 }
-                            }
+                                std::cmp::Ordering::Greater => {
+                                    let cl = write_cache.len();
+                                    let _ = self.write_cache.insert(write_cache);
+                                    self.write_state = WriteState::ReadyForNew;
+
+                                    Poll::Ready(Err(io::Error::other(format!(
+                                        "write len not right, {n}, {cl}",
+                                    ))))
+                                }
+                            },
                         },
                     }
                 }
@@ -1090,7 +1083,7 @@ impl map::Map for ClientOrServer {
                     .b(params.b)
                     .build();
             }
-            _ => todo!(),
+            _ => MapResult::err_str("spe1 only support tcplike stream"),
         }
     }
 }
