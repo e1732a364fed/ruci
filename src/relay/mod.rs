@@ -235,6 +235,7 @@ pub fn cp_stream(
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
+    //todo: add trace for udp
     match (s1, s2) {
         (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(
             cid,

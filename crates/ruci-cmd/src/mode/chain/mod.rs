@@ -15,6 +15,7 @@ use std::sync::Arc;
 #[allow(unused)]
 pub(crate) async fn run(
     f: &str,
+    args: crate::Args,
     #[cfg(feature = "api_server")] opts: Option<(
         api::server::Server,
         mpsc::Receiver<()>,
@@ -38,7 +39,14 @@ pub(crate) async fn run(
     #[cfg(feature = "api_server")]
     {
         if let Some(mut s) = opts {
-            setup_api_server_with_chain_engine(&mut se, &mut s.0, s.2).await;
+            setup_api_server_with_chain_engine(
+                &mut se,
+                #[cfg(feature = "trace")]
+                args,
+                &mut s.0,
+                s.2,
+            )
+            .await;
 
             run_engine(&se, Some(s.1)).await?;
 
@@ -70,6 +78,7 @@ async fn run_engine(e: &Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow:
 #[cfg(feature = "api_server")]
 async fn setup_api_server_with_chain_engine(
     e: &mut Engine,
+    #[cfg(feature = "trace")] args: crate::Args,
     api_ser: &mut api::server::Server,
     gtr: Arc<ruci::net::GlobalTrafficRecorder>,
 ) {
@@ -77,7 +86,9 @@ async fn setup_api_server_with_chain_engine(
 
     setup_record_newconn_info(e, api_ser).await;
     #[cfg(feature = "trace")]
-    setup_trace_flux(e, api_ser).await;
+    if args.trace {
+        setup_trace_flux(e, api_ser).await;
+    }
 }
 
 /// 记录新连接信息

@@ -160,7 +160,9 @@ fn get_iobounds_by_config_and_selector_map(
 /// used by load_infinite,
 pub type GMAP = HashMap<String, LuaNextGenerator>;
 
-/// get (inbounds generator map, outbounds generator map)
+/// get (inbounds generator map, outbounds generator map).
+///
+/// read "dyn_config"  global variable
 pub fn load_infinite_io(text: &str) -> anyhow::Result<(GMAP, GMAP)> {
     let i = get_infinite_gmap_from(text, ProxyBehavior::DECODE)?;
     let o = get_infinite_gmap_from(text, ProxyBehavior::ENCODE)?;

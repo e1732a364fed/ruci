@@ -37,6 +37,11 @@ struct Args {
     #[arg(short, long)]
     log_level: Option<log::Level>,
 
+    /// enable flux trace (might slow down performance)
+    #[cfg(feature = "trace")]
+    #[arg(long)]
+    trace: bool,
+
     #[cfg(feature = "api_server")]
     #[arg(short, long, value_enum)]
     api_server: Vec<api::server::Command>,
@@ -93,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
                 for arg in api_server_args {
                     let x = api::server::deal_args(arg, &args).await;
                     if let Some(opts) = x {
-                        start_engine(args.mode.clone(), args.config.clone(), Some(opts)).await?;
+                        start_engine(args.clone(), args.config.clone(), Some(opts)).await?;
                     }
                 }
             }
@@ -168,7 +173,7 @@ pub fn print_env_version(ll: Option<Level>) {
 
 /// blocking
 async fn start_engine(
-    m: Mode,
+    args: Args,
     f: String,
     #[cfg(feature = "api_server")] opts: Option<(
         api::server::Server,
@@ -176,10 +181,11 @@ async fn start_engine(
         std::sync::Arc<ruci::net::GlobalTrafficRecorder>,
     )>,
 ) -> anyhow::Result<()> {
-    match m {
+    match args.mode {
         Mode::C => {
             mode::chain::run(
                 &f,
+                args,
                 #[cfg(feature = "api_server")]
                 opts,
             )
