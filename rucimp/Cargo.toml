@@ -23,3 +23,10 @@ mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lo
 [features]
 default = ["lua"]
 lua = ["mlua"]
+
+[[example]]
+name = "suit"
+
+
+[[example]]
+name = "suit2"

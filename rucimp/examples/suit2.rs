@@ -1,7 +1,7 @@
 /*!
- * rucimp 提供一个简易可执行文件，若要全功能，用 rucimple
+ * rucimp 提供数个示例可执行文件, 若要全功能, 用 rucimple
  *
- * 查找 config.toml 文件，读取它并以suit模式运行。
+ * 在working dir 或 working dir /resource 文件夹查找 config.toml 文件, 读取它并以suit模式运行。
  */
 
 use std::{
@@ -9,18 +9,18 @@ use std::{
     fs,
 };
 
-use log::{info, log_enabled, Level};
+use log::{info, log_enabled, warn, Level};
 use rucimp::{
     suit::config::adapter::{
         load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
     },
-    suit::engine::SuitEngine,
+    suit::engine2::SuitEngine,
 };
-//use rucimp::{load_in_adder_by_str, load_out_adder_by_str, SuitEngine};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    println!("rucimp~ \n");
+    println!("rucimp~ suit2\n");
+    println!("working dir: {:?} \n", std::env::current_dir().unwrap());
 
     const RL: &str = "RUST_LOG";
     let l = env::var(RL).unwrap_or("warn".to_string());
@@ -41,7 +41,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("versions: ruci_{}_mp_{}", ruci::VERSION, rucimp::VERSION,)
     }
 
-    let contents = fs::read_to_string("config.toml").expect("no config.toml");
+    let mut r_contents = fs::read_to_string("config.suit.toml");
+    if r_contents.is_err() {
+        r_contents = fs::read_to_string("resource/config.suit.toml");
+    }
+
+    let contents = r_contents.expect("no config.toml");
+
     println!("{}", contents);
     let mut se = SuitEngine::new(
         load_in_mappers_by_str_and_ldconfig,
@@ -51,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     se.load_config_from_str(&contents);
     let r = se.block_run().await;
 
-    info!("r {:?}", r);
+    warn!("r {:?}", r);
 
     Ok(())
 }

@@ -1,9 +1,0 @@
-[[listen]]
-protocol = "socks5"
-host = "127.0.0.1"
-port = 10800
-#uuid = "u0 p0"
-#users = [ { user = "u1", pass = "p1"},  { user = "u2", pass = "p2"}, ]
-
-[[dial]]
-protocol = "direct"
