@@ -157,6 +157,8 @@ impl UDPListener {
         listen_a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
     ) -> MapResult {
+        let (shutdown_addrconn_tx, shutdown_addrconn_rx) = oneshot::channel();
+
         let r = match listen_a.network {
             Network::UDP => so2::listen_udp(&listen_a, &self.sopt).await.map(|s| {
                 let (tx, rx) = mpsc::channel(100); //todo: adjust this
@@ -180,6 +182,7 @@ impl UDPListener {
                 tokio::spawn(async move {
                     let _ = shutdown_rx.await;
                     info!("tproxy udp got shutdown signal");
+                    let _ = shutdown_addrconn_tx.send(());
                     thr.terminate();
                     info!("tproxy udp terminated");
                 });
@@ -207,6 +210,7 @@ impl UDPListener {
                     Addr::from_network_addr_str("udp://1.1.1.1:53").expect("ok"),
                 ))
                 .b(Some(fake_b))
+                .shutdown_rx(shutdown_addrconn_rx)
                 .build(),
             Err(e) => MapResult::from_e(
                 e.context(format!("tproxy_udp_listener dial {} failed", listen_a)),
@@ -322,6 +326,7 @@ impl AsyncReadAddr for UdpR {
     }
 }
 
+/// blocking
 fn loop_accept_udp(
     us: Arc<UdpSocket>,
     tx: mpsc::Sender<AddrData>,

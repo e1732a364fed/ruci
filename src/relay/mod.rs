@@ -270,6 +270,8 @@ pub async fn handle_in_fold_result(
         dial_result.a,
         tr,
         dial_result.no_timeout,
+        listen_result.shutdown_rx,
+        dial_result.shutdown_rx,
         #[cfg(feature = "trace")]
         updater,
     );
@@ -286,6 +288,8 @@ pub fn cp_stream(
     first_target: Option<net::Addr>, // 用于 udp
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
     no_timeout: bool,
+    shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
+    shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
@@ -325,7 +329,17 @@ pub fn cp_stream(
             ));
         }
         (Stream::AddrConn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp(cid, i, o, ed, first_target, tr, no_timeout));
+            tokio::spawn(cp_udp(
+                cid,
+                i,
+                o,
+                ed,
+                first_target,
+                tr,
+                no_timeout,
+                shutdown_rx1,
+                shutdown_rx2,
+            ));
         }
         (s1, s2) => {
             warn!( s1 = %s1, s2 = %s2,"can't cp stream when one of them is not (Conn or AddrConn)");
@@ -341,6 +355,8 @@ pub async fn cp_udp(
     first_target: Option<net::Addr>,
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
     no_timeout: bool,
+    shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
+    shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 ) {
     use crate::Name;
 
@@ -378,7 +394,16 @@ pub async fn cp_udp(
         }
     }
 
-    let _ = net::addr_conn::cp(cid.clone(), &mut in_conn, &mut out_conn, tr, no_timeout).await;
+    let _ = net::addr_conn::cp(
+        cid.clone(),
+        &mut in_conn,
+        &mut out_conn,
+        tr,
+        no_timeout,
+        shutdown_rx1,
+        shutdown_rx2,
+    )
+    .await;
 
     debug!("cp_udp: calling shutdown");
 

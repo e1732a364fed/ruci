@@ -119,6 +119,8 @@ pub struct FoldResult {
 
     #[cfg(feature = "trace")]
     pub trace: Vec<String>, // table of Names of each Mapper during accumulation.
+
+    pub shutdown_rx: Option<oneshot::Receiver<()>>,
 }
 
 impl Debug for FoldResult {
@@ -250,6 +252,8 @@ pub async fn fold(params: FoldParams) -> FoldResult {
 
         #[cfg(feature = "trace")]
         trace,
+
+        shutdown_rx: last_r.shutdown_rx,
     }
 }
 

@@ -108,7 +108,7 @@ fn tproxy_get_destination_addr(msg: &libc::msghdr) -> Option<libc::sockaddr_stor
     None
 }
 
-/// usize, src_addr, dst_addr
+/// blocking, returns usize, src_addr, dst_addr
 pub fn tproxy_recv_from_with_destination<T: AsRawFd>(
     socket: &T,
     buf: &mut [u8],

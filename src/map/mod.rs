@@ -148,9 +148,12 @@ pub struct MapResult {
     /// if true, copying between AddrConn won't timeout
     #[builder(default)]
     pub no_timeout: bool,
+
+    #[builder(default, setter(strip_option))]
+    pub shutdown_rx: Option<oneshot::Receiver<()>>,
 }
 
-type MapResultBuilderStreamFilled = MapResultBuilder<((), (), (Stream,), (), (), (), (), ())>;
+type MapResultBuilderStreamFilled = MapResultBuilder<((), (), (Stream,), (), (), (), (), (), ())>;
 //some helper initializers
 impl MapResult {
     pub fn c(c: net::Conn) -> Self {

@@ -361,9 +361,19 @@ pub async fn cp(
     c2: &mut AddrConn,
     opt: Option<Arc<GlobalTrafficRecorder>>,
     no_timeout: bool,
+    shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
+    shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<u64, Error> {
     cp_between(
-        cid, &mut c1.r, &mut c1.w, &mut c2.r, &mut c2.w, opt, no_timeout,
+        cid,
+        &mut c1.r,
+        &mut c1.w,
+        &mut c2.r,
+        &mut c2.w,
+        opt,
+        no_timeout,
+        shutdown_rx1,
+        shutdown_rx2,
     )
     .await
 }
@@ -381,16 +391,64 @@ pub async fn cp_between<
     w2: &mut W2,
     opt: Option<Arc<GlobalTrafficRecorder>>,
     no_timeout: bool,
+    shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
+    shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<u64, Error> {
     let (tx1, rx1) = oneshot::channel();
     let (tx2, rx2) = oneshot::channel();
+
+    let (_tmpx0, tmp_rx0) = oneshot::channel();
+    let shutdown_rx1 = if shutdown_rx1.is_some() {
+        debug!("shutdown_rx1.is_some");
+        shutdown_rx1.unwrap()
+    } else {
+        debug!("shutdown_rx1.isnone");
+        tmp_rx0
+    }
+    .fuse();
+
+    let (_tmpx, tmp_rx) = oneshot::channel();
+    let shutdown_rx2 = if shutdown_rx2.is_some() {
+        debug!("shutdown_rx2.is_some");
+        shutdown_rx2.unwrap()
+    } else {
+        debug!("shutdown_rx2.isnone");
+        tmp_rx
+    }
+    .fuse();
+
     let (c1_to_c2, c2_to_c1) = (
         cp_addr(r1, w2, no_timeout, rx1).fuse(),
         cp_addr(r2, w1, no_timeout, rx2).fuse(),
     );
-    pin_mut!(c1_to_c2, c2_to_c1);
+    pin_mut!(c1_to_c2, c2_to_c1, shutdown_rx1, shutdown_rx2);
 
     futures::select! {
+        _ = shutdown_rx1 =>{
+            debug!("addrconn cp_between got shutdown1 signal");
+
+            let _ = tx1.send(());
+            let _ = tx2.send(());
+
+            let _rst1 = c1_to_c2.await;
+            let rst2 = c2_to_c1.await;
+
+            debug!("addrconn cp_between ended");
+            rst2
+        }
+
+        _ = shutdown_rx2 =>{
+            debug!("addrconn cp_between got shutdown2 signal");
+
+            let _ = tx1.send(());
+            let _ = tx2.send(());
+
+            let _rst1 = c1_to_c2.await;
+            let rst2 = c2_to_c1.await;
+
+            debug!("addrconn cp_between ended");
+            rst2
+        }
         rst1 = c1_to_c2 =>{
 
             if tracing::enabled!(tracing::Level::DEBUG)  {
