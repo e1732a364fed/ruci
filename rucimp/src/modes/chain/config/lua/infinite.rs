@@ -1,3 +1,5 @@
+use crate::map::lua::LuaMapWrapper;
+
 /*
 Defines functions to load infinite(complete) dynamic chain configs from a lua file.
 */
@@ -27,10 +29,14 @@ pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
 /// set global func Create_out_map for lua
 pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
+        // if let Some(f) = v.as_function() {
+        //     todo!()
+        // } else {
         let c = lua.from_value::<OutMapConfig>(v)?;
         let m = c.to_map_box();
         let m = LuaMapWrapper(Arc::new(m));
         Ok(m)
+        // }
     })?;
     lua.globals().set("Create_out_map", f)?;
     Ok(())
@@ -114,7 +120,7 @@ struct InnerLuaNextGenerator {
     tag: String,
 
     lua: Lua,
-    key: LuaRegistryKey,
+    generator_key: LuaRegistryKey,
     behavior: ProxyBehavior,
     thread_map: HashMap<CID, LuaOwnedThread>,
     create_thread_func_map: HashMap<CID, LuaOwnedFunction>,
@@ -127,7 +133,7 @@ impl InnerLuaNextGenerator {
         Self {
             tag,
             lua,
-            key,
+            generator_key: key,
             behavior,
             thread_map: HashMap::new(),
             create_thread_func_map: HashMap::new(),
@@ -316,7 +322,7 @@ impl dynamic::IndexNextMapGenerator for LuaNextGenerator {
             let l = &mg.lua;
             let cid_v = l.to_value(&cid).ok()?;
             let r = l
-                .registry_value::<LuaFunction>(&mg.key)
+                .registry_value::<LuaFunction>(&mg.generator_key)
                 .expect("must get generator from lua")
                 .call::<_, (i64, Value)>((cid_v, this_state_index, l.to_value(&data)));
             let r = r.ok()?;

@@ -14,26 +14,6 @@ use super::*;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Value};
 
-#[derive(Clone)]
-pub struct LuaMapWrapper(Arc<MapBox>);
-
-use mlua::UserData;
-
-impl<'lua> FromLua<'lua> for LuaMapWrapper {
-    fn from_lua(value: Value<'lua>, _: &'lua Lua) -> LuaResult<Self> {
-        match value {
-            Value::UserData(ud) => Ok(ud.take::<Self>()?),
-            _ => unreachable!(),
-        }
-    }
-}
-use mlua::UserDataMethods;
-impl UserData for LuaMapWrapper {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("clone", |_, m, ()| Ok(m.clone()));
-    }
-}
-
 /// load chain::config::StaticConfig from a lua file which has a
 /// "Config" global variable
 pub fn load_static(lua_text: &str) -> mlua::Result<StaticConfig> {
