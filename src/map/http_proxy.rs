@@ -24,7 +24,6 @@ use crate::utils::buf_to_ob;
 use crate::{
     net::{self, Conn},
     user::{PlainText, UsersMap},
-    Name,
 };
 
 use super::{Map, MapBox, MapExtFields, Stream};
@@ -40,11 +39,11 @@ pub struct Server {
     pub only_connect: bool,
 }
 
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "http_proxy_server"
-    }
-}
+// impl Name for Server {
+//     fn name(&self) -> &'static str {
+//         "http_proxy_server"
+//     }
+// }
 
 #[derive(Default, Clone)]
 pub struct ServerConfig {
@@ -280,11 +279,11 @@ impl Client {
     }
 }
 
-impl Name for Client {
-    fn name(&self) -> &'static str {
-        "http_proxy_client"
-    }
-}
+// impl Name for Client {
+//     fn name(&self) -> &'static str {
+//         "http_proxy_client"
+//     }
+// }
 impl Client {
     pub async fn handshake(
         &self,

@@ -13,7 +13,7 @@ use std::{
 };
 use tracing::debug;
 
-use crate::{net::CID, Name};
+use crate::net::CID;
 
 use self::utils::HexSlice;
 
@@ -33,11 +33,11 @@ pub struct Conn {
 
     write_mode: WriteMode,
 }
-impl Name for Conn {
-    fn name(&self) -> &'static str {
-        "stdio_conn"
-    }
-}
+// impl Name for Conn {
+//     fn name(&self) -> &'static str {
+//         "stdio_conn"
+//     }
+// }
 
 impl AsyncRead for Conn {
     fn poll_read(
@@ -109,11 +109,11 @@ pub struct Stdio {
     pub write_mode: WriteMode,
 }
 
-impl Name for Stdio {
-    fn name(&self) -> &'static str {
-        "stdio"
-    }
-}
+// impl Name for Stdio {
+//     fn name(&self) -> &'static str {
+//         "stdio"
+//     }
+// }
 
 #[async_trait]
 impl Map for Stdio {

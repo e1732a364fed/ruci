@@ -13,12 +13,9 @@ use tracing::info;
 use self::map::helpers::MAX_LEN_SOCKS5_BYTES;
 
 use super::*;
-use crate::{
-    net::{
-        addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr},
-        *,
-    },
-    Name,
+use crate::net::{
+    addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr},
+    *,
 };
 
 /// socks5 udp conn
@@ -27,11 +24,11 @@ pub struct Conn {
     base: Arc<UdpSocket>,
     peer_soa: SocketAddr,
 }
-impl Name for Conn {
-    fn name(&self) -> &str {
-        "socks5_udp"
-    }
-}
+// impl Name for Conn {
+//     fn name(&self) -> &str {
+//         "socks5_udp"
+//     }
+// }
 
 impl Conn {
     pub fn new(u: UdpSocket, peer_soa: SocketAddr) -> Self {

@@ -13,11 +13,11 @@ use tracing::{debug, info, warn};
 #[derive(Clone, Debug, Default, MapExt)]
 pub struct Echo {}
 
-impl Name for Echo {
-    fn name(&self) -> &'static str {
-        "echo"
-    }
-}
+// impl Name for Echo {
+//     fn name(&self) -> &'static str {
+//         "echo"
+//     }
+// }
 
 impl Echo {
     pub fn boxed() -> MapBox {

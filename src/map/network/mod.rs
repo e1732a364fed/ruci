@@ -11,7 +11,7 @@ use tracing::info;
 
 use super::*;
 use crate::map;
-use crate::Name;
+// use crate::Name;
 use anyhow::Result;
 
 /// BlackHole drops the connection instantly
@@ -19,11 +19,11 @@ use anyhow::Result;
 #[derive(MapExt, Debug, Default, Clone)]
 pub struct BlackHole {}
 
-impl Name for BlackHole {
-    fn name(&self) -> &str {
-        "blackhole"
-    }
-}
+// impl Name for BlackHole {
+//     fn name(&self) -> &str {
+//         "blackhole"
+//     }
+// }
 
 impl BlackHole {
     pub fn boxed() -> MapBox {
@@ -54,11 +54,11 @@ pub struct Direct {
     pub leak_target_addr: bool,
     pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
-impl Name for Direct {
-    fn name(&self) -> &'static str {
-        "direct"
-    }
-}
+// impl Name for Direct {
+//     fn name(&self) -> &'static str {
+//         "direct"
+//     }
+// }
 
 #[async_trait]
 impl Map for Direct {
@@ -158,11 +158,11 @@ pub struct BindDialer {
     auto_route_state: Arc<parking_lot::Mutex<AutoRouteState>>,
 }
 
-impl Name for BindDialer {
-    fn name(&self) -> &'static str {
-        "bind_dialer"
-    }
-}
+// impl Name for BindDialer {
+//     fn name(&self) -> &'static str {
+//         "bind_dialer"
+//     }
+// }
 
 #[cfg(feature = "tun")]
 impl Drop for BindDialer {
@@ -374,11 +374,11 @@ pub struct Listener {
     pub listen_addr: net::Addr,
 }
 
-impl Name for Listener {
-    fn name(&self) -> &'static str {
-        "listener"
-    }
-}
+// impl Name for Listener {
+//     fn name(&self) -> &'static str {
+//         "listener"
+//     }
+// }
 impl Listener {
     pub async fn listen_addr(
         a: &net::Addr,

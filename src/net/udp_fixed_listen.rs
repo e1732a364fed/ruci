@@ -174,8 +174,8 @@ fn new(
         src,
         conn_map,
     };
-    let mut ac = AddrConn::new(Box::new(r), Box::new(w));
-    ac.cached_name = String::from("udp_fixed");
+    let ac = AddrConn::new(Box::new(r), Box::new(w));
+    // ac.cached_name = String::from("udp_fixed");
     ac
 }
 
@@ -185,11 +185,11 @@ struct Writer {
     src: SocketAddr,
     conn_map: Arc<Mutex<HashMap<SocketAddr, Sender<BytesMut>>>>,
 }
-impl crate::Name for Writer {
-    fn name(&self) -> &str {
-        "udp_fixed_w"
-    }
-}
+// impl crate::Name for Writer {
+//     fn name(&self) -> &str {
+//         "udp_fixed_w"
+//     }
+// }
 impl AsyncWriteAddr for Writer {
     fn poll_write_addr(
         self: Pin<&mut Self>,
@@ -233,11 +233,11 @@ struct Reader {
     last_buf: Option<BytesMut>,
     state: ReadState,
 }
-impl crate::Name for Reader {
-    fn name(&self) -> &str {
-        "udp_fixed_r"
-    }
-}
+// impl crate::Name for Reader {
+//     fn name(&self) -> &str {
+//         "udp_fixed_r"
+//     }
+// }
 
 enum ReadState {
     Buf,

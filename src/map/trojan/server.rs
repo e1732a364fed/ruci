@@ -3,7 +3,7 @@ use crate::{
     map::{self, Data, Map, MapBox, MapExtFields, MapResult, CID},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
-    utils, Name,
+    utils,
 };
 use anyhow::{anyhow, bail, Context};
 use async_trait::async_trait;
@@ -254,11 +254,11 @@ impl Server {
         }
     }
 }
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "trojan_server"
-    }
-}
+// impl Name for Server {
+//     fn name(&self) -> &'static str {
+//         "trojan_server"
+//     }
+// }
 
 #[async_trait]
 impl Map for Server {

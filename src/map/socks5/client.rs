@@ -176,11 +176,11 @@ impl Client {
     }
 }
 
-impl crate::Name for Client {
-    fn name(&self) -> &'static str {
-        "socks5_client"
-    }
-}
+// impl crate::Name for Client {
+//     fn name(&self) -> &'static str {
+//         "socks5_client"
+//     }
+// }
 
 #[async_trait::async_trait]
 impl map::Map for Client {

@@ -25,11 +25,11 @@ pub struct TcpOptListener {
     pub sopt: SockOpt,
 }
 
-impl Name for TcpOptListener {
-    fn name(&self) -> &'static str {
-        "tcp_opt_listener"
-    }
-}
+// impl Name for TcpOptListener {
+//     fn name(&self) -> &'static str {
+//         "tcp_opt_listener"
+//     }
+// }
 impl TcpOptListener {
     pub async fn listen_addr(
         &self,
@@ -100,11 +100,11 @@ pub struct OptDirect {
 
     pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
-impl Name for OptDirect {
-    fn name(&self) -> &'static str {
-        "opt_direct"
-    }
-}
+// impl Name for OptDirect {
+//     fn name(&self) -> &'static str {
+//         "opt_direct"
+//     }
+// }
 impl OptDirect {
     #[allow(unused)]
     pub fn new(
@@ -142,7 +142,10 @@ impl Map for OptDirect {
         let a = match params.a {
             Some(a) => a,
             None => {
-                return MapResult::from_err_str(&format!("{}, opt_direct need params.a, got empty", cid))
+                return MapResult::from_err_str(&format!(
+                    "{}, opt_direct need params.a, got empty",
+                    cid
+                ))
             }
         };
 
@@ -198,7 +201,9 @@ impl Map for OptDirect {
                             .a(Some(a))
                             .build();
                     }
-                    _ => return MapResult::from_err_str("OptDirect only supports Conn or AddrConn"),
+                    _ => {
+                        return MapResult::from_err_str("OptDirect only supports Conn or AddrConn")
+                    }
                 }
             }
             Err(e) => return MapResult::from_e(e.context(format!("opt_direct dial {} failed", a))),
@@ -223,11 +228,11 @@ pub struct OptDialer {
     pub opt_dns_client: Option<Arc<dns::AsyncClient>>,
 }
 
-impl Name for OptDialer {
-    fn name(&self) -> &'static str {
-        "opt_dialer"
-    }
-}
+// impl Name for OptDialer {
+//     fn name(&self) -> &'static str {
+//         "opt_dialer"
+//     }
+// }
 
 impl OptDialer {
     pub fn new(opt: OptDialerOption) -> anyhow::Result<Self> {
@@ -274,7 +279,9 @@ impl Map for OptDialer {
                 return self.dial_addr(&self.dial_addr, params.a, params.b).await;
             }
 
-            _ => return MapResult::from_err_str("OptDialer can't dial when a stream already exists"),
+            _ => {
+                return MapResult::from_err_str("OptDialer can't dial when a stream already exists")
+            }
         }
     }
 }

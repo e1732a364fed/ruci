@@ -4,7 +4,7 @@ Defines a structure [`AddrConn`], and facilities around it.
 It provides several functions for copying data bewteen [`AddrReadTrait`] and [`AddrWriteTrait`], like
 [`cp_addr`], and a [fn@`cp`] function for copying data between [`AddrConn`] (which consists of [`AddrReadTrait`] and [`AddrWriteTrait`])
  */
-use crate::Name;
+// use crate::Name;
 
 use super::*;
 
@@ -22,7 +22,7 @@ use tokio::sync::oneshot;
 // 只是加了一个 Addr 参数. 这一部分比较难懂.
 
 /// 每一次读数据时都同时获取到一个 Addr,
-pub trait AsyncReadAddr: crate::Name {
+pub trait AsyncReadAddr {
     fn poll_read_addr(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -36,7 +36,7 @@ pub trait AsyncReadAddr: crate::Name {
 }
 
 /// 每一次写数据时都同时附带一个 Addr
-pub trait AsyncWriteAddr: crate::Name {
+pub trait AsyncWriteAddr {
     fn poll_write_addr(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -61,33 +61,32 @@ pub struct AddrConn {
     pub w: Box<dyn AddrWriteTrait>,
 
     pub default_write_to: Option<Addr>,
-
-    pub cached_name: String,
+    // pub cached_name: String,
 }
-impl Name for AddrConn {
-    fn name(&self) -> &str {
-        &self.cached_name
-    }
-}
+// impl Name for AddrConn {
+//     fn name(&self) -> &str {
+//         &self.cached_name
+//     }
+// }
 impl Debug for AddrConn {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AddrConn")
             .field("default_write_to", &self.default_write_to)
-            .field("cached_name", &self.cached_name)
+            // .field("cached_name", &self.cached_name)
             .finish()
     }
 }
 impl AddrConn {
     pub fn new(r: Box<dyn AddrReadTrait>, w: Box<dyn AddrWriteTrait>) -> Self {
-        let cached_name = match r.name() == w.name() {
-            true => String::from(r.name()),
-            false => format!("({}_{})", r.name(), w.name()),
-        };
+        // let cached_name = match r.name() == w.name() {
+        //     true => String::from(r.name()),
+        //     false => format!("({}_{})", r.name(), w.name()),
+        // };
         AddrConn {
             r,
             w,
             default_write_to: None,
-            cached_name,
+            // cached_name,
         }
     }
 }
@@ -417,7 +416,7 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
     cid: CID,
     mut r: R,
     mut w: W,
-    name: String,
+    // name: String,
     no_timeout: bool,
     mut shutdown_rx: oneshot::Receiver<()>,
     is_d: bool,
@@ -442,7 +441,8 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
                             },
                             _ => {
                                 // udp timeout 时常 会发生, 因此不能认为是错误
-                                debug!(cid = %cid,name = name,"cp_addr got e, will break: {e}");
+                                debug!(cid = %cid, "cp_addr got e, will break: {e}");
+                                // debug!(cid = %cid,name = name,"cp_addr got e, will break: {e}");
                             },
                         }
 
@@ -498,8 +498,8 @@ pub async fn cp(
     shutdown_in_rx: Option<tokio::sync::oneshot::Receiver<()>>,
     shutdown_out_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<u64, Error> {
-    let n1 = ac_in.cached_name.clone() + " to " + &ac_out.cached_name;
-    let n2 = ac_out.cached_name.clone() + " to " + &ac_in.cached_name;
+    // let n1 = ac_in.cached_name.clone() + " to " + &ac_out.cached_name;
+    // let n2 = ac_out.cached_name.clone() + " to " + &ac_in.cached_name;
 
     let (shut_tx1, shut_rx1) = oneshot::channel();
     let (shut_tx2, shut_rx2) = oneshot::channel();
@@ -508,7 +508,7 @@ pub async fn cp(
         cid.clone(),
         ac_in.r,
         ac_out.w,
-        n1,
+        // n1,
         no_timeout,
         shut_rx1,
         false,
@@ -518,7 +518,7 @@ pub async fn cp(
         cid.clone(),
         ac_out.r,
         ac_in.w,
-        n2,
+        // n2,
         no_timeout,
         shut_rx2,
         true,
@@ -608,11 +608,11 @@ mod test {
     struct MyType {
         counter: u32,
     }
-    impl crate::Name for MyType {
-        fn name(&self) -> &str {
-            "my_type"
-        }
-    }
+    // impl crate::Name for MyType {
+    //     fn name(&self) -> &str {
+    //         "my_type"
+    //     }
+    // }
 
     impl AsyncReadAddr for MyType {
         fn poll_read_addr(

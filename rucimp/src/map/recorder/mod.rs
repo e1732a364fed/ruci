@@ -15,7 +15,7 @@ use std::time;
 use addr_conn::AddrConn;
 use async_trait::async_trait;
 use ruci::map::{self, *};
-use ruci::{net::*, Name};
+use ruci::net::*;
 use serde::{Deserialize, Serialize};
 
 use macro_map::{map_ext_fields, MapExt};
@@ -106,11 +106,11 @@ impl RecorderMap {
         }
     }
 }
-impl Name for RecorderMap {
-    fn name(&self) -> &'static str {
-        "recorder"
-    }
-}
+// impl Name for RecorderMap {
+//     fn name(&self) -> &'static str {
+//         "recorder"
+//     }
+// }
 
 #[async_trait]
 impl Map for RecorderMap {
@@ -167,7 +167,7 @@ impl Map for RecorderMap {
                         record: w_r,
                     }),
                     default_write_to: ac.default_write_to,
-                    cached_name: "record_ac".to_string(),
+                    // cached_name: "record_ac".to_string(),
                 };
 
                 MapResult::builder()

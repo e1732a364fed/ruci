@@ -15,7 +15,6 @@ use crate::user::{self};
 use crate::{
     net::Conn,
     user::{PlainText, UsersMap},
-    Name,
 };
 
 use super::{http_proxy, socks5, Map, MapBox, MapExtFields};
@@ -40,11 +39,11 @@ pub struct Server {
     pub socks5_s: socks5::server::Server,
 }
 
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "socks5http_server"
-    }
-}
+// impl Name for Server {
+//     fn name(&self) -> &'static str {
+//         "socks5http_server"
+//     }
+// }
 
 impl Server {
     pub async fn new(option: Config) -> Self {

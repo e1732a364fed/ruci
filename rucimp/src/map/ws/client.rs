@@ -22,11 +22,11 @@ pub struct Client {
     use_early_data: bool,
 }
 
-impl ruci::Name for Client {
-    fn name(&self) -> &str {
-        "websocket_client"
-    }
-}
+// impl ruci::Name for Client {
+//     fn name(&self) -> &str {
+//         "websocket_client"
+//     }
+// }
 
 impl Client {
     pub fn new(c: CommonConfig) -> Self {
@@ -157,11 +157,11 @@ struct EarlyConn {
     left_first_w_data: Option<BytesMut>,
 }
 
-impl ruci::Name for EarlyConn {
-    fn name(&self) -> &str {
-        "websocket_ed_conn"
-    }
-}
+// impl ruci::Name for EarlyConn {
+//     fn name(&self) -> &str {
+//         "websocket_ed_conn"
+//     }
+// }
 
 impl AsyncRead for EarlyConn {
     fn poll_read(

@@ -8,7 +8,7 @@ use macro_map::{map_ext_fields, MapExt};
 use std::{cmp::min, pin::Pin, task::Poll, time::Duration};
 use tracing::debug;
 
-use crate::{net::CID, Name};
+use crate::net::CID;
 
 use super::*;
 use tokio::{
@@ -26,11 +26,11 @@ pub struct FileIOConn {
     last_read: Option<tokio::time::Instant>,
 }
 
-impl Name for FileIOConn {
-    fn name(&self) -> &'static str {
-        "fileio_conn"
-    }
-}
+// impl Name for FileIOConn {
+//     fn name(&self) -> &'static str {
+//         "fileio_conn"
+//     }
+// }
 impl FileIOConn {
     fn real_read(
         mut self: Pin<&mut Self>,
@@ -130,11 +130,11 @@ pub struct FileIO {
     pub bytes_per_turn: Option<usize>,
 }
 
-impl Name for FileIO {
-    fn name(&self) -> &'static str {
-        "fileio"
-    }
-}
+// impl Name for FileIO {
+//     fn name(&self) -> &'static str {
+//         "fileio"
+//     }
+// }
 impl FileIO {
     async fn get_conn(
         &self,
@@ -163,7 +163,9 @@ impl Map for FileIO {
         // function is similar to Stdio
 
         if params.c.is_some() {
-            return MapResult::from_err_str("fileio can't generate stream when there's already one");
+            return MapResult::from_err_str(
+                "fileio can't generate stream when there's already one",
+            );
         };
 
         let c = match self

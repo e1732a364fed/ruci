@@ -11,10 +11,7 @@ use std::{io, pin::Pin, task::Poll};
 use bytes::{Buf, Bytes, BytesMut};
 use futures::Sink;
 use futures_lite::{ready, StreamExt};
-use ruci::{
-    net::AsyncConn,
-    utils::{io_error, io_error2},
-};
+use ruci::{net::AsyncConn, utils::io_error};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
@@ -58,11 +55,11 @@ pub struct WsStreamToConnWrapper<T: AsyncConn> {
     w_buf: Option<BytesMut>,
 }
 
-impl<T: AsyncConn> ruci::Name for WsStreamToConnWrapper<T> {
-    fn name(&self) -> &str {
-        "websocket_conn"
-    }
-}
+// impl<T: AsyncConn> ruci::Name for WsStreamToConnWrapper<T> {
+//     fn name(&self) -> &str {
+//         "websocket_conn"
+//     }
+// }
 
 impl<T: AsyncConn> AsyncRead for WsStreamToConnWrapper<T> {
     fn poll_read(
@@ -101,7 +98,7 @@ impl<T: AsyncConn> AsyncRead for WsStreamToConnWrapper<T> {
                     return Poll::Ready(Ok(()));
                 }
                 _ => {
-                    return Poll::Ready(Err(io_error2(
+                    return Poll::Ready(Err(crate::utils::io_error2(
                         "ws stream got message type other than binary or close ",
                         message,
                     )))

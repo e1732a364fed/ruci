@@ -22,11 +22,11 @@ pub struct Server {
     pub config: Option<CommonConfig>,
 }
 
-impl ruci::Name for Server {
-    fn name(&self) -> &str {
-        "websocket_server"
-    }
-}
+// impl ruci::Name for Server {
+//     fn name(&self) -> &str {
+//         "websocket_server"
+//     }
+// }
 
 use lazy_static::lazy_static;
 lazy_static! {

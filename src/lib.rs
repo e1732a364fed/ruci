@@ -18,24 +18,20 @@ pub mod utils;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-// 重新导出一些包，以方便其它引用 ruci 的 包 使用
+// many types in ruci have a name.
+// /// use lower case letters + underline
+// pub trait Name {
+//     fn name(&self) -> &str;
+// }
 
-// pub use tokio_rustls;
+// impl<T: Name + ?Sized> Name for Box<T> {
+//     fn name(&self) -> &str {
+//         (**self).name()
+//     }
+// }
 
-/// many types in ruci have a name.
-/// use lower case letters + underline
-pub trait Name {
-    fn name(&self) -> &str;
-}
-
-impl<T: Name + ?Sized> Name for Box<T> {
-    fn name(&self) -> &str {
-        (**self).name()
-    }
-}
-
-impl<T: Name + ?Sized> Name for &mut T {
-    fn name(&self) -> &str {
-        (**self).name()
-    }
-}
+// impl<T: Name + ?Sized> Name for &mut T {
+//     fn name(&self) -> &str {
+//         (**self).name()
+//     }
+// }

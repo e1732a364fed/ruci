@@ -12,7 +12,6 @@ use crate::{
     net::{Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
     utils::{buf_to_ob, io_error},
-    Name,
 };
 use anyhow::Context;
 use bytes::{Buf, BytesMut};
@@ -476,11 +475,11 @@ impl Server {
         })
     }
 }
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "socks5_server"
-    }
-}
+// impl Name for Server {
+//     fn name(&self) -> &'static str {
+//         "socks5_server"
+//     }
+// }
 #[async_trait::async_trait]
 impl map::Map for Server {
     async fn maps(

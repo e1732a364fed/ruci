@@ -753,11 +753,11 @@ pub struct ClientOrServer {
     pub is_server: bool,
 }
 
-impl ruci::Name for ClientOrServer {
-    fn name(&self) -> &'static str {
-        "spe1"
-    }
-}
+// impl ruci::Name for ClientOrServer {
+//     fn name(&self) -> &'static str {
+//         "spe1"
+//     }
+// }
 
 impl ClientOrServer {
     fn connect_with_rw(

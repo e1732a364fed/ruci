@@ -42,7 +42,7 @@ pub struct CpAddrConnArgs {
 /// non-blocking
 ///
 pub async fn cp_ac(args: CpAddrConnArgs) {
-    use crate::Name;
+    // use crate::Name;
 
     let cid = args.cid;
     let in_conn = args.in_conn;
@@ -76,7 +76,7 @@ pub async fn cp_ac(args: CpAddrConnArgs) {
             }
         }
     }
-    debug!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
+    debug!(cid = %cid,  "cp_addr_conn start",);
 
     tokio::spawn(net::addr_conn::cp(
         cid.clone(),
@@ -112,8 +112,8 @@ pub async fn cp_ac_and_c(args: CpAddrConnAndConnArgs) -> anyhow::Result<u64> {
     let mut c = args.c;
     let ed_from_ac = args.ed_from_ac;
     let gtr = args.gtr;
-    use crate::Name;
-    info!(cid = %cid, ac = ac.name(), "cp_addr_conn_and_conn start",);
+    // use crate::Name;
+    info!(cid = %cid,   "cp_addr_conn_and_conn start",);
 
     if let Some(ed) = args.ed {
         if ed_from_ac {

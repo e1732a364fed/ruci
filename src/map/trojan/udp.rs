@@ -61,11 +61,11 @@ impl Reader {
     }
 }
 
-impl crate::Name for Reader {
-    fn name(&self) -> &str {
-        "trojan_udp(r)"
-    }
-}
+// impl crate::Name for Reader {
+//     fn name(&self) -> &str {
+//         "trojan_udp(r)"
+//     }
+// }
 
 impl AsyncReadAddr for Reader {
     fn poll_read_addr(
@@ -103,11 +103,11 @@ pub struct Writer {
 
     pub last_buf: Option<BytesMut>,
 }
-impl crate::Name for Writer {
-    fn name(&self) -> &str {
-        "trojan_udp(w)"
-    }
-}
+// impl crate::Name for Writer {
+//     fn name(&self) -> &str {
+//         "trojan_udp(w)"
+//     }
+// }
 impl Writer {
     pub fn new(base: WriteHalf<net::Conn>) -> Self {
         Self {
@@ -189,9 +189,9 @@ pub fn from(c: net::Conn) -> net::addr_conn::AddrConn {
     let ar = Reader::new(r);
     let aw = Writer::new(w);
 
-    let mut ac = net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw));
+    let ac = net::addr_conn::AddrConn::new(Box::new(ar), Box::new(aw));
 
-    ac.cached_name = String::from("trojan_udp");
+    // ac.cached_name = String::from("trojan_udp");
     ac
 }
 

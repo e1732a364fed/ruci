@@ -350,3 +350,11 @@ pub fn init_tls_server_pem_option(
         alpn: opts.alpn.clone(),
     })
 }
+
+/// generate an io::ErrorKind::Other
+pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
+    message: T,
+    message2: T2,
+) -> io::Error {
+    io::Error::new(io::ErrorKind::Other, format!("{} {}", message, message2))
+}

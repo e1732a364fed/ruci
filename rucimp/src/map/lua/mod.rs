@@ -30,7 +30,6 @@ use ruci::net::Addr;
 use ruci::{
     map::{self, Map, MapResult},
     net::{Stream, CID},
-    Name,
 };
 use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
@@ -465,11 +464,11 @@ pub struct LuaMap {
     pub file_source: Arc<crate::utils::FileSource>,
 }
 
-impl Name for LuaMap {
-    fn name(&self) -> &'static str {
-        "lua_map"
-    }
-}
+// impl Name for LuaMap {
+//     fn name(&self) -> &'static str {
+//         "lua_map"
+//     }
+// }
 
 impl LuaMap {
     /// 向 lua 插入 若干函数，并提取出 handshake 函数

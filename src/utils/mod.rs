@@ -1,10 +1,8 @@
 pub mod record;
 
-use std::{fmt, io, process::Command};
+use std::{fmt, io};
 
-use anyhow::bail;
 use bytes::BytesMut;
-use tracing::{trace, warn};
 
 /// remove first character, and return the trimmed str
 pub fn rm_first(value: &str) -> &str {
@@ -34,14 +32,6 @@ pub fn io_error<T: std::fmt::Display>(message: T) -> io::Error {
     io::Error::new(io::ErrorKind::Other, format!("{}", message))
 }
 
-/// generate an io::ErrorKind::Other
-pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
-    message: T,
-    message2: T2,
-) -> io::Error {
-    io::Error::new(io::ErrorKind::Other, format!("{} {}", message, message2))
-}
-
 pub fn buf_to_ob(b: BytesMut) -> Option<BytesMut> {
     if b.is_empty() {
         None
@@ -50,6 +40,7 @@ pub fn buf_to_ob(b: BytesMut) -> Option<BytesMut> {
     }
 }
 
+/*
 pub fn run_command(cmd: &str, args: &str) -> anyhow::Result<()> {
     trace!(cmd = cmd, args = ?args, "running command",);
 
@@ -61,7 +52,6 @@ pub fn run_command(cmd: &str, args: &str) -> anyhow::Result<()> {
         bail!("err output: {:?}", r);
     }
 }
-
 /// keep run next command if got error
 pub fn sync_run_command_list_no_stop(list: Vec<&str>, no_warn: bool) -> anyhow::Result<()> {
     //debug!("utils: start run_command_list ");
@@ -127,3 +117,4 @@ pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
 
     Ok(())
 }
+ */

@@ -16,11 +16,11 @@ pub struct MockTcpStream {
     pub write_data: Vec<u8>,
     pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
 }
-impl crate::Name for MockTcpStream {
-    fn name(&self) -> &str {
-        "mock_tcp_stream"
-    }
-}
+// impl crate::Name for MockTcpStream {
+//     fn name(&self) -> &str {
+//         "mock_tcp_stream"
+//     }
+// }
 
 impl Unpin for MockTcpStream {}
 impl AsyncRead for MockTcpStream {
@@ -81,11 +81,11 @@ pub struct MockTcpStream2<'a> {
     pub write_data: &'a mut Vec<u8>,
     pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
 }
-impl crate::Name for MockTcpStream2<'_> {
-    fn name(&self) -> &str {
-        "mock_tcp_stream2"
-    }
-}
+// impl crate::Name for MockTcpStream2<'_> {
+//     fn name(&self) -> &str {
+//         "mock_tcp_stream2"
+//     }
+// }
 
 impl Unpin for MockTcpStream2<'_> {}
 impl AsyncRead for MockTcpStream2<'_> {

@@ -28,11 +28,11 @@ pub struct SingleClient {
 
     req: Option<Request<()>>,
 }
-impl ruci::Name for SingleClient {
-    fn name(&self) -> &str {
-        "h2_single_client"
-    }
-}
+// impl ruci::Name for SingleClient {
+//     fn name(&self) -> &str {
+//         "h2_single_client"
+//     }
+// }
 
 impl SingleClient {
     pub fn new(is_grpc: bool, http_config: Option<CommonConfig>) -> Self {
@@ -178,11 +178,11 @@ pub struct MuxClient {
 
     cache: Arc<Mutex<Option<SendRequest<Bytes>>>>,
 }
-impl ruci::Name for MuxClient {
-    fn name(&self) -> &str {
-        "h2_mux_client"
-    }
-}
+// impl ruci::Name for MuxClient {
+//     fn name(&self) -> &str {
+//         "h2_mux_client"
+//     }
+// }
 
 impl MuxClient {
     pub fn new(is_grpc: bool, http_config: Option<CommonConfig>) -> Self {
@@ -307,7 +307,9 @@ impl Map for MuxClient {
                     Err(e) => MapResult::from_e(e.context("h2_mux_client handshake failed")),
                 }
             }
-            _ => MapResult::from_err_str("h2_mux_client only support tcplike stream or None stream"),
+            _ => {
+                MapResult::from_err_str("h2_mux_client only support tcplike stream or None stream")
+            }
         }
     }
 }

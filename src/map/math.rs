@@ -3,10 +3,7 @@ Defines some math related [`Map`]s.
 */
 
 use crate::map;
-use crate::{
-    net::{self, Stream, CID},
-    Name,
-};
+use crate::net::{self, Stream, CID};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use macro_map::*;
@@ -67,15 +64,15 @@ impl AdderConn {
         r
     }
 }
-impl Name for AdderConn {
-    fn name(&self) -> &'static str {
-        match self.direction {
-            AddDirection::Read => "adder_conn(r)",
-            AddDirection::Write => "adder_conn(w)",
-            AddDirection::Both => "adder_conn",
-        }
-    }
-}
+// impl Name for AdderConn {
+//     fn name(&self) -> &'static str {
+//         match self.direction {
+//             AddDirection::Read => "adder_conn(r)",
+//             AddDirection::Write => "adder_conn(w)",
+//             AddDirection::Both => "adder_conn",
+//         }
+//     }
+// }
 
 impl AsyncRead for AdderConn {
     fn poll_read(
@@ -144,11 +141,11 @@ pub struct Adder {
     pub add_num: i8,
     pub direction: AddDirection,
 }
-impl Name for Adder {
-    fn name(&self) -> &'static str {
-        "adder"
-    }
-}
+// impl Name for Adder {
+//     fn name(&self) -> &'static str {
+//         "adder"
+//     }
+// }
 impl std::fmt::Display for Adder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "adder {:?} {}", self.direction, self.add_num)

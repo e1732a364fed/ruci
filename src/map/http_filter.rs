@@ -22,11 +22,11 @@ use super::{http::CommonConfig, Map, MapResult, ProxyBehavior};
 pub struct Server {
     pub config: Option<CommonConfig>,
 }
-impl crate::Name for Server {
-    fn name(&self) -> &str {
-        "http_filter"
-    }
-}
+// impl crate::Name for Server {
+//     fn name(&self) -> &str {
+//         "http_filter"
+//     }
+// }
 #[async_trait]
 impl Map for Server {
     async fn maps(

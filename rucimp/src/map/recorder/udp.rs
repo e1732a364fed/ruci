@@ -12,22 +12,22 @@ pub(super) struct RecordAddrConnR {
     pub(super) record: Recorder,
 }
 
-impl ruci::Name for RecordAddrConnR {
-    fn name(&self) -> &str {
-        "recorder_ac_r"
-    }
-}
+// impl ruci::Name for RecordAddrConnR {
+//     fn name(&self) -> &str {
+//         "recorder_ac_r"
+//     }
+// }
 
 pub(super) struct RecordAddrConnW {
     pub(super) base: Pin<Box<dyn addr_conn::AddrWriteTrait>>,
     pub(super) record: Recorder,
 }
 
-impl ruci::Name for RecordAddrConnW {
-    fn name(&self) -> &str {
-        "recorder_ac_w"
-    }
-}
+// impl ruci::Name for RecordAddrConnW {
+//     fn name(&self) -> &str {
+//         "recorder_ac_w"
+//     }
+// }
 
 impl AsyncReadAddr for RecordAddrConnR {
     fn poll_read_addr(

@@ -45,7 +45,7 @@ stream2 和 stream3 都是 只读的.
 use super::*;
 
 use crate::map;
-use crate::{net::*, Name};
+use crate::net::*;
 use async_trait::async_trait;
 
 use futures::executor::block_on;
@@ -58,11 +58,11 @@ use tokio::sync::mpsc;
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Tee {}
 
-impl Name for Tee {
-    fn name(&self) -> &'static str {
-        "tee"
-    }
-}
+// impl Name for Tee {
+//     fn name(&self) -> &'static str {
+//         "tee"
+//     }
+// }
 
 #[async_trait]
 impl Map for Tee {

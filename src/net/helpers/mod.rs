@@ -17,7 +17,7 @@ use std::{
     task::{ready, Poll},
 };
 
-use crate::Name;
+// use crate::Name;
 
 use super::*;
 use bytes::{Buf, BufMut, BytesMut};
@@ -234,11 +234,11 @@ impl EarlyDataWrapper {
     }
 }
 
-impl Name for EarlyDataWrapper {
-    fn name(&self) -> &'static str {
-        "earlydata_wrapper_conn"
-    }
-}
+// impl Name for EarlyDataWrapper {
+//     fn name(&self) -> &'static str {
+//         "earlydata_wrapper_conn"
+//     }
+// }
 
 impl AsyncRead for EarlyDataWrapper {
     fn poll_read(
@@ -313,11 +313,11 @@ impl PrintWrapper {
     }
 }
 
-impl Name for PrintWrapper {
-    fn name(&self) -> &'static str {
-        "print_wrapper_conn"
-    }
-}
+// impl Name for PrintWrapper {
+//     fn name(&self) -> &'static str {
+//         "print_wrapper_conn"
+//     }
+// }
 
 impl AsyncRead for PrintWrapper {
     fn poll_read(

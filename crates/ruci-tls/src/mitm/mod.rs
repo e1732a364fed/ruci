@@ -20,7 +20,7 @@ use macro_map::{map_ext_fields, MapExt};
 use ruci::map::*;
 use ruci::net::helpers::EarlyDataWrapper;
 use ruci::net::CID;
-use ruci::Name;
+// use ruci::Name;
 use ruci::{map, net::MTU};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
@@ -32,11 +32,11 @@ pub struct MITM {
     pub sc: crate::server::ServerPEMOptions,
 }
 
-impl Name for MITM {
-    fn name(&self) -> &'static str {
-        "mitm_server"
-    }
-}
+// impl Name for MITM {
+//     fn name(&self) -> &'static str {
+//         "mitm_server"
+//     }
+// }
 
 #[async_trait]
 impl Map for MITM {

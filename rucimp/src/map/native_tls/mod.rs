@@ -11,7 +11,6 @@ use bytes::BytesMut;
 use ruci::{
     map::{self, MapExtFields, MapResult, ProxyBehavior},
     net::{self, helpers::EarlyDataWrapper, CID},
-    Name,
 };
 
 use macro_map::*;
@@ -60,11 +59,11 @@ impl fmt::Debug for Server {
     }
 }
 
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "native_tls_server"
-    }
-}
+// impl Name for Server {
+//     fn name(&self) -> &'static str {
+//         "native_tls_server"
+//     }
+// }
 
 impl Server {
     async fn handshake(
@@ -114,11 +113,11 @@ pub struct Client {
     pub config: ruci_tls::client::TlsClientOptions,
 }
 
-impl Name for Client {
-    fn name(&self) -> &'static str {
-        "native_tls_client"
-    }
-}
+// impl Name for Client {
+//     fn name(&self) -> &'static str {
+//         "native_tls_client"
+//     }
+// }
 
 #[async_trait]
 impl map::Map for Client {

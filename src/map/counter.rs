@@ -19,7 +19,7 @@ use std::{
 };
 
 use crate::map;
-use crate::{net::*, Name};
+use crate::net::*;
 use addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use async_trait::async_trait;
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -32,11 +32,11 @@ pub struct CounterConn {
     base: Pin<net::Conn>,
 }
 
-impl Name for CounterConn {
-    fn name(&self) -> &str {
-        "counter"
-    }
-}
+// impl Name for CounterConn {
+//     fn name(&self) -> &str {
+//         "counter"
+//     }
+// }
 
 #[derive(Clone)]
 pub struct CounterData {
@@ -109,11 +109,11 @@ impl Counter {
     }
 }
 
-impl Name for Counter {
-    fn name(&self) -> &'static str {
-        "counter"
-    }
-}
+// impl Name for Counter {
+//     fn name(&self) -> &'static str {
+//         "counter"
+//     }
+// }
 
 #[async_trait]
 impl Map for Counter {
@@ -162,7 +162,7 @@ impl Map for Counter {
                         data: cd,
                     }),
                     default_write_to: ac.default_write_to,
-                    cached_name: "record_ac".to_string(),
+                    // cached_name: "record_ac".to_string(),
                 };
                 MapResult::builder()
                     .a(params.a)
@@ -182,22 +182,22 @@ struct CounterAddrConnR {
     pub data: CounterData,
 }
 
-impl crate::Name for CounterAddrConnR {
-    fn name(&self) -> &str {
-        "counter_ac_r"
-    }
-}
+// impl crate::Name for CounterAddrConnR {
+//     fn name(&self) -> &str {
+//         "counter_ac_r"
+//     }
+// }
 
 struct CounterAddrConnW {
     base: Pin<Box<dyn addr_conn::AddrWriteTrait>>,
     pub data: CounterData,
 }
 
-impl crate::Name for CounterAddrConnW {
-    fn name(&self) -> &str {
-        "counter_ac_w"
-    }
-}
+// impl crate::Name for CounterAddrConnW {
+//     fn name(&self) -> &str {
+//         "counter_ac_w"
+//     }
+// }
 
 impl AsyncReadAddr for CounterAddrConnR {
     fn poll_read_addr(

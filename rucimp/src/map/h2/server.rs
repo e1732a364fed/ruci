@@ -22,11 +22,11 @@ pub struct Server {
 
     pub http_config: Option<CommonConfig>,
 }
-impl ruci::Name for Server {
-    fn name(&self) -> &str {
-        "h2_server"
-    }
-}
+// impl ruci::Name for Server {
+//     fn name(&self) -> &str {
+//         "h2_server"
+//     }
+// }
 
 impl Server {
     pub fn new(is_grpc: Option<bool>, http_config: Option<CommonConfig>) -> Self {

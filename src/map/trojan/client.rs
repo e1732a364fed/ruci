@@ -8,7 +8,6 @@ use tracing::debug;
 use crate::{
     map::{self, Map, MapExt, MapResult, CID},
     net::{self, helpers, Network},
-    Name,
 };
 
 use super::*;
@@ -79,11 +78,11 @@ impl Client {
         }
     }
 }
-impl Name for Client {
-    fn name(&self) -> &'static str {
-        "trojan_client"
-    }
-}
+// impl Name for Client {
+//     fn name(&self) -> &'static str {
+//         "trojan_client"
+//     }
+// }
 
 #[async_trait]
 impl Map for Client {

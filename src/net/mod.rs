@@ -321,10 +321,10 @@ impl Stream {
     pub fn to_str(&self) -> &str {
         match &self {
             Stream::Conn(_) => "conn",
-            Stream::AddrConn(ac) => crate::Name::name(ac),
+            Stream::AddrConn(_ac) => "AddrConn",
             Stream::Generator(_) => "SomeStreamGenerator",
             Stream::None => "NoStream",
-            Stream::RW(_) => todo!(),
+            Stream::RW(_) => "rw",
         }
     }
     pub fn c(c: Conn) -> Self {
