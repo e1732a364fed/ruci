@@ -335,7 +335,7 @@ mod test {
         // let (_, rx) = oneshot::channel();
         let (tx1, rx1) = tokio::sync::broadcast::channel(10);
 
-        let _ = crate::net::addr_conn::cp_addr(r2, ms, "".to_string(), false, tx1).await;
+        let _ = crate::net::addr_conn::cp_addr(r2, ms, "".to_string(), false, rx1).await;
 
         let nv = buf_to_write.repeat(5);
 

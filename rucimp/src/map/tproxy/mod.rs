@@ -160,23 +160,26 @@ impl UDPListener {
                 let dst_src_map = Arc::new(Mutex::new(HashMap::new()));
                 let mapc = dst_src_map.clone();
 
-                let r = UdpR::new(rx);
+                let r = UdpR::new(rx, mapc);
 
-                let w = UdpW { dst_src_map };
+                let w = UdpW {
+                    dst_src_map,
+                    ..Default::default()
+                };
 
                 // 阻塞函数要用 新线程 而不是 tokio::spawn, 否则 程序退出时会卡住
 
-                use terminate_thread::Thread;
-                let thr = Thread::spawn(|| loop_accept_udp(socket, tx, mapc));
+                // use terminate_thread::Thread;
+                // let thr = Thread::spawn(|| loop_accept_udp(socket, tx));
 
-                // let _jh = std::thread::spawn(|| loop_accept_udp(socket, tx, mapc));
+                let _jh = std::thread::spawn(|| loop_accept_udp(socket, tx));
 
                 tokio::spawn(async move {
                     let _ = shutdown_rx.await;
                     info!("tproxy udp got shutdown signal");
                     let _ = shutdown_addrconn_tx.send(());
-                    thr.terminate();
-                    info!("tproxy udp terminated");
+                    // thr.terminate();
+                    // info!("tproxy udp terminated");
                 });
 
                 let mut ac = AddrConn::new(Box::new(r), Box::new(w));
@@ -233,17 +236,21 @@ impl Mapper for UDPListener {
 }
 
 pub struct UdpR {
-    rx: mpsc::Receiver<AddrData>,
+    rx: mpsc::Receiver<DataDstSrc>,
+    dst_src_map: Arc<Mutex<HashMap<Addr, Addr>>>,
 }
 impl UdpR {
-    fn new(rx: mpsc::Receiver<AddrData>) -> Self {
-        Self { rx }
+    fn new(rx: mpsc::Receiver<DataDstSrc>, dst_src_map: Arc<Mutex<HashMap<Addr, Addr>>>) -> Self {
+        Self { rx, dst_src_map }
     }
 }
 
 /// tproxy 的 udp 不是 fullcone 的, 而是对称的
+#[derive(Default)]
 pub struct UdpW {
     dst_src_map: Arc<Mutex<HashMap<Addr, Addr>>>,
+
+    established_map: HashMap<(Addr, Addr), Socket>,
 }
 
 impl Name for UdpW {
@@ -258,12 +265,12 @@ impl Name for UdpR {
     }
 }
 
-pub type AddrData = (BytesMut, net::Addr);
+pub type DataDstSrc = (BytesMut, net::Addr, net::Addr);
 
 /// 将 外来 的udp 数据 写回 本机
 impl AsyncWriteAddr for UdpW {
     fn poll_write_addr(
-        self: Pin<&mut Self>,
+        mut self: Pin<&mut Self>,
         _cx: &mut Context,
         buf: &[u8],
         raddr: &Addr,
@@ -274,37 +281,43 @@ impl AsyncWriteAddr for UdpW {
         };
 
         let laddr = match laddr {
-            Some(laddr) => {
-                // debug!(
-                //     "tproxy UdpW get from dst_src_map ,{} {} {}",
-                //     buf.len(),
-                //     raddr,
-                //     laddr
-                // );
-                laddr
-            }
+            Some(laddr) => laddr,
             None => {
                 warn!("tproxy UdpW get from dst_src_map got none, {}", raddr);
                 return Poll::Ready(Ok(buf.len()));
             }
         };
-        let us = so2::connect_tproxy_udp(raddr, &laddr).unwrap();
+
         // 实测这里不能 将 socket2::Socket 转成 tokio 的 UdpSocket使用,  否 则 poll send 会一直为 pending
 
-        // debug!("tproxy UdpW connected ,will send");
+        let k = (laddr, raddr.clone());
+        let x = self.established_map.get(&k);
+        match x {
+            Some(us) => {
+                let r = us.send(buf);
 
-        let r = us.send(buf);
-        // debug!("tproxy UdpW try_send_to r {:?}", r);
+                Poll::Ready(r)
+            }
+            None => {
+                let us = so2::connect_tproxy_udp(raddr, &k.0).unwrap();
 
-        Poll::Ready(r)
+                let r = us.send(buf);
+
+                self.established_map.insert(k, us);
+
+                Poll::Ready(r)
+            }
+        }
     }
 
     fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+    fn poll_close_addr(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         debug!("tproxy UdpW close called");
+        self.established_map.clear();
+
         let mut mg = self.dst_src_map.lock();
         mg.clear();
         Poll::Ready(Ok(()))
@@ -327,12 +340,21 @@ impl AsyncReadAddr for UdpR {
                     let bl = buf.len();
                     let len_to_cp = min(bl, data_l);
                     if data_l != len_to_cp {
-                        debug!("tproxy UdpR try recv will short write {} {}", bl, len_to_cp);
+                        debug!(
+                            "tproxy UdpR try recv will short write {} {}",
+                            data_l, len_to_cp
+                        );
                     }
                     ad.0.copy_to_slice(&mut buf[..len_to_cp]);
 
-                    let a = ad.1;
-                    return Poll::Ready(Ok((len_to_cp, a)));
+                    let dst = ad.1;
+
+                    {
+                        let mut mg = self.dst_src_map.lock();
+                        mg.insert(dst.clone(), ad.2)
+                    };
+
+                    return Poll::Ready(Ok((len_to_cp, dst)));
                 }
                 None => {
                     return Poll::Ready(Err(io_error("tproxy UdpR rx closed")));
@@ -350,15 +372,9 @@ impl AsyncReadAddr for UdpR {
 // }
 
 /// blocking
-fn loop_accept_udp(
-    us: Socket,
-    tx: mpsc::Sender<AddrData>,
-    dst_src_map: Arc<Mutex<HashMap<Addr, Addr>>>,
-) {
+fn loop_accept_udp(us: Socket, tx: mpsc::Sender<DataDstSrc>) {
     loop {
         let mut buf = BytesMut::zeroed(1500);
-
-        //debug!("loop_accept_udp");
 
         let r = tproxy_recv_from_with_destination(&us, &mut buf);
         let r = match r {
@@ -368,7 +384,6 @@ fn loop_accept_udp(
                 return;
             }
         };
-        //debug!("loop_accept_udp got r {:?}", r);
 
         // 如 本机请求 dns, 则 src 为 本机ip 随机高端口， dst 为 路由器ip 53 端口
         let (n, src, dst) = r;
@@ -384,17 +399,7 @@ fn loop_accept_udp(
                 network: Network::UDP,
             };
 
-            // debug!("loop_accept_udp lock");
-
-            {
-                let mut mg = dst_src_map.lock();
-                mg.insert(dst_a.clone(), src_a);
-            }
-            // debug!("loop_accept_udp lock ok, try send");
-
-            // 用 blockiing_send 会变得卡顿
-            let r = tx.try_send((buf, dst_a));
-            // debug!("loop_accept_udp lock ok, try send ok",);
+            let r = tx.try_send((buf, dst_a, src_a));
 
             if let Err(e) = r {
                 warn!("tproxy loop_accept_udp tx.send got err {e}");

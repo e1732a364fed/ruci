@@ -167,15 +167,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
-name = "autotools"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aef8da1805e028a172334c3b680f93e71126f2327622faef2ec3d893c0a4ad77"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "aws-lc-rs"
 version = "1.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2287,7 +2278,6 @@ dependencies = [
  "serde",
  "serde_json",
  "socket2",
- "terminate-thread",
  "thiserror",
  "tokio",
  "tokio-native-tls",
@@ -2829,16 +2819,6 @@ dependencies = [
  "fastrand",
  "rustix",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "terminate-thread"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b401a5b99e135fccaeea97aa2dd4670bcf3e99911dbabbab8a151d4a6a3e0c58"
-dependencies = [
- "autotools",
- "bindgen",
 ]
 
 [[package]]

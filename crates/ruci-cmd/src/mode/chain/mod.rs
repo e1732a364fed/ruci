@@ -10,6 +10,7 @@ use crate::api;
 
 #[cfg(feature = "api_server")]
 use std::sync::Arc;
+use std::time::Duration;
 
 ///blocking
 #[allow(unused)]
@@ -72,6 +73,12 @@ async fn run_engine(e: &Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow:
         Some(rx) => wait_close_sig_with_closer(rx).await?,
         None => wait_close_sig().await?,
     }
+
+    std::thread::spawn(|| {
+        std::thread::sleep(Duration::from_secs(3));
+        println!("Force shutdown after 3 secs!"); //only println works at this point.
+        std::process::exit(1);
+    });
 
     e.stop().await;
 

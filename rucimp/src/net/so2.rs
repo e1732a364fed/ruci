@@ -131,7 +131,7 @@ pub fn new_socket2_udp_tproxy_dial(laddr: &net::Addr) -> anyhow::Result<Socket> 
     let socket = Socket::new(domain, Type::DGRAM, Some(Protocol::UDP))?;
 
     socket.set_reuse_address(true)?;
-    //socket.set_nonblocking(true)?;
+    socket.set_nonblocking(true)?;
     // DO NOT set IP_RECVORIGDSTADDR
     so_opts::set_tproxy_socket_opts(is_v4, false, &socket)?;
     // if let Some(m) = so.so_mark {
@@ -151,7 +151,7 @@ pub fn connect_tproxy_udp(laddr: &net::Addr, raddr: &net::Addr) -> anyhow::Resul
     let socket = new_socket2_udp_tproxy_dial(laddr)?;
     let ra = raddr
         .get_socket_addr()
-        .context("new_socket2 failed, requires a has socket addr")?;
+        .context("connect_tproxy_udp failed, requires raddr has socket addr")?;
 
     socket.connect(&ra.into()).context("connect failed")?;
 

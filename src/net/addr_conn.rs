@@ -5,16 +5,12 @@ use super::*;
 use core::time;
 use std::{
     io,
-    ops::DerefMut,
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::{
-    io::ReadBuf,
-    sync::{broadcast, oneshot},
-};
+use tokio::sync::{broadcast, oneshot};
 
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
 // 只是加了一个 Addr 参数. 这一部分比较难懂.
@@ -278,40 +274,54 @@ impl<T: AsyncWriteAddr + Unpin + ?Sized> futures::Future for WriteFuture<'_, T> 
 pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: change this
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 
+// todo improve the codes below
+
+async fn read_once_notimeout<R1: AddrReadTrait, W1: AddrWriteTrait>(
+    r1: &mut R1,
+    w1: &mut W1,
+    buf: &mut [u8],
+) -> bool {
+    match r1.read(buf).await {
+        Err(e) => {
+            debug!("read addrconn GOT ERROR {e}");
+
+            return false;
+        }
+        Ok((m, ad)) => {
+            if m > 0 {
+                let r = w1.write(&buf[..m], &ad).await;
+                match r {
+                    Ok(_) => return true,
+                    Err(e) => {
+                        debug!("write addrconn err {e}");
+
+                        return false;
+                    }
+                }
+            }
+            return false;
+        }
+    }
+}
+
 async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
     r1: &mut R1,
     w1: &mut W1,
     no_timeout: bool,
-    mut shutdown_rx: broadcast::Receiver<()>,
+    buf: &mut [u8],
 ) -> bool {
-    let r1ref = r1;
-
-    let sleep_f = if no_timeout {
-        tokio::time::sleep(time::Duration::MAX)
-    } else {
-        tokio::time::sleep(CP_UDP_TIMEOUT)
-    };
-    let read_f = async move {
-        let mut buf0 = Box::new([0u8; MAX_DATAGRAM_SIZE]);
-        let mut buf = ReadBuf::new(buf0.deref_mut());
-        let r = r1ref.read(buf.initialized_mut()).await;
-
-        (r, buf0)
-    };
+    if no_timeout {
+        return read_once_notimeout(r1, w1, buf).await;
+    }
 
     tokio::select! {
-        _ = sleep_f =>{
+        _ = tokio::time::sleep(CP_UDP_TIMEOUT) =>{
             debug!("read addrconn timeout");
 
             return false ;
         }
-        _ = shutdown_rx.recv() =>{
-            debug!("read addrconn got shutdown_rx");
 
-            return  false;
-        }
-        r = read_f =>{
-            let (r,  buf0) = r;
+        r = r1.read(buf) =>{
             match r {
                 Err(e) => {
                     debug!("read addrconn GOT ERROR {e}");
@@ -322,23 +332,21 @@ async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
                     if m > 0 {
                         //写udp 是不会卡住的, 但addr_conn底层可能不是 udp
 
-                        let sleep_f2 = tokio::time::sleep(Duration::from_secs(1));
-                        let wf = w1.write(&buf0[..m], &ad).fuse();
+                        let sleep_f2 = tokio::time::timeout(Duration::from_secs(1),w1.write(&buf[..m], &ad)).await;
+                        match sleep_f2{
+                            Ok(r) => match r {
+                                Ok(_) => return true,
+                                Err(e) => {
+                                    debug!("write addrconn err {e}");
 
-
-                        tokio::select!{
-                            _ = sleep_f2 =>{
-                                 debug!("write addrconn timeout");
-                            }
-                            r = wf =>{
-
-                                if let Err(e) = r {
-                                    debug!("write addrconn got err, {}",e);
-                                    return  false;
-                                }
-                            }
+                                    return false},
+                            },
+                            Err(_) => {
+                                debug!("write addrconn timeout");
+                                return true;
+                            },
                         }
-                        return  true;
+
                     }
                     return false ;
                 }
@@ -351,22 +359,69 @@ async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
 /// CP_UDP_TIMEOUT 为 最长等待时间, 一旦读不到, 就会退出函数
 ///
 /// 读到后, 如果写超过了同样的时间, 也退出函数
-pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
+pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     mut r1: R1,
     mut w1: W1,
     _name: String,
     no_timeout: bool,
-    shutdown_rx: broadcast::Sender<()>,
+    mut shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<u64, Error> {
     //let mut whole_write = 0;
+    let mut buf0 = Box::new([0u8; 1400]);
 
-    //pin_mut!(shutdown_rxf);
     loop {
-        let r = read_once(&mut r1, &mut w1, no_timeout, shutdown_rx.subscribe()).await;
-        if !r {
-            break;
+        tokio::select! {
+            r = read_once(&mut r1, &mut w1, no_timeout,buf0.as_mut()) =>{
+                if !r {
+                    break;
+                }
+            }
+            _ = shutdown_rx.recv() =>{
+                break;
+            }
         }
     } //loop
+
+    // 实测 用一个loop + 小 buf 的实现 比用 两个 spawn + mpsc 快很多. 后者非常卡顿几乎不可用
+    // buf size 的选择也很重要, 太大太小都卡
+
+    // let (tx, mut rx) = mpsc::channel(1000);
+
+    // let jh1 = tokio::spawn(async move {
+    //     loop {
+    //         let mut buf = BytesMut::zeroed(1500);
+    //         let r = r1.read(buf.as_mut()).await;
+    //         match r {
+    //             Ok((u, a)) => {
+    //                 buf.truncate(u);
+    //                 let r = tx.send((buf, a)).await;
+    //                 if r.is_err() {
+    //                     break;
+    //                 }
+    //             }
+    //             Err(_e) => {
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // });
+
+    // let jh2 = tokio::spawn(async move {
+    //     loop {
+    //         let r = rx.recv().await;
+    //         match r {
+    //             Some((buf, a)) => {
+    //                 let r = w1.write(&buf, &a).await;
+    //                 if r.is_err() {
+    //                     break;
+    //                 }
+    //             }
+    //             None => break,
+    //         }
+    //     }
+    // });
+
+    // let _ = join!(jh1, jh2);
 
     // debug!("CP ADDR exit {name}  {whole_write}");
     // Ok(whole_write as u64)
@@ -413,7 +468,7 @@ pub async fn cp_between<
 
     r2: R2,
     w2: W2,
-    opt: Option<Arc<GlobalTrafficRecorder>>,
+    _opt: Option<Arc<GlobalTrafficRecorder>>,
     no_timeout: bool,
     shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
     shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
@@ -431,22 +486,20 @@ pub async fn cp_between<
         shutdown_rx1.unwrap()
     } else {
         tmp_rx0
-    }
-    .fuse();
+    };
 
     let (_tmpx, tmp_rx) = oneshot::channel();
     let shutdown_rx2 = if shutdown_rx2.is_some() {
         shutdown_rx2.unwrap()
     } else {
         tmp_rx
-    }
-    .fuse();
+    };
 
     let n1 = name1.clone() + " to " + &name2;
     let n2 = name2 + " to " + &name1;
 
-    let cp1 = tokio::spawn(cp_addr(r1, w2, n1, no_timeout, tx1));
-    let cp2 = tokio::spawn(cp_addr(r2, w1, n2, no_timeout, tx2));
+    let cp1 = tokio::spawn(cp_addr(r1, w2, n1, no_timeout, rx1));
+    let cp2 = tokio::spawn(cp_addr(r2, w1, n2, no_timeout, rx2));
 
     let r = tokio::select! {
         r = cp1 =>{
@@ -454,7 +507,7 @@ pub async fn cp_between<
                 debug!( cid = %cid,"cp_addr end, u");
             }
             let _ = tx1c.send(());
-            let _ = tx2c.send(());
+            let _ = tx2.send(());
 
             let r = match r{
                 Ok(r) => match r {
@@ -488,8 +541,6 @@ pub async fn cp_between<
 
             let _ = tx1c.send(());
             let _ = tx2c.send(());
-            // let _rst1 = c1_to_c2.await;
-            // let rst2 = c2_to_c1.await;
 
              debug!("shutdown1 ended");
             // rst2
@@ -501,9 +552,6 @@ pub async fn cp_between<
 
             let _ = tx1c.send(());
             let _ = tx2c.send(());
-
-            // let _rst1 = c1_to_c2.await;
-            // let rst2 = c2_to_c1.await;
 
              debug!("shutdown2 ended");
             // rst2

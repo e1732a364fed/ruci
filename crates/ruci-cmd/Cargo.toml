@@ -39,6 +39,8 @@ lua54 = ["rucimp/lua54"]
 quic = ["rucimp/quic"]
 quinn = ["rucimp/quinn"]
 
+tproxy = ["rucimp/sockopt"]
+
 api_server = ["chrono","axum", "tower", "tower-http"]
 api_client = ["reqwest"]
 

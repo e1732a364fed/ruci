@@ -32,11 +32,17 @@ async fn main() -> anyhow::Result<()> {
 
     wait_close_sig().await?;
 
+    std::thread::spawn(|| {
+        std::thread::sleep(Duration::from_secs(3));
+        println!("Force shutdown after 3 secs!"); //only println works at this point.
+        std::process::exit(1);
+    });
+
     e.stop().await;
 
     debug!("Waiting for join set");
 
-    let r = tokio::time::timeout(Duration::from_secs(3), js.shutdown()).await;
+    let r = js.shutdown().await;
 
     debug!("{:?}", r);
     // js.shutdown().await;
