@@ -1,4 +1,4 @@
-#[cfg(all(feature = "sockopt", target_os = "linux"))]
+#[cfg(all(feature = "sockopt"))]
 pub mod so2;
 
 #[cfg(all(feature = "sockopt", target_os = "linux"))]

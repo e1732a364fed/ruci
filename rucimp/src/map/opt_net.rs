@@ -11,7 +11,7 @@ use ruci::*;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::oneshot;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::net::so2::{self, SockOpt};
 
@@ -103,6 +103,8 @@ impl Name for OptDirect {
 }
 impl OptDirect {
     pub fn new(sopt: SockOpt, more_num_of_files: Option<bool>) -> anyhow::Result<Self> {
+
+        #[cfg(target_os = "linux")]
         if more_num_of_files.unwrap_or_default() {
             tracing::info!("calls rlimit::prlimit");
 
@@ -113,7 +115,7 @@ impl OptDirect {
                 None,
             );
             if let Err(e) = r {
-                warn!(err = %e, "OptDirect: call rlimit::prlimit failed")
+                tracing::warn!(err = %e, "OptDirect: call rlimit::prlimit failed")
             }
         }
 

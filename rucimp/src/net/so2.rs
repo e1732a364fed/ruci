@@ -1,6 +1,5 @@
 use std::{
-    net::{Ipv4Addr, SocketAddrV4},
-    time::Duration,
+    net::{Ipv4Addr, SocketAddrV4},time::Duration
 };
 
 use anyhow::Context;
@@ -10,7 +9,6 @@ use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use ruci::net::{self, Network, Stream};
 use socket2::{Domain, Protocol, Socket, Type};
 
-use super::so_opts;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SockOpt {
@@ -23,7 +21,7 @@ pub struct SockOpt {
 ///
 /// will set non_blocking for all conditions other than udp listen
 ///
-pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Result<Socket> {
+pub fn new_socket2(na: &net::Addr, sopt: &SockOpt, is_listen: bool) -> anyhow::Result<Socket> {
     let a = na
         .get_socket_addr()
         .context("new_socket2 failed, requires a has socket addr")?;
@@ -45,51 +43,211 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
         (Type::STREAM, Protocol::TCP)
     };
 
-    let socket = Socket::new(domain, typ, Some(protocol))?;
 
-    if so.tproxy.unwrap_or_default() {
-        so_opts::set_tproxy_socket_opts(is_v4, is_udp, &socket)?;
+    let so = Socket::new(domain, typ, Some(protocol))?;
+
+    #[cfg(target_os = "linux")]
+    {
+        if sopt.tproxy.unwrap_or_default() {
+            super::so_opts::set_tproxy_socket_opts(is_v4, is_udp, &sopt)?;
+        }
+        if let Some(m) = sopt.so_mark {
+            super::so_opts::set_mark(&sopt, m)?;
+        }
     }
-    if let Some(m) = so.so_mark {
-        so_opts::set_mark(&socket, m)?;
-    }
-    if let Some(d) = &so.bind_to_device {
-        socket.bind_device(Some(d.as_bytes()))?;
+   
+    if let Some(d) = &sopt.bind_to_device {
+        #[cfg(unix)]
+        so.bind_device(Some(d.as_bytes()))?;
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::io::AsRawSocket;
+
+            let handle =so.as_raw_socket() as SOCKET;
+
+            // improved from (MIT) shadowsocks-rust
+
+            use bytes::BytesMut;
+            use windows_sys::Win32::Networking::WinSock::*;
+            use  windows_sys::Win32::NetworkManagement::IpHelper::*;
+            fn find_adapter_interface_index(is_4: bool, iface: &str) -> std::io::Result<Option<u32>> {
+                // https://learn.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-getadaptersaddresses
+            
+            
+                unsafe {
+                    let mut ip_adapter_addresses_buffer = BytesMut::with_capacity(15 * 1024);
+                    ip_adapter_addresses_buffer.set_len(15 * 1024);
+            
+                    let mut ip_adapter_addresses_buffer_size: u32 = ip_adapter_addresses_buffer.len() as u32;
+                    loop {
+                        let ret = windows_sys::Win32::NetworkManagement::IpHelper::GetAdaptersAddresses(
+                            AF_UNSPEC as u32,
+                            GAA_FLAG_SKIP_UNICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
+                            std::ptr::null(),
+                            ip_adapter_addresses_buffer.as_mut_ptr() as *mut _,
+                            &mut ip_adapter_addresses_buffer_size as *mut _,
+                        );
+            
+                        match ret {
+                            windows_sys::Win32::Foundation::ERROR_SUCCESS => break,
+                            windows_sys::Win32::Foundation::ERROR_BUFFER_OVERFLOW => {
+                                // resize buffer to ip_adapter_addresses_buffer_size
+                                ip_adapter_addresses_buffer.resize(ip_adapter_addresses_buffer_size as usize, 0);
+                                continue;
+                            }
+                            windows_sys::Win32::Foundation::ERROR_NO_DATA => return Ok(None),
+                            _ => {
+                                let err = std::io::Error::new(
+                                    std::io::ErrorKind::Other,
+                                    format!("GetAdaptersAddresses failed with error: {}", ret),
+                                );
+                                return Err(err);
+                            }
+                        }
+                    }
+            
+                    // IP_ADAPTER_ADDRESSES_LH is a linked-list
+                    let mut current_ip_adapter_address: *mut IP_ADAPTER_ADDRESSES_LH =
+                        ip_adapter_addresses_buffer.as_mut_ptr() as *mut _;
+                    while !current_ip_adapter_address.is_null() {
+                        let ip_adapter_address: &IP_ADAPTER_ADDRESSES_LH = &*current_ip_adapter_address;
+            
+                        use std::os::windows::ffi::OsStringExt;
+                        // Friendly Name
+                        let friendly_name_len: usize = libc::wcslen(ip_adapter_address.FriendlyName);
+                        let friendly_name_slice: &[u16] = std::slice::from_raw_parts(ip_adapter_address.FriendlyName, friendly_name_len);
+                        let friendly_name_os = std::ffi::OsString::from_wide(friendly_name_slice); // UTF-16 to UTF-8
+                        if let Some(friendly_name) = friendly_name_os.to_str() {
+                            if friendly_name == iface {
+                                match is_4 {
+                                    true => return Ok(Some(ip_adapter_address.Anonymous1.Anonymous.IfIndex)),
+                                    false => return Ok(Some(ip_adapter_address.Ipv6IfIndex)),
+                                }
+                            }
+                        }
+            
+                        // Adapter Name
+                        let adapter_name =std::ffi:: CStr::from_ptr(ip_adapter_address.AdapterName as *mut _ as *const _);
+                        if adapter_name.to_bytes() == iface.as_bytes() {
+                            match is_4 {
+                                true => return Ok(Some(ip_adapter_address.Anonymous1.Anonymous.IfIndex)),
+                                false => return Ok(Some(ip_adapter_address.Ipv6IfIndex)),
+                            }
+                        }
+            
+                        current_ip_adapter_address = ip_adapter_address.Next;
+                    }
+                }
+            
+                Ok(None)
+            }
+            
+            fn find_interface_index_cached(is_4: bool, iface: &str) -> std::io::Result<u32> {
+                const INDEX_EXPIRE_DURATION: Duration = Duration::from_secs(5);
+            
+                thread_local! {
+                    static INTERFACE_INDEX_CACHE: std::cell::RefCell<std::collections::HashMap<String, (u32, tokio::time::Instant)>> =
+                    std::cell::RefCell::new(std::collections::HashMap::new());
+                }
+            
+                let cache_index = INTERFACE_INDEX_CACHE.with(|cache| cache.borrow().get(iface).cloned());
+                if let Some((idx, insert_time)) = cache_index {
+                    // short-path, cache hit for most cases
+                    let now = tokio::time::Instant::now();
+                    if now - insert_time < INDEX_EXPIRE_DURATION {
+                        return Ok(idx);
+                    }
+                }
+            
+                // Get from API GetAdaptersAddresses
+                let idx = match find_adapter_interface_index(is_4, iface)? {
+                    Some(idx) => idx,
+                    None => unsafe {
+                        // Windows if_nametoindex requires a C-string for interface name
+                        let ifname = std::ffi::CString::new(iface).expect("iface");
+            
+                        // https://docs.microsoft.com/en-us/previous-versions/windows/hardware/drivers/ff553788(v=vs.85)
+                        let if_index = if_nametoindex(ifname.as_ptr() as windows_sys::core::PCSTR);
+                        if if_index == 0 {
+                            // If the if_nametoindex function fails and returns zero, it is not possible to determine an error code.
+                            tracing::error!("if_nametoindex {} fails", iface);
+                            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid interface name"));
+                        }
+            
+                        if_index
+                    },
+                };
+            
+                INTERFACE_INDEX_CACHE.with(|cache| {
+                    cache.borrow_mut().insert(iface.to_owned(), (idx, tokio::time::Instant::now()));
+                });
+            
+                Ok(idx)
+            }
+            let if_index = find_interface_index_cached(true, d)?;
+
+            
+            unsafe{
+                let if_index =windows_sys::Win32::Networking::WinSock:: htonl(if_index);
+
+                if is_v4 {
+                    setsockopt(
+                        handle,
+                        IPPROTO_IP as i32,
+                        IP_UNICAST_IF as i32,
+                        &if_index as *const _ as windows_sys::core::PCSTR,
+                        std::mem::size_of_val(&if_index) as i32,
+                    );
+    
+                  
+                }else{
+                    setsockopt(
+                        handle,
+                        IPPROTO_IPV6 as i32,
+                        IPV6_UNICAST_IF as i32,
+                        &if_index as *const _ as windows_sys::core::PCSTR,
+                        std::mem::size_of_val(&if_index) as i32,
+                    );
+                }
+            }
+           
+        }
     }
     if is_listen {
         if na.network == Network::TCP {
-            socket.set_nonblocking(true)?; // NECESSARY
+            so.set_nonblocking(true)?; // NECESSARY
         }
     } else {
         if na.network == Network::UDP {
-            socket.set_nonblocking(true)?; // NECESSARY!, or it will block the program
+            so.set_nonblocking(true)?; // NECESSARY!, or it will block the program
         }
     }
 
-    socket.set_reuse_address(true)?;
+    so.set_reuse_address(true)?;
 
     if is_listen {
-        socket.bind(&a.into())?;
+        so.bind(&a.into())?;
 
         if na.network == Network::TCP {
-            socket.listen(128)?;
+            so.listen(128)?;
         }
     } else {
         let zeroa = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
-        socket.bind(&zeroa.into()).context("bind failed")?;
+        so.bind(&zeroa.into()).context("bind failed")?;
 
         if na.network == Network::TCP {
             if tracing::enabled!(tracing::Level::TRACE) {
                 tracing::trace!("so2 connecting tcp {}", a);
             }
-            socket
+            so
                 .connect_timeout(&a.into(), Duration::from_secs(3))
                 .context("so2 tcp connect failed")?;
 
             if tracing::enabled!(tracing::Level::TRACE) {
                 tracing::trace!("so2 connected tcp {}", a);
             }
-            socket.set_nonblocking(true)?;
+            so.set_nonblocking(true)?;
 
             // 至此, 总结:
             // tcp dial 要设为 nonblocking, udp dial 要设为 nonblocking
@@ -97,7 +255,7 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
         }
     }
 
-    Ok(socket)
+    Ok(so)
 }
 
 pub fn listen_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpListener> {
@@ -126,6 +284,7 @@ pub fn block_listen_udp_socket(na: &net::Addr, so: &SockOpt) -> anyhow::Result<S
     Ok(socket)
 }
 
+#[cfg(target_os = "linux")]
 pub fn new_socket2_udp_tproxy_dial(laddr: &net::Addr) -> anyhow::Result<Socket> {
     let laddr = laddr
         .get_socket_addr()
@@ -145,7 +304,7 @@ pub fn new_socket2_udp_tproxy_dial(laddr: &net::Addr) -> anyhow::Result<Socket> 
     socket.set_reuse_address(true)?;
     socket.set_nonblocking(true)?;
     // DO NOT set IP_RECVORIGDSTADDR
-    so_opts::set_tproxy_socket_opts(is_v4, false, &socket)?;
+    super::so_opts::set_tproxy_socket_opts(is_v4, false, &socket)?;
     // if let Some(m) = so.so_mark {
     //     so_opts::set_mark(&socket, m)?;
     // }
@@ -162,7 +321,7 @@ pub fn new_socket2_udp_tproxy_dial(laddr: &net::Addr) -> anyhow::Result<Socket> 
 ///
 /// bind to laddr
 ///
-///
+#[cfg(target_os = "linux")]
 pub fn connect_tproxy_udp(laddr: &net::Addr, raddr: &net::Addr) -> anyhow::Result<Socket> {
     let socket = new_socket2_udp_tproxy_dial(laddr)?;
     let ra = raddr

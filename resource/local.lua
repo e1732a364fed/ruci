@@ -580,8 +580,8 @@ local config_16_tun = {
                         tun_dev_name = "utun321",
                         tun_gateway = "10.0.0.1",
                         router_ip = "192.168.0.1",
-                        original_dev_name = "enp0s1",
-                        direct_list = { "192.168.0.226" }, -- 服务端的ip要直连
+                        original_dev_name = "enp0s1",   -- windows/macos 可不填 original_dev_name, linux 要填 original_dev_name
+                        --direct_list = { "192.168.0.204" }, -- 服务端的ip要直连
                         dns_list = { "114.114.114.114" }
                     }
                 }
@@ -592,13 +592,15 @@ local config_16_tun = {
     outbounds = { {
         tag = "dial1",
         chain = { {
-            --OptDialer = { -- 如果自动路由没写 direct_list, 也可以用 OptDialer+ bind_to_device 的方法
+            OptDialer = { -- 如果自动路由没写 direct_list, 也可以用 OptDialer+ bind_to_device 的方法
 
-            BindDialer = {
-                dial_addr = "tcp://192.168.0.226:10801",
-                -- sockopt = {
-                --     bind_to_device = "enp0s1"
-                -- }
+            -- 注: windows 上要用 OptDialer + bind_to_device 的方法
+
+           -- BindDialer = {
+                dial_addr = "tcp://192.168.0.204:10801",
+                sockopt = {
+                    bind_to_device = "WLAN" --enp0s1(linux 的一般情况) --WLAN( windows, 用wifi联网的情况)
+                }
             }
         }, tlsout, websocket_out}
     } }

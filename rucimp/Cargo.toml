@@ -63,7 +63,7 @@ serde_json = "1.0.114"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [features]
-default = ["route","geoip"]
+default = ["route","geoip","sockopt"]
 
 rustls21 = ["dep:rustls", "rustls-pemfile", "webpki-roots"]
 
@@ -85,6 +85,15 @@ sockopt = ["libc", "socket2","rlimit"]
 use-native-tls = ["native-tls","tokio-native-tls"]
 
 native-tls-vendored = ["native-tls/vendored","tokio-native-tls/vendored"]
+
+[target.'cfg(windows)'.dependencies]
+windows-sys =  { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis",
+    "Win32_Networking_WinSock",
+    "Win32_System_IO",
+] }
 
 
 [[example]]

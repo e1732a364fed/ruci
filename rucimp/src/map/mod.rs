@@ -2,7 +2,7 @@
 Defines some [`ruci::map::Map`] s
  */
 
-#[cfg(all(feature = "sockopt", target_os = "linux"))]
+#[cfg(all(feature = "sockopt"))]
 pub mod opt_net;
 
 #[cfg(all(feature = "sockopt", target_os = "linux"))]

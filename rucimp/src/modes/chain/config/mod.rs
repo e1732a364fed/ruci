@@ -271,7 +271,7 @@ pub enum InMapConfig {
         ext: Option<Ext>,
     }, //多流发生器
 
-    #[cfg(all(feature = "sockopt", target_os = "linux"))]
+    #[cfg(feature = "sockopt")]
     TcpOptListener {
         listen_addr: String,
         sockopt: crate::net::so2::SockOpt,
@@ -322,13 +322,13 @@ pub enum OutMapConfig {
     Counter,
     TLS(TlsOut),
 
-    #[cfg(all(feature = "sockopt", target_os = "linux"))]
+    #[cfg(all(feature = "sockopt"))]
     OptDirect {
         sockopt: crate::net::so2::SockOpt,
         more_num_of_files: Option<bool>,
     },
 
-    #[cfg(all(feature = "sockopt", target_os = "linux"))]
+    #[cfg(all(feature = "sockopt"))]
     OptDialer(crate::map::opt_net::OptDialerOption),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
@@ -530,7 +530,7 @@ impl ToMapBox for InMapConfig {
             #[cfg(feature = "quinn")]
             InMapConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
 
-            #[cfg(all(feature = "sockopt", target_os = "linux"))]
+            #[cfg(all(feature = "sockopt"))]
             InMapConfig::TcpOptListener {
                 listen_addr,
                 sockopt,
@@ -652,7 +652,7 @@ impl ToMapBox for OutMapConfig {
                     .expect("legal quic client config"),
             ),
 
-            #[cfg(all(feature = "sockopt", target_os = "linux"))]
+            #[cfg(all(feature = "sockopt"))]
             OutMapConfig::OptDirect {
                 sockopt,
                 more_num_of_files,
@@ -660,7 +660,7 @@ impl ToMapBox for OutMapConfig {
                 crate::map::opt_net::OptDirect::new(sockopt.clone(), more_num_of_files.clone())
                     .expect("ok"),
             ),
-            #[cfg(all(feature = "sockopt", target_os = "linux"))]
+            #[cfg(all(feature = "sockopt"))]
             OutMapConfig::OptDialer(sopt) => {
                 Box::new(crate::map::opt_net::OptDialer::new(sopt.clone()).expect("ok"))
             }
