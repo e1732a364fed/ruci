@@ -74,20 +74,27 @@ pub struct SimplifiedRecordData {
 impl From<&mut RecordData> for SimplifiedRecordData {
     /// 本转换会 拿走 RecordData 中 download_data 和 upload_data
     ///
-    /// 且将截断1500字节以上的部分(但不做padding 以最小化文件大小)
+    /// 且将截断每段条目的1500字节以上的部分(但不做padding 以最小化文件大小)
+    ///
+    /// 且总数据量不超过3000
     fn from(d: &mut RecordData) -> Self {
-        fn convert(d: Vec<DataPiece>, i: i8) -> Vec<(i8, u128, Vec<u8>)> {
-            d.into_iter()
+        let piece_truncate = d.piece_truncate.unwrap_or(1500);
+        let session_truncate = d.session_truncate.unwrap_or(3000);
+
+        let convert = |d: Vec<DataPiece>, i: i8| -> Vec<(i8, u128, Vec<u8>)> {
+            return d
+                .into_iter()
                 .map(|dp| {
                     let mut data = match dp.data {
                         PayloadData::Pure(d) => d,
                         PayloadData::Addr(add) => add.1,
                     };
-                    data.truncate(1500);
+                    data.truncate(piece_truncate);
                     (i, dp.nanos_since_start, data)
                 })
-                .collect()
-        }
+                .collect();
+        };
+
         let mut dd = Vec::new();
         std::mem::swap(&mut d.download_data, &mut dd);
 
@@ -101,11 +108,22 @@ impl From<&mut RecordData> for SimplifiedRecordData {
 
         a.sort_by(|a, b| a.1.cmp(&b.1));
 
+        let mut s = 0;
+        let mut last = 0;
+        for (i, x) in a.iter().enumerate() {
+            s += x.2.len();
+            last = i;
+            if s > session_truncate {
+                break;
+            }
+        }
+        a.truncate(last);
+
         let data = a.into_iter().map(|x| (x.0, x.2)).collect_vec();
 
         SimplifiedRecordData {
             data,
-            label: d.custom_str.clone(),
+            label: d.label.clone(),
         }
     }
 }
@@ -124,12 +142,16 @@ pub struct RecordData {
     #[serde(skip)]
     pub full_record: Option<bool>,
 
+    pub piece_truncate: Option<usize>,
+
+    pub session_truncate: Option<usize>,
+
     // #[serde(skip)]
     // pub global_data: Option<GlobalData>,
     pub global_data: Option<SerializableGlobalData>,
 
     /// customized by user (as a marker)
-    pub custom_str: Option<String>,
+    pub label: Option<String>,
     pub upload_data: Vec<DataPiece>,
     pub download_data: Vec<DataPiece>,
 }
@@ -158,33 +180,31 @@ impl RecordData {
     /// log/name.log
     fn save_name(&self) -> String {
         let tail = format!(
-            "{}.{}.log",
+            "{}_{}.{}.log",
+            self.label.as_deref().unwrap_or_default(),
             self.cid,
             self.serialize_format.as_deref().unwrap_or("json")
         );
-        let mut name = if let Some(g) = &self.global_data {
+        let name = if let Some(g) = &self.global_data {
             format!("record_{}_{}", g.run_instance_id, tail)
         } else {
             format!("record_.{}", tail)
         };
-        if let Some(p) = &self.file_prefix {
-            name = p.to_owned() + &name;
-        }
+
         format!("logs/{}", name)
     }
     fn save(&mut self) {
         let _ = std::fs::create_dir("logs");
 
         let name = self.save_name();
-        let f = std::fs::File::create(name).unwrap();
 
         let r = match &self.serialize_format {
             Some(s) => match s.as_str() {
-                "json" => self.save_json(f),
-                "cbor" => self.save_cbor(f),
-                _ => self.save_json(f),
+                "json" => self.save_json(name),
+                "cbor" => self.save_cbor(name),
+                _ => self.save_json(name),
             },
-            None => self.save_json(f),
+            None => self.save_json(name),
         };
 
         if let Err(e) = r {
@@ -192,22 +212,35 @@ impl RecordData {
         }
     }
 
-    fn save_cbor(&mut self, f: std::fs::File) -> anyhow::Result<()> {
+    fn save_cbor(&mut self, name: String) -> anyhow::Result<()> {
         if self.full_record.unwrap_or_default() {
+            let f = std::fs::File::create(name).unwrap();
+
             Ok(serde_cbor::to_writer(f, &self)?)
         } else {
-            Ok(serde_cbor::to_writer(f, &SimplifiedRecordData::from(self))?)
+            let sd = SimplifiedRecordData::from(self);
+            if sd.data.len() > 0 {
+                let f = std::fs::File::create(name).unwrap();
+
+                serde_cbor::to_writer(f, &sd)?
+            }
+            Ok(())
         }
     }
 
-    fn save_json(&mut self, f: std::fs::File) -> anyhow::Result<()> {
+    fn save_json(&mut self, name: String) -> anyhow::Result<()> {
         if self.full_record.unwrap_or_default() {
+            let f = std::fs::File::create(name).unwrap();
+
             Ok(serde_json::to_writer_pretty(f, &self)?)
         } else {
-            Ok(serde_json::to_writer_pretty(
-                f,
-                &SimplifiedRecordData::from(self),
-            )?)
+            let sd = SimplifiedRecordData::from(self);
+            if sd.data.len() > 0 {
+                let f = std::fs::File::create(name).unwrap();
+
+                serde_json::to_writer_pretty(f, &sd)?
+            }
+            Ok(())
         }
     }
 }
@@ -327,7 +360,7 @@ impl AsyncWrite for RecorderConn {
         cx: &mut std::task::Context<'_>,
     ) -> Poll<io::Result<()>> {
         info!(
-            cid = %self.record.data.cid,
+            cid = %self.record.data.cid, label = self.record.data.label,
             "recorder got shutdown, Saving to file...",
         );
 
@@ -410,9 +443,12 @@ impl AsyncWriteAddr for RecordAddrConnW {
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct Config {
-    pub custom_str: Option<String>,
+    pub label: Option<String>,
     pub serialize_format: Option<String>,
     pub full_record: Option<bool>,
+
+    pub piece_truncate: Option<usize>,
+    pub session_truncate: Option<usize>,
 }
 
 #[map_ext_fields]
@@ -449,9 +485,11 @@ impl Map for RecorderMap {
                 // global_data: params.g.clone(),
                 global_data: sgd.clone(),
                 full_record: self.config.full_record,
+                piece_truncate: self.config.piece_truncate,
+                session_truncate: self.config.session_truncate,
 
                 serialize_format: self.config.serialize_format.clone(),
-                custom_str: self.config.custom_str.clone(),
+                label: self.config.label.clone(),
 
                 ..Default::default()
             },

@@ -693,12 +693,12 @@ local config_17_tcp_ip_stack = {
 }
 --]]
 
-
+-- Recorder 用于记录流量并写入单独的日志文件
 local config_18_recorder = {
     inbounds = { {
         chain = { listen, {
             Recorder = {
-                custom_str = "socks5",
+                label = "socks5",
                 serialize_format = "cbor", --"json"
                 --full_record = true
             }
@@ -712,7 +712,7 @@ local config_18_recorder = {
         tag = "dial1",
         chain = { direct, {
             Recorder = {
-                custom_str = "direct",
+                label = "direct",
                 serialize_format = "cbor"
             }
         } }
@@ -720,8 +720,78 @@ local config_18_recorder = {
 
 }
 
+local function get_recorder(label)
+    return {
+        Recorder = {
+            label = label,
+            serialize_format = "cbor",
+            session_truncate = 2000,
+        }
+    }
+end
 
-Config = config_18_recorder
+
+
+local config_19_recorder_trojans = {
+    tag_route = { { "listen_socks5", "dial_trojan" }, { "listen_trojan", "dial_direct" } },
+    inbounds = {
+        {
+            tag = "listen_socks5",
+            chain = {
+                listen,
+                get_recorder("socks5"),
+                {
+                    Socks5Http = {},
+                }
+            },
+        },
+        {
+            tag = "listen_trojan",
+            chain = { {
+                Listener = { listen_addr = "0.0.0.0:10801" }
+            },
+                get_recorder("trojans"),
+                {
+                    TLS = {
+                        cert = "test.crt",
+                        key = "test.key",
+                        alpn = { "h2", "http" }
+
+                    }
+                },
+                {
+                    Trojan = {
+                        password = "mypassword"
+                    }
+                } },
+        },
+    },
+    outbounds = {
+        {
+            tag = "dial_direct",
+            chain = { direct, get_recorder("direct"), }
+        },
+        {
+            tag = "dial_trojan",
+            chain = {
+                {
+                    BindDialer = {
+                        dial_addr = "tcp://0.0.0.0:10801"
+                    }
+                },
+
+                tlsout,
+                get_recorder("trojan"),
+                trojan_out
+
+            }
+        }
+    }
+
+}
+
+
+Config = config_19_recorder_trojans
 
 --[[
 
