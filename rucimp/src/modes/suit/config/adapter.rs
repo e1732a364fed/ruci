@@ -98,6 +98,7 @@ pub fn load_out_mappers_by_str_and_ld_config(s: &str, c: LDConfig) -> Option<Map
                     Some(ruci::user::PlainText::from(u))
                 },
                 use_earlydata: c.early_data.unwrap_or_default(),
+                ..Default::default()
             };
             Some(Box::new(a))
         }

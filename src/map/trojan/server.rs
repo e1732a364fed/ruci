@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    map::{self, Data, MapResult, Mapper, MapperBox, ToMapperBox, CID},
+    map::{self, Data, MapResult, Mapper, MapperBox, MapperExtFields, ToMapperBox, CID},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
     utils, Name,
@@ -9,7 +9,7 @@ use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use bytes::{Buf, BytesMut};
 use futures::executor::block_on;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use tokio::io::AsyncReadExt;
 
 #[derive(Default, Clone)]
@@ -25,7 +25,8 @@ impl ToMapperBox for Config {
     }
 }
 
-#[derive(Debug, Clone, NoMapperExt)]
+#[mapper_ext_fields]
+#[derive(Debug, Clone, MapperExt)]
 pub struct Server {
     pub um: UsersMap<User>,
 }
@@ -49,7 +50,10 @@ impl Server {
             panic!("can't init a trojan server without any password");
         }
 
-        Server { um }
+        Server {
+            um,
+            ext_fields: Some(MapperExtFields::default()),
+        }
     }
 
     pub async fn handshake(

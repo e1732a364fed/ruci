@@ -9,7 +9,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use bytes::BytesMut;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use std::{io, pin::Pin, task::Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
@@ -138,7 +138,8 @@ impl AsyncWrite for AdderConn {
 }
 
 /// maps generates an AdderConn stream, which does add or sub for the input
-#[derive(Debug, Clone, Copy, Default, NoMapperExt)]
+#[mapper_ext_fields]
+#[derive(Debug, Clone, Default, MapperExt)]
 pub struct Adder {
     pub add_num: i8,
     pub direction: AddDirection,

@@ -3,7 +3,7 @@ use anyhow::{bail, Context};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use futures::Future;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use ruci::{
     map::{self, *},
     net::{self, http::CommonConfig, *},
@@ -15,7 +15,8 @@ use tokio_tungstenite::{
 
 use super::*;
 
-#[derive(Clone, Debug, Default, NoMapperExt)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, Default, MapperExt)]
 pub struct Client {
     request: Request<()>,
     use_early_data: bool,
@@ -60,6 +61,7 @@ impl Client {
         Self {
             request: r,
             use_early_data: c.use_early_data.unwrap_or_default(),
+            ..Default::default()
         }
     }
 

@@ -3,7 +3,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use http::{header::CONTENT_TYPE, Response, StatusCode};
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
     net::{self, helpers::EarlyDataWrapper, http::CommonConfig},
@@ -15,7 +15,8 @@ use tracing::warn;
 use crate::map::h2::grpc::GRPC_CONTENT_TYPE;
 
 use super::*;
-#[derive(Clone, Debug, NoMapperExt, Default)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, MapperExt, Default)]
 pub struct Server {
     pub is_grpc: Option<bool>,
 
@@ -32,6 +33,7 @@ impl Server {
         Server {
             http_config,
             is_grpc,
+            ..Default::default()
         }
     }
     async fn handshake(

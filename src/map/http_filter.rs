@@ -11,13 +11,14 @@ use crate::{map, net};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use bytes::BytesMut;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use net::http::parse_h1_request;
 use tokio::io::AsyncReadExt;
 
 use super::{http::CommonConfig, MapResult, Mapper, ProxyBehavior};
 
-#[derive(Clone, Debug, NoMapperExt, Default)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, MapperExt, Default)]
 pub struct Server {
     pub config: Option<CommonConfig>,
 }

@@ -6,7 +6,7 @@ use super::*;
 
 /// consumes the stream, loop listen and echo it back.
 #[mapper_ext_fields]
-#[derive(Clone, Debug, Default, NoMapperExt)]
+#[derive(Clone, Debug, Default, MapperExt)]
 pub struct Echo {}
 
 impl Name for Echo {

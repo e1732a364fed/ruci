@@ -79,6 +79,7 @@ impl Server {
             socks5_s: socks5::server::Server {
                 um: oum,
                 support_udp: true, //默认打开udp 支持
+                ext_fields: Some(MapperExtFields::default()),
             },
             ext_fields: None,
         }

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bytes::BytesMut;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
     net::{self, helpers::EarlyDataWrapper, http::CommonConfig},
@@ -16,7 +16,8 @@ use tracing::{debug, warn};
 
 use super::*;
 
-#[derive(Clone, Debug, NoMapperExt, Default)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, MapperExt, Default)]
 pub struct Server {
     pub config: Option<CommonConfig>,
 }

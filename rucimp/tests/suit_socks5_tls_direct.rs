@@ -94,6 +94,7 @@ async fn f_dial_future_tls_out_adder(
     let a = socks5::client::Client {
         up: Some(PlainText::from("u0 p0".to_string())),
         use_earlydata: false,
+        ..Default::default()
     };
     let mut newconn = a
         .maps(

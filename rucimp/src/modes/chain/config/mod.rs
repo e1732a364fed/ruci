@@ -416,10 +416,12 @@ impl ToMapperBox for InMapperConfig {
                 http_config: config,
             } => Box::new(crate::map::ws::server::Server {
                 config: config.clone(),
+                ..Default::default()
             }),
-            InMapperConfig::HttpFilter(c) => {
-                Box::new(ruci::map::http_filter::Server { config: c.clone() })
-            }
+            InMapperConfig::HttpFilter(c) => Box::new(ruci::map::http_filter::Server {
+                config: c.clone(),
+                ..Default::default()
+            }),
             InMapperConfig::H2 {
                 http_config: config,
                 is_grpc,
@@ -488,6 +490,7 @@ impl ToMapperBox for OutMapperConfig {
                         Some(ruci::user::PlainText::from(u))
                     },
                     use_earlydata: c.early_data.unwrap_or_default(),
+                    ..Default::default()
                 };
                 if let Some(ext) = &c.ext {
                     a.set_ext_fields(Some(ext.to_ext_fields()))

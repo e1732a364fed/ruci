@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use h2::client::{Connection, SendRequest};
 use http::Request;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
     net::{self, http::CommonConfig, Conn, CID},
@@ -20,7 +20,8 @@ use tracing::debug;
 use super::*;
 
 /// SingleClient 不使用 h2 的多路复用特性
-#[derive(Clone, Debug, NoMapperExt, Default)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, MapperExt, Default)]
 pub struct SingleClient {
     pub http_config: Option<CommonConfig>,
     pub is_grpc: bool,
@@ -49,6 +50,7 @@ impl SingleClient {
             req,
             http_config,
             is_grpc,
+            ..Default::default()
         }
     }
 
@@ -166,7 +168,8 @@ impl Mapper for SingleClient {
 }
 
 /// MuxClient 使用 h2 的多路复用特性
-#[derive(Clone, Debug, NoMapperExt, Default)]
+#[mapper_ext_fields]
+#[derive(Clone, Debug, MapperExt, Default)]
 pub struct MuxClient {
     pub http_config: Option<CommonConfig>,
     pub is_grpc: bool,

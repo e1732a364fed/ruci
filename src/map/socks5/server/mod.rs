@@ -10,17 +10,16 @@ pub mod udp2;
 use super::*;
 
 use crate::{
-    map::{self, MapResult, MapperBox, ProxyBehavior, ToMapperBox, CID},
+    map::{self, MapResult, MapperBox, MapperExtFields, ProxyBehavior, ToMapperBox, CID},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
-    utils::buf_to_ob,
-    utils::io_error,
+    utils::{buf_to_ob, io_error},
     Name,
 };
 use anyhow::Context;
 use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use map::Stream;
 use std::{
     cmp::min,
@@ -59,7 +58,8 @@ impl ToMapperBox for Config {
 ///
 /// 握手成功后, 会以100ms为限读一次 eary_data
 ///
-#[derive(Debug, Clone, NoMapperExt)]
+#[mapper_ext_fields]
+#[derive(Debug, Clone, MapperExt)]
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,
     pub support_udp: bool,
@@ -96,6 +96,7 @@ impl Server {
         Server {
             support_udp: option.support_udp,
             um: if um.len().await > 0 { Some(um) } else { None },
+            ext_fields: Some(MapperExtFields::default()),
         }
     }
 

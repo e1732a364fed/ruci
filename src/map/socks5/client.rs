@@ -4,7 +4,7 @@ Defines a Mapper for socks5 client.
 */
 
 use bytes::BufMut;
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 use map::{helpers, Addr, Network};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -20,7 +20,8 @@ use crate::{
 };
 use anyhow::{anyhow, bail, Ok};
 
-#[derive(Debug, Clone, NoMapperExt)]
+#[mapper_ext_fields]
+#[derive(Debug, Clone, MapperExt, Default)]
 pub struct Client {
     pub up: Option<PlainText>, //todo: make sure len <= 255
 

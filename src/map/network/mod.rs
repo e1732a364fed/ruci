@@ -5,7 +5,7 @@ Defines Mappper s that can generate a/some basic Stream, or can consume a Stream
 pub mod accept;
 pub mod echo;
 
-use macro_mapper::{mapper_ext_fields, MapperExt, NoMapperExt};
+use macro_mapper::*;
 use tokio::sync::mpsc::Receiver;
 use tracing::debug;
 use tracing::info;
@@ -15,7 +15,8 @@ use crate::map;
 use crate::Name;
 
 /// BlackHole drops the connection instantly
-#[derive(NoMapperExt, Debug, Default, Clone)]
+#[mapper_ext_fields]
+#[derive(MapperExt, Debug, Default, Clone)]
 pub struct BlackHole {}
 
 impl Name for BlackHole {
