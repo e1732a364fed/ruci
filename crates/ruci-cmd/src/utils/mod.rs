@@ -95,8 +95,8 @@ pub async fn dl_url(url: &str, file_name: &str) -> anyhow::Result<()> {
 }
 
 async fn download_mmdb() -> anyhow::Result<()> {
-    dl_url(MMDB_DOWNLOAD_LINK, "Country.mmdb").await?;
-    info!("download succeed");
+    const GEOIP_COUNTRY: &str = "Country.mmdb";
+    dl_url(MMDB_DOWNLOAD_LINK, GEOIP_COUNTRY).await?;
     Ok(())
 }
 

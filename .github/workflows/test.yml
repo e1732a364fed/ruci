@@ -28,7 +28,18 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - uses: taiki-e/install-action@cargo-hack
     - name: Build
       run: cargo build --verbose
+      
+    - name: Test Ruci Every feature tag
+      run: cargo hack check --feature-powerset --no-dev-deps
+
+    - name: Test Rucimp Every feature tag
+      run: cd rucimp && cargo hack check --feature-powerset --no-dev-deps    
+
+    - name: Test Ruci-Cmd Every feature tag
+      run: cd crates/ruci-cmd && cargo hack check --feature-powerset --no-dev-deps
+   
     - name: Run tests
       run: cargo test --verbose

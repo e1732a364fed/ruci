@@ -109,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             #[cfg(not(feature = "api_server"))]
-            start_engine(args.mode, args.config).await?;
+            start_engine(args.clone(), args.config).await?;
         }
 
         Some(cs) => match cs {

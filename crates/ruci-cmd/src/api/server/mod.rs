@@ -43,7 +43,7 @@ pub async fn deal_args(
 
 type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, (DateTime<Utc>, NewConnInfo)>>>;
 
-/// 缓存 某时间点的流量
+/// 缓存 某cid的 某时间点的流量
 #[cfg(feature = "trace")]
 type FluxCache = Arc<TinyUfo<CID, Vec<(tokio::time::Instant, u64)>>>;
 #[cfg(feature = "trace")]
@@ -255,7 +255,6 @@ pub async fn serve(s: &Server, global_traffic: Arc<ruci::net::GlobalTrafficRecor
     info!("api server starting {addr}");
 
     let mut app = Router::new().route("/stop_core", get(stop_core).with_state(s.close_tx.clone()));
-    //get_last_ok_cid
     app = app
         .route(
             "/gt/acc",
