@@ -114,7 +114,7 @@ dial = {
 
 opt_dial = {
     OptDialer ={
-        dial_addr = "tcp://0.0.0.0:10801", -- 不能为 127.0.0.1, 须为 0.0.0.0
+        dial_addr = "tcp://0.0.0.0:10801", -- 用tproxy时, 不能为 127.0.0.1, 须为 0.0.0.0
         sockopt = {
             so_mark = 255,
             bind_to_device = "enp0s1"

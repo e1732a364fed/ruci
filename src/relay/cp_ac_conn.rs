@@ -6,9 +6,6 @@ use crate::net;
 use crate::net::addr_conn::*;
 use crate::net::CID;
 use bytes::BytesMut;
-use futures_util::pin_mut;
-use futures_util::select;
-use futures_util::FutureExt;
 use std::io;
 use std::ops::DerefMut;
 use std::sync::Arc;
@@ -53,7 +50,7 @@ pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u6
 
         }
         info!( cid = %cid,
-        "udp to tcp relay end", );
+        "cp_addr_conn_and_conn end", );
     }
     //might discard udp addr part
 
@@ -75,12 +72,11 @@ pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u6
 
     if no_timeout {
         let (c1_to_c2, c2_to_c1) = (
-            cp_conn_to_addr_conn(&mut r, ac.w).fuse(),
-            cp_addr_conn_to_conn(ac.r, &mut w).fuse(),
+            cp_conn_to_addr_conn(&mut r, ac.w),
+            cp_addr_conn_to_conn(ac.r, &mut w),
         );
-        pin_mut!(c1_to_c2, c2_to_c1);
 
-        select! {
+        tokio::select! {
             r1 = c1_to_c2 => {
 
                 r1
@@ -92,12 +88,11 @@ pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u6
         }
     } else {
         let (c1_to_c2, c2_to_c1) = (
-            cp_conn_to_addr_conn(&mut r, ac.w).fuse(),
-            cp_addr_conn_to_conn_timeout(ac.r, &mut w).fuse(),
+            cp_conn_to_addr_conn(&mut r, ac.w),
+            cp_addr_conn_to_conn_timeout(ac.r, &mut w),
         );
-        pin_mut!(c1_to_c2, c2_to_c1);
 
-        select! {
+        tokio::select! {
             r1 = c1_to_c2 => {
 
                 r1
@@ -110,19 +105,19 @@ pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u6
     }
 }
 
-pub async fn cp_conn_to_addr_conn<R, W1: AddrWriteTrait>(r1: &mut R, mut w1: W1) -> io::Result<u64>
+pub async fn cp_conn_to_addr_conn<R>(r: &mut R, mut w: impl AddrWriteTrait) -> io::Result<u64>
 where
     R: AsyncRead + Unpin + ?Sized,
 {
     let mut whole: u64 = 0;
-    let mut buf0 = Box::new([0u8; MAX_DATAGRAM_SIZE]);
+    let mut buf0 = Box::new([0u8; MTU]);
 
     let a = net::Addr::default();
     loop {
-        let r = r1.read(buf0.deref_mut()).await;
+        let r = r.read(buf0.deref_mut()).await;
         match r {
             Ok(n) => {
-                let r = w1.write(&buf0[..n], &a).await;
+                let r = w.write(&buf0[..n], &a).await;
                 match r {
                     Ok(n) => whole += n as u64,
                     Err(_) => break,
@@ -137,9 +132,9 @@ where
     Ok(whole)
 }
 
-pub async fn cp_addr_conn_to_conn_timeout<W, R1: AddrReadTrait>(
-    mut r1: R1,
-    w1: &mut W,
+pub async fn cp_addr_conn_to_conn_timeout<W>(
+    mut r: impl AddrReadTrait,
+    w: &mut W,
 ) -> io::Result<u64>
 where
     W: AsyncWrite + Unpin + ?Sized,
@@ -147,20 +142,18 @@ where
     let mut whole_write = 0;
 
     loop {
-        let r1ref = &mut r1;
+        let r1ref = &mut r;
 
-        let sleep_f = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
+        let sleep_f = tokio::time::sleep(CP_UDP_TIMEOUT);
         let read_f = async move {
-            let mut buf0 = Box::new([0u8; MAX_DATAGRAM_SIZE]);
+            let mut buf0 = Box::new([0u8; MTU]);
             let mut buf = ReadBuf::new(buf0.deref_mut());
             let r = r1ref.read(buf.initialized_mut()).await;
 
             (r, buf0)
-        }
-        .fuse();
-        pin_mut!(sleep_f, read_f);
+        };
 
-        select! {
+        tokio::select! {
             _ = sleep_f =>{
                 debug!("read addrconn timeout");
 
@@ -173,13 +166,13 @@ where
                     Ok((m, _ad)) => {
                         if m > 0 {
                             //debug!("cp_addr_to_conn, read got {m}");
-                            let r = w1.write(&buf0[..m]).await;
+                            let r = w.write(&buf0[..m]).await;
                             if let Ok(n) = r{
                                 //debug!("cp_addr_to_conn, write ok {n}");
 
                                 whole_write += n;
 
-                                let r = w1.flush().await;
+                                let r = w.flush().await;
                                 if r.is_err(){
                                     debug!("cp_addr_to_conn, write  flush not ok ");
                                     break;
@@ -200,56 +193,46 @@ where
     Ok(whole_write as u64)
 }
 
-pub async fn cp_addr_conn_to_conn<W, R1: AddrReadTrait>(mut r1: R1, w1: &mut W) -> io::Result<u64>
+pub async fn cp_addr_conn_to_conn<W>(mut r: impl AddrReadTrait, w: &mut W) -> io::Result<u64>
 where
     W: AsyncWrite + Unpin + ?Sized,
 {
     let mut whole_write = 0;
 
     loop {
-        let r1ref = &mut r1;
+        let rr = &mut r;
 
-        let read_f = async move {
-            let mut buf0 = Box::new([0u8; MAX_DATAGRAM_SIZE]);
-            let mut buf = ReadBuf::new(buf0.deref_mut());
-            let r = r1ref.read(buf.initialized_mut()).await;
+        let mut buf0 = Box::new([0u8; MTU]);
+        let mut buf = ReadBuf::new(buf0.deref_mut());
+        let r = rr.read(buf.initialized_mut()).await;
 
-            (r, buf0)
-        }
-        .fuse();
-        pin_mut!(read_f);
+        match r {
+            Err(e) => {
+                debug!("cp_addr_to_conn, read not ok {e}");
 
-        select! {
+                break;
+            }
+            Ok((m, _ad)) => {
+                if m > 0 {
+                    //debug!("cp_addr_to_conn, read got {m}");
+                    let r = w.write(&buf0[..m]).await;
+                    if let Ok(n) = r {
+                        //debug!("cp_addr_to_conn, write ok {n}");
 
-            r = read_f =>{
-                let (r,  buf0) = r;
-                match r {
-                    Err(_) => break,
-                    Ok((m, _ad)) => {
-                        if m > 0 {
-                            //debug!("cp_addr_to_conn, read got {m}");
-                            let r = w1.write(&buf0[..m]).await;
-                            if let Ok(n) = r{
-                                //debug!("cp_addr_to_conn, write ok {n}");
+                        whole_write += n;
 
-                                whole_write += n;
-
-                                let r = w1.flush().await;
-                                if r.is_err(){
-                                    debug!("cp_addr_to_conn, write  flush not ok ");
-                                    break;
-                                }
-
-                            }else{
-                                debug!("cp_addr_to_conn, write not ok ");
-                                break;
-                            }
-
+                        let r = w.flush().await;
+                        if r.is_err() {
+                            debug!("cp_addr_to_conn, write  flush not ok {r:?}");
+                            break;
                         }
+                    } else {
+                        debug!("cp_addr_to_conn, write not ok {r:?}");
+                        break;
                     }
                 }
             }
-        } //select
+        }
     } //loop
 
     Ok(whole_write as u64)

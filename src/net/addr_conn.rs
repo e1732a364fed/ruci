@@ -320,6 +320,7 @@ where
 
 pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: change this
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
+pub const MTU: usize = 1400;
 
 async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
     r1: &mut R1,
@@ -362,7 +363,7 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
     // buf size 的选择也很重要, 太大太小都卡
 
     let mut whole_write = 0;
-    let mut buf = Box::new([0u8; 1400]);
+    let mut buf = Box::new([0u8; MTU]);
 
     if no_timeout {
         loop {

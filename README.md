@@ -46,7 +46,7 @@ ruci-cmd 是最终的全功能的可执行文件, 包含一些系统路由的配
 1. "suit mode", 是扁平配置, toml格式. (suit 含义是 "套装")
 2. "chain mode", 链式配置, lua格式. 
 
-lua格式可参考 [用例](resource/local.lua)  和 [lua配置功能](doc/lua.md) 
+lua格式可参考 [local.lua](resource/local.lua), [remote.lua](resource/remote.lua)  和 [lua配置说明](doc/lua.md) 
 
 ## Compile/Run
 
@@ -66,18 +66,30 @@ See [exmaples](rucimp/examples/README.md)
 
 TDD. See [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md)
 
+## What is "Proxy"
+
+A proxy must have both an inbound and an outbound.
+
+If the app only has an inbound, then it's just a regular server.
+
+On client side, having both an inbound and an outbound is called regular proxy;
+It's outbound is connected to the server's inbound.
+
+On server side, having both an inbound and an outbound is called "reverse proxy".
+
+
 ## Chain Structure Explained
 
-ruci对代理的原理加以更高的抽象化, 认为任何协议都可被认定为由一个或多个【映射】组成
+Ruci abstracts proxy, regards any protocols as consisting of one or more Mapper 【映射】
 
-有如下定义(伪代码): 
+Pseudo code: 
 
-单流发生器(stream generator):  `function(args)->stream`
+stream generator 【单流发生器】:  `function(args)->stream`
 
-单射( injective function, which is the normal stream mapper): 
+injective function 【单射】(which is the normal stream Mapper): 
  `function(stream1, args...)-> (Option<stream2>, useful_data...) `
 
-多流发生器(multi-stream generator): `function( Option<stream> ,args...)->[channel->stream]`
+multi-stream generator【多流发生器】: `function( Option<stream> ,args...)->[channel->stream]`
 
 流由流发生器产生. 
 
