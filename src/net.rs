@@ -507,7 +507,7 @@ impl Display for Stream {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
             Stream::TCP(c) => write!(f, "{}", c.name()),
-            Stream::UDP(_) => write!(f, "SomeUdplikeStream"),
+            Stream::UDP(ac) => write!(f, "{}", ac.name()),
             Stream::Generator(_) => write!(f, "SomeStreamGenerator"),
             Stream::None => write!(f, "NoStream"),
         }

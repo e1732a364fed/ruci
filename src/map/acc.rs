@@ -40,7 +40,6 @@ impl Debug for AccumulateResult {
             .field("e", &self.e)
             .field("id", &self.id)
             .field("tag", &self.chain_tag)
-            //.field("left_mappers_iter count", &self.left_mappers_iter.)
             .finish()
     }
 }
