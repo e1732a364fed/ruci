@@ -7,8 +7,6 @@ The mod is a mirror of mod tcp_ip_stack_lwip.
 
  */
 
-mod udp;
-
 use std::{
     fmt::Display,
     net::SocketAddr,
@@ -33,7 +31,24 @@ use tokio::{
 };
 use tracing::debug;
 use tracing::warn;
-use udp::loop_accept_udp;
+// use udp::smoltcp_loop_accept_udp;
+
+#[async_trait::async_trait]
+
+impl crate::map::tcp_ip_stack_common::udp::Getter for netstack_smoltcp::udp::ReadHalf {
+    async fn get(&mut self) -> std::io::Result<(Vec<u8>, SocketAddr, SocketAddr)> {
+        let r = self.next().await;
+        r.ok_or(std::io::Error::other("smoltcp udp ReadHalf got None"))
+    }
+}
+
+pub async fn smoltcp_loop_accept_udp(
+    mut r: netstack_smoltcp::udp::ReadHalf,
+    tx: mpsc::Sender<crate::map::tcp_ip_stack_common::udp::DataDstSrc>,
+    shutdown_atomic: Arc<AtomicBool>,
+) {
+    crate::map::tcp_ip_stack_common::udp::loop_accept_udp(&mut r, tx, shutdown_atomic).await
+}
 
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
@@ -180,12 +195,15 @@ impl Map for Stack {
 
             let shutdown_atomic: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
             tokio::spawn(async move {
-                loop_accept_udp(r, udp_new_msg_tx_smoltcp_end, shutdown_atomic).await
+                smoltcp_loop_accept_udp(r, udp_new_msg_tx_smoltcp_end, shutdown_atomic).await
             });
 
-            let mut l = udp::Listener::new(udp_new_msg_tx_to_smoltcp, udp_new_msg_rx_self_end)
-                .await
-                .unwrap();
+            let mut l = crate::map::tcp_ip_stack_common::udp::Listener::new(
+                udp_new_msg_tx_to_smoltcp,
+                udp_new_msg_rx_self_end,
+            )
+            .await
+            .unwrap();
 
             tokio::spawn(async move {
                 loop {

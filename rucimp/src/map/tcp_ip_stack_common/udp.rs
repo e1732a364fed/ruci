@@ -15,8 +15,6 @@ use std::{
 
 use bytes::BytesMut;
 use futures::channel::oneshot;
-use futures::StreamExt;
-use netstack_smoltcp::udp::ReadHalf as RecvHalf;
 use ruci::net::addr_conn::CP_UDP_TIMEOUT;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tracing::{debug, warn};
@@ -29,39 +27,44 @@ use ruci::net::{
 use dashmap::DashMap;
 
 /// (buf_index, left_bound, right_bound), dst, src
-type DataDstSrc = (Vec<u8>, SocketAddr, SocketAddr);
+pub type DataDstSrc = (Vec<u8>, SocketAddr, SocketAddr);
 
 const UDP_CHANNEL_SIZE: usize = 4096;
 const UDP_CONN_CHANNEL_SIZE: usize = 100;
 const UDP_TIMEOUT_MULTIPLIER: u32 = 2;
 
+#[async_trait::async_trait]
+pub trait Getter: Send {
+    async fn get(&mut self) -> io::Result<(Vec<u8>, SocketAddr, SocketAddr)>;
+}
+
 pub async fn loop_accept_udp(
-    mut r: RecvHalf,
+    r: &mut dyn Getter,
     tx: mpsc::Sender<DataDstSrc>,
     shutdown_atomic: Arc<AtomicBool>,
 ) {
     loop {
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
-            debug!("smoltcp udp thread shutdown_atomic = true");
+            debug!("stack udp thread shutdown_atomic = true");
             break;
         }
 
-        let r = r.next().await;
+        let r = r.get().await;
 
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
-            debug!("smoltcp udp thread shutdown_atomic = true");
+            debug!("stack udp thread shutdown_atomic = true");
 
             break;
         }
 
         let r = match r {
-            Some(r) => {
-                tracing::trace!("smoltcp udp thread got {} {} {}", r.0.len(), r.1, r.2);
+            Ok(r) => {
+                tracing::trace!("stack udp thread got {} {} {}", r.0.len(), r.1, r.2);
 
                 r
             }
-            None => {
-                warn!("smoltcp loop_accept_udp tproxy_recv_from_with_destination got none");
+            Err(_) => {
+                warn!("stack loop_accept_udp tproxy_recv_from_with_destination got none");
                 return;
             }
         };
@@ -73,7 +76,7 @@ pub async fn loop_accept_udp(
 
             if let Err(e) = r {
                 warn!(
-                    "smoltcp loop_accept_udp tx.send got err: {e}, {} {}",
+                    "stack loop_accept_udp tx.send got err: {e}, {} {}",
                     src, dst
                 );
 
@@ -81,7 +84,7 @@ pub async fn loop_accept_udp(
             }
         } else {
             // shouldn't happen
-            warn!("smoltcp loop_accept_udp read got n=0, will continue");
+            warn!("stack loop_accept_udp read got n=0, will continue");
 
             continue;
         }
@@ -138,7 +141,7 @@ impl Listener {
             loop {
                 tokio::select! {
                     _ = &mut shutdown_rx=>{
-                        debug!("smoltcp UdpListener got shutdown, will break");
+                        debug!("stack UdpListener got shutdown, will break");
                         break;
                     }
 
@@ -146,7 +149,7 @@ impl Listener {
                         let (data,src, dst) = match r {
                             Some(r) => r,
                             None => {
-                                debug!("smoltcp UdpListener loop rx got none, will break");
+                                debug!("stack UdpListener loop rx got none, will break");
                                 break;
                             }
                         };
@@ -174,7 +177,7 @@ impl Listener {
 
                             let r = new_ac_tx.send(AcceptData{ac,dst,  first_buf}).await;
                             if let Err(e) = r {
-                                debug!("smoltcp UdpListener loop got e: {e}");
+                                debug!("stack UdpListener loop got e: {e}");
                                 break;
                             }
 
@@ -182,7 +185,7 @@ impl Listener {
                             entry.last_active = Instant::now();
                             let r = entry.tx.send(data).await;
                             if let Err(e) = r {
-                                debug!("smoltcp UdpListener tx send got e: {e}");
+                                debug!("stack UdpListener tx send got e: {e}");
                                 conn_map.remove(&k);
                                 continue;
                             }
@@ -203,17 +206,17 @@ impl Listener {
             .rx
             .recv()
             .await
-            .ok_or(anyhow::anyhow!("smoltcp udplistener accept got rx closed"))?;
+            .ok_or(anyhow::anyhow!("stack udplistener accept got rx closed"))?;
         Ok(ad)
     }
 
     /// the listener is not reuseable after shutdown
     pub fn shutdown(&mut self) {
-        debug!("smoltcp udp got shutdown called");
+        debug!("stack udp got shutdown called");
 
         let tx = self.shutdown_tx.take();
         if let Some(tx) = tx {
-            debug!("smoltcp udp will shutdown");
+            debug!("stack udp will shutdown");
 
             let _ = tx.send(());
         }

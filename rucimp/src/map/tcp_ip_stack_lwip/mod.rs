@@ -5,8 +5,6 @@
 
  */
 
-mod udp;
-
 use std::{
     fmt::Display,
     net::SocketAddr,
@@ -32,7 +30,22 @@ use tokio::{
 };
 use tracing::debug;
 use tracing::warn;
-use udp::loop_accept_udp;
+
+#[async_trait::async_trait]
+
+impl crate::map::tcp_ip_stack_common::udp::Getter for netstack_lwip::udp::RecvHalf {
+    async fn get(&mut self) -> std::io::Result<(Vec<u8>, SocketAddr, SocketAddr)> {
+        self.recv_from().await
+    }
+}
+
+pub async fn lwip_loop_accept_udp(
+    mut r: netstack_lwip::udp::RecvHalf,
+    tx: mpsc::Sender<crate::map::tcp_ip_stack_common::udp::DataDstSrc>,
+    shutdown_atomic: Arc<AtomicBool>,
+) {
+    crate::map::tcp_ip_stack_common::udp::loop_accept_udp(&mut r, tx, shutdown_atomic).await
+}
 
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
@@ -163,12 +176,15 @@ impl Map for Stack {
 
             let shutdown_atomic: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
             tokio::spawn(async move {
-                loop_accept_udp(r, udp_new_msg_tx_lwip_end, shutdown_atomic).await
+                lwip_loop_accept_udp(r, udp_new_msg_tx_lwip_end, shutdown_atomic).await
             });
 
-            let mut l = udp::Listener::new(udp_new_msg_tx_to_lwip, udp_new_msg_rx_self_end)
-                .await
-                .unwrap();
+            let mut l = crate::map::tcp_ip_stack_common::udp::Listener::new(
+                udp_new_msg_tx_to_lwip,
+                udp_new_msg_rx_self_end,
+            )
+            .await
+            .unwrap();
 
             tokio::spawn(async move {
                 loop {
