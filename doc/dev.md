@@ -1,6 +1,6 @@
 Clippy:
 ruci-cmd 目录下
-cargo clippy --all-targets --no-default-features --features "steganography lua file_server api_server api_client utils quinn use-native-tls tun smoltcp"
+cargo clippy --all-targets --no-default-features --features "steganography lua file_server api_server api_client utils quinn use-native-tls tun lwip"
 
 在 rucimp 目录下
 cargo clippy --all-targets --no-default-features --features "tun quinn lua sockopt use-native-tls ruci-rustls21 trace steganography"
@@ -35,4 +35,10 @@ macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关
 
 发现 lua 的 Trojan 的 do_not_use_early_data 在没有给出时， load_static 后 反序列化 
 后的 StaticConfig 中 对应的 do_not_use_early_data 变为了 Some(false), 应为 None.
+
+25.3.7
+发现 tun 在使用 fd 时，会自动被 drop 掉，导致错误发生。
+进而发现，fold_from_start 在 c 不是 Stream::Generator 时，不会
+保留c，也没通过 tx 发送，致其被释放
+
 

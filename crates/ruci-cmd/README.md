@@ -17,10 +17,10 @@ debug:
 ```sh
 
 # 指定不生成 log 
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography smoltcp" -- --log-file ""
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography lwip" -- --log-file ""
 
 # 指定lua配置
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography smoltcp"  -- --log-file "" -c remote.lua
+RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun steganography lwip"  -- --log-file "" -c remote.lua
 
 # powershell
 $Env:RUST_LOG="none,ruci=debug";cargo run --features "lua utils use-native-tls quinn tun" -- --log-file ""
@@ -46,16 +46,18 @@ export PATH="$PATH:$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 
 arm64:
 
-CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android32-clang cargo build --target aarch64-linux-android --features "api_server utils file_server" --release
+CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android32-clang cargo build --target aarch64-linux-android --features "api_server utils file_server lwip lua54" --release
 
 x86_64:
 
-CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android32-clang cargo build --target x86_64-linux-android --features "api_server utils file_server" --release
+CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android32-clang cargo build --target x86_64-linux-android --features "api_server utils file_server lwip lua54" --release
+
+(feature lua 要用 libc++_shared.so, 所以使用 lua54 feature 编译)
 
 # features
 
-features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn, tun, smoltcp
-default enables none.
+features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn, tun, smoltcp, lwip
+default enables api_server,utils.
 
 api_server, trace 这两个feature都会少许降低 performance. 
 

@@ -287,17 +287,17 @@ impl Engine {
         let mut index = 1u32;
 
         self.inbounds.clone().into_iter().for_each(|miter| {
-            let (tx, rx) = oneshot::channel();
+            let (shut_tx, shut_rx) = oneshot::channel();
 
-            let (atx, arx) = mpsc::channel(100); //todo: change this
+            let (out_tx, out_rx) = mpsc::channel(100); //todo: change this
 
             let cid = CID::new(index);
             debug!(inbound_index = index, "fold_from_start");
             let t1 = fold::fold_from_start(
                 cid,
                 Some(self.global_data.clone()),
-                atx,
-                rx,
+                out_tx,
+                shut_rx,
                 miter.clone(),
                 Some(self.gtr.clone()),
             );
@@ -305,7 +305,7 @@ impl Engine {
 
             let t2 = Engine::loop_in_to_out(
                 self.global_data.clone(),
-                arx,
+                out_rx,
                 out_selector.clone(),
                 self.gtr.clone(),
                 self.new_conn_recorder.clone(),
@@ -314,7 +314,7 @@ impl Engine {
             );
 
             tasks.push((t1, t2));
-            shutdown_tx_vec.push(tx);
+            shutdown_tx_vec.push(shut_tx);
         });
         info!(inbounds_count = tasks.len(), "chain engine started",);
 

@@ -23,7 +23,7 @@ pub use strum;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Common directories to search for configuration files
-pub const COMMON_DIRS: [&str; 8] = [
+pub const COMMON_DIRS: [&str; 12] = [
     "./",
     "ruci_config/",
     "resource/",
@@ -31,7 +31,11 @@ pub const COMMON_DIRS: [&str; 8] = [
     "../dev_res/",
     "../../dev_res/",
     "../resource/",
+    "../resource/lua_examples/local",
+    "../resource/lua_examples/remote",
     "../../resource/",
+    "../../resource/lua_examples/local",
+    "../../resource/lua_examples/remote",
 ];
 
 /// Default name for Lua configuration files

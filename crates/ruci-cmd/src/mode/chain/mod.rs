@@ -17,11 +17,12 @@ pub async fn get_config_file(
         .context("insert_current_working_dir failed")?;
 
     let get_file_f = || -> anyhow::Result<_> {
-        let mut r = data_source.get_file_content(Path::new(&file_name));
+        let r = data_source.get_file_content(Path::new(&file_name));
 
-        if r.is_err() {
-            r = data_source.get_file_content(Path::new(DEFAULT_LUA_CONFIG_FILE_NAME));
-        }
+        // if r.is_err() {
+        //     debug!("get file err, will use default file name, err: {r:?}");
+        //     r = data_source.get_file_content(Path::new(DEFAULT_LUA_CONFIG_FILE_NAME));
+        // }
 
         r.context("get_config_file data_source.get_file_content failed")
     };

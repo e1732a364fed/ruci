@@ -18,7 +18,7 @@ test_lua_file() {
     echo "Testing $file..."
     
     # 运行命令
-    RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun smoltcp use-native-tls steganography" --example lua "../$file" &
+    RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun lwip use-native-tls steganography" --example lua "../$file" &
     local pid=$!
     
     sleep 2
@@ -45,7 +45,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../rucimp" || exit 1
 echo "Building example lua ..."
 
-RUST_LOG=none,ruci=debug cargo build --example lua --features "lua quinn tun smoltcp use-native-tls steganography"
+RUST_LOG=none,ruci=debug cargo build --example lua --features "lua quinn tun lwip use-native-tls steganography"
 
 # 主测试逻辑
 echo "Starting Lua examples test..."

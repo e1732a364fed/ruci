@@ -78,4 +78,5 @@ use-native-tls = ["rucimp/use-native-tls"]
 native-tls-vendored = ["rucimp/native-tls-vendored"]
 
 smoltcp = ["rucimp/smoltcp"]
+lwip = ["rucimp/lwip"]
 steganography = ["rucimp/steganography"]

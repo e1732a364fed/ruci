@@ -106,12 +106,12 @@ impl StaticConfig {
                             data_source: data_source.clone(),
                         };
 
-                        let map: anyhow::Result<MapBox> = config_with_fs
+                        let map_box: anyhow::Result<MapBox> = config_with_fs
                             .try_into()
                             .context("config_with_fs.try_into failed");
-                        map.map(|mut map| {
-                            map.set_chain_tag(tag.as_str());
-                            map
+                        map_box.map(|mut map_box| {
+                            map_box.set_chain_tag(tag.as_str());
+                            map_box
                         })
                     })
                     .try_collect();

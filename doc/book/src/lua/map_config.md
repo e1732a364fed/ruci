@@ -152,7 +152,7 @@ out_auto_route = {
 }
 ```
 
-ip 拨号是建立一个虚拟网卡，一般为 tun. 这个一般可以用于配合 tcp/ip stack (smoltcp) 进行全局路由使用，详情
+ip 拨号是建立一个虚拟网卡，一般为 tun. 这个一般可以用于配合 tcp/ip stack (smoltcp/lwip) 进行全局路由使用，详情
 见 local.lua 中的对应示例，以及 [这里](https://github.com/e1732a364fed/ruci/blob/tokio/doc/notes.md#tun模式的一些实测信息)
 
 

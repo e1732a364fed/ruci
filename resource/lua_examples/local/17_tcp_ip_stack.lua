@@ -1,6 +1,5 @@
 local sockopt_config = {
   bind_to_device = "wlp3s0",
-  so_mark = 255
 }
 
 local outbound_opt_direct = {
@@ -14,7 +13,7 @@ local tun_config = {
   in_auto_route = {
     tun_dev_name = "utun321",
     dns_list = { "114.114.114.114" },
-    original_dev_name = "en0",
+    original_dev_name = "wlp3s0",
     tun_gateway = "10.0.0.1",
     router_ip = "192.168.0.1"
   },
@@ -24,8 +23,8 @@ local tun_config = {
 
 
 Config = {
-  outbounds = { dial1 = outbound_opt_direct },
   inbounds = {
-    listen1 = { tun_config, { type = "Stack" } }
-  }
+    listen1 = { tun_config, { type = "StackLwip" } }
+  },
+  outbounds = { dial1 = outbound_opt_direct }
 }

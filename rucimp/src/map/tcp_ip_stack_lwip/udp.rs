@@ -43,22 +43,24 @@ pub async fn loop_accept_udp(
         debug!("lwip loop_accept_udp");
 
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
-            debug!("lwip udp thread got shutdown_atomic = true");
+            debug!("lwip udp thread shutdown_atomic = true");
             break;
         }
 
         let r = r.recv_from().await;
 
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
-            debug!("lwip udp thread got shutdown_atomic = true");
+            debug!("lwip udp thread shutdown_atomic = true");
 
             break;
         }
 
-        tracing::debug!("lwip udp thread got {}", r.is_ok());
-
         let r = match r {
-            Ok(r) => r,
+            Ok(r) => {
+                tracing::debug!("lwip udp thread got {} {} {}", r.0.len(), r.1, r.2);
+
+                r
+            }
             Err(e) => {
                 warn!("lwip loop_accept_udp tproxy_recv_from_with_destination got err {e}");
                 return;
@@ -230,7 +232,6 @@ struct ConnInfo {
     last_active: Instant,
 }
 
-// 修改 ConnMap 类型定义
 type ConnMap = Arc<DashMap<(SocketAddr, SocketAddr), ConnInfo>>;
 
 /// init a AddrConn from a UdpSocket
@@ -314,6 +315,7 @@ impl Display for Reader {
     }
 }
 
+#[derive(Debug)]
 enum ReadState {
     Buf,
     Rx,
@@ -328,18 +330,17 @@ impl AsyncReadAddr for Reader {
         loop {
             match self.state {
                 ReadState::Buf => {
-                    if let Some(b) = self.last_buf.take() {
+                    if let Some(mut b) = self.last_buf.take() {
                         let r_len = b.len();
 
                         let min_l = min(r_len, buf.len());
 
-                        buf[..min_l].copy_from_slice(b.as_slice());
+                        buf[..min_l].copy_from_slice(&b.as_slice()[..min_l]);
 
-                        // b.copy_to_slice(&mut buf[..min_l]);
-
-                        if b.is_empty() {
+                        if min_l == r_len {
                             self.state = ReadState::Rx;
                         } else {
+                            b.truncate(r_len - min_l);
                             self.last_buf = Some(b);
                         }
 
