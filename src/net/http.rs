@@ -21,7 +21,7 @@ pub struct CommonConfig {
     pub headers: Option<BTreeMap<String, String>>,
 
     pub use_early_data: Option<bool>,
-    pub can_fallback: Option<bool>,
+    //pub can_fallback: Option<bool>,
 }
 
 pub const MAX_PARSE_URL_LEN: usize = 3000;

@@ -7,8 +7,8 @@ on:
     paths-ignore: 
       - '**.md'
       - '.github/workflows/*.yml'
-      - 'Makefile'
-      - 'Cross.toml'
+      - '**/Makefile'
+      - '**/Cross.toml'
       
   pull_request:
     branches: [ "tokio" ]
