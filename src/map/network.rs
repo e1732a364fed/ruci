@@ -71,13 +71,13 @@ impl Mapper for Direct {
                                 .write_all(params.b.as_ref().expect("param.b is some"))
                                 .await;
                             if let Err(re) = rw {
-                                return MapResult::from_err(re);
+                                return MapResult::from_io_err(re);
                             }
                             return MapResult::c(Box::new(c));
                         }
                         return MapResult::newc(Box::new(c)).b(params.b).build();
                     }
-                    Err(e) => return MapResult::from_err(e),
+                    Err(e) => return MapResult::from_io_err(e),
                 }
             }
             Err(e) => return MapResult::from_e(e),
@@ -108,7 +108,7 @@ impl TcpDialer {
 
         match r {
             Ok(c) => MapResult::newc(Box::new(c)).a(pass_a).b(pass_b).build(),
-            Err(e) => MapResult::from_err(e),
+            Err(e) => MapResult::from_io_err(e),
         }
     }
 }

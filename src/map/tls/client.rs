@@ -164,7 +164,7 @@ impl map::Mapper for Client {
             let r = self.handshake(cid, conn, params.b, params.a).await;
             match r {
                 Ok(r) => r,
-                Err(e) => MapResult::from_err(e),
+                Err(e) => MapResult::from_io_err(e),
             }
         } else {
             MapResult::err_str("tls only support tcplike stream")

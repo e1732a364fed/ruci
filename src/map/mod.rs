@@ -84,42 +84,40 @@ pub struct InputData {
 }
 
 /// map方法的参数
+#[derive(Default, TypedBuilder)]
 pub struct MapParams {
     ///base conn
+    #[builder(default)]
     pub c: Stream,
 
     ///target_addr
+    #[builder(default)]
     pub a: Option<net::Addr>,
 
     ///pre_read_buf
+    #[builder(default)]
     pub b: Option<BytesMut>,
 
+    #[builder(default)]
     pub d: Option<InputData>,
 
     /// if Stream is a Generator, shutdown_rx should be provided.
     /// it will stop generating if shutdown_rx got msg.
+    #[builder(default, setter(strip_option))]
     pub shutdown_rx: Option<oneshot::Receiver<()>>,
 }
 
 impl MapParams {
     pub fn new(c: net::Conn) -> Self {
-        MapParams {
-            c: Stream::TCP(c),
-            a: None,
-            b: None,
-            d: None,
-            shutdown_rx: None,
-        }
+        MapParams::builder().c(Stream::TCP(c)).build()
+    }
+
+    pub fn newc(c: net::Conn) -> MapParamsBuilder<((Stream,), (), (), (), ())> {
+        MapParams::builder().c(Stream::TCP(c))
     }
 
     pub fn ca(c: net::Conn, target_addr: net::Addr) -> Self {
-        MapParams {
-            c: Stream::TCP(c),
-            a: Some(target_addr),
-            b: None,
-            d: None,
-            shutdown_rx: None,
-        }
+        MapParams::newc(c).a(Some(target_addr)).build()
     }
 }
 
@@ -171,7 +169,7 @@ impl MapResult {
         MapResult::builder().e(anyhow!("{}", estr)).build()
     }
 
-    pub fn from_err(e: io::Error) -> Self {
+    pub fn from_io_err(e: io::Error) -> Self {
         MapResult::builder().e(e.into()).build()
     }
 

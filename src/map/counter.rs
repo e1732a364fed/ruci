@@ -139,15 +139,11 @@ impl Mapper for Counter {
                     data: cd.clone(),
                     base: Box::pin(c),
                 };
-
-                MapResult {
-                    a: params.a,
-                    b: params.b,
-                    c: Stream::TCP(Box::new(cc)),
-                    d: Some(AnyData::B(Box::new(cd))),
-                    e: None,
-                    new_id: None,
-                }
+                MapResult::newc(Box::new(cc))
+                    .a(params.a)
+                    .b(params.b)
+                    .d(AnyData::B(Box::new(cd)))
+                    .build()
             }
             Stream::UDP(_) => {
                 todo!()

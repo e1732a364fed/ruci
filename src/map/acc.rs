@@ -108,7 +108,7 @@ pub async fn accumulate(
                     a: last_r.a,
                     b: last_r.b,
                     d: input_data,
-                    shutdown_rx: None,
+                    ..Default::default()
                 },
             )
             .await;
@@ -168,13 +168,7 @@ pub async fn accumulate_from_start(
         .maps(
             CID::default(),
             ProxyBehavior::DECODE,
-            MapParams {
-                c: Stream::None,
-                a: None,
-                b: None,
-                d: None,
-                shutdown_rx: Some(shutdown_rx),
-            },
+            MapParams::builder().shutdown_rx(shutdown_rx).build(),
         )
         .await;
     if let Some(e) = r.e {
@@ -199,8 +193,7 @@ pub async fn accumulate_from_start(
                     b: r.b,
                     c: r.c,
                     d: r.d,
-                    e: None,
-                    new_id: None,
+                    ..Default::default()
                 },
                 inmappers,
             )
