@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use ruci::{
     map::{acc2::MIterBox, *},
     net::TransmissionInfo,
-    relay::{conn2::handle_in_accumulate_result, route::*},
+    relay::{conn::handle_in_accumulate_result, route::*},
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{

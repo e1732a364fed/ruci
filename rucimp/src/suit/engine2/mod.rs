@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use ruci::{
     map::*,
     net::TransmissionInfo,
-    relay::{conn2, route::*},
+    relay::{conn, route::*},
 };
 
 use tokio::{
@@ -261,7 +261,7 @@ async fn listen_tcp2(
                 let ib = Box::new(iter);
 
                 let slt = selector.clone();
-                tokio::spawn(  conn2::handle_conn_clonable(
+                tokio::spawn(  conn::handle_conn_clonable(
                         Box::new(tcpstream),
                         ib,
                         slt,

@@ -3,7 +3,7 @@
 具体实现 中可以有不同的转发逻辑
 
 */
-pub mod conn2;
+pub mod conn;
 pub mod cp_tcp;
 pub mod cp_udp;
 pub mod route;
