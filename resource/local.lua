@@ -302,7 +302,7 @@ config = {
 
 -- 演示 有限动态链的 选择器用法
 
-function get_dyn_selector_for(tag)
+function dyn_selectors(tag)
     if tag == "listen1" then
         return dyn_inbound_next_selector
     end

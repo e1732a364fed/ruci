@@ -21,7 +21,7 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
 
 //todo: 写得太乱了，improve code
 
-const GET_DYN_SELECTOR_FOR: &str = "get_dyn_selector_for";
+const DYN_SELECTORS: &str = "dyn_selectors";
 
 /// test if the lua text is ok for finite dynamic
 pub fn try_load_finite_dynamic(lua_text: &str) -> Result<()> {
@@ -30,7 +30,7 @@ pub fn try_load_finite_dynamic(lua_text: &str) -> Result<()> {
 
     let lg = lua.globals();
 
-    let _s1: LuaFunction = lg.get(GET_DYN_SELECTOR_FOR)?;
+    let _s1: LuaFunction = lg.get(DYN_SELECTORS)?;
 
     Ok(())
 }
@@ -66,8 +66,8 @@ fn load_finite_dynamic_helper(
     let clt: LuaTable = lg.get("config").context("lua has no config field")?;
 
     let _: LuaFunction = lg
-        .get(GET_DYN_SELECTOR_FOR)
-        .context(format!("lua has no {}", GET_DYN_SELECTOR_FOR))?;
+        .get(DYN_SELECTORS)
+        .context(format!("lua has no {}", DYN_SELECTORS))?;
 
     let c: StaticConfig = lua.from_value(Value::Table(clt))?;
     let x: HashMap<String, LuaNextSelector> = c
@@ -79,20 +79,18 @@ fn load_finite_dynamic_helper(
             let real_lua = Lua::new();
             real_lua.load(&lua_text).eval::<()>().expect("must be ok");
 
-            let real_getter: LuaFunction = real_lua
-                .globals()
-                .get(GET_DYN_SELECTOR_FOR)
-                .expect("must be ok");
+            let real_getter: LuaFunction =
+                real_lua.globals().get(DYN_SELECTORS).expect("must be ok");
 
             let x = match real_getter.call::<String, LuaFunction>(tag.to_string()) {
                 Ok(rst) => rst,
                 Err(err) => {
-                    panic!("get get_dyn_selector_for for {tag} err: {}", err);
+                    panic!("get dyn_selectors for {tag} err: {}", err);
                 }
             };
             (
                 tag.to_string(),
-                LuaNextSelector(Arc::new(parking_lot::Mutex::new(x.into_owned()))),
+                LuaNextSelector(Arc::new(Mutex::new(x.into_owned()))),
             )
         })
         .collect();
@@ -106,20 +104,18 @@ fn load_finite_dynamic_helper(
             let real_lua = Lua::new();
             real_lua.load(&lua_text).eval::<()>().expect("must be ok");
 
-            let real_getter: LuaFunction = real_lua
-                .globals()
-                .get(GET_DYN_SELECTOR_FOR)
-                .expect("must be ok");
+            let real_getter: LuaFunction =
+                real_lua.globals().get(DYN_SELECTORS).expect("must be ok");
 
             let x = match real_getter.call::<String, LuaFunction>(tag.to_string()) {
                 Ok(rst) => rst,
                 Err(err) => {
-                    panic!("get get_dyn_selector_for for {tag} err: {}", err);
+                    panic!("get dyn_selectors for {tag} err: {}", err);
                 }
             };
             (
                 tag.to_string(),
-                LuaNextSelector(Arc::new(parking_lot::Mutex::new(x.into_owned()))),
+                LuaNextSelector(Arc::new(Mutex::new(x.into_owned()))),
             )
         })
         .collect();
@@ -199,7 +195,7 @@ fn get_dmiter_from_static_config_and_helper(
 /// https://github.com/mlua-rs/mlua/issues/262
 ///
 #[derive(Debug, Clone)]
-pub struct LuaNextSelector(Arc<parking_lot::Mutex<mlua::OwnedFunction>>);
+pub struct LuaNextSelector(Arc<Mutex<mlua::OwnedFunction>>);
 
 unsafe impl Send for LuaNextSelector {}
 unsafe impl Sync for LuaNextSelector {}
@@ -228,6 +224,7 @@ impl NextSelector for LuaNextSelector {
 */
 
 use mlua::{UserData, UserDataMethods};
+use parking_lot::Mutex;
 
 #[repr(transparent)]
 pub struct AnyDataLuaWrapper(ruci::map::AnyData);

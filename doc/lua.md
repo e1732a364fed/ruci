@@ -65,9 +65,9 @@ config = {
 
 ## 有限动态链
 
-有限动态链中，程序一样会读取 config 变量，和 静态链一样，但还要读一个 get_dyn_selector_for 函数
+有限动态链中，程序一样会读取 config 变量，和 静态链一样，但还要读一个 dyn_selectors 函数
 
-get_dyn_selector_for, 对每一个tag 的inbound/outbound 都要有返回一个selector
+dyn_selectors, 对每一个tag 的inbound/outbound 都要有返回一个selector
 
 selector 接受 this_index 和 data 作为输入, 返回一个新的index, index 是 在 该chain (Mapper数组) 中的索引
 
@@ -83,7 +83,7 @@ selector 接受 this_index 和 data 作为输入, 返回一个新的index, index
 -- 演示 动态链的 选择器用法
 
 
-function get_dyn_selector_for(tag)
+function dyn_selectors(tag)
     if tag == "listen1" then 
         return dyn_inbound_next_selector
     end
