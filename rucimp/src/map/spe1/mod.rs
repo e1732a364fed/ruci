@@ -57,10 +57,10 @@ pub struct QaData {
     a_hash_map: [HashMap<String, u8>; 2],
 
     // 首部id标识
-    head_marker_set: [Token; 32],
+    // head_marker_set: [Token; 32],
 
     // 中断标识
-    interrupt_set: Token,
+    // interrupt_set: Token,
 
     //所有的 QA的转移方阵，其维度为 qa_set中的 Vec的 长度.每行总和均为1
     //也可以不提供，不提供则所问的问题完全随机化
@@ -72,10 +72,10 @@ fn simple_qa(from: usize, plus: usize) -> QA {
     (format!("question {n}"), format!("answer {n}"))
 }
 
-fn simple_token(from: usize) -> Token {
-    let array: Token = array_init::array_init(|i| simple_qa(from, i));
-    array
-}
+// fn simple_token(from: usize) -> Token {
+//     let array: Token = array_init::array_init(|i| simple_qa(from, i));
+//     array
+// }
 
 fn simple_token_vec(count: usize) -> Vec<Token> {
     let mut r = vec![];
@@ -111,10 +111,9 @@ impl QaData {
             qa_set,
             q_hash_map,
             a_hash_map,
-            head_marker_set: <[Token; 32]>::try_from(simple_token_vec(32))
-                .expect("Conversion failed"),
-            interrupt_set: simple_token(384),
-
+            // head_marker_set: <[Token; 32]>::try_from(simple_token_vec(32))
+            //     .expect("Conversion failed"),
+            // interrupt_set: simple_token(384),
             transformation_matrix: None,
         }
     }
