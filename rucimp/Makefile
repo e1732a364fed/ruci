@@ -1,10 +1,7 @@
 define compile
-	cargo build --release --example chain --example suit  --example suit2
+	cargo build --target ${BUILD_TRIPLET} --release --example chain --example suit  --example suit2
 endef
 
-define xcompile
-	cross build --target ${BUILD_TRIPLET} --release --example chain --example suit  --example suit2
-endef
 
 
 
@@ -22,12 +19,6 @@ main:
 	$(call compile)
 	$(call copy)
 	$(call cmp,${BUILD_VERSION},${BUILD_TRIPLET})
-
-cross:
-	$(call xcompile)
-	$(call copy)
-	$(call cmp,${BUILD_VERSION},${BUILD_TRIPLET})
-
 
 cp:
 	$(call copy)

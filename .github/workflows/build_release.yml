@@ -20,28 +20,25 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - i686-unknown-linux-musl
           - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-gnu
-          - x86_64-unknown-linux-musl
-          - armv7-unknown-linux-musleabihf
           - armv7-unknown-linux-gnueabihf
-          - arm-unknown-linux-gnueabi
-          - arm-unknown-linux-gnueabihf
-          - arm-unknown-linux-musleabi
-          - arm-unknown-linux-musleabihf
           - aarch64-unknown-linux-gnu
-          - aarch64-unknown-linux-musl
 
     steps:
     - uses: actions/checkout@v4
-    - name: Install cross
-      run: cargo install cross
-
+    - name: Install ARM compiler toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+    - name: Install ARM7 compiler toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf libc-dev-armhf-cross
     - name: Build ${{ matrix.target }}
       run: |
         cd rucimp
-        make cross BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+        make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
@@ -50,3 +47,35 @@ jobs:
         file: dist/*.tar.xz
         tag: ${{ github.ref }}
         file_glob: true
+
+  build-unix:
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: full
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GNU tar
+        run: |
+          brew install gnu-tar
+          echo "/usr/local/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
+  
+      - name: Build ${{ matrix.target }}
+        run: |
+          cd rucimp
+          make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+  
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/*.tar.xz
+          tag: ${{ github.ref }}
+          file_glob: true
