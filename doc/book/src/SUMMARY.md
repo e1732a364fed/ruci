@@ -12,3 +12,4 @@
   - [Route Config](lua/route_config.md)
   - [Infinite](lua/infinite.md)
 - [lua自定义协议](lua/user_defined_protocol.md)
+- [json配置](json.md)

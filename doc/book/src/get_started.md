@@ -107,6 +107,8 @@ resource 文件夹中的内容有助于参考使用，建议保留。
 ruci-gui 的 Node Editor 还提供了一种很方便的 “节点编辑器”，可以 以可视化的方式编辑您的配置文件。
 而 Control Panel 中又提供了一些方便的小工具。
 
+ruci-webui 项目的 release 分为 webui 和 gui 两种。gui为 tauri 生成的 桌面程序，而 webui 则为 一个 dist 压缩包，可用于在 ruci-cmd 中的 file-server中运行
+(api-server 运行后会自动运行 file-server 服务 dist 文件夹)
 
 # 接下来
 

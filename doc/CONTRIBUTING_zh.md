@@ -29,7 +29,7 @@ only use Box::leak if have to.
 ## commit message shortcut
 
 mi: minor improve
-me: minor edit
+me: minor edit (for edit document)
 mc: minor change
 rcc: ruci-cmd
 +: add
