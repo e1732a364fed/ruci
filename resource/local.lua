@@ -814,7 +814,8 @@ local config_20_spe1 = {
     outbounds = {
         {
             tag = "dial1",
-            chain = { dial, "SPE1", trojan_out }
+            chain = { dial, { SPE1 = { qa = { { "q1", "a1" }, { "q2", "a2" } } } }, trojan_out }
+            -- chain = { dial, { SPE1 = {} }, trojan_out }
         }
     }
 }

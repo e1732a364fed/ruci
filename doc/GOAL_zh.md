@@ -59,7 +59,10 @@ Steganography, cryptography, Provable Perfect Security ， Covert Communication
 https://patents.google.com/patent/CN101741744B/zh
 (接着看 Cited By 即可找到更多)
 
+
 可能有用的论文
+
+https://www.usenix.org/conference/usenixsecurity24/presentation/xue-fingerprinting
 
 Perfectly Secure Steganography Using Minimum Entropy Coupling
 https://arxiv.org/abs/2210.14889

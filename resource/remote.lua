@@ -132,6 +132,8 @@ local out_stdio_show_bytes_chain = { {
     }
 } }
 
+local spe1_in = { SPE1 = { qa = { { "q1", "a1" }, { "q2", "a2" } } } }
+-- local spe1_in = { SPE1 = {} }
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
@@ -155,7 +157,7 @@ Config = {
 
         }
         -- ]]
-        { chain = { tcp, "SPE1", trojan_in }, tag = "listen1" }
+        { chain = { tcp, spe1_in, trojan_in }, tag = "listen1" }
     },
 
     ---[[

@@ -43,7 +43,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 // use tracing::trace;
 
 pub type QA = (String, String);
-pub type Token = [QA; 128]; //每个 Token都有128种可能, 128个问答同时表示同一种信息（类比“量子态”）
+pub type Token = [QA; 128]; //每个 Token都有128种可能, 128个问答同时表示同一种信息
 
 /// 选择的方式按 转移方阵中所指定的概率来
 #[derive(Debug)]
@@ -52,15 +52,15 @@ pub struct QaData {
     pub qa_set: [Token; 2],
 
     // 用于快速用String 查找对应 Question
-    pub q_hash_map: [HashMap<String, u8>; 2],
+    q_hash_map: [HashMap<String, u8>; 2],
     // 用于快速用String 查找对应 Answer
-    pub a_hash_map: [HashMap<String, u8>; 2],
+    a_hash_map: [HashMap<String, u8>; 2],
 
     // 首部id标识
-    pub head_marker_set: [Token; 32],
+    head_marker_set: [Token; 32],
 
     // 中断标识
-    pub interrupt_set: Token,
+    interrupt_set: Token,
 
     //所有的 QA的转移方阵，其维度为 qa_set中的 Vec的 长度.每行总和均为1
     //也可以不提供，不提供则所问的问题完全随机化
@@ -88,10 +88,10 @@ fn simple_token_vec(count: usize) -> Vec<Token> {
     r
 }
 
-impl QaData {
-    pub fn new_simple() -> QaData {
-        let qa_set = <[Token; 2]>::try_from(simple_token_vec(2)).expect("Conversion failed");
+type BytesAndIndexVec = (BytesMut, Option<Vec<(bool, u8)>>);
 
+impl QaData {
+    pub fn new(qa_set: [Token; 2]) -> QaData {
         let q_hash_map: [HashMap<String, u8>; 2] = array_init::array_init(|i| {
             qa_set[i]
                 .iter()
@@ -107,7 +107,6 @@ impl QaData {
                 .map(|(index, qa)| (qa.1.clone(), index as u8))
                 .collect::<HashMap<String, u8>>()
         });
-
         QaData {
             qa_set,
             q_hash_map,
@@ -118,6 +117,63 @@ impl QaData {
 
             transformation_matrix: None,
         }
+    }
+    pub fn new_simple() -> QaData {
+        let qa_set = <[Token; 2]>::try_from(simple_token_vec(2)).expect("Conversion failed");
+
+        Self::new(qa_set)
+    }
+
+    /// 由给定的 question-answer 对 的Vec 来初始化 QaData.
+    /// qas.len() 须为偶数。
+    /// 若 qas.len() > 256, 则会truncate.
+    /// 若 qas.len() < 256, 则会truncate到2的幂后分一半 duplicate 对应次数；
+    ///
+    /// 前一半的问答代表0， 后一半 代表1.
+    /// 约定 每个question-answer的权重都是相等的，即问任一问题
+    /// 的机会相等。
+    ///
+    pub fn from(mut qas: Vec<QA>) -> QaData {
+        let len = qas.len();
+
+        let qa_set = {
+            match len.cmp(&256) {
+                std::cmp::Ordering::Equal => {}
+                std::cmp::Ordering::Greater => {
+                    qas.truncate(256);
+                }
+                std::cmp::Ordering::Less => {
+                    let target_n = nearest_power_of_two(len as u32) as usize;
+
+                    qas.truncate(target_n);
+
+                    let half = target_n / 2;
+
+                    let mut first_part = qas.split_off(half);
+                    let mut second_part = qas;
+
+                    for _ in 1..128 / half {
+                        first_part.extend_from_within(0..half);
+                        second_part.extend_from_within(0..half);
+                    }
+
+                    println!("{} {}", first_part.len(), second_part.len());
+
+                    first_part.append(&mut second_part);
+
+                    qas = first_part;
+                }
+            };
+            let first_part = qas.split_off(128);
+            let second_part = qas;
+
+            [
+                <Token>::try_from(first_part).expect("Conversion failed"),
+                <Token>::try_from(second_part).expect("Conversion failed"),
+            ]
+        };
+
+        Self::new(qa_set)
     }
 
     // select question randomly
@@ -148,7 +204,7 @@ impl QaData {
     // u8 表示 问题索引
     //true 代表1，false 代表0，错误代表 其不在 本QA表中。
     pub fn match_question(&self, s: &str) -> Result<(bool, u8), anyhow::Error> {
-        // //trace!("matching question {s}");
+        //trace!("matching question {s}");
         let o = self.q_hash_map[0].get(s);
         match o {
             Some(i) => Ok((false, *i)),
@@ -185,7 +241,7 @@ impl QaData {
         str: &str,
         with_answer_index: bool,
         has_header: bool,
-    ) -> Result<(BytesMut, Option<Vec<(bool, u8)>>), anyhow::Error> {
+    ) -> Result<BytesAndIndexVec, anyhow::Error> {
         let lines: Vec<&str> = str.split('\n').collect();
 
         let mut bools: Vec<bool> = vec![];
@@ -245,6 +301,18 @@ impl QaData {
 
         Ok(bm)
     }
+}
+
+fn nearest_power_of_two(mut n: u32) -> u32 {
+    if n == 0 {
+        return 0;
+    }
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n - (n >> 1) // 返回小于或等于 n 的最大 2 的幂
 }
 
 // 大端序，即 vec![true] 会被转成 vec![128]
