@@ -9,6 +9,7 @@ pub mod mock;
 pub use content_len_protocol::BufReadResult as ContentLenProtocolBufReadResult;
 pub use content_len_protocol::BufReader as ContentLenProtocolBufReader;
 pub use content_len_protocol::PacketMetadata as ContentLenProtocolPacketMetadata;
+use tracing::info;
 
 use std::{
     io,
@@ -454,6 +455,78 @@ impl AsyncWrite for PrintWrapper {
     ) -> Poll<io::Result<()>> {
         self.base.as_mut().poll_shutdown(cx)
     }
+}
+
+/// non-blocking. will spawn two loop task for read/write c
+pub fn mpsc_transmit(
+    c: super::Conn,
+    capacity: usize,
+) -> (
+    tokio::sync::mpsc::Sender<Vec<u8>>,
+    tokio::sync::mpsc::Receiver<Vec<u8>>,
+) {
+    let (read_tx, read_rx) = tokio::sync::mpsc::channel::<Vec<u8>>(capacity);
+    let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<Vec<u8>>(capacity);
+
+    let (mut r, mut w) = tokio::io::split(c);
+
+    tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                o_wbuf = write_rx.recv() =>{
+                    match o_wbuf {
+                        Some(v) => {
+                            let r = w.write_all(&v).await;
+                            match r {
+                                Ok(_) => continue,
+                                Err(e) => {
+                                    info!("mpsc_transmit, write got e: {e}");
+                                    break;
+                                },
+                            }
+                        },
+                        None => {
+                            debug!("mpsc_transmit write got none, will shutdown");
+                           let _ =  w.write(&[]).await;
+                            let _ = w.shutdown().await;
+                        },
+                    }
+                }
+            }
+        }
+    });
+
+    use tokio::io::AsyncReadExt;
+    tokio::spawn(async move {
+        let mut buf = BytesMut::with_capacity(1024 * 8);
+        buf.resize(1024 * 8, 0);
+
+        loop {
+            tokio::select! {
+                read_result = r.read(&mut buf)=>{
+                    match read_result {
+                        Ok(n) => {
+                            let v = buf[..n].to_vec();
+                           let r =  read_tx.send(v).await;
+
+                           if let Err(e) = r{
+                                info!("mpsc_transmit, read send got e: {e}");
+                                break;
+                           }
+
+                        },
+                        Err(e) => {
+                            info!("mpsc_transmit, read got e: {e}");
+                            break;
+                        },
+                    }
+
+                }
+            }
+        }
+    });
+
+    (write_tx, read_rx)
 }
 
 #[cfg(test)]
