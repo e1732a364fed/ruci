@@ -99,6 +99,8 @@ geosite_gfw = {
 
 geosite_gfw 是一个 人工智能 gfw项目，它用过机器学习训练出的模型来判断一个 域名 倒底是会被墙还是 可以直连
 
+主要用于 local 本地端进行分流。
+
 目前的运行方式
 
 ```sh
@@ -117,6 +119,7 @@ python3 classify.py --mode serve_api --port 5134
 ```
 
 之后在 ruci 的 routes 中使用 geosite_gfw 就能生效啦。
+
 
 
 # 接下来
