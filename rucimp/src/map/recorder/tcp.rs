@@ -82,16 +82,24 @@ impl AsyncRead for RecorderConn {
                             self.record.record_read(buf.filled()); // 为0时也要记录, 因为这是EOF标志
 
                             if l == 0 {
-                                let cid = self.record.cid().to_string();
+                                let cid = self.record.common().cid.to_string();
                                 info!(
                                     cid = %cid,
                                     "recorder read got EOF(len=0), Saving to file",
                                 );
                                 self.as_mut().start_save();
                             }
+
+                            // 一般来说，h2 中的 最后一个client 发送的包 很可能是 17字节，它其实是 h2 的 goaway 帧,
+                            // 是 9字节的帧头 + 8字节的 payload，见
+                            // https://www.rfc-editor.org/rfc/rfc7540.html#section-6.8
+
+                            // if l == 17 {
+                            //     debug!("recorder got 17: {}", buf.filled().escape_ascii());
+                            // }
                         }
                         Err(e) => {
-                            let cid = self.record.cid().to_string();
+                            let cid = self.record.common().cid.to_string();
                             info!(
                                 cid = %cid,
                                 "recorder read got err, Saving to file; err: {e}",
@@ -149,8 +157,8 @@ impl AsyncWrite for RecorderConn {
             match *self.as_mut().project().state {
                 State::Normal => {
                     info!(
-                        cid = %self.record.cid(),
-                        label = %self.record.label(),
+                        cid = %self.record.common().cid,
+                        label = %self.record.common().label.as_deref().unwrap_or(""),
                         "recorder got shutdown call, Saving to file",
                     );
 

@@ -23,7 +23,7 @@ pub(crate) async fn run(
 ) -> anyhow::Result<()> {
     info!("starting rucimp chain engine...");
 
-    let mut e = rucimp::modes::chain::engine::Engine::default();
+    let mut e = rucimp::modes::chain::engine::Engine::new();
 
     let (contents, file_source) = crate::mode::get_config_file(&mut file_name, args.in_memory)
         .await
@@ -112,7 +112,10 @@ async fn run_engine(e: &mut Engine, close_rx: Option<mpsc::Receiver<()>>) -> any
     js.shutdown().await;
 
     e.reset().await;
-    tracing::info!("chain engine shutted down gracefully");
+    tracing::info!(
+        "chain engine shutted down gracefully, {}",
+        e.global_data.run_instance_id
+    );
 
     Ok(())
 }

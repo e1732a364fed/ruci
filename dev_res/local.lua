@@ -946,6 +946,7 @@ local config_25_recorder_mitm = {
                     output_format = "Ruci",         --"Ruci", "Har"
                     record_mode = "Info",
                     output_dir = "record_dir",
+                    prettify = true,
                 }
             }, },
         tag = "listen1"

@@ -65,6 +65,8 @@ pub struct Config {
     pub output_format: OutputFormat,
     pub record_mode: RecordMode,
 
+    pub prettify: Option<bool>,
+
     pub piece_truncate_option: Option<PieceTruncateOption>,
     pub session_truncate_option: Option<SessionTruncateOption>,
 }
@@ -76,11 +78,11 @@ pub enum Recorder {
 }
 
 impl Recorder {
-    pub fn cid(&self) -> &str {
+    pub fn common(&self) -> &CommonData {
         match self {
-            Recorder::Full(r) => r.cid(),
-            Recorder::Simplified(r) => r.cid(),
-            Recorder::Info(r) => r.cid(),
+            Recorder::Full(r) => &r.data.common_data,
+            Recorder::Simplified(r) => &r.data.common_data,
+            Recorder::Info(r) => &r.data.common_data,
         }
     }
 
@@ -110,9 +112,9 @@ impl Recorder {
 
     pub fn label(&self) -> &str {
         match self {
-            Recorder::Full(r) => r.data.label.as_deref().unwrap_or(""),
-            Recorder::Simplified(r) => r.data.label.as_deref().unwrap_or(""),
-            Recorder::Info(r) => r.data.label.as_deref().unwrap_or(""),
+            Recorder::Full(r) => r.data.common_data.label.as_deref().unwrap_or(""),
+            Recorder::Simplified(r) => r.data.common_data.label.as_deref().unwrap_or(""),
+            Recorder::Info(r) => r.data.common_data.label.as_deref().unwrap_or(""),
         }
     }
 
@@ -157,14 +159,18 @@ pub struct SimplifiedRecorder {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct FullData {
+
+pub struct CommonData {
     pub cid: String,
     pub behavior: ProxyBehavior,
-
-    /// customized by user (as a marker)
     pub label: Option<String>,
-
     pub global_data: Option<SerializableGlobalData>,
+    pub target_addr: Option<Addr>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct FullData {
+    pub common_data: CommonData,
 
     pub read_data: Vec<FullPayloadData>,
     pub write_data: Vec<FullPayloadData>,
@@ -185,9 +191,8 @@ pub enum FullPayloadData {
 ///
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct SimplifiedRecordData {
-    pub cid: String,
+    pub common_data: CommonData,
 
-    pub label: Option<String>,
     pub data: Vec<(i8, Vec<u8>)>, // 使用 UPLOAD_DIRECTION 和 DOWNLOAD_DIRECTION
 }
 
@@ -195,8 +200,10 @@ pub struct SimplifiedRecordData {
 pub struct SerializableGlobalData {
     pub run_instance_id: u32,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub instance_start_time: Option<chrono::DateTime<chrono::Utc>>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub read_handshake_timeout: Option<u64>,
 }
 
@@ -244,11 +251,7 @@ pub struct InfoRecorder {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct InfoData {
-    pub cid: String,
-    pub behavior: ProxyBehavior,
-    pub label: Option<String>,
-
-    pub global_data: Option<SerializableGlobalData>,
+    pub common_data: CommonData,
 
     pub payload: Vec<PayloadInfo>,
 }
@@ -258,6 +261,8 @@ pub struct PayloadInfo {
     pub timestamp: u128,
     pub direction: i8,
     pub length: usize,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub opt_addr: Option<Addr>,
 }
 
@@ -311,7 +316,7 @@ impl FullRecorder {
 
 // Common trait for all recorders
 pub trait RecorderTrait {
-    fn cid(&self) -> &str;
+    fn common(&self) -> &CommonData;
     fn since(&self, start: time::Instant) -> u128 {
         start.elapsed().as_nanos()
     }
@@ -366,11 +371,18 @@ async fn async_save_to_file<T: serde::Serialize + Data + Send + 'static + Clone>
 
     // Clone the data for the blocking task
     let ext = config.output_file_extension;
+    let pretty = config.prettify.unwrap_or(false);
 
     // Spawn blocking task for serialization since serde operations are CPU-bound (especially for large data)
     let buf = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, SerializeError> {
         match ext {
-            OutputFileExtension::Json => serde_json::to_vec(&data).map_err(SerializeError::Json),
+            OutputFileExtension::Json => {
+                if pretty {
+                    serde_json::to_vec_pretty(&data).map_err(SerializeError::Json)
+                } else {
+                    serde_json::to_vec(&data).map_err(SerializeError::Json)
+                }
+            }
             OutputFileExtension::Cbor => serde_cbor::to_vec(&data).map_err(SerializeError::Cbor),
         }
     })
@@ -408,12 +420,12 @@ async fn async_save_to_file<T: serde::Serialize + Data + Send + 'static + Clone>
 }
 
 impl RecorderTrait for InfoRecorder {
-    fn cid(&self) -> &str {
-        &self.data.cid
+    fn common(&self) -> &CommonData {
+        &self.data.common_data
     }
 
     async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
-        let cid = self.cid().to_string();
+        let cid = self.common().cid.to_string();
         match config.output_format {
             OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
             OutputFormat::Har => {
@@ -433,12 +445,12 @@ impl RecorderTrait for InfoRecorder {
 }
 
 impl RecorderTrait for SimplifiedRecorder {
-    fn cid(&self) -> &str {
-        &self.data.cid
+    fn common(&self) -> &CommonData {
+        &self.data.common_data
     }
 
     async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
-        let cid = self.cid().to_string();
+        let cid = self.common().cid.to_string();
         match config.output_format {
             OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
             OutputFormat::Har => {
@@ -458,12 +470,12 @@ impl RecorderTrait for SimplifiedRecorder {
 }
 
 impl RecorderTrait for FullRecorder {
-    fn cid(&self) -> &str {
-        &self.data.cid
+    fn common(&self) -> &CommonData {
+        &self.data.common_data
     }
 
     async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
-        let cid = self.cid().to_string();
+        let cid = self.common().cid.to_string();
         match config.output_format {
             OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
             OutputFormat::Har => panic!("har is not implemented for full data"),
@@ -501,6 +513,17 @@ impl From<Config> for MapBox {
 #[async_trait]
 impl Map for RecorderMap {
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        let mut common_data = CommonData {
+            cid: cid.to_string(),
+            behavior,
+            label: self.config.label.clone(),
+            global_data: params.g.as_ref().map(SerializableGlobalData::from),
+            ..Default::default()
+        };
+        if let Some(target_addr) = &params.a {
+            common_data.target_addr = Some(target_addr.clone());
+        }
+
         let mut r = match self.config.record_mode {
             RecordMode::Full => {
                 let mut r = FullRecorder {
@@ -508,11 +531,7 @@ impl Map for RecorderMap {
                     data: FullData::default(),
                     start: time::Instant::now(),
                 };
-
-                r.data.cid = cid.to_string();
-                r.data.behavior = behavior;
-                r.data.label = self.config.label.clone();
-                r.data.global_data = params.g.as_ref().map(SerializableGlobalData::from);
+                r.data.common_data = common_data;
 
                 Recorder::Full(r)
             }
@@ -523,8 +542,7 @@ impl Map for RecorderMap {
                     start: time::Instant::now(),
                 };
 
-                r.data.cid = cid.to_string();
-                r.data.label = self.config.label.clone();
+                r.data.common_data = common_data;
 
                 Recorder::Simplified(r)
             }
@@ -535,10 +553,7 @@ impl Map for RecorderMap {
                     start: time::Instant::now(),
                 };
 
-                r.data.cid = cid.to_string();
-                r.data.behavior = behavior;
-                r.data.label = self.config.label.clone();
-                r.data.global_data = params.g.as_ref().map(SerializableGlobalData::from);
+                r.data.common_data = common_data;
 
                 Recorder::Info(r)
             }
@@ -579,7 +594,7 @@ pub trait Data {
 
 impl Data for InfoData {
     fn label(&self) -> &Option<String> {
-        &self.label
+        &self.common_data.label
     }
 
     fn format(&self) -> OutputFormat {
@@ -589,7 +604,7 @@ impl Data for InfoData {
 
 impl Data for SimplifiedRecordData {
     fn label(&self) -> &Option<String> {
-        &self.label
+        &self.common_data.label
     }
 
     fn format(&self) -> OutputFormat {
@@ -599,7 +614,7 @@ impl Data for SimplifiedRecordData {
 
 impl Data for FullData {
     fn label(&self) -> &Option<String> {
-        &self.label
+        &self.common_data.label
     }
 
     fn format(&self) -> OutputFormat {
