@@ -1,4 +1,4 @@
-name: Test
+name: Test Features
 
 on:
   workflow_dispatch:
@@ -35,11 +35,11 @@ jobs:
     - name: Build
       run: cargo build --verbose
 
-    - name: Run Ruci tests
-      run: cargo test --verbose
+    - name: Test Ruci Every feature tag
+      run: cargo hack check --feature-powerset --no-dev-deps
 
-    - name: Run Rucimp tests
-      run: cd rucimp && cargo test --verbose
+    - name: Test Rucimp Every feature tag
+      run: cd rucimp && cargo hack check --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features use-native-tls,native-tls-vendored
 
-    - name: Run Ruci-cmd tests
-      run: cd crates/ruci-cmd && cargo test --verbose
+    - name: Test Ruci-Cmd Every feature tag
+      run: cd crates/ruci-cmd && cargo hack check --feature-powerset --no-dev-deps --mutually-exclusive-features lua54,lua --mutually-exclusive-features use-native-tls,native-tls-vendored
