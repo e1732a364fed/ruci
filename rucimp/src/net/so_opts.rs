@@ -14,7 +14,6 @@ use std::{
     os::unix::io::AsRawFd,
 };
 
-#[allow(dead_code)]
 pub fn set_mark<T: AsRawFd>(socket: &T, mark: u8) -> Result<()> {
     let fd = socket.as_raw_fd();
     unsafe {

@@ -6,6 +6,7 @@ use socket2::{Domain, Protocol, Socket, Type};
 
 use super::so_opts;
 
+#[derive(Clone, Debug, Default)]
 pub struct SockOpt {
     tproxy: bool,
     so_mark: Option<u8>,
