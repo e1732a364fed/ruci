@@ -1,3 +1,4 @@
+use core::time;
 use std::{
     io,
     pin::Pin,
@@ -5,7 +6,11 @@ use std::{
     task::{Context, Poll},
 };
 
+use anyhow::bail;
+use log::info;
 use tokio::{io::ReadBuf, net::UdpSocket};
+
+use self::map::{addr_conn::MAX_DATAGRAM_SIZE, helpers::MAX_LEN_SOCKS5_BYTES};
 
 use super::*;
 use crate::net::{
@@ -14,39 +19,29 @@ use crate::net::{
     *,
 };
 
+/// server side udp conn
 #[derive(Clone)]
-pub struct Conn {
+pub struct InboundConn {
     base: Arc<UdpSocket>,
 }
 
-impl Conn {
+impl InboundConn {
     pub fn new(u: UdpSocket) -> Self {
-        Conn { base: Arc::new(u) }
+        InboundConn::newa(Arc::new(u))
     }
 
     pub fn newa(u: Arc<UdpSocket>) -> Self {
-        Conn { base: u }
-    }
-
-    pub fn duplicate(&self) -> Conn {
-        self.clone()
+        InboundConn { base: u }
     }
 }
 
-pub fn new(u: UdpSocket) -> AddrConn {
-    let a = Arc::new(u);
+pub fn new_addr_conn(u: UdpSocket) -> AddrConn {
+    let a = Box::new(InboundConn::new(u));
     let b = a.clone();
-    AddrConn::new(Box::new(Conn::newa(a)), Box::new(Conn::newa(b)))
+    AddrConn::new(a, b)
 }
 
-/// wrap u with Arc, then return 2 copys.
-pub fn duplicate(u: UdpSocket) -> (Conn, Conn) {
-    let a = Arc::new(u);
-    let b = a.clone();
-    (Conn::newa(a), Conn::newa(b))
-}
-
-impl AsyncWriteAddr for Conn {
+impl AsyncWriteAddr for InboundConn {
     fn poll_write_addr(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -55,7 +50,20 @@ impl AsyncWriteAddr for Conn {
     ) -> Poll<io::Result<usize>> {
         let sor = addr.get_socket_addr_or_resolve();
         match sor {
-            std::result::Result::Ok(so) => self.base.poll_send_to(cx, buf, so),
+            std::result::Result::Ok(so) => {
+                let mut bf = BytesMut::with_capacity(buf.len() + MAX_LEN_SOCKS5_BYTES);
+
+                encode_udp_diagram(
+                    net::Addr {
+                        addr: net::NetAddr::Socket(so),
+                        network: net::Network::UDP,
+                    },
+                    &mut bf,
+                );
+                bf.extend_from_slice(buf);
+
+                self.base.poll_send(cx, &mut bf)
+            }
             Err(e) => Poll::Ready(Err(io::Error::other(e))),
         }
     }
@@ -69,26 +77,53 @@ impl AsyncWriteAddr for Conn {
     }
 }
 
-impl AsyncReadAddr for Conn {
+fn decode_read(bs: &[u8]) -> anyhow::Result<(BytesMut, SocketAddr)> {
+    let mut bf = BytesMut::from(bs);
+
+    let a = decode_udp_diagram(&mut bf)?;
+
+    let soa = a.get_socket_addr_or_resolve()?;
+
+    Ok((bf, soa))
+}
+
+impl AsyncReadAddr for InboundConn {
     fn poll_read_addr(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        let mut rbuf = ReadBuf::new(buf);
+        let mut new_buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
+        use std::result::Result::Ok;
+
+        let mut rbuf = ReadBuf::new(&mut new_buf);
         let r = self.base.poll_recv_from(cx, &mut rbuf);
         match r {
-            Poll::Ready(r) => match r {
-                std::result::Result::Ok(so) => Poll::Ready(std::result::Result::Ok((
-                    rbuf.filled().len(),
-                    crate::net::Addr {
-                        addr: NetAddr::Socket(so),
-                        network: Network::UDP,
-                    },
-                ))),
-                Err(e) => Poll::Ready(Err(e)),
-            },
             Poll::Pending => Poll::Pending,
+
+            Poll::Ready(r) => match r {
+                Err(e) => Poll::Ready(Err(e)),
+                Ok(so) => {
+                    let bs = rbuf.filled();
+
+                    let r = decode_read(bs);
+
+                    match r {
+                        Ok((mut actual_buf, soa)) => {
+                            actual_buf.copy_to_slice(buf);
+
+                            Poll::Ready(Ok::<(usize, net::Addr), Error>((
+                                actual_buf.len(),
+                                crate::net::Addr {
+                                    addr: NetAddr::Socket(soa),
+                                    network: Network::UDP,
+                                },
+                            )))
+                        }
+                        Err(e) => Poll::Ready(Err(io::Error::other(e.to_string()))),
+                    }
+                }
+            },
         }
     }
 }
@@ -97,9 +132,9 @@ pub(super) async fn udp_associate(
     cid: CID,
     mut base: net::Conn,
     client_future_addr: net::Addr,
-) -> anyhow::Result<()> {
-    let socket = UdpSocket::bind("0.0.0.0:0").await?; //random port provided by OS.
-    let udp_sock_addr = socket.local_addr()?;
+) -> anyhow::Result<MapResult> {
+    let user_udp_socket = UdpSocket::bind("0.0.0.0:0").await?; //random port provided by OS.
+    let udp_sock_addr = user_udp_socket.local_addr()?;
     let port = udp_sock_addr.port();
 
     //4个0为 BND.ADDR(4字节的ipv4) ,表示还是用原tcp的ip地址
@@ -117,148 +152,34 @@ pub(super) async fn udp_associate(
     ];
     base.write_all(&reply).await?;
 
-    task::spawn(loop_listen_udp_for_certain_client(
-        cid,
-        base,
-        client_future_addr,
-        socket,
-    ));
+    info!("socks5:{cid} listening a udp port for the user");
 
-    Ok(())
-}
+    let mut buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
 
-pub async fn loop_listen_udp_for_certain_client(
-    cid: CID,
-    mut base: net::Conn,
-    client_future_addr: net::Addr,
-    udpso_created_to_listen_for_thisuser: UdpSocket,
-) -> anyhow::Result<()> {
-    const CAP: usize = 1500; //todo: change this
+    let (_n, so) = tokio::time::timeout(
+        time::Duration::from_secs(15),
+        user_udp_socket.recv_from(&mut buf),
+    )
+    .await??;
+    use std::result::Result::Ok;
 
-    let mut buf2 = BytesMut::with_capacity(CAP);
-
-    let mut user_raddr: IpAddr = client_future_addr
+    let cip = client_future_addr
         .get_ip()
         .expect("client_future_addr has ip");
-    let mut user_port: u16 = client_future_addr.get_port();
 
-    use futures::FutureExt;
-    use tokio::sync::mpsc::channel;
-    let (tx, mut rx) = channel::<(Option<SocketAddr>, BytesMut, SocketAddr)>(20);
-
-    let udpso_created_to_listen_for_thisuser = Arc::new(udpso_created_to_listen_for_thisuser);
-
-    let udp = udpso_created_to_listen_for_thisuser.clone();
-
-    //loop write to user or remote
-    task::spawn(async move {
-        let mut buf_w = BytesMut::with_capacity(CAP);
-
-        loop {
-            let x = rx.recv().await;
-            match x {
-                None => break,
-
-                Some((msg_was_from, buf, send_to)) => {
-                    match msg_was_from {
-                        None => {
-                            // from the user, to remote. the buf is already decoded
-                            if udp.send_to(&buf, send_to).await.is_err() {
-                                break;
-                            }
-                        }
-                        Some(from) => {
-                            // from a remote, to the user. the send_to is the user's address
-
-                            buf_w.clear();
-                            encode_udp_diagram(
-                                net::Addr {
-                                    addr: net::NetAddr::Socket(from),
-                                    network: net::Network::UDP,
-                                },
-                                &mut buf_w,
-                            );
-
-                            buf_w.extend_from_slice(&buf);
-
-                            let r = udp.send_to(&buf_w, send_to).await;
-
-                            if r.is_err() {
-                                break;
-                            }
-                        }
-                    } //match
-                } //Some
-            } //match
-        } // loop
-    }); //task
-
-    //loop read from user or remote
-    loop {
-        select! {
-
-            /*
-            A UDP association terminates when the TCP connection that the UDP
-            ASSOCIATE request arrived on terminates.
-            */
-
-            result = base.read(&mut buf2).fuse()  =>{
-                if let Err(e ) = result{
-                    debug!("{}, socks5 server, will end loop listen udp because of the read err of the tcp conn, {}", cid, e);
-
-                    drop(tx);
-
-                    break;
-                }
-
-                warn!("{cid}, socks5 server, tcp conn got read data, but we don't know what to do with it", );
-
-            },
-            default =>{
-                let mut buf = BytesMut::zeroed(CAP);
-
-                let (n, raddr) = udpso_created_to_listen_for_thisuser.recv_from(&mut buf).await?;
-                buf.truncate(n);
-
-
-                if user_raddr.is_unspecified() || raddr.ip().eq(&user_raddr) {
-
-                    //user write to remote
-
-                    if user_raddr.is_unspecified() {
-                        user_raddr = raddr.ip();
-                        user_port = raddr.port();
-                    }
-
-                    let a = decode_udp_diagram(&mut buf)?;
-
-                    let so = match a.get_socket_addr_or_resolve(){
-                        std::result::Result::Ok(s) => s,
-                        Err(e) => {
-                            warn!("can't convert to socketaddr, {}",e);
-                            continue;
-                        },
-
-                    };
-
-                    let x= tx.send(( None,buf, so)).await;
-                    if let Err(e) = x{
-                        return Err(anyhow!("{}",e));
-                    }
-
-
-                }else{
-
-                    // new data from some remote
-
-                    let r= tx.send(( Some(raddr),buf,SocketAddr::new(user_raddr,user_port))).await;
-                    if let Err(e) = r{
-                        return Err(anyhow!("{}",e));
-                    }
-                }
-            }
+    if !cip.is_unspecified() {
+        if !so.ip().eq(&cip) {
+            bail!("socks5 server udp listen for user first msg got msg other than user's ip addr, should from {}, but is from {}", so.ip(), cip)
         }
     }
 
-    Ok(())
+    let ad = decode_udp_diagram(&mut buf)?;
+
+    let ibc = new_addr_conn(user_udp_socket);
+    let mr = MapResult::builder()
+        .a(Some(ad))
+        .b(Some(buf))
+        .c(Stream::u(ibc));
+
+    Ok(mr.build())
 }

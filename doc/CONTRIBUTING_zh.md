@@ -23,6 +23,8 @@ only use Box::leak if have to.
 
 灵活使用迭代器
 
+不要过多使用元组结构
+
 ## 子项目
 
 ruci(定义) - rucimp（实现） - rucimple（可执行文件）
