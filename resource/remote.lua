@@ -27,6 +27,7 @@ config = {
     inbounds = { 
         --{chain = trojan_chain, tag = "listen1"} ,
         {chain = socks5http_chain, tag = "listen1"} ,
+       -- {chain = { { Dialer =  "udp://127.0.0.1:20800" } }, tag = "udp_listen"} ,
     },
 
     outbounds = { { tag="dial1", chain = direct_out_chain  } }

@@ -139,6 +139,7 @@ pub struct OutMapperConfigChain {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
     Stdio(Ext),       //单流发生器
+    Dialer(String),   //单流发生器
     Listener(String), //多流发生器
     Adder(i8),
     Counter,
@@ -222,6 +223,12 @@ impl ToMapper for InMapperConfig {
                 let mut s = ruci::map::stdio::Stdio::new();
                 s.set_ext_fields(Some(extf));
                 s
+            }
+            InMapperConfig::Dialer(td_str) => {
+                let a = net::Addr::from_network_addr_str(td_str).expect("network_ip_addr is valid");
+                let mut d = ruci::map::network::Dialer::default();
+                d.set_configured_target_addr(Some(a));
+                Box::new(d)
             }
             InMapperConfig::Listener(l_str) => {
                 let a = net::Addr::from_network_addr_str(l_str).expect("network_addr is valid");

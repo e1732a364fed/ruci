@@ -76,6 +76,7 @@ impl Mapper for Direct {
     }
 }
 
+/// can dial tcp, udp or unix domain socket
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
 pub struct Dialer {}

@@ -34,9 +34,11 @@ pub(super) async fn udp_associate(
         (port >> 8) as u8, // BND.PORT(2字节)
         port as u8,
     ];
-    base.write_all(&reply).await?;
+    base.write_all(&reply)
+        .await
+        .context("socks5 server udp handshake write new addr to client failed")?;
 
-    info!("socks5:{cid} listening a udp port for the user");
+    info!("{cid} socks5: listening a udp port for the user, port: {port}");
 
     let mut buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
 
@@ -44,7 +46,8 @@ pub(super) async fn udp_associate(
         time::Duration::from_secs(15),
         user_udp_socket.recv_from(&mut buf),
     )
-    .await??;
+    .await
+    .context("socks5 server listen user first udp msg failed")??;
 
     buf.truncate(n);
 

@@ -120,6 +120,18 @@ impl MapParams {
     pub fn ca(c: net::Conn, target_addr: net::Addr) -> Self {
         MapParams::newc(c).a(target_addr).build()
     }
+
+    pub fn to_result(self) -> MapResult {
+        let rb = MapResult::builder().a(self.a).b(self.b).c(self.c);
+
+        match self.d {
+            Some(d) => match d.calculated_data {
+                Some(d) => rb.d(d).build(),
+                None => rb.build(),
+            },
+            None => rb.build(),
+        }
+    }
 }
 
 /// Mapper::maps  return type
