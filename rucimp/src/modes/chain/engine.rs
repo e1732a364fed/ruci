@@ -65,6 +65,7 @@ impl Engine {
 
     pub fn load_routes_from(&mut self, sc: StaticConfig) {
         self.tag_routes = sc.get_tag_route();
+        self.fallback_routes = sc.get_fallback_route();
 
         #[cfg(feature = "route")]
         {

@@ -62,7 +62,7 @@ impl StaticConfig {
                 if let Some(last_m) = chain.last_mut() {
                     last_m.set_is_tail_of_chain(true);
                 } else {
-                    warn!("the chain has no mappers");
+                    warn!("the inbound chain has no mappers, {:?}", config_chain.tag);
                 }
 
                 chain
@@ -90,7 +90,7 @@ impl StaticConfig {
                 if let Some(last_m) = chain.last_mut() {
                     last_m.set_is_tail_of_chain(true);
                 } else {
-                    warn!("the chain has no mappers");
+                    warn!("the outbound chain has no mappers, {:?}", config_chain.tag);
                 }
 
                 chain
@@ -130,6 +130,13 @@ impl StaticConfig {
     /// panic if the given tag isn't presented in outbounds
     pub fn get_tag_route(&self) -> Option<HashMap<String, String>> {
         self.tag_route.as_ref().map(|tr| {
+            let route_tag_pairs = tr.clone();
+            route_tag_pairs.into_iter().collect::<HashMap<_, _>>()
+        })
+    }
+
+    pub fn get_fallback_route(&self) -> Option<HashMap<String, String>> {
+        self.fallback_route.as_ref().map(|tr| {
             let route_tag_pairs = tr.clone();
             route_tag_pairs.into_iter().collect::<HashMap<_, _>>()
         })

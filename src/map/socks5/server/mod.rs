@@ -139,7 +139,7 @@ impl Server {
                 let e2 = anyhow!(
                     "socks5: unsupported version: {}, buf as str:\n {}\n",
                     v,
-                    String::from_utf8_lossy(&buf[..min(n, 256)])
+                    String::from_utf8_lossy(&buf[..min(n, 64)])
                 );
 
                 buf.truncate(n);

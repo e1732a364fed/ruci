@@ -112,6 +112,8 @@ fn get_io_bounds_by_config_and_selector_map(
             let tag = v.last().unwrap().get_chain_tag().to_string();
             let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
 
+            //debug!("try remove from selector map: {}", tag);
+
             let selector = Box::new(selector_map.remove(&tag).unwrap());
 
             let x: DMIterBox = Box::new(Finite {

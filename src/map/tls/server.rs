@@ -1,8 +1,8 @@
-use macro_mapper::NoMapperExt;
+use macro_mapper::*;
 
 use crate::map::{MapperBox, ToMapperBox};
 
-use self::map::CID;
+use self::map::{MapperExtFields, CID};
 
 use super::*;
 
@@ -21,7 +21,8 @@ impl ToMapperBox for ServerOptions {
 }
 
 // todo: 添加 alpn 和 tls_min_v
-#[derive(Clone, NoMapperExt)]
+#[mapper_ext_fields]
+#[derive(Clone, MapperExt)]
 pub struct Server {
     pub option_cache: ServerOptions,
     ta: TlsAcceptor,
@@ -44,6 +45,7 @@ impl Server {
         Server {
             ta: TlsAcceptor::from(Arc::new(config)),
             option_cache: c.clone(),
+            ext_fields: Some(MapperExtFields::default()),
         }
     }
 

@@ -150,7 +150,7 @@ config = {
 --]=]
 
 
----[=[
+--[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_trojan_ws_chain } }
@@ -245,7 +245,7 @@ config = {
 
 --]]
 
---[=[
+---[=[
 
 config = {
     inbounds = { 
@@ -255,9 +255,9 @@ config = {
     outbounds = { 
         { tag="d1", chain = { "Direct" } } ,  { tag="d2", chain = { dial, tlsout } } ,
         {
-            tag = "fallback_d", chain = {
+            tag = "fallback_d", chain = {{
                 Dialer = "tcp://0.0.0.0:80"
-            }
+            }}
         }
     },
 
@@ -336,29 +336,18 @@ config = {
 ---[[
 
 -- 有限动态链的 选择器用法 的基本演示 
--- 有限动态链使用 config 所提供的列表, 在 *_next_selector 中动态地
+-- 有限动态链使用 config 所提供的列表, 在 dyn_selectors 中动态地
 -- 根据参数 返回列表的索引值
+-- 下面 示例是 最简单的示例, 使得动态链的行为和静态链相同
 
 function dyn_selectors(tag)
-    if tag == "listen1" then
-        return dyn_inbound_next_selector
+    return function(this_index, data)
+        -- print("data:",data)
+    
+        return this_index + 1
     end
-    if tag == "dial1" then
-        return dyn_outbound_next_selector
-    end
 end
 
--- 下面两个selector 示例都是 最简单的示例, 使得动态链的行为和静态链相同
-
-dyn_inbound_next_selector = function(this_index, data)
-    -- print("data:",data)
-
-    return this_index + 1
-end
-
-dyn_outbound_next_selector = function(this_index, ovov)
-    return this_index + 1
-end
 
 -- ]]
 

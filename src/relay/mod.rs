@@ -201,37 +201,39 @@ pub async fn handle_in_fold_result(
     let dial_result = match dial_result {
         Ok(d) => d,
         Err(e) => {
-            warn!(cid = %cid, "fold outbound timeout, {e}",);
+            warn!(cid = %cid, is_fallback = is_fallback, "fold outbound timeout, {e}",);
             return Err(e.into());
         }
     };
     let cid = dial_result.id;
 
     if let Some(e) = dial_result.e {
-        warn!(cid = %cid, "fold outbound failed, {:#}", e);
+        warn!(cid = %cid, is_fallback = is_fallback, "fold outbound failed, {:#}", e);
         return Err(e);
     }
     if let Stream::None = dial_result.c {
         warn!(
-            cid = %cid,
+            cid = %cid, is_fallback = is_fallback,
             "fold outbound stream got consumed ",
         );
 
         return Ok(());
     }
 
-    if let Some(rta) = &dial_result.a {
-        if rta.eq(&Addr::default()) {
-            debug!(
-                cid = %cid,
-                "fold outbound succeed with empty target_addr left",
-            );
+    if tracing::enabled!(tracing::Level::INFO) {
+        if let Some(rta) = &dial_result.a {
+            if rta.eq(&Addr::default()) {
+                info!(
+                    cid = %cid, is_fallback = is_fallback,
+                    "fold outbound succeed with empty target_addr",
+                );
+            } else {
+                info!( cid = %cid, is_fallback = is_fallback,
+                "fold outbound succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
+            }
         } else {
-            debug!( cid = %cid,
-            "fold outbound succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
+            info!(cid = %cid, is_fallback = is_fallback,"fold outbound succeed, will start relay");
         }
-    } else {
-        info!(cid = %cid,"fold outbound succeed, will start relay");
     }
 
     if let Some(r) = newc_recorder {
