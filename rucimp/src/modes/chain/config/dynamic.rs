@@ -21,7 +21,7 @@
  * 都要初始化一遍配置（如加载tls证书等），这将是非常低效的
  *
  */
-use std::{cmp::Ordering, fmt::Debug, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 use dyn_clone::DynClone;
 use ruci::{
@@ -39,9 +39,8 @@ pub struct IndexInfinite {
 
     pub generator: Box<dyn IndexNextMapperGenerator>,
 
-    /// 生成的 新 MapperBox 会存储在 cache 中
-    pub cache: Vec<Arc<MapperBox>>,
-
+    // 生成的 新 MapperBox 会存储在 cache 中
+    // pub cache: Vec<Arc<MapperBox>>,
     pub current_index: i64,
 }
 
@@ -50,7 +49,7 @@ impl IndexInfinite {
         IndexInfinite {
             tag,
             generator,
-            cache: Vec::new(),
+            // cache: Vec::new(),
             current_index: -1,
         }
     }
@@ -58,33 +57,17 @@ impl IndexInfinite {
 
 pub type IndexMapperBox = (i64, Option<Arc<MapperBox>>); //MapperBox 和它的 索引
 
-/// 如果产生的是新的且需要被缓存, 则其index 为 cache_len
-///
-/// 如果 index 大于 cache_len, 则不会被写入缓存, 即它指示该新MapperBox
-/// 只会被用到一次，
-///
-/// 若 index 在 [0..cache_len) 区间内, 则它指示使用历史生成的MapperBox
-///
-/// 若 index 小于0, 则指示迭代结束
+/// 若返回的 index 小于0, 则指示迭代结束
 ///
 pub trait IndexNextMapperGenerator: DynClone + Debug + Send + Sync {
-    fn next_mapper(
-        &mut self,
-        cid: CID,
-        this_index: i64,
-        cache_len: usize,
-        data: OVOD,
-    ) -> Option<IndexMapperBox>;
+    fn next_mapper(&mut self, cid: CID, this_index: i64, data: OVOD) -> Option<IndexMapperBox>;
 }
 
 dyn_clone::clone_trait_object!(IndexNextMapperGenerator);
 
 impl DynIterator for IndexInfinite {
     fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapperBox>> {
-        let cl = self.cache.len();
-        let oi = self
-            .generator
-            .next_mapper(cid, self.current_index, cl, data);
+        let oi = self.generator.next_mapper(cid, self.current_index, data);
         match oi {
             Some(ib) => {
                 let i = ib.0;
@@ -92,22 +75,8 @@ impl DynIterator for IndexInfinite {
                     return None;
                 }
                 self.current_index = i;
-                let i = i as usize;
 
-                match i.cmp(&cl) {
-                    Ordering::Greater => ib.1,
-                    Ordering::Equal => {
-                        let mb = ib.1.expect("should have a mapper_box");
-                        self.cache.push(mb.clone());
-                        Some(mb)
-                    }
-
-                    _ => {
-                        let mb = self.cache[i].clone();
-
-                        Some(mb)
-                    }
-                }
+                ib.1
             }
             None => None,
         }

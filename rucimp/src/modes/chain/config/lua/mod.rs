@@ -337,19 +337,18 @@ impl InnerLuaNextGenerator {
     fn get_result(
         &mut self,
         cid: CID,
-        cache_len: usize,
-        rst: (i64, OwnedTableOrString),
+        rst: (i64, LuaMapperRepresentation),
     ) -> Option<dynamic::IndexMapperBox> {
         let i = rst.0;
 
         if i < 0 {
             return None;
         }
-        if (i as usize) < cache_len {
-            return Some((i, None));
-        }
+        // if (i as usize) < cache_len {
+        //     return Some((i, None));
+        // }
         match rst.1 {
-            OwnedTableOrString::OT(t) => {
+            LuaMapperRepresentation::OT(t) => {
                 if let Ok(g) = t.to_ref().get::<_, Value>("stream_generator") {
                     if let Value::Nil = g {
                         // debug!("will get r by table");
@@ -373,7 +372,7 @@ impl InnerLuaNextGenerator {
                     self.get_result_by_value(i, Value::Table(t.to_ref()))
                 }
             }
-            OwnedTableOrString::OS(s) => {
+            LuaMapperRepresentation::OS(s) => {
                 // debug!("will get r by str");
 
                 self.get_result_by_value(i, Value::String(s.to_ref()))
@@ -382,7 +381,7 @@ impl InnerLuaNextGenerator {
     }
 }
 
-enum OwnedTableOrString {
+enum LuaMapperRepresentation {
     OT(LuaOwnedTable),
     OS(LuaOwnedString),
 }
@@ -392,7 +391,6 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
         &mut self,
         cid: CID,
         this_index: i64,
-        cache_len: usize,
         data: OVOD,
     ) -> Option<dynamic::IndexMapperBox> {
         let mut mg = self.inner.lock();
@@ -420,10 +418,10 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                         let r = r.ok()?;
                         match r.1 {
                             LuaValue::String(t) => {
-                                Some((r.0, OwnedTableOrString::OS(t.into_owned())))
+                                Some((r.0, LuaMapperRepresentation::OS(t.into_owned())))
                             }
                             LuaValue::Table(t) => {
-                                Some((r.0, OwnedTableOrString::OT(t.into_owned())))
+                                Some((r.0, LuaMapperRepresentation::OT(t.into_owned())))
                             }
 
                             _ => None,
@@ -434,7 +432,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                 };
 
                 match r {
-                    Some(r) => return mg.get_result(cid, cache_len, r),
+                    Some(r) => return mg.get_result(cid, r),
                     None => {
                         mg.thread_map.remove(&cid);
                         return None;
@@ -456,10 +454,10 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                         let r = r.ok()?;
 
                         let v = match r.1 {
-                            LuaValue::String(t) => OwnedTableOrString::OS(t.into_owned()),
+                            LuaValue::String(t) => LuaMapperRepresentation::OS(t.into_owned()),
                             LuaValue::Table(t) => {
                                 // debug!("thread resume got table");
-                                OwnedTableOrString::OT(t.into_owned())
+                                LuaMapperRepresentation::OT(t.into_owned())
                             }
 
                             _ => panic!("get lua value not string or table"),
@@ -469,7 +467,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                         (t.into_owned(), r)
                     };
 
-                    let new_r = mg.get_result(cid.clone(), cache_len, r.1);
+                    let new_r = mg.get_result(cid.clone(), r.1);
                     (r.0, new_r)
                 };
 
@@ -494,8 +492,8 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
             let r = r.ok()?;
 
             let v = match r.1 {
-                LuaValue::String(t) => OwnedTableOrString::OS(t.into_owned()),
-                LuaValue::Table(t) => OwnedTableOrString::OT(t.into_owned()),
+                LuaValue::String(t) => LuaMapperRepresentation::OS(t.into_owned()),
+                LuaValue::Table(t) => LuaMapperRepresentation::OT(t.into_owned()),
 
                 _ => panic!("get lua value not string or table"),
             };
@@ -503,6 +501,6 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
             (r.0, v)
         };
 
-        mg.get_result(cid, cache_len, r)
+        mg.get_result(cid, r)
     }
 }
