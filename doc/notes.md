@@ -17,3 +17,5 @@ CommonMapperExt 要 配合 common_mapper_field 宏一起使用
 用了 CommonMapperExt 后，可以在方法内使用 self.is_tail_of_chain 判断是否在链尾，如果在，则可以发送ed, 
 如果不在，不可以发送，只能传递到下一级
 
+而作为最高级抽象的动态链则做不到. 静态链是动态链的一种具体的固定的形态
+

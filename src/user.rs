@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use std::sync::Mutex;
 
 /// 用于用户鉴权
-pub trait User: Clone {
+pub trait UserTrait {
     fn identity_str(&self) -> String; //每个user唯一，通过比较这个string 即可 判断两个User 是否相等。相当于 user name
 
     fn identity_bytes(&self) -> &[u8]; //与str类似; 对于程序来说,bytes更方便处理; 可以与str相同，也可以不同.
@@ -13,6 +13,9 @@ pub trait User: Clone {
 
     fn auth_bytes(&self) -> &[u8]; //与 AuthStr 类似; 对于程序来说,bytes更方便处理; 可以与str相同，也可以不同.
 }
+
+pub trait User: UserTrait + Clone {}
+impl<T: UserTrait + Clone> User for T {}
 
 /// 用户鉴权的实际方法
 #[async_trait]
@@ -61,7 +64,7 @@ impl UserPass {
     }
 }
 
-impl User for UserPass {
+impl UserTrait for UserPass {
     fn identity_str(&self) -> String {
         self.user.clone()
     }

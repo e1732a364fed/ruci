@@ -165,7 +165,7 @@ impl StaticEngine {
     }
     fn get_tag_route_out_selector(&mut self) -> &'static dyn OutSelector {
         let t = TagOutSelector {
-            outbounds_route_map: self.tag_routes.clone().unwrap(),
+            outbounds_tag_route_map: self.tag_routes.clone().unwrap(),
             outbounds_map: self.outbounds.clone(),
             default: self.default_outbound.clone().unwrap(),
         };

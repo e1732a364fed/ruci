@@ -83,7 +83,7 @@ impl User {
     }
 }
 
-impl crate::user::User for User {
+impl crate::user::UserTrait for User {
     fn identity_str(&self) -> String {
         self.hex.clone()
     }

@@ -6,6 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     map::{AnyData, MIterBox},
     net,
+    user::{self},
 };
 
 /// Send + Sync to use in async
@@ -36,8 +37,8 @@ impl OutSelector for FixedOutSelector {
 
 #[derive(Debug)]
 pub struct TagOutSelector {
-    pub outbounds_route_map: HashMap<String, String>, // in -> out
-    pub outbounds_map: Arc<HashMap<String, MIterBox>>, //out_tag -> outbound
+    pub outbounds_tag_route_map: HashMap<String, String>, // in_tag -> out_tag
+    pub outbounds_map: Arc<HashMap<String, MIterBox>>,    //out_tag -> outbound
     pub default: MIterBox,
 }
 
@@ -48,7 +49,7 @@ impl OutSelector for TagOutSelector {
         in_chain_tag: &str,
         _params: Vec<Option<AnyData>>,
     ) -> MIterBox {
-        let ov = self.outbounds_route_map.get(in_chain_tag);
+        let ov = self.outbounds_tag_route_map.get(in_chain_tag);
         match ov {
             Some(out_k) => {
                 let y = self.outbounds_map.get(out_k);
@@ -60,6 +61,17 @@ impl OutSelector for TagOutSelector {
             None => self.default.clone(),
         }
     }
+}
+
+pub struct RouteRule {
+    pub users: Box<dyn user::UserTrait>,
+}
+
+#[derive(Debug)]
+pub struct RuleOutSelector {
+    pub outbounds_tag_route_map: HashMap<String, String>, // in_tag -> out_tag
+    pub outbounds_map: Arc<HashMap<String, MIterBox>>,    //out_tag -> outbound
+    pub default: MIterBox,
 }
 
 #[cfg(test)]
@@ -75,7 +87,6 @@ mod test {
             ("l1".to_string(), "d1".to_string()),
             ("l2".to_string(), "d2".to_string()),
         ];
-
         let outbounds_route_map: HashMap<_, _> = teams_list.into_iter().collect();
 
         let a = Adder::default();
@@ -99,7 +110,7 @@ mod test {
         let outbounds_map = Arc::new(outbounds_map);
 
         let t = TagOutSelector {
-            outbounds_route_map,
+            outbounds_tag_route_map: outbounds_route_map,
             outbounds_map,
             default: m2,
         };
