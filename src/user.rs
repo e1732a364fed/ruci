@@ -85,7 +85,15 @@ pub struct UsersMap<T: User> {
     m: Mutex<InnerUsersmapStruct<T>>,
 }
 
-#[derive(Debug)]
+impl<T: User> Clone for UsersMap<T> {
+    fn clone(&self) -> Self {
+        Self {
+            m: Mutex::new(self.m.lock().unwrap().clone()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct InnerUsersmapStruct<T: User> {
     idmap: HashMap<String, T>, // id map
     amap: HashMap<String, T>,  //auth map

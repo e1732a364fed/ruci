@@ -4,6 +4,7 @@ use crate::Name;
 
 use super::*;
 
+#[derive(Clone)]
 pub struct TcpDialer {
     addr: Option<net::Addr>,
 }

@@ -105,7 +105,7 @@ impl AsyncWrite for CounterConn {
 }
 
 /// 通过 maps 给 base 添加 上传和下载的流量计数
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Counter;
 
 impl Name for Counter {

@@ -354,13 +354,6 @@ impl<'a> Display for OptAddrRef<'a> {
     }
 }
 
-#[async_trait::async_trait]
-pub trait AsyncIterator: Send {
-    type Item;
-
-    async fn next(&mut self) -> Option<Self::Item>;
-}
-
 #[derive(Default)]
 pub enum Stream {
     ///  tcp / unix domain socket 等 目标 Addr 唯一的 情况

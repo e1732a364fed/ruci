@@ -5,7 +5,7 @@ use self::map::{MapParams, ProxyBehavior};
 use super::*;
 use crate::{map::MapResult, net};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Client {
     pub up: Option<UserPass>, //todo: make sure len <= 255
 

@@ -345,10 +345,16 @@ pub struct AccumulateResult {
     pub e: Option<io::Error>,
 }
 
-//impl<'a> Accumulator<'a> {
 ///  accumulate 是一个作用很强的函数
 /// extra_data_vec 若不为空，其须与 mappers 提供同数量的元素, 否则
 /// 将panic
+///
+/// accumulate 只适用于 不含 Stream::Generator 的情况,
+///
+/// 结果中 Stream为 None 或 一个 Stream::Generator ，或e不为None时，将退出累加
+///
+/// 能生成 Stream::Generator 说明其 behavior 为 DECODE
+///
 pub async fn accumulate<'a, IterMapperBoxRef, IterOptData>(
     cid: u32,
     behavior: ProxyBehavior,
@@ -415,6 +421,9 @@ where
                 if last_r.e.is_some() {
                     break;
                 }
+                if let Stream::Generator(_) = last_r.c {
+                    break;
+                }
             }
             None => {
                 break;
@@ -430,95 +439,21 @@ where
         e: last_r.e,
     };
 }
-//}
-/*
-/// 类似 TcpInAccumulator , 这是一个作用很强的累加器，
-///
-/// 一般 【中同层是用不到 target_addr的，只有最后一层会用到，即，
-///只有代理层会用到目标地址】
-///
 
-
-pub struct OutAccumulator<'a> {
-    phantom: std::marker::PhantomData<&'a i32>,
-}
-
-impl<'a> OutAccumulator<'a> {
-    pub async fn accumulate<IterMapperBoxRef>(
-        cid: u32,
-        base: Stream,
-        mut outmappers: IterMapperBoxRef,
-        target_addr: Option<net::Addr>,
-        early_data: Option<BytesMut>,
-    ) -> io::Result<AccumulateResult>
-    where
-        IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
-    {
-        let mut extra_data_vec = Vec::new();
-
-        let mut last_r = MapResult {
-            a: target_addr,
-            b: early_data,
-            c: Some(base),
-            d: None,
-            e: None,
-        };
-
-        // 与 InAccumulator 相反, early_data 在传入第一层后就会消失
-        let first_adder = outmappers.next();
-
-        match first_adder {
-            Some(fa) => {
-                last_r = fa
-                    .maps(
-                        cid,
-                        ProxyBehavior::ENCODE,
-                        MapParams {
-                            c: last_r.c.unwrap(),
-                            a: last_r.a,
-                            b: last_r.b,
-                            d: None,
-                        },
-                    )
-                    .await;
-
-                extra_data_vec.push(last_r.d);
-
-                loop {
-                    let oadder = outmappers.next();
-                    match oadder {
-                        Some(adder) => {
-                            last_r = adder
-                                .maps(
-                                    cid,
-                                    ProxyBehavior::ENCODE,
-                                    MapParams {
-                                        c: last_r.c.unwrap(),
-                                        a: last_r.a,
-                                        b: None,
-                                        d: None,
-                                    },
-                                )
-                                .await;
-                            extra_data_vec.push(last_r.d);
-                        }
-                        None => {
-                            return Ok((last_r.c.unwrap(), last_r.a, extra_data_vec));
-                        }
-                    }
-                }
-            }
-            None => {
-                return Ok(AccumulateResult {
-                    a: last_r.a,
-                    b: last_r.b,
-                    c: last_r.c,
-                    d: extra_data_vec,
-                    e: None,
-                });
-            }
-        }
+/// 用于 已知一个初始点为 Stream::Generator, 向其所有子连接进行accumulate，
+/// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator，或e不为None
+pub async fn propagation<'a, IterMapperBoxRef, IterOptData>(
+    cid: u32,
+    mut rx: tokio::sync::mpsc::Receiver<Stream>,
+    mut mappers: IterMapperBoxRef,
+    mut hyperparameter_vec: Option<IterOptData>,
+) where
+    IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
+    IterOptData: Iterator<Item = OptData>,
+{
+    loop {
+        let x = rx.recv().await;
+        if x.is_none() {}
+        let x = x.unwrap();
     }
 }
-
-*/

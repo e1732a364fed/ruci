@@ -42,7 +42,7 @@ impl ToMapper for Config {
 ///  support_udp开关udp associate的支持
 ///
 /// 支持 AuthNone和 AuthUserPass
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Server {
     pub um: Option<UsersMap<UserPass>>,
     pub support_udp: bool,
