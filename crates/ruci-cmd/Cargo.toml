@@ -1,5 +1,5 @@
 [package]
-name = "cmd0"
+name = "ruci-cmd"
 version = "0.0.0"
 edition = "2021"
 
@@ -7,3 +7,10 @@ edition = "2021"
 ruci = { path = "../.." }
 rucimp = { path = "../../rucimp" }
 clap = { version = "4.5.1", features = ["derive"] }
+
+axum = {version = "0.7.4", optional = true}
+
+[features]
+default = ["api_server"]
+api_server = ["axum"]
+

@@ -172,6 +172,13 @@ o2node-.->collector
 - [ ] quic
 - [ ] ss?, vmess?
 
+### ruci-cmd
+
+- [ ] chain mode support
+- [ ] suit mode support
+- [ ] api_server
+- [ ] system auto route
+
 #### 项目的实际目的？
 
 我们要了解协议的细节，以进行数据处理、转换到统一格式和“标注”.

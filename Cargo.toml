@@ -1,4 +1,4 @@
-workspace = { members = [ "rucimp" ,"./", "crates/macro_mapper", "crates/cmd0"]  }
+workspace = { members = [ "rucimp" ,"./", "crates/macro_mapper", "crates/ruci-cmd"]  }
 [package]
 name = "ruci"
 version = "0.0.2"
