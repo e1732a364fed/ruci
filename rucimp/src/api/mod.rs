@@ -10,7 +10,6 @@ use chrono::{DateTime, Utc};
 use parking_lot::RwLock;
 use ruci::net::{GlobalTrafficRecorder, CID};
 use ruci::relay::NewConnInfo;
-use serde::Serialize;
 use tokio::sync::{mpsc, Mutex};
 use tracing::info;
 
@@ -19,17 +18,17 @@ pub const DEFAULT_API_ADDR: &str = "127.0.0.1:40681";
 type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, (DateTime<Utc>, NewConnInfo)>>>;
 
 /// 缓存 某cid的 某时间点的流量
-#[cfg(all(feature = "trace", feature = "api_server"))]
+#[cfg(all(feature = "trace"))]
 type FluxCache = Arc<tinyufo::TinyUfo<CID, Vec<(tokio::time::Instant, u64)>>>;
-#[cfg(all(feature = "trace", feature = "api_server"))]
+#[cfg(all(feature = "trace"))]
 fn new_cache() -> FluxCache {
     Arc::new(tinyufo::TinyUfo::new(100, 100))
 }
 
-#[cfg(all(feature = "trace", feature = "api_server"))]
+#[cfg(all(feature = "trace"))]
 use std::sync::atomic::AtomicBool;
 
-#[cfg(all(feature = "trace", feature = "api_server"))]
+#[cfg(all(feature = "trace"))]
 pub struct TracePart {
     pub is_monitoring: Arc<AtomicBool>,
 
@@ -79,19 +78,55 @@ impl Server {
 }
 
 #[cfg(feature = "trace")]
+#[utoipa::path(
+    get,
+    path = "/api/monitoring/status",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get monitoring status", body = String)
+    )
+)]
+#[cfg(feature = "trace")]
 async fn is_monitoring_flux(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> String {
     format!("{}", is_monitoring_flux.load(Ordering::Relaxed))
 }
+
 #[cfg(feature = "trace")]
+#[utoipa::path(
+    get,
+    path = "/api/monitoring/enable",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Enable monitoring", body = String)
+    )
+)]
 async fn enable_monitor(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> &'static str {
     is_monitoring_flux.fetch_or(true, Ordering::Relaxed);
     "ok"
 }
+
 #[cfg(feature = "trace")]
+#[utoipa::path(
+    get,
+    path = "/api/monitoring/disable",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Disable monitoring", body = String)
+    )
+)]
 async fn disable_monitor(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> &'static str {
     is_monitoring_flux.fetch_and(false, Ordering::Relaxed);
     "ok"
 }
+
+#[utoipa::path(
+    get,
+    path = "/api/connections",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get all connection information", body = String)
+    )
+)]
 
 async fn get_conn_infos(State(all_conn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
@@ -107,6 +142,17 @@ async fn get_conn_infos(State(all_conn): State<NewConnInfoMap>) -> String {
     s
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/connections/range/{cid}",
+    tag = "ruci",
+    params(
+        ("cid" = String, Path, description = "Connection ID to start range from")
+    ),
+    responses(
+        (status = 200, description = "Get connection information from specified CID onwards", body = String)
+    )
+)]
 async fn get_conn_infos_range(
     Path(cid): Path<String>,
     State(all_conn): State<NewConnInfoMap>,
@@ -131,6 +177,14 @@ async fn get_conn_infos_range(
     s
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/connections/last/ok",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get last successful connection ID", body = String)
+    )
+)]
 async fn get_last_ok_cid(State(all_conn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
     let m = all_conn.read();
@@ -141,26 +195,78 @@ async fn get_last_ok_cid(State(all_conn): State<NewConnInfoMap>) -> String {
     s
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/connections/count",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get total connection count", body = String)
+    )
+)]
 async fn get_conn_count(State(all_conn): State<NewConnInfoMap>) -> String {
     format!("{}", all_conn.read().len())
 }
+
+#[utoipa::path(
+    get,
+    path = "/api/traffic/connections/alive/count",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get alive connection count", body = String)
+    )
+)]
 
 async fn get_alive_conn_count(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
     format!("{}", s.alive_connection_count.load(Ordering::Relaxed))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/traffic/connections/last/id",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get last connection ID", body = String)
+    )
+)]
 async fn get_last_conn_id(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
     format!("{}", s.last_connection_id.load(Ordering::Relaxed))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/traffic/upload",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get upload traffic statistics", body = String)
+    )
+)]
 async fn get_gt_u(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
     format!("{}", s.ub.load(Ordering::Relaxed))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/traffic/download",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get download traffic statistics", body = String)
+    )
+)]
 async fn get_gt_d(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
     format!("{}", s.db.load(Ordering::Relaxed))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/connections/{cid}",
+    tag = "ruci",
+    params(
+        ("cid" = String, Path, description = "Connection ID")
+    ),
+    responses(
+        (status = 200, description = "Get information for a specific connection", body = String)
+    )
+)]
 async fn get_conn_info(Path(cid): Path<String>, State(all_conn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
     let m = all_conn.read();
@@ -216,6 +322,14 @@ fn instant_data_to_str(v: Vec<(tokio::time::Instant, u64)>) -> String {
     s
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/engine/stop",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Stop the engine", body = String)
+    )
+)]
 /// stop rucimp core
 async fn stop_engine(State(tx): State<mpsc::Sender<()>>) -> String {
     let r = tx.try_send(());
@@ -232,6 +346,15 @@ pub type Opts = Arc<
     >,
 >;
 
+#[utoipa::path(
+    post,
+    path = "/api/engine/start",
+    tag = "ruci",
+    request_body = crate::modes::CoreArgs,
+    responses(
+        (status = 200, description = "Start the engine", body = String)
+    )
+)]
 async fn start_engine(
     State(api_server_opts): State<Opts>,
     axum::Json(args): axum::Json<crate::modes::CoreArgs>,
@@ -253,11 +376,23 @@ async fn start_engine(
     }
 }
 
-#[derive(Serialize)]
-struct StatusResponse {
-    status: String,
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "api_server", derive(utoipa::ToSchema))]
+
+pub struct StatusResponse {
+    /// Current status of the server
+    pub status: String,
 }
 
+// Add OpenAPI documentation for each endpoint
+#[utoipa::path(
+    get,
+    path = "/api/status",
+    tag = "ruci",
+    responses(
+        (status = 200, description = "Get server status", body = StatusResponse)
+    )
+)]
 pub async fn get_status() -> impl IntoResponse {
     let status = StatusResponse {
         status: "running".to_string(),
@@ -319,7 +454,7 @@ pub async fn serve(
             get(get_last_ok_cid).with_state(s.new_conn_info_map.clone()),
         )
         .route(
-            "/api/connections/range/:cid",
+            "/api/connections/range/{cid}",
             get(get_conn_infos_range).with_state(s.new_conn_info_map.clone()),
         )
         .route(
@@ -327,7 +462,7 @@ pub async fn serve(
             get(get_conn_count).with_state(s.new_conn_info_map.clone()),
         )
         .route(
-            "/api/connections/:cid",
+            "/api/connections/{cid}",
             get(get_conn_info).with_state(s.new_conn_info_map.clone()),
         );
 
@@ -349,15 +484,19 @@ pub async fn serve(
         );
 
         app = app.route(
-            "/api/traffic/download/:cid",
+            "/api/traffic/download/{cid}",
             get(get_flux_for).with_state(s.flux_trace.d_cache.clone()),
         );
 
         app = app.route(
-            "/api/traffic/upload/:cid",
+            "/api/traffic/upload/{cid}",
             get(get_flux_for).with_state(s.flux_trace.u_cache.clone()),
         );
     }
+
+    // Add OpenAPI documentation and Swagger UI
+    use utoipa_swagger_ui::SwaggerUi;
+    app = app.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
 
     // RUST_LOG=tower_http=trace
 
@@ -488,3 +627,79 @@ async fn setup_trace_flux_for_chain_engine(
     spawn_for(db_rx, imc, dc);
     spawn_for(ub_rx, imc2, uc);
 }
+
+use serde::{Deserialize, Serialize};
+use utoipa::OpenApi;
+
+/// Response for status endpoint
+
+/// Connection information response
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+pub struct ConnectionInfoResponse {
+    /// Connection ID
+    pub cid: String,
+    /// Connection timestamp
+    pub timestamp: String,
+    /// Connection details
+    pub details: String,
+}
+
+/// Traffic statistics response
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+pub struct TrafficStatsResponse {
+    /// Number of bytes
+    pub bytes: u64,
+}
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        get_status,
+        stop_engine,
+        start_engine,
+        get_alive_conn_count,
+        get_last_conn_id,
+        get_gt_u,
+        get_gt_d,
+        get_conn_infos,
+        get_last_ok_cid,
+        get_conn_infos_range,
+        get_conn_count,
+        get_conn_info,
+    ),
+    components(
+        schemas(StatusResponse, ConnectionInfoResponse, TrafficStatsResponse, crate::modes::CoreArgs, crate::modes::Mode, crate::modes::LevelWrapper)
+    ),
+    tags(
+        (name = "ruci", description = "Ruci API endpoints")
+    )
+)]
+pub struct ApiDoc;
+
+#[cfg(feature = "trace")]
+#[utoipa::path(
+    get,
+    path = "/api/traffic/download/{cid}",
+    tag = "ruci",
+    params(
+        ("cid" = String, Path, description = "Connection ID")
+    ),
+    responses(
+        (status = 200, description = "Get download traffic for a specific connection", body = String)
+    )
+)]
+pub fn get_flux_for_download() {}
+
+#[cfg(feature = "trace")]
+#[utoipa::path(
+    get,
+    path = "/api/traffic/upload/{cid}",
+    tag = "ruci",
+    params(
+        ("cid" = String, Path, description = "Connection ID")
+    ),
+    responses(
+        (status = 200, description = "Get upload traffic for a specific connection", body = String)
+    )
+)]
+pub fn get_flux_for_upload() {}

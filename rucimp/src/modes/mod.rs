@@ -14,6 +14,7 @@ use crate::DEFAULT_LUA_CONFIG_FILE_NAME;
 pub mod chain;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "api_server", derive(utoipa::ToSchema))]
 pub enum Mode {
     /// Chain mode, which uses lua/json file
     #[default]
@@ -22,6 +23,30 @@ pub enum Mode {
 
 #[derive(Debug, Clone, Copy)]
 pub struct LevelWrapper(pub tracing::Level);
+
+#[cfg(feature = "api_server")]
+impl utoipa::PartialSchema for LevelWrapper {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::RefOr::T(utoipa::openapi::schema::Schema::Object(
+            utoipa::openapi::schema::ObjectBuilder::new()
+                .schema_type(utoipa::openapi::schema::SchemaType::Type(
+                    utoipa::openapi::Type::String,
+                ))
+                .enum_values(Some(vec![
+                    "ERROR".to_string(),
+                    "WARN".to_string(),
+                    "INFO".to_string(),
+                    "DEBUG".to_string(),
+                    "TRACE".to_string(),
+                ]))
+                .description(Some("Tracing level".to_string()))
+                .build(),
+        ))
+    }
+}
+
+#[cfg(feature = "api_server")]
+impl utoipa::ToSchema for LevelWrapper {}
 
 impl Serialize for LevelWrapper {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -92,6 +117,7 @@ impl FromStr for LevelWrapper {
 }
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "api_server", derive(utoipa::ToSchema))]
 pub struct CoreArgs {
     /// choose the rucimp core mode
     pub mode: Mode,

@@ -139,9 +139,13 @@ pack是打包为 tar 文件， pack-z 是在打包为 tar.zip 文件。
 
 默认api 监听为 127.0.0.1:40681
 
-可用 --api-addr 和 --file-server-addr 改变
+可用 --api-addr  改变
 
 -a 运行api server
+
+已支持 OpenAPI，运行 api server 后，访问
+http://127.0.0.1:40681/swagger-ui
+以查看更详细的 api 定义
 
 api:
 
