@@ -22,6 +22,7 @@ use crate::map::CID;
 use crate::net;
 use crate::user::AsyncUserAuthenticator;
 use crate::user::PlainText;
+use crate::user::User;
 use futures::executor::block_on;
 use futures::join;
 
@@ -57,12 +58,11 @@ async fn new_noauth_socks5_inadder() -> Server {
 #[tokio::test]
 async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
     let a = new_3user_socks5_inadder().await;
-    //println!("{:?}", a);
 
     assert!(
         a.um.as_ref()
             .unwrap()
-            .auth_user_by_authstr("u1\np1")
+            .auth_user_by_authstr("plaintext:u1\np1")
             .await
             .unwrap()
             .pass
@@ -72,7 +72,7 @@ async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
     assert!(
         a.um.as_ref()
             .unwrap()
-            .auth_user_by_authstr("u0\np0")
+            .auth_user_by_authstr("plaintext:u0\np0")
             .await
             .unwrap()
             .pass
@@ -151,26 +151,6 @@ async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
 #[tokio::test]
 async fn auth_tcp_handshake_in_mem_earlydata() -> std::io::Result<()> {
     let a = new_3user_socks5_inadder().await;
-
-    assert!(
-        a.um.as_ref()
-            .unwrap()
-            .auth_user_by_authstr("u1\np1")
-            .await
-            .unwrap()
-            .pass
-            == "p1"
-    );
-
-    assert!(
-        a.um.as_ref()
-            .unwrap()
-            .auth_user_by_authstr("u0\np0")
-            .await
-            .unwrap()
-            .pass
-            == "p0"
-    );
 
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();
@@ -287,9 +267,9 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
 
         match d {
             crate::map::AnyData::B(mut d) => {
-                if let Some(up) = d.downcast_mut::<PlainText>() {
-                    assert_eq!(up.user, "u0");
-                    assert_eq!(up.pass, "p0");
+                if let Some(up) = d.downcast_mut::<Box<dyn User>>() {
+                    assert_eq!(up.identity_str(), "u0");
+                    assert_eq!(up.auth_str(), "plaintext:u0\np0");
                 } else {
                     panic!("failed downcasted to UserPass, ")
                 }

@@ -96,8 +96,10 @@ impl Server {
         let pass_part = buf.split_to(PASS_LEN);
 
         let hash_str = String::from_utf8_lossy(&pass_part);
+        let mut trojan_hash = String::from("trojan:");
+        trojan_hash.push_str(&hash_str);
 
-        let opt_user = self.um.auth_user_by_authstr(&hash_str).await;
+        let opt_user = self.um.auth_user_by_authstr(&trojan_hash).await;
 
         if opt_user.is_none() {
             return Ok(MapResult::buf_err_str(buf, "hash not match"));

@@ -175,7 +175,7 @@ impl PlainText {
         !self.user.is_empty() && !self.pass.is_empty()
     }
 
-    ///auth string slice
+    ///plaintext:{user}\n{pass}, like plaintext:u1\np1
     pub fn auth_strs(&self) -> &str {
         self.astr.as_str()
     }
