@@ -2,16 +2,23 @@
  *
 与 verysimple 一样, 我们直接使用 maxmind 的 数据 作为ip国别判断的数据库
 
-https://github.com/Loyalsoldier/geoip
+https://www.maxmind.com/en/geoip-databases
+
+https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
+
+https://www.maxmind.com/en/accounts/current/geoip/downloads
 
 https://github.com/oschwald/maxminddb-rust
 
 https://docs.rs/maxminddb/latest/maxminddb/struct.Reader.html
+
+https://github.com/Loyalsoldier/geoip
+
  */
 use std::net::IpAddr;
 
 use anyhow::anyhow;
-use log::warn;
+use log::{debug, warn};
 use maxminddb::geoip2;
 
 // pub const MMDB_DOWNLOAD_LINK: &str =
@@ -21,7 +28,7 @@ use maxminddb::geoip2;
 pub fn get_ip_iso(ip: IpAddr, filename: &str, possible_addrs: &[&str]) -> String {
     let reader = open_mmdb(filename, possible_addrs).expect(&format!("has {}", filename));
 
-    get_ip_iso_by_reader(ip, reader)
+    get_ip_iso_by_reader(ip, &reader)
 }
 
 pub fn open_mmdb(
@@ -45,7 +52,9 @@ pub fn open_mmdb(
 }
 
 /// get iso 3166 string
-pub fn get_ip_iso_by_reader(ip: IpAddr, reader: maxminddb::Reader<Vec<u8>>) -> String {
+///
+/// https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
+pub fn get_ip_iso_by_reader(ip: IpAddr, reader: &maxminddb::Reader<Vec<u8>>) -> String {
     let r = reader.lookup(ip);
     let c: geoip2::Country = match r {
         Ok(c) => c,
@@ -54,6 +63,8 @@ pub fn get_ip_iso_by_reader(ip: IpAddr, reader: maxminddb::Reader<Vec<u8>>) -> S
             return "".to_string();
         }
     };
+    debug!("got {:?}", c);
+
     if let Some(c) = c.country {
         c.iso_code.unwrap_or_default().to_string()
     } else {
@@ -61,18 +72,40 @@ pub fn get_ip_iso_by_reader(ip: IpAddr, reader: maxminddb::Reader<Vec<u8>>) -> S
     }
 }
 
+/// see  doc/notes.md
+///
+/// Convert GOOGLE, TWITTER, TELEGRAM, FACEBOOK, NETFLIX, CLOUDFRONT,CLOUDFLARE etc. to US
+///
+pub fn filter_iso_string(s: &str) -> &str {
+    if s == "PRIVATE" {
+        return s;
+    }
+    if s.len() > 2 {
+        return "US";
+    }
+
+    s
+}
+
 #[cfg(test)]
 mod test {
 
-    use crate::COMMON_DIRS;
+    use std::env::set_var;
+
+    use crate::{route::maxmind::filter_iso_string, COMMON_DIRS};
 
     use super::get_ip_iso;
 
+    /// see  doc/notes.md
     #[test]
     fn test1() {
+        set_var("RUST_LOG", "debug");
+        let _ = env_logger::try_init();
+
         let s = get_ip_iso("127.0.0.1".parse().unwrap(), "Country.mmdb", &COMMON_DIRS);
         println!("{s}");
         assert_eq!(s, "PRIVATE");
+        assert_eq!(filter_iso_string(&s), "PRIVATE");
 
         //www.baidu.com's IP
         let s = get_ip_iso(
@@ -82,5 +115,35 @@ mod test {
         );
         println!("{s}");
         assert_eq!(s, "CN");
+        assert_eq!(filter_iso_string(&s), "CN");
+
+        // www.google.com's IP
+        let s = get_ip_iso(
+            "142.251.32.36".parse().unwrap(),
+            "Country.mmdb",
+            &COMMON_DIRS,
+        );
+        println!("{s}");
+        assert_eq!(s, "GOOGLE");
+        assert_eq!(filter_iso_string(&s), "US");
+
+        // www.twitter.com's IP
+        let s = get_ip_iso(
+            "104.244.42.1".parse().unwrap(),
+            "Country.mmdb",
+            &COMMON_DIRS,
+        );
+        println!("{s}");
+        assert_eq!(s, "TWITTER");
+
+        // www.reddit.com's IP
+        let s = get_ip_iso(
+            "151.101.65.140".parse().unwrap(),
+            "Country.mmdb",
+            &COMMON_DIRS,
+        );
+        println!("{s}");
+        assert_eq!(s, "FASTLY");
+        assert_eq!(filter_iso_string(&s), "US");
     }
 }

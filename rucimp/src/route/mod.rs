@@ -12,7 +12,7 @@ route 模块中的定义的是 比 ruci::route中的 InboundInfoOutSelector 更�
 */
 
 #[cfg(feature = "geoip")]
-pub mod geoip;
+pub mod maxmind;
 
 pub mod config;
 
@@ -31,8 +31,6 @@ use ruci::{
     relay::route::{self, *},
     user::*,
 };
-
-use crate::COMMON_DIRS;
 
 #[derive(Debug)]
 pub struct RuleSetOutSelector {
@@ -77,14 +75,16 @@ impl route::OutSelector for RuleSetOutSelector {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub enum Mode {
     BlackList,
+
+    #[default]
     WhiteList,
 }
 
 /// ta 前缀 意思是 target_addr,
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RuleSet {
     pub out_tag: String,
 
@@ -102,8 +102,11 @@ pub struct RuleSet {
     pub ta_ipv6: Option<IpRange<Ipv6Net>>,
 
     pub ta_domain_matcher: Option<DomainMatcher>,
-    //todo: add peer_addr related filter
+    /// for geoip, checkiing ip_countries
+    #[cfg(feature = "geoip")]
+    pub mmdb_reader: Option<Arc<maxminddb::Reader<Vec<u8>>>>,
 }
+//todo: add peer_addr related filter
 
 #[derive(Clone, Debug)]
 pub struct DomainMatcher {
@@ -144,10 +147,14 @@ impl RuleSet {
             return false;
         }
 
-        let is_in_ta_ip_countries = self.is_in_ta_ip_countries(true, &r.target_addr);
-        if !is_in_ta_ip_countries {
-            return false;
+        #[cfg(feature = "geoip")]
+        {
+            let is_in_ta_ip_countries = self.is_in_ta_ip_countries(true, &r.target_addr);
+            if !is_in_ta_ip_countries {
+                return false;
+            }
         }
+
         true
     }
 
@@ -176,52 +183,55 @@ impl RuleSet {
             return true;
         }
 
-        let is_in_ta_ip_countries = self.is_in_ta_ip_countries(true, &r.target_addr);
-        if is_in_ta_ip_countries {
-            return true;
+        #[cfg(feature = "geoip")]
+        {
+            let is_in_ta_ip_countries = self.is_in_ta_ip_countries(true, &r.target_addr);
+            if is_in_ta_ip_countries {
+                return true;
+            }
         }
         false
     }
 
-    /// 如果在集合中, 或 allow_empty 且 集合为 空, 返回 true
-    pub fn is_in_in_tags(&self, allow_empty: bool, in_chain_tag: &str) -> bool {
+    /// 如果在集合中, 或 true_if_empty 且 集合为 空, 返回 true
+    pub fn is_in_in_tags(&self, true_if_empty: bool, in_chain_tag: &str) -> bool {
         match &self.in_tags {
             Some(ts) => ts.get(in_chain_tag).is_some(),
-            None => allow_empty,
+            None => true_if_empty,
         }
     }
 
-    pub fn is_in_userset(&self, allow_empty: bool, users: &UserVec) -> bool {
+    pub fn is_in_userset(&self, true_if_empty: bool, users: &UserVec) -> bool {
         match &self.userset {
             Some(us) => us.get(users).is_some(),
-            None => allow_empty,
+            None => true_if_empty,
         }
     }
 
-    pub fn is_in_ips(&self, allow_empty: bool, addr: &net::Addr) -> bool {
+    pub fn is_in_ips(&self, true_if_empty: bool, addr: &net::Addr) -> bool {
         match addr.addr {
             NetAddr::Socket(so) | NetAddr::NameAndSocket(_, so, _) => match so {
                 std::net::SocketAddr::V4(so) => match &self.ta_ipv4 {
                     Some(i4) => i4.contains(so.ip()),
-                    None => allow_empty,
+                    None => true_if_empty,
                 },
                 std::net::SocketAddr::V6(so) => match &self.ta_ipv6 {
                     Some(i6) => i6.contains(so.ip()),
-                    None => allow_empty,
+                    None => true_if_empty,
                 },
             },
             NetAddr::Name(_, _) => false,
         }
     }
 
-    pub fn is_in_networks(&self, allow_empty: bool, addr: &net::Addr) -> bool {
+    pub fn is_in_networks(&self, true_if_empty: bool, addr: &net::Addr) -> bool {
         match &self.ta_networks {
             Some(nw) => nw.get(&addr.network).is_some(),
-            None => allow_empty,
+            None => true_if_empty,
         }
     }
 
-    pub fn is_in_domain(&self, allow_empty: bool, addr: &net::Addr) -> bool {
+    pub fn is_in_domain(&self, true_if_empty: bool, addr: &net::Addr) -> bool {
         match &self.ta_domain_matcher {
             Some(dm) => match &addr.addr {
                 NetAddr::Name(domain, _) => {
@@ -237,31 +247,66 @@ impl RuleSet {
                     }
                     false
                 }
-                _ => allow_empty,
+                _ => true_if_empty,
             },
-            None => allow_empty,
+            None => true_if_empty,
         }
     }
 
-    pub fn is_in_ta_ip_countries(&self, allow_empty: bool, addr: &net::Addr) -> bool {
-        #[cfg(feature = "geoip")]
-        let is_in = {
-            match &self.ta_ip_countries {
+    #[cfg(feature = "geoip")]
+    pub fn is_in_ta_ip_countries(&self, true_if_empty: bool, addr: &net::Addr) -> bool {
+        match &self.mmdb_reader {
+            None => true_if_empty,
+
+            Some(mr) => match &self.ta_ip_countries {
+                None => true_if_empty,
+
                 Some(cs) => match addr.addr {
                     NetAddr::Socket(so) | NetAddr::NameAndSocket(_, so, _) => {
                         let ip = so.ip();
-                        let country = geoip::get_ip_iso(ip, "Country.mmdb", &COMMON_DIRS);
-                        cs.contains(&country)
+                        let str = &maxmind::get_ip_iso_by_reader(ip, mr);
+                        let country = maxmind::filter_iso_string(str);
+                        cs.contains(country)
                     }
-                    _ => allow_empty,
+                    _ => true_if_empty,
                 },
-                None => allow_empty,
-            }
-        };
-        #[cfg(not(feature = "geoip"))]
-        let is_in = { allow_empty };
-
-        is_in
+            },
+        }
     }
 }
-// todo : add test
+
+#[cfg(test)]
+mod test {
+
+    use crate::COMMON_DIRS;
+
+    use super::*;
+
+    #[test]
+    #[cfg(feature = "geoip")]
+    fn test_country() -> anyhow::Result<()> {
+        let mut rs = RuleSet::default();
+        let mr = maxmind::open_mmdb("Country.mmdb", &COMMON_DIRS)?;
+        rs.mmdb_reader = Some(Arc::new(mr));
+
+        let mut ipcountries = HashSet::new();
+        ipcountries.insert("CN".to_string());
+        ipcountries.insert("US".to_string());
+
+        rs.ta_ip_countries = Some(ipcountries);
+
+        //www.baidu.com's IP
+        let a = Addr::from_network_addr_str("tcp://104.193.88.123:80")?;
+
+        let r = rs.is_in_ta_ip_countries(false, &a);
+        assert!(r);
+
+        // www.google.com's IP
+        let a = Addr::from_network_addr_str("tcp://142.251.32.36:80")?;
+
+        let r = rs.is_in_ta_ip_countries(false, &a);
+        assert!(r);
+
+        Ok(())
+    }
+}
