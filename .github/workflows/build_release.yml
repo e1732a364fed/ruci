@@ -65,7 +65,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: dist/*.tar.xz
+        files: rucimp/dist/*.tar.xz
         tag_name: ${{ inputs.tag || github.ref_name }}
 
   build-unix:
@@ -106,5 +106,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: dist/*.tar.xz
+          files: rucimp/dist/*.tar.xz
           tag_name: ${{ inputs.tag || github.ref_name }}
