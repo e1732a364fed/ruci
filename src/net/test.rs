@@ -1,5 +1,6 @@
 use std::net::IpAddr;
 use std::net::ToSocketAddrs;
+use std::str::FromStr;
 
 use crate::net::gen_random_higher_port;
 
@@ -10,9 +11,22 @@ const TEST_DOMAIN: &str = "www.baidu.com";
 #[test]
 fn print_cid_chain() {
     let cc = CIDChain {
-        id_list: vec![1, 2, 3],
+        id_list: smallvec![1, 2],
     };
-    println!("{}", cc)
+
+    let mut c = CID::Chain(cc);
+    c.push_num(3);
+    println!("{}", c);
+    let s = c.to_string();
+
+    let cc_new = CID::from_str(&s);
+    println!("{}", cc_new.unwrap());
+
+    let cc_new = CID::from_str("123");
+    println!("{}", cc_new.unwrap());
+
+    let cc_new = CID::from_str("123x");
+    assert!(cc_new.is_err())
 }
 
 #[test]

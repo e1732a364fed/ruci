@@ -42,8 +42,9 @@ use futures::{io::Error, FutureExt};
 use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
+use smallvec::smallvec;
+use smallvec::SmallVec;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
-use std::vec;
 use std::{fmt::Debug, net::Ipv4Addr};
 use std::{
     fmt::{Display, Formatter},
@@ -82,30 +83,14 @@ pub fn new_ordered_cid(last_id: &AtomicU32) -> u32 {
 /// use ruci::net::CIDChain;
 ///
 /// let cc = CIDChain {
-///       id_list: vec![1, 2, 3],
+///       id_list: smallvec::smallvec![1, 2, 3],
 ///  };
 ///  println!("{}", cc)
 /// ```
 ///
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CIDChain {
-    pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
-}
-impl CIDChain {
-    pub fn str(&self) -> String {
-        match (self.id_list).len() {
-            0 => String::from("_"),
-            1 => self
-                .id_list
-                .first()
-                .expect("get first element of cid")
-                .to_string(),
-            _ => {
-                let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
-                v.join("-")
-            }
-        }
-    }
+    pub id_list: SmallVec<[u32; 2]>, //首项为根id, 末项为末端stream的id
 }
 
 impl Display for CIDChain {
@@ -122,9 +107,14 @@ impl Display for CIDChain {
                 )
             }
             _ => {
-                let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
-                let s = v.join("-");
-                write!(f, "{}", s)
+                let last = self.id_list.len() - 1;
+                for (i, u) in self.id_list.iter().enumerate() {
+                    write!(f, "{}", u)?;
+                    if i != last {
+                        write!(f, "-")?;
+                    }
+                }
+                Ok(())
             }
         }
     }
@@ -133,6 +123,8 @@ impl Display for CIDChain {
 /// stream id ('c' for conn as convention)
 ///
 /// default is CID::Unit(0) which means no connection yet
+///
+/// CID is massively used in ruci.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum CID {
     Unit(u32),
@@ -160,7 +152,17 @@ impl std::str::FromStr for CID {
         if let Ok(u) = u {
             return Ok(CID::Unit(u));
         }
-        Err(anyhow!("cid can't parse from {}", s))
+        let v: Vec<_> = s.split('-').collect();
+
+        let mut cid = CID::default();
+        for s in v {
+            let u = s.parse::<u32>();
+            match u {
+                Ok(u) => cid.push_num(u),
+                Err(e) => return Err(anyhow!("CID can't parse from {}, {e}", s)),
+            }
+        }
+        Ok(cid)
     }
 
     type Err = anyhow::Error;
@@ -171,7 +173,7 @@ impl CID {
     pub fn str(&self) -> String {
         match self {
             CID::Unit(u) => u.to_string(),
-            CID::Chain(c) => c.str(),
+            CID::Chain(c) => c.to_string(),
         }
     }
     pub fn new_random() -> CID {
@@ -203,7 +205,11 @@ impl CID {
         }
     }
 
-    /// change self
+    /// push will add a new number to self.
+    ///
+    /// if ogtr is given, it will add new id by the GlobalTrafficRecorder
+    ///
+    /// if None is give, it will generate a random id number
     ///
     /// # Example
     ///
@@ -230,6 +236,11 @@ impl CID {
             None => new_rand_cid(),
         };
 
+        self.push_num(new_id_num)
+    }
+
+    /// push_num add a new number to self.
+    pub fn push_num(&mut self, new_id_num: u32) {
         match self {
             CID::Unit(u) => {
                 let x = *u;
@@ -237,13 +248,14 @@ impl CID {
                     *self = CID::Unit(new_id_num);
                 } else {
                     *self = CID::Chain(CIDChain {
-                        id_list: vec![x, new_id_num],
+                        id_list: smallvec![x, new_id_num],
                     })
                 }
             }
             CID::Chain(c) => c.id_list.push(new_id_num),
         };
     }
+
     /// won't change self
     pub fn clone_push(&self, ogtr: Option<Arc<GlobalTrafficRecorder>>) -> Self {
         let mut cid = self.clone();

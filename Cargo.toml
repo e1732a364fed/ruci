@@ -29,6 +29,8 @@ pin-project-lite = "0.2.13"
 scopeguard = "1.2.0"
 parking_lot = "0.12.1"
 lazy_static = "1"
+smallvec = {version = "1.13.1", features = ["serde"]}
+
 serde = { version = "1", features = ["derive"] }
 typetag = "0.2.16"
 dyn-clone = "1"
