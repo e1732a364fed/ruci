@@ -94,7 +94,7 @@ impl Server {
 
             if r.b.is_some() {
                 let c = match r.c {
-                    net::Stream::TCP(c) => c,
+                    Some(c) => c,
 
                     _ => unimplemented!(),
                 };

@@ -9,6 +9,7 @@ use crate::{
     user::{self, AsyncUserAuthenticator, PlainText, User, UsersMap},
     Name,
 };
+use anyhow::Ok;
 use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
 use log::{debug, log_enabled, warn};
@@ -435,7 +436,7 @@ impl Server {
         //要尝试将其转成ip
         if let Some(name) = &name {
             use std::str::FromStr;
-            if let Ok(tip) = IpAddr::from_str(name) {
+            if let std::result::Result::Ok(tip) = IpAddr::from_str(name) {
                 ip = Some(tip)
             }
         }
@@ -447,6 +448,7 @@ impl Server {
                 map::AnyData::B(Box::new(b))
             })
         }
+        let d = ou_to_oad(the_user);
 
         if cmd == CMD_CONNECT {
             let _ = base.write(&*COMMMON_TCP_HANDSHAKE_REPLY).await?;
@@ -454,8 +456,8 @@ impl Server {
             return Ok(MapResult {
                 a: Some(ad),
                 b: buf_to_ob(buf),
-                c: map::Stream::TCP(base),
-                d: ou_to_oad(the_user), //将 该登录的用户信息 作为 额外信息 传回
+                c: Some(base),
+                d, //将 该登录的用户信息 作为 额外信息 传回
                 ..Default::default()
             });
         }
@@ -466,7 +468,7 @@ impl Server {
                 b: buf_to_ob(buf),
                 d: Some(map::AnyData::B(Box::new(map::NewConnectionOptData {
                     new_connection: map::NewConnection::UdpConnection,
-                    data: ou_to_oad(the_user),
+                    data: d,
                 }))), //标记我们 采用了新的udp连接
                 ..Default::default()
             });
@@ -474,7 +476,7 @@ impl Server {
 
         Ok(MapResult {
             b: buf_to_ob(buf),
-            c: map::Stream::TCP(base),
+            c: Some(base),
             e: Some(anyhow!("socks5: not supported cmd, {}", cmd)),
             ..Default::default()
         })

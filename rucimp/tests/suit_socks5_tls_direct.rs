@@ -72,7 +72,7 @@ async fn f_dial_future_tls_out_adder(
         )
         .await
         .c
-        .try_unwrap_tcp()?;
+        .expect("last_result as c");
 
     let a = socks5::client::Client {
         up: Some(PlainText::from("u0 p0".to_string())),
@@ -86,7 +86,7 @@ async fn f_dial_future_tls_out_adder(
         )
         .await
         .c
-        .try_unwrap_tcp()?;
+        .expect("last_result as c");
 
     info!("client{} writing hello...", rid,);
 

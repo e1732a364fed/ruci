@@ -128,9 +128,9 @@ impl Client {
                 bc.write_all(&ed).await?;
                 bc.flush().await?;
             }
-            Ok(mrb.c(net::Stream::TCP(bc)).build())
+            Ok(mrb.c(bc).build())
         } else {
-            Ok(mrb.b(b).c(net::Stream::TCP(bc)).build())
+            Ok(mrb.b(b).c(bc).build())
         }
     }
 }

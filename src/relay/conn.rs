@@ -107,10 +107,7 @@ pub async fn handle_in_accumulate_result(
                 MapResult {
                     a: Some(target_addr),
                     b: listen_result.b,
-                    c: Stream::None,
-                    d: None,
-                    e: None,
-                    new_id: None,
+                    ..Default::default()
                 },
                 outbound,
             )

@@ -31,7 +31,7 @@ async fn dial_future(
                 CID::default(),
                 ProxyBehavior::DECODE,
                 MapParams {
-                    c: last_result.c,
+                    c: Stream::TCP(last_result.c.expect("last_result as c")),
                     a: Some(ta.clone()),
                     b: None,
                     d: None,
@@ -45,7 +45,7 @@ async fn dial_future(
         }
     }
 
-    let r = last_result.c.try_unwrap_tcp()?;
+    let r = last_result.c.expect("last_result as c");
 
     Ok(r)
 }
@@ -84,7 +84,7 @@ async fn listen_future(
                     CID::default(),
                     ProxyBehavior::DECODE,
                     MapParams {
-                        c: last_result.c,
+                        c: Stream::TCP(last_result.c.expect("last_result as c")),
                         a: None,
                         b: None,
                         d: None,
@@ -100,7 +100,7 @@ async fn listen_future(
 
         let conn = last_result.c;
 
-        let mut c = conn.try_unwrap_tcp()?;
+        let mut c = conn.expect("last_result as c");
 
         //let mut buf = BytesMut::zeroed(1024);
         loop {

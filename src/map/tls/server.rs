@@ -64,7 +64,8 @@ impl Server {
 
         let c = self.ta.accept(conn).await?;
 
-        Ok(MapResult::newc(Box::new(c))
+        Ok(MapResult::builder()
+            .c(Box::new(c))
             .a(a)
             .d(map::AnyData::B(Box::new(SeverTLSConnDescriber {})))
             .build())

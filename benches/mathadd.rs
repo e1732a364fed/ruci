@@ -41,7 +41,7 @@ async fn test_adder_r(_l: usize) -> anyhow::Result<()> {
     }
 
     let r = r.c;
-    let mut r = r.try_unwrap_tcp()?;
+    let mut r = r.expect("last_result as c");
     {
         r.write(&mut VEC1.lock()).await?;
     }

@@ -161,7 +161,7 @@ impl Server {
 
         if is_udp {
             let u = udp::split_conn_to_trojan_udp_rw(base);
-            let mut mr = MapResult::newudp(u).a(Some(ta)).b(Some(buf)).build();
+            let mut mr = MapResult::builder().u(u).a(Some(ta)).b(Some(buf)).build();
             mr.d = ou_to_od(opt_user);
             Ok(mr)
         } else {

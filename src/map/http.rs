@@ -229,7 +229,7 @@ impl Server {
         Ok(MapResult {
             a: Some(ta),
             b: buf_to_ob(buf),
-            c: map::Stream::TCP(base),
+            c: Some(base),
             d: authed_user.map(|up| {
                 let b: Box<dyn User> = Box::new(up);
                 map::AnyData::B(Box::new(b))

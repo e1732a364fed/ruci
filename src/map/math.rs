@@ -183,12 +183,11 @@ impl crate::map::Mapper for Adder {
                     direction: self.direction,
                 };
 
-                MapResult {
-                    a: params.a,
-                    b: params.b,
-                    c: Stream::TCP(Box::new(cc)),
-                    ..Default::default()
-                }
+                MapResult::builder()
+                    .a(params.a)
+                    .b(params.b)
+                    .c(Box::new(cc))
+                    .build()
             }
             Stream::UDP(_) => {
                 todo!()

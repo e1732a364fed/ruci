@@ -139,9 +139,10 @@ impl Mapper for Counter {
                     data: cd.clone(),
                     base: Box::pin(c),
                 };
-                MapResult::newc(Box::new(cc))
+                MapResult::builder()
                     .a(params.a)
                     .b(params.b)
+                    .c(Box::new(cc))
                     .d(AnyData::B(Box::new(cd)))
                     .build()
             }

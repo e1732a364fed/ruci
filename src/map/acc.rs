@@ -78,6 +78,8 @@ pub async fn accumulate(
 
     let mut tag: String = String::new();
 
+    let mut last_stream = oc_ou_og_to_stream(last_r.c, last_r.u, last_r.g);
+
     for adder in mappers.by_ref() {
         let input_data = InputData {
             calculated_data: calculated_output_vec
@@ -104,7 +106,7 @@ pub async fn accumulate(
                 },
                 behavior,
                 MapParams {
-                    c: last_r.c,
+                    c: last_stream,
                     a: last_r.a,
                     b: last_r.b,
                     d: input_data,
@@ -123,21 +125,23 @@ pub async fn accumulate(
 
         calculated_output_vec.push(last_r.d);
 
-        if let Stream::None = last_r.c {
+        last_stream = oc_ou_og_to_stream(last_r.c, last_r.u, last_r.g);
+
+        if let Stream::None = last_stream {
+            break;
+        }
+        if let Stream::Generator(_) = last_stream {
             break;
         }
         if last_r.e.is_some() {
             break;
         }
-        if let Stream::Generator(_) = last_r.c {
-            break;
-        }
-    }
+    } //for
 
     AccumulateResult {
         a: last_r.a,
         b: last_r.b,
-        c: last_r.c,
+        c: last_stream,
         d: calculated_output_vec,
         e: last_r.e,
         id: if last_r.new_id.is_some() {
@@ -164,37 +168,46 @@ pub async fn accumulate_from_start(
     oti: Option<Arc<TransmissionInfo>>,
 ) -> anyhow::Result<()> {
     let first = inmappers.next().expect("first inmapper");
-    let r = first
+    let first_r = first
         .maps(
             CID::default(),
             ProxyBehavior::DECODE,
             MapParams::builder().shutdown_rx(shutdown_rx).build(),
         )
         .await;
-    if let Some(e) = r.e {
+    if let Some(e) = first_r.e {
         warn!("accumulate_from_start, returned by e, {}", e);
         return Err(e);
     }
 
-    if let Stream::Generator(rx) = r.c {
+    if let Some(rx) = first_r.g {
         in_iter_accumulate_forever(CID::default(), rx, tx, inmappers, oti).await;
     } else {
-        warn!(
-            "accumulate_from_start: not a stream generator, will accumulate directly. {}",
-            r.c
-        );
+        match &first_r.c {
+            Some(c) => {
+                warn!(
+                    "accumulate_from_start: not a stream generator, will accumulate directly. {}",
+                    c.name()
+                );
+            }
+            None => match &first_r.u {
+                Some(u) => {
+                    warn!(
+                            "accumulate_from_start: not a stream generator, will accumulate directly. {}",
+                            u.name()
+                        );
+                }
+                None => {
+                    warn!("accumulate_from_start: no input stream, still trying to accumulate")
+                }
+            },
+        }
 
         tokio::spawn(async move {
             let r = accumulate(
                 CID::new_by_opti(oti),
                 ProxyBehavior::DECODE,
-                MapResult {
-                    a: r.a,
-                    b: r.b,
-                    c: r.c,
-                    d: r.d,
-                    ..Default::default()
-                },
+                first_r,
                 inmappers,
             )
             .await;

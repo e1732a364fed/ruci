@@ -481,6 +481,8 @@ impl<'a> Display for OptAddrRef<'a> {
     }
 }
 
+pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
+
 #[derive(Default)]
 pub enum Stream {
     ///  tcp / unix domain socket 等 目标 Addr 唯一的 情况
@@ -489,7 +491,7 @@ pub enum Stream {
 
     /// 比如： tcp listener. Receiver 中的元素为 MapResult, 是为了
     /// 方便传递其它信息, 如peer_addr 由 MapResult.a 标识
-    Generator(tokio::sync::mpsc::Receiver<MapResult>),
+    Generator(StreamGenerator),
 
     #[default]
     None,

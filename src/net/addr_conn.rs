@@ -38,6 +38,11 @@ pub trait AsyncWriteAddr {
 }
 
 pub struct AddrConn(pub Box<dyn AddrReadTrait>, pub Box<dyn AddrWriteTrait>);
+impl Name for AddrConn {
+    fn name(&self) -> &str {
+        "addr_conn"
+    }
+}
 
 /*
 

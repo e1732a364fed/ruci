@@ -4,7 +4,7 @@ pub(super) async fn udp_associate(
     cid: CID,
     mut base: Conn,
     client_future_addr: net::Addr,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:0").await?; //random port provided by OS.
     let udp_sock_addr = socket.local_addr()?;
     let port = udp_sock_addr.port();
@@ -145,7 +145,7 @@ pub async fn loop_listen_udp_for_certain_client(
                     let a = decode_udp_diagram(&mut buf)?;
 
                     let so = match a.get_socket_addr_or_resolve(){
-                        Ok(s) => s,
+                        std::result::Result::Ok(s) => s,
                         Err(e) => {
                             warn!("can't convert to socketaddr, {}",e);
                             continue;
