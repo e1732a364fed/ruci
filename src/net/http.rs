@@ -68,12 +68,11 @@ pub struct RawHeader {
 ///
 ///minimum valid request:
 ///
-///
-///     GET / HTTP/1.1<CR><LF>
-///     Host:x<CR><LF>
-///     <CR><LF>
-///
-///
+///```plaintext
+/// GET / HTTP/1.1<CR><LF>
+/// Host:x<CR><LF>
+/// <CR><LF>
+///```
 pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     let mut request = ParsedHttpRequest::default();
     request.fail_reason = FailReason::None;
