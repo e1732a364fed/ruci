@@ -1,4 +1,3 @@
-use ::http::HeaderValue;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -11,7 +10,6 @@ use tokio_tungstenite::{
     client_async,
     tungstenite::http::{Request, StatusCode},
 };
-use tracing::debug;
 
 use super::*;
 
@@ -62,18 +60,18 @@ impl Client {
         a: Option<net::Addr>,
         b: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
-        let mut req = self.request.clone();
+        let req = self.request.clone();
         if self.use_early_data {
-            if let Some(ref b) = b {
-                debug!("will use earlydata");
-                use base64::{engine::general_purpose::URL_SAFE, Engine as _};
+            // if let Some(ref b) = b {
+            //     debug!("will use earlydata {}", b.len());
+            //     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
-                let str = URL_SAFE.encode(b);
-                req.headers_mut().insert(
-                    EARLY_DATA_HEADER_KEY,
-                    HeaderValue::from_str(&str).expect("ok"),
-                );
-            }
+            //     let str = URL_SAFE_NO_PAD.encode(b);
+            //     req.headers_mut().insert(
+            //         EARLY_DATA_HEADER_KEY,
+            //         HeaderValue::from_str(&str).expect("ok"),
+            //     );
+            // }
         }
 
         let (c, resp) = client_async(req, conn)
@@ -89,9 +87,10 @@ impl Client {
         Ok(MapResult::new_c(Box::new(WsStreamToConnWrapper {
             ws: Box::pin(c),
             r_buf: None,
-            w_buf: b,
+            w_buf: None,
         }))
         .a(a)
+        .b(b)
         .build())
     }
 }

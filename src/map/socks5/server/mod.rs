@@ -18,7 +18,7 @@ use crate::{
     utils::io_error,
     Name,
 };
-use anyhow::{Context, Ok};
+use anyhow::Context;
 use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
 use macro_mapper::NoMapperExt;
@@ -28,6 +28,7 @@ use std::{
     io::{self, Error},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     sync::Arc,
+    time::Duration,
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -436,6 +437,25 @@ impl Server {
 
         if cmd == CMD_CONNECT {
             let _ = base.write(&*COMMON_TCP_HANDSHAKE_REPLY).await?;
+
+            if buf.is_empty() {
+                debug!("try read first data in 100ms");
+                buf.resize(buf.capacity(), 0);
+                let r = tokio::time::timeout(Duration::from_millis(100), base.read(&mut buf)).await;
+
+                match r {
+                    Ok(r) => match r {
+                        Ok(u) => {
+                            debug!("read first data got {u} bytes");
+                            buf.truncate(u);
+                        }
+                        Err(e) => debug!("try read first data got err {e}"),
+                    },
+                    Err(e) => debug!("try read first data in 1s timeout {e}"),
+                }
+            }
+
+            //
 
             return Ok(MapResult {
                 a: Some(ad),

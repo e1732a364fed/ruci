@@ -93,10 +93,10 @@ impl Server {
                 .to_str()
                 .expect("ok");
 
-            if given_early_data != "" {
-                use base64::{engine::general_purpose::URL_SAFE, Engine as _};
+            if !given_early_data.is_empty() {
+                use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
-                let r = URL_SAFE.decode(given_early_data);
+                let r = URL_SAFE_NO_PAD.decode(given_early_data);
                 match r {
                     Ok(v) => {
                         debug!("ws got early data {}", v.len());

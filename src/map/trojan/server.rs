@@ -99,7 +99,7 @@ impl Server {
         let opt_user = self.um.auth_user_by_authstr(&trojan_hash).await;
 
         if opt_user.is_none() {
-            return Ok(MapResult::buf_err_str(buf, "hash not match"));
+            return Ok(MapResult::buf_err_str(buf, "trojan hash not match"));
         }
         let crlf = buf.get_u16();
         if crlf != CRLF {

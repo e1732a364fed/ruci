@@ -46,20 +46,19 @@ pub async fn handle_in_stream(
     };
 
     let cid_c = cid.clone();
-    let listen_result =
-        tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            acc::fold(FoldParams {
-                cid: cid_c,
-                behavior: ProxyBehavior::DECODE,
-                initial_state: MapResult::builder().c(in_conn).build(),
-                mappers: ins_iterator,
+    let listen_result = tokio::time::timeout(
+        Duration::from_secs(READ_HANDSHAKE_TIMEOUT),
+        acc::fold(FoldParams {
+            cid: cid_c,
+            behavior: ProxyBehavior::DECODE,
+            initial_state: MapResult::builder().c(in_conn).build(),
+            mappers: ins_iterator,
 
-                #[cfg(feature = "trace")]
-                trace: Vec::new(),
-            })
-            .await
-        })
-        .await;
+            #[cfg(feature = "trace")]
+            trace: Vec::new(),
+        }),
+    )
+    .await;
 
     let listen_result = match listen_result {
         Ok(lr) => lr,
