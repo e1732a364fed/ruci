@@ -26,12 +26,12 @@ jobs:
     - name: Copy Files 
       run: |
         mkdir dist
-        cp target/release/examples/chain dist/
-        cp target/release/examples/chain.exe dist/
-        cp target/release/examples/suit dist/
-        cp target/release/examples/suit.exe dist/
-        cp target/release/examples/suit2 dist/
-        cp target/release/examples/suit2.exe dist/
+        cp target/release/examples/chain dist/  2>/dev/null
+        cp target/release/examples/chain.exe dist/  2>/dev/null
+        cp target/release/examples/suit dist/  2>/dev/null
+        cp target/release/examples/suit.exe dist/  2>/dev/null
+        cp target/release/examples/suit2 dist/  2>/dev/null
+        cp target/release/examples/suit2.exe dist/  2>/dev/null
         cp -r resource dist/
 
     - name: Archive production artifacts
