@@ -25,13 +25,6 @@ $Env:RUST_LOG="none,ruci=debug";cargo run --features "lua utils use-native-tls q
 RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun"  -- --log-file "" -c local_mux2_h2.lua --infinite
 
 RUST_LOG=debug cargo run --features "api_server api_client trace lua utils use-native-tls quinn tun" -- -a run --trace
-
-# with tproxy(linux):
-
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun tproxy" -- --log-file ""
-
-RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun tproxy" -- --log-file "" -c remote.lua
-
 ```
 
 make:

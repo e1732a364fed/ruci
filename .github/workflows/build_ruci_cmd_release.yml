@@ -48,7 +48,7 @@ jobs:
       if: ${{ matrix.target != 'x86_64-pc-windows-gnu' }}
       run: |
         cd crates/ruci-cmd
-        make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }} EXTRA="-F tproxy"
+        make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
 
     - name: Build exe
       if: ${{ matrix.target == 'x86_64-pc-windows-gnu' }}
