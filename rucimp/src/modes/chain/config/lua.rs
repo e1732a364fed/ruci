@@ -184,10 +184,9 @@ impl NextSelector for LuaNextSelector {
     ) -> Option<i64> {
         let mg = self.0.lock();
         let lua = &mg.0;
-        let key = &mg.1;
 
         let f: LuaFunction = lua
-            .registry_value(&key)
+            .registry_value(&mg.1)
             .expect("must get selector from lua");
 
         match f.call::<_, i64>((this_index, lua.to_value(&data))) {

@@ -27,10 +27,7 @@ pub type MIterBox = Box<dyn MIter>;
 /// if you want to count it, you might use get_miter to try to get MIterBox first
 ///
 pub trait DynIterator {
-    fn next_with_data(
-        &mut self,
-        data: Option<Vec<Option<Box<dyn Data>>>>,
-    ) -> Option<Arc<MapperBox>>;
+    fn next_with_data(&mut self, data: OVOD) -> Option<Arc<MapperBox>>;
 
     fn next(&mut self) -> Option<Arc<MapperBox>> {
         self.next_with_data(None)
@@ -51,15 +48,14 @@ dyn_clone::clone_trait_object!(DMIter);
 
 pub type DMIterBox = Box<dyn DMIter>;
 
+pub type OVOD = Option<Vec<Option<Box<dyn Data>>>>;
+
 /// 包装 MIterBox 以使其支持 DynIterator
 #[derive(Debug, Clone)]
 pub struct DynMIterWrapper(pub MIterBox);
 
 impl DynIterator for DynMIterWrapper {
-    fn next_with_data(
-        &mut self,
-        _data: Option<Vec<Option<Box<dyn Data>>>>,
-    ) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _data: OVOD) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
@@ -83,10 +79,7 @@ impl DynIterator for DynMIterWrapper {
 pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapperBox>>);
 
 impl DynIterator for DynVecIterWrapper {
-    fn next_with_data(
-        &mut self,
-        _data: Option<Vec<Option<Box<dyn Data>>>>,
-    ) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _data: OVOD) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 

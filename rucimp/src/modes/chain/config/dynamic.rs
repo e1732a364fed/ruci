@@ -17,20 +17,23 @@
  * 比如，一个 tcp 到一个 tls 监听 ，这部分是静态的，之后根据 tls 的 alpn 结果
  * ，进行分支，两个子分支后面也是静态的，但这个判断是动态的
  *
- * 在完全动态链中，因为完全不知道任何有效信息，将没办法提前初始化，对每个 Inbound
- * 连接都要初始化一遍配置（如加载tls证书等），将是非常低效的
+ * 在完全动态链中，因为完全不知道任何有效信息，将没办法提前初始化，对每个 Mapper
+ * 都要初始化一遍配置（如加载tls证书等），这将是非常低效的
  *
  */
 use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use dyn_clone::DynClone;
-use ruci::map::{acc::DynIterator, Data, MapperBox};
+use ruci::map::{
+    acc::{DynIterator, OVOD},
+    MapperBox,
+};
 
 use uuid::Uuid;
 
 /// Complete Dynamic Chain using index
 pub struct IndexInfinite {
-    pub selector: Box<dyn IndexNextInMapperGenerator>,
+    pub generator: Box<dyn IndexNextMapperGenerator>,
 
     /// 生成的 新 MapperBox 会存储在 cache 中
     pub cache: Vec<Arc<MapperBox>>,
@@ -47,22 +50,19 @@ pub type IndexMapperBox = (usize, Arc<MapperBox>); //MapperBox 和它的 索引
 /// 如果 index 不为 cache_len, 则不会被写入缓存, 即它指示该新MapperBox只会被
 /// 用到一次
 ///
-pub trait IndexNextInMapperGenerator {
-    fn next_in_mapper(
+pub trait IndexNextMapperGenerator {
+    fn next_mapper(
         &self,
         this_index: usize,
         cache_len: usize,
-        data: Option<Vec<Option<Box<dyn Data>>>>,
+        data: OVOD,
     ) -> Option<IndexMapperBox>;
 }
 
 impl DynIterator for IndexInfinite {
-    fn next_with_data(
-        &mut self,
-        data: Option<Vec<Option<Box<dyn Data>>>>,
-    ) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, data: OVOD) -> Option<Arc<MapperBox>> {
         let cl = self.cache.len();
-        let oi = self.selector.next_in_mapper(self.current_index, cl, data);
+        let oi = self.generator.next_mapper(self.current_index, cl, data);
         match oi {
             Some(ib) => {
                 let i = ib.0;
@@ -80,7 +80,7 @@ impl DynIterator for IndexInfinite {
 
 /// Complete Dynamic Chain using uuid
 pub struct UuidInfinite {
-    pub selector: Box<dyn UuidInfiniteNextInMapperGenerator>,
+    pub generator: Box<dyn UuidInfiniteNextInMapperGenerator>,
 
     /// 生成的 新 MapperBox 会存储在 cache 中
     pub cache: HashMap<Uuid, Arc<MapperBox>>,
@@ -93,11 +93,7 @@ pub struct UuidInfinite {
 pub type UUIDMapperBox = (Uuid, Arc<MapperBox>); //MapperBox 和它的 uuid
 
 pub trait UuidInfiniteNextInMapperGenerator {
-    fn next_in_mapper(
-        &self,
-        this_index: Uuid,
-        data: Option<Vec<Option<Box<dyn Data>>>>,
-    ) -> Option<UUIDMapperBox>;
+    fn next_mapper(&self, this_index: Uuid, data: OVOD) -> Option<UUIDMapperBox>;
 }
 
 /// 有界部分动态链, 即米利型有限状态机, Mealy machine
@@ -129,15 +125,12 @@ pub trait NextSelector: Debug + DynClone + Send + Sync {
     ///
     /// 初始index 传入 -1. 如果 返回值为 None, 或 返回值<0 或 返回值 大于最大索引值,
     /// 则意味着链终止
-    fn next_index(&self, this_index: i64, data: Option<Vec<Option<Box<dyn Data>>>>) -> Option<i64>;
+    fn next_index(&self, this_index: i64, data: OVOD) -> Option<i64>;
 }
 dyn_clone::clone_trait_object!(NextSelector);
 
 impl DynIterator for Finite {
-    fn next_with_data(
-        &mut self,
-        data: Option<Vec<Option<Box<dyn Data>>>>,
-    ) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, data: OVOD) -> Option<Arc<MapperBox>> {
         let oi = self.selector.next_index(self.current_index, data);
         match oi {
             Some(i) => {
