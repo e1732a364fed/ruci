@@ -2195,7 +2195,7 @@ dependencies = [
 
 [[package]]
 name = "ruci"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2255,7 +2255,7 @@ dependencies = [
 
 [[package]]
 name = "rucimp"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "async-trait",

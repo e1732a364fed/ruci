@@ -409,6 +409,10 @@ run `ulimit -a` to see. run `ulimit -n 1000000` as root to set
 
 ruci-cmd tproxy 在启动监听后, 进程所打开的文件在12个左右.
 
+## ip relay
+
+在转发 ip 包时，如果通过tcp 传, 注意粘包问题. 可通过套 ws/h2 等 有 长度包头的 协议来解决
+
 ## 其它
 
 使用 anyhow 的 context 会导致变慢, 若有初始化开销 则要改用 with_context
