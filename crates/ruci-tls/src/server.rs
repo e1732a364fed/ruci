@@ -4,7 +4,6 @@ use macro_map::*;
 use ruci::{
     map::{self, MapResult, ProxyBehavior},
     net::{helpers::EarlyDataWrapper, CID},
-    utils::FileSource,
 };
 use serde::{Deserialize, Serialize};
 
@@ -26,16 +25,6 @@ pub struct TlsServerOptions {
     pub cert: PathBuf,
     pub key: PathBuf,
     pub alpn: Option<Vec<String>>,
-}
-
-impl ServerPEMOptions {
-    pub fn from(opts: &TlsServerOptions, fs: &FileSource) -> std::io::Result<Self> {
-        Ok(Self {
-            cert: fs.read_to_string(opts.cert.clone())?,
-            key: fs.read_to_string(opts.key.clone())?,
-            alpn: opts.alpn.clone(),
-        })
-    }
 }
 
 impl From<ServerPEMOptions> for map::MapBox {

@@ -60,7 +60,6 @@ tar = { version = "0.4.43", optional = true }
 
 [features]
 
-default = ["tar"]
 
 trace = []
 

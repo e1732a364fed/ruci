@@ -13,7 +13,7 @@ use tracing::debug;
 use rustls_pemfile::{certs, read_one, Item};
 use std::io::{self, BufReader};
 
-use super::server::{ServerPEMOptions, TlsServerOptions};
+use super::server::ServerPEMOptions;
 
 /// if `opt_authority` is given, we will use the given cert as CA and generate a new cert for the
 /// authority.
@@ -90,15 +90,15 @@ pub fn load_ser_config_from_pem(
     Ok(config)
 }
 
-/// if `opt_authority` is given, we will use the given cert as CA and generate a new cert for the
-/// authority.
-pub fn load_ser_config(
-    options: &TlsServerOptions,
-    opt_authority: Option<&http::uri::Authority>,
-) -> anyhow::Result<ServerConfig> {
-    let pem_opts = ServerPEMOptions::from(options, &ruci::utils::FileSource::StdReadFile)?;
-    load_ser_config_from_pem(&pem_opts, opt_authority)
-}
+// if `opt_authority` is given, we will use the given cert as CA and generate a new cert for the
+// authority.
+// pub fn load_ser_config(
+//     options: &TlsServerOptions,
+//     opt_authority: Option<&http::uri::Authority>,
+// ) -> anyhow::Result<ServerConfig> {
+//     let pem_opts = ServerPEMOptions::from(options, &crate::utils::FileSource::StdReadFile)?;
+//     load_ser_config_from_pem(&pem_opts, opt_authority)
+// }
 
 /// Load the passed certificates file
 pub fn load_certs(path: &PathBuf) -> io::Result<Vec<CertificateDer<'static>>> {
@@ -189,23 +189,23 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_load_ser_config() {
-        let mut path = PathBuf::new();
-        path.push("test.crt");
+    // #[test]
+    // fn test_load_ser_config() {
+    //     let mut path = PathBuf::new();
+    //     path.push("test.crt");
 
-        let mut path2 = PathBuf::new();
-        path2.push("test.key");
+    //     let mut path2 = PathBuf::new();
+    //     path2.push("test.key");
 
-        let r = load_ser_config(
-            &TlsServerOptions {
-                cert: path,
-                key: path2,
-                ..Default::default()
-            },
-            None,
-        );
+    //     let r = load_ser_config(
+    //         &TlsServerOptions {
+    //             cert: path,
+    //             key: path2,
+    //             ..Default::default()
+    //         },
+    //         None,
+    //     );
 
-        println!("{:#?}", r);
-    }
+    //     println!("{:#?}", r);
+    // }
 }

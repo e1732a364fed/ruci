@@ -1,4 +1,4 @@
-use std::{env::set_var, path::PathBuf, sync::Arc, time::Duration};
+use std::{env::set_var, fs, path::PathBuf, sync::Arc, time::Duration};
 
 use client::TlsClientOptions;
 use futures::{join, FutureExt};
@@ -7,7 +7,6 @@ use ruci::{
     map::{Map, MapParams, ProxyBehavior},
     net::{self, gen_random_higher_port, helpers::mock::MockTcpStream, CID},
 };
-use server::ServerPEMOptions;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -113,16 +112,13 @@ pub async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::R
     let mut path2 = PathBuf::new();
     path2.push("test.key");
 
-    let sc = crate::server::TlsServerOptions {
-        cert: path,
-        key: path2,
+    let sc = crate::server::ServerPEMOptions {
+        cert: fs::read_to_string(path)?,
+        key: fs::read_to_string(path2)?,
         ..Default::default()
     };
 
-    let a = crate::server::Server::new(ServerPEMOptions::from(
-        &sc,
-        &ruci::utils::FileSource::StdReadFile,
-    )?);
+    let a = crate::server::Server::new(sc);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
         .await

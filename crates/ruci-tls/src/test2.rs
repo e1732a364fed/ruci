@@ -1,8 +1,7 @@
 use self::map::MapParams;
 
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
-use crate::server::ServerPEMOptions;
 use ruci::{
     map::{self, *},
     net::{self, AsyncConn, CID},
@@ -74,17 +73,13 @@ async fn listen_future(
     let mut path2 = PathBuf::new();
     path2.push("test.key");
 
-    let sc = super::server::TlsServerOptions {
-        // addr: "addr".to_string(),
-        cert: path,
-        key: path2,
+    let sc = super::server::ServerPEMOptions {
+        cert: fs::read_to_string(path)?,
+        key: fs::read_to_string(path2)?,
         ..Default::default()
     };
 
-    let a = super::server::Server::new(ServerPEMOptions::from(
-        &sc,
-        &ruci::utils::FileSource::StdReadFile,
-    )?);
+    let a = super::server::Server::new(sc);
 
     let listener = TcpListener::bind(listen_host_str.to_string() + ":" + &listen_port.to_string())
         .await

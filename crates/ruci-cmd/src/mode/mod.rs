@@ -2,7 +2,7 @@
 */
 
 use anyhow::bail;
-use ruci::utils::FileSource;
+use rucimp::utils::FileSource;
 use rucimp::DEFAULT_LUA_CONFIG_FILE_NAME;
 use tracing::debug;
 
@@ -90,10 +90,10 @@ pub async fn get_file(
 
         //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua 或 local.toml
         let mut real_file_bytes_r =
-            ruci::utils::get_file_from_tar(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
+            rucimp::utils::get_file_from_tar(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
 
         if real_file_bytes_r.is_err() {
-            real_file_bytes_r = ruci::utils::get_file_from_tar("local.toml", &tar_file_bytes_v);
+            real_file_bytes_r = rucimp::utils::get_file_from_tar("local.toml", &tar_file_bytes_v);
         }
         let real_file_bytes = real_file_bytes_r?;
 

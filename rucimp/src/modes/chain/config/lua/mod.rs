@@ -27,7 +27,7 @@ const CONFIG_KEY: &str = "Config";
 /// * `mlua::Result<StaticConfig>` - The parsed static chain configuration
 pub fn load_static(
     lua_text: &str,
-    file_source: Arc<ruci::utils::FileSource>,
+    file_source: Arc<crate::utils::FileSource>,
 ) -> anyhow::Result<StaticConfig> {
     let lua = Lua::new();
     use anyhow::Context;

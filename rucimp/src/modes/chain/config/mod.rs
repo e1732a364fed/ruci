@@ -33,13 +33,14 @@ use ruci::{
         *,
     },
     net::{self, dns, http::CommonConfig},
-    utils::FileSource,
 };
-use ruci_tls::server::ServerPEMOptions;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{recorder, ws};
+use crate::{
+    map::{recorder, ws},
+    utils::{init_tls_server_pem_option, FileSource},
+};
 
 #[cfg(feature = "lwip")]
 use crate::map::tcp_ip_stack_lwip;
@@ -194,7 +195,7 @@ impl StaticConfig {
     #[cfg(feature = "route")]
     pub fn get_rule_route(
         &self,
-        file_source: Arc<ruci::utils::FileSource>,
+        file_source: Arc<crate::utils::FileSource>,
     ) -> Option<Vec<RuleSet>> {
         let mut result = self.rule_route.clone().map(|rr| {
             let v: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
@@ -588,7 +589,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::Recorder(c) => Ok(c.into()),
 
             InMapConfig::TLS(sc) => {
-                let sc = ServerPEMOptions::from(&sc, file_source.as_ref())?;
+                let sc = crate::utils::init_tls_server_pem_option(&sc, file_source.as_ref())?;
 
                 Ok(sc.into())
             }
@@ -717,7 +718,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {
-                let sc = ServerPEMOptions::from(&c, &file_source)?;
+                let sc = init_tls_server_pem_option(&c, &file_source)?;
 
                 Ok(Box::new(ruci_tls::mitm::MITM {
                     sc,

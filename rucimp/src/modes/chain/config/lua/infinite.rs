@@ -4,10 +4,10 @@ use crate::map::lua::{create_load_file_func, MapWrapper};
 Defines functions to load infinite(complete) dynamic chain configs from a lua file.
 */
 use super::*;
+use crate::utils::FileSource;
 use parking_lot::Mutex;
 use ruci::map::fold::OVOD;
 use ruci::net::CID;
-use ruci::utils::FileSource;
 
 const INFINITE_CONFIG_FIELD: &str = "Infinite";
 const GENERATOR_FIELD: &str = "generator";
