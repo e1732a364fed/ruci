@@ -58,6 +58,18 @@ Which ALPN protocols we include in our client hello. If empty, no ALPN extension
 
 native-tls 的 server 不支持手动设置 alpn
 
+## tproxy
+
+使用 tproxy 时, 确保是 linux 系统, 并 安装了 iptables
+
+若要 代理 局域网内其它设备, root 权限运行
+
+```sh
+echo net.ipv4.ip_forward=1 >> /etc/sysctl.conf && sysctl -p
+```
+
+该命令确保 /etc/sysctl.conf 文件中 包含 `net.ipv4.ip_forward=1` 且生效
+
 
 
 ## 名词
