@@ -82,15 +82,15 @@ impl DynIterator for DynMIterWrapper {
 ///
 /// 比 [`DynMIterWrapper`] 少一层装箱
 #[derive(Debug, Clone)]
-pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapBox>>);
+pub struct DynVecIter(pub std::vec::IntoIter<Arc<MapBox>>);
 
-impl From<Vec<Arc<MapBox>>> for DynVecIterWrapper {
+impl From<Vec<Arc<MapBox>>> for DynVecIter {
     fn from(v: Vec<Arc<MapBox>>) -> Self {
         Self(v.into_iter())
     }
 }
 
-impl DynIterator for DynVecIterWrapper {
+impl DynIterator for DynVecIter {
     fn next_with_data(&mut self, _cid: CID, _data: OVOD) -> Option<Arc<MapBox>> {
         self.0.next()
     }
@@ -142,6 +142,9 @@ impl Debug for FoldResult {
             .field("e", &self.e)
             .field("id", &self.id)
             .field("tag", &self.chain_tag)
+            // .field("left_maps_iter", &self.left_maps_iter)
+            .field("no_timeout", &self.no_timeout)
+            .field("shutdown_rx", &self.shutdown_rx.is_some())
             .finish()
     }
 }

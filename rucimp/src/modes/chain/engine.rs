@@ -14,7 +14,7 @@ use parking_lot::Mutex;
 use ruci::net;
 use ruci::{
     map::{
-        fold::{DMIterBox, DynVecIterWrapper},
+        fold::{DMIterBox, DynVecIter},
         *,
     },
     net::{GlobalTrafficRecorder, CID},
@@ -127,7 +127,7 @@ impl Engine {
             .map(|v| {
                 let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
 
-                let dbox: DMIterBox = Box::new(DynVecIterWrapper(inbound.into_iter()));
+                let dbox: DMIterBox = Box::new(DynVecIter(inbound.into_iter()));
                 dbox
             })
             .collect();

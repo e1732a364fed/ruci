@@ -28,7 +28,7 @@ use ruci::{
     map::{
         counter::Counter,
         echo::Echo,
-        fold::{DMIterBox, DynVecIterWrapper},
+        fold::{DMIterBox, DynVecIter},
         network::{BlackHole, Direct},
         *,
     },
@@ -165,7 +165,7 @@ impl StaticConfig {
                 let ts = tag.to_string();
                 let outbound: Vec<_> = outbound.into_iter().map(Arc::new).collect();
 
-                let outbound_iter: DMIterBox = Box::new(DynVecIterWrapper(outbound.into_iter()));
+                let outbound_iter: DMIterBox = Box::new(DynVecIter(outbound.into_iter()));
 
                 if first_o.is_none() {
                     first_o = Some(outbound_iter.clone());

@@ -233,7 +233,7 @@ mod test {
     use crate::net::Addr;
     use user_trait::PlainText;
 
-    use self::fold::DynVecIterWrapper;
+    use self::fold::DynVecIter;
 
     use super::*;
 
@@ -249,7 +249,7 @@ mod test {
 
         let v = vec![a, b];
         let v: Vec<_> = v.into_iter().map(Arc::new).collect();
-        let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
+        let m: DMIterBox = Box::new(DynVecIter(v.into_iter()));
         m
     }
     fn get_miter_a() -> DMIterBox {
@@ -261,7 +261,7 @@ mod test {
 
         let v = vec![a];
         let v: Vec<_> = v.into_iter().map(Arc::new).collect();
-        let m: DMIterBox = Box::new(DynVecIterWrapper(v.into_iter()));
+        let m: DMIterBox = Box::new(DynVecIter(v.into_iter()));
 
         m
     }
