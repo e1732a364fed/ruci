@@ -35,18 +35,29 @@ jobs:
         rustup override set stable
         rustup target add --toolchain stable ${{ matrix.target }}
 
+    - name: Install mingw toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends x86_64-w64-mingw32-gcc 
     - name: Install ARM compiler toolchain
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+        sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross aarch64-linux-gnu-g++
     - name: Install ARM7 compiler toolchain
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf libc-dev-armhf-cross
+        sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf libc-dev-armhf-cross arm-linux-gnueabihf-g++
     - name: Build ${{ matrix.target }}
+      if: ${{ matrix.target != 'x86_64-pc-windows-gnu' }}
       run: |
         cd rucimp
         make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+
+    - name: Build ${{ matrix.target }}
+      if: ${{ matrix.target == 'x86_64-pc-windows-gnu' }}
+      run: |
+        cd rucimp
+        make exe BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
