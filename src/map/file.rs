@@ -20,7 +20,6 @@ pub struct FileIOConn {
     pub i: Pin<Box<tokio::fs::File>>,
     pub o: Pin<Box<tokio::fs::File>>,
 
-    // if hungs, after read file finished it will block instead of end
     sleep_interval: Option<Duration>,
     bytes_per_turn: Option<usize>,
     last_read: Option<tokio::time::Instant>,
@@ -63,7 +62,6 @@ impl AsyncRead for FileIOConn {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        //debug!("buflen {}", buf.initialize_unfilled().len());//8192
         match self.sleep_interval {
             Some(si) => match self.last_read {
                 Some(last) if last.elapsed() < si => {
@@ -87,10 +85,7 @@ impl AsyncWrite for FileIOConn {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        let r = self.o.as_mut().poll_write(cx, buf);
-        let _ = self.o.as_mut().poll_flush(cx);
-
-        r
+        self.o.as_mut().poll_write(cx, buf)
     }
 
     fn poll_flush(
@@ -109,7 +104,10 @@ impl AsyncWrite for FileIOConn {
     }
 }
 
-/// use an existing file as the stream source
+/// use an existing file as the stream source.
+///
+/// ## Write:
+/// append or create the file
 #[mapper_ext_fields]
 #[derive(Debug, MapperExt)]
 pub struct FileIO {
@@ -132,14 +130,12 @@ impl FileIO {
         bytes_per_turn: Option<usize>,
     ) -> anyhow::Result<FileIOConn> {
         let i = File::open(&self.iname).await?;
-        let o = File::open(&self.oname).await?;
+        let o = File::options().append(true).open(&self.oname).await?;
         Ok(FileIOConn {
             i: Box::pin(i),
             o: Box::pin(o),
             sleep_interval,
             bytes_per_turn,
-            // sleep_interval: None,
-            // bytes_per_turn: None,
             last_read: None,
         })
     }
