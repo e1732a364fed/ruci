@@ -1,7 +1,6 @@
 use log::{debug, info, log_enabled};
 use macro_mapper::{common_mapper_field, CommonMapperExt, DefaultMapperExt};
 use tokio::{
-    io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
     sync::mpsc::{self, Receiver},
 };
@@ -58,27 +57,21 @@ impl Mapper for Direct {
 
         //todo: DNS 功能
 
-        let asor = a.get_socket_addr_or_resolve();
-
-        match asor {
-            Ok(aso) => {
-                let r = TcpStream::connect(aso).await;
-
-                match r {
-                    Ok(mut c) => {
-                        if self.is_tail_of_chain() && params.b.is_some() {
-                            let rw = c
-                                .write_all(params.b.as_ref().expect("param.b is some"))
-                                .await;
-                            if let Err(re) = rw {
-                                return MapResult::from_e(re);
-                            }
-                            return MapResult::c(Box::new(c));
-                        }
-                        return MapResult::cb(Box::new(c), params.b);
+        let dial_r = a.try_dial().await;
+        match dial_r {
+            Ok(mut stream) => {
+                if self.is_tail_of_chain() && params.b.is_some() {
+                    let rw = stream
+                        .write_all(params.b.as_ref().expect("param.b is some"))
+                        .await;
+                    if let Err(re) = rw {
+                        let mut e: anyhow::Error = re.into();
+                        e = e.context("Direct try write early data");
+                        return MapResult::from_e(e);
                     }
-                    Err(e) => return MapResult::from_e(e),
+                    return MapResult::builder().c(stream).build();
                 }
+                return MapResult::builder().c(stream).b(params.b).build();
             }
             Err(e) => return MapResult::from_e(e),
         }

@@ -589,8 +589,6 @@ impl Stream {
         if let Stream::TCP(mut t) = self {
             t.shutdown().await?
         } else if let Stream::UDP(mut c) = self {
-            use crate::net::addr_conn::AsyncWriteAddrExt;
-
             c.w.shutdown().await?
         }
         Ok(())
@@ -616,6 +614,34 @@ impl Stream {
         }
         Err(anyhow!("not udp"))
     }
+
+    pub async fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        match self {
+            Stream::TCP(conn) => conn.write(buf).await,
+            Stream::UDP(ac) => {
+                let x = ac
+                    .default_write_to
+                    .clone()
+                    .expect("stream write requires AddrConn has default_write_to");
+                ac.w.write(buf, &x).await
+            }
+            _ => Err(std::io::Error::other("stream is not tcp/udp, can't write")),
+        }
+    }
+
+    pub async fn write_all(&mut self, buf: &[u8]) -> std::io::Result<()> {
+        match self {
+            Stream::TCP(conn) => conn.write_all(buf).await,
+            Stream::UDP(ac) => {
+                let x = ac
+                    .default_write_to
+                    .clone()
+                    .expect("stream write_all requires AddrConn has default_write_to");
+                ac.w.write(buf, &x).await.map(|_| ())
+            }
+            _ => Err(std::io::Error::other("stream is not tcp/udp, can't write")),
+        }
+    }
 }
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -624,6 +650,7 @@ use crate::map::MapResult;
 use crate::Name;
 
 use self::addr_conn::AddrConn;
+use self::addr_conn::AsyncWriteAddrExt;
 
 /// 用于状态监视和流量统计；可以用 Arc<TransmissionInfo> 进行全局的监视和统计。
 #[derive(Debug, Default)]
