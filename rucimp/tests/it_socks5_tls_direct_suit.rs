@@ -6,8 +6,11 @@ use ruci::{
     user::UserPass,
 };
 use rucimp::{
-    load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
-    suit::config::Config, SuitEngine,
+    suit::config::{
+        adapter::{load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig},
+        Config,
+    },
+    SuitEngine,
 };
 use std::{env::set_var, io};
 use tokio::{

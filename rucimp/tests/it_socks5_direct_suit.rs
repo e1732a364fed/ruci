@@ -18,10 +18,11 @@ use log::info;
 use ruci::map::{self, socks5::*};
 use ruci::map::{socks5, MappersVec};
 use ruci::{map::Mapper, net, user::UserPass};
-use rucimp::suit::config::Config;
-use rucimp::{
-    load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig, suit::*, SuitEngine,
+use rucimp::suit::config::adapter::{
+    load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
+use rucimp::suit::config::Config;
+use rucimp::{suit::*, SuitEngine};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 

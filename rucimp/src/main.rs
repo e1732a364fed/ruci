@@ -11,7 +11,10 @@ use std::{
 
 use log::{info, log_enabled, Level};
 use rucimp::{
-    load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig, SuitEngine,
+    suit::config::adapter::{
+        load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
+    },
+    SuitEngine,
 };
 //use rucimp::{load_in_adder_by_str, load_out_adder_by_str, SuitEngine};
 
