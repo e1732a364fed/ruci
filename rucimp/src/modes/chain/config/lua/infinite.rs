@@ -20,7 +20,7 @@ pub type GMap = HashMap<String, LuaNextGenerator>;
 pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(move |lua, v: LuaValue| {
         let c = lua.from_value::<InMapConfig>(v)?;
-        let m = c.to_map_box(Arc::new(None));
+        let m: MapBox = c.try_into().map_err(|e| mlua::Error::external(e))?;
         let m = MapWrapper(Arc::new(m));
         Ok(m)
     })?;
@@ -34,10 +34,9 @@ pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
 pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(move |lua, v: LuaValue| {
         let c = lua.from_value::<OutMapConfig>(v)?;
-        let m = c.to_map_box(Arc::new(None));
+        let m: MapBox = c.try_into().map_err(|e| mlua::Error::external(e))?;
         let m = MapWrapper(Arc::new(m));
         Ok(m)
-        // }
     })?;
     lua.globals().set("Create_out_map", f)?;
     Ok(())
@@ -160,7 +159,9 @@ impl InnerLuaNextGenerator {
         }
     }
 
-    fn lua_value_to_oim<T: for<'de> Deserialize<'de> + AdvancedToMapBox>(
+    fn lua_value_to_oim<
+        T: for<'de> Deserialize<'de> + std::fmt::Debug + TryInto<MapBox, Error = anyhow::Error>,
+    >(
         &self,
         i: i64,
         v: Value,
@@ -168,7 +169,7 @@ impl InnerLuaNextGenerator {
         let ic: LuaResult<T> = self.lua.from_value(v);
         match ic {
             Ok(ic) => {
-                let mut mb = ic.to_map_box(Arc::new(None));
+                let mut mb: MapBox = ic.try_into().unwrap();
                 mb.set_chain_tag(&self.tag);
                 Some((i, Some(Arc::new(mb))))
             }

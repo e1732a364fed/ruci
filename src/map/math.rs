@@ -155,11 +155,10 @@ impl std::fmt::Display for Adder {
     }
 }
 
-impl ToMapBox for i8 {
-    /// AddDirection = Read
-    fn to_map_box(&self) -> MapBox {
+impl From<i8> for MapBox {
+    fn from(value: i8) -> Self {
         Box::new(Adder {
-            add_num: *self,
+            add_num: value,
             ..Default::default()
         })
     }

@@ -109,8 +109,8 @@ impl Engine {
         }
     }
 
-    pub fn init_static(&mut self, sc: StaticConfig) {
-        let inbounds = sc.get_inbounds(self.file_source.clone());
+    pub fn init_static(&mut self, sc: StaticConfig) -> anyhow::Result<()> {
+        let inbounds = sc.get_inbounds(self.file_source.clone())?;
         self.inbounds = inbounds
             .into_iter()
             .map(|v| {
@@ -121,24 +121,27 @@ impl Engine {
             })
             .collect();
 
-        let (d, m) = sc.get_default_and_outbounds_map(self.file_source.clone());
+        let (d, m) = sc.get_default_and_outbounds_map(self.file_source.clone())?;
         self.default_outbound = Some(d);
         self.outbounds = Arc::new(m);
         self.load_routes_from(sc);
+        Ok(())
     }
 
     /// finite dynamic or static, depends on the content of the lua code
     #[cfg(any(feature = "lua", feature = "lua54"))]
     pub fn init_lua(&mut self, lua_text: String) -> anyhow::Result<()> {
-        use crate::modes::chain::config::lua;
+        // use crate::modes::chain::config::lua;
 
         debug!("trying init_lua");
 
-        let r = lua::finite::is_finite_dynamic_available(&lua_text);
-        match r {
-            Ok(_) => self.init_lua_finite_dynamic(lua_text),
-            Err(_) => self.init_lua_static(lua_text),
-        }
+        self.init_lua_static(lua_text)
+
+        // let r = lua::finite::is_finite_dynamic_available(&lua_text);
+        // match r {
+        //     Ok(_) => self.init_lua_finite_dynamic(lua_text),
+        //     Err(_) => self.init_lua_static(lua_text),
+        // }
     }
 
     /// load static chain
@@ -150,27 +153,27 @@ impl Engine {
 
         let sc = lua::load_static(&lua_text, self.file_source.clone())
             .context("init_lua_static failed")?;
-        self.init_static(sc);
+        self.init_static(sc)?;
         Ok(())
     }
 
     /// load finite dynamic chain
-    #[cfg(any(feature = "lua", feature = "lua54"))]
-    pub fn init_lua_finite_dynamic(&mut self, lua_text: String) -> anyhow::Result<()> {
-        use anyhow::Context;
+    // #[cfg(any(feature = "lua", feature = "lua54"))]
+    // pub fn init_lua_finite_dynamic(&mut self, lua_text: String) -> anyhow::Result<()> {
+    //     use anyhow::Context;
 
-        info!("initializing lua finite dynamic");
+    //     info!("initializing lua finite dynamic");
 
-        use crate::modes::chain::config::lua;
-        let (sc, ibs, default_o, ods) =
-            lua::finite::load_finite_dynamic(&lua_text, self.file_source.clone())
-                .context("Engine::init_lua_finite_dynamic: lua::load_finite_dynamic failed")?;
-        self.inbounds = ibs;
-        self.default_outbound = Some(default_o);
-        self.outbounds = ods;
-        self.load_routes_from(sc);
-        Ok(())
-    }
+    //     use crate::modes::chain::config::lua;
+    //     let (sc, ibs, default_o, ods) =
+    //         lua::finite::load_finite_dynamic(&lua_text, self.file_source.clone())
+    //             .context("Engine::init_lua_finite_dynamic: lua::load_finite_dynamic failed")?;
+    //     self.inbounds = ibs;
+    //     self.default_outbound = Some(default_o);
+    //     self.outbounds = ods;
+    //     self.load_routes_from(sc);
+    //     Ok(())
+    // }
 
     /// load infinite dynamic chain
     #[cfg(any(feature = "lua", feature = "lua54"))]
@@ -415,7 +418,7 @@ impl Engine {
 
         e.file_source = Arc::new(file_source);
 
-        e.init_static(sc);
+        e.init_static(sc)?;
 
         let mut js = e.run().await?;
 

@@ -8,7 +8,7 @@ pub mod udp;
 use super::*;
 
 use crate::{
-    map::{self, MapBox, MapExtFields, MapResult, ProxyBehavior, ToMapBox, CID},
+    map::{self, MapBox, MapExtFields, MapResult, ProxyBehavior, CID},
     net::{Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
     utils::{buf_to_ob, io_error},
@@ -35,9 +35,9 @@ pub struct Config {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapBox for Config {
-    fn to_map_box(&self) -> MapBox {
-        let a = block_on(Server::new(self.clone()));
+impl From<Config> for MapBox {
+    fn from(value: Config) -> Self {
+        let a = block_on(Server::new(value.clone()));
         Box::new(a)
     }
 }

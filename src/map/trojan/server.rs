@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    map::{self, Data, Map, MapBox, MapExtFields, MapResult, ToMapBox, CID},
+    map::{self, Data, Map, MapBox, MapExtFields, MapResult, CID},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
     utils, Name,
@@ -19,9 +19,9 @@ pub struct Config {
     pub passes: Option<Vec<String>>,
 }
 
-impl ToMapBox for Config {
-    fn to_map_box(&self) -> MapBox {
-        let a = block_on(Server::new(self.clone()));
+impl From<Config> for MapBox {
+    fn from(value: Config) -> Self {
+        let a = block_on(Server::new(value.clone()));
         Box::new(a)
     }
 }

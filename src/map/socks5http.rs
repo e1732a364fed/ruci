@@ -18,7 +18,7 @@ use crate::{
     Name,
 };
 
-use super::{http_proxy, socks5, Map, MapBox, MapExtFields, ToMapBox};
+use super::{http_proxy, socks5, Map, MapBox, MapExtFields};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -26,9 +26,9 @@ pub struct Config {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapBox for Config {
-    fn to_map_box(&self) -> MapBox {
-        let a = block_on(Server::new(self.clone()));
+impl From<Config> for MapBox {
+    fn from(value: Config) -> Self {
+        let a = block_on(Server::new(value.clone()));
         Box::new(a)
     }
 }

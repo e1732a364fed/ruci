@@ -6,7 +6,7 @@ Defines functions to load static chain configuration from a lua file.
 #[allow(unused)]
 pub mod test;
 
-pub mod finite;
+// pub mod finite;
 pub mod infinite;
 
 use super::*;

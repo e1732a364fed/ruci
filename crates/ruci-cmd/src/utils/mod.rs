@@ -1,4 +1,4 @@
-use std::{fs, time::Duration};
+use std::{fs, sync::Arc, time::Duration};
 
 use super::*;
 use anyhow::{Context, Ok};
@@ -90,10 +90,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         Commands::GenCA { subject_alt_names } => {
             info!("generatiing CA cert and key... with My Company as OrganizationName and My CA Root as CommonName");
 
-            use rcgen::{
-                BasicConstraints, Certificate, CertificateParams, DnType, IsCa, KeyPair,
-                PKCS_ECDSA_P256_SHA256,
-            };
+            use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
             use std::fs;
 
             let mut params = CertificateParams::new(subject_alt_names)?;
@@ -345,7 +342,7 @@ pub fn convert_config(
         "lua" => {
             #[cfg(any(feature = "lua", feature = "lua54"))]
             {
-                rucimp::modes::chain::config::lua::load_static(input, Some(&file_source))
+                rucimp::modes::chain::config::lua::load_static(input, Arc::new(Some(file_source)))
                     .context("init_lua_static failed")?
             }
             #[cfg(not(any(feature = "lua", feature = "lua54")))]

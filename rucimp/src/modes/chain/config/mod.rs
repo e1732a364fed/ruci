@@ -71,66 +71,91 @@ pub struct StaticConfig {
 
 impl StaticConfig {
     /// convert config chain to map chain
-    pub fn get_inbounds(&self, file_source: Arc<Option<FileSource>>) -> Vec<Vec<MapBox>> {
+    pub fn get_inbounds(
+        &self,
+        file_source: Arc<Option<FileSource>>,
+    ) -> anyhow::Result<Vec<Vec<MapBox>>> {
+        use itertools::Itertools;
+
         let listens: Vec<_> = self
             .inbounds
             .iter()
             .map(|config_chain| {
-                let mut chain = config_chain
+                let chain: anyhow::Result<Vec<_>> = config_chain
                     .chain
                     .iter()
                     .map(|map_config| {
-                        let mut map = map_config.to_map_box(file_source.clone());
-                        map.set_chain_tag(config_chain.tag.as_deref().unwrap_or(""));
-                        map
+                        let config_with_fs = InMapConfigWithFileSource {
+                            config: map_config.clone(),
+                            file_source: file_source.clone(),
+                        };
+
+                        let map: anyhow::Result<MapBox> = config_with_fs.try_into();
+                        map.map(|mut map| {
+                            map.set_chain_tag(config_chain.tag.as_deref().unwrap_or(""));
+                            map
+                        })
                     })
-                    .collect::<Vec<_>>();
+                    .try_collect();
 
-                if let Some(last_m) = chain.last_mut() {
-                    last_m.set_is_tail_of_chain(true);
-                } else {
-                    warn!("the inbound chain has no maps, {:?}", config_chain.tag);
-                }
-
-                chain
+                chain.map(|mut chain| {
+                    if let Some(last_m) = chain.last_mut() {
+                        last_m.set_is_tail_of_chain(true);
+                    } else {
+                        warn!("the inbound chain has no maps, {:?}", config_chain.tag);
+                    }
+                    chain
+                })
             })
-            .collect();
+            .try_collect()?;
 
-        listens
+        Ok(listens)
     }
 
     /// convert config chain to map chain
-    pub fn get_outbounds(&self, file_source: Arc<Option<FileSource>>) -> Vec<Vec<MapBox>> {
+    pub fn get_outbounds(
+        &self,
+        file_source: Arc<Option<FileSource>>,
+    ) -> anyhow::Result<Vec<Vec<MapBox>>> {
+        use itertools::Itertools;
         self.outbounds
             .iter()
             .map(|config_chain| {
-                let mut chain = config_chain
+                let chain: anyhow::Result<Vec<_>> = config_chain
                     .chain
                     .iter()
                     .map(|map_config| {
-                        let mut map = map_config.to_map_box(file_source.clone());
-                        map.set_chain_tag(&config_chain.tag);
-                        map
+                        let config_with_fs = OutMapConfigWithFileSource {
+                            config: map_config.clone(),
+                            file_source: file_source.clone(),
+                        };
+
+                        let map: anyhow::Result<MapBox> = config_with_fs.try_into();
+                        map.map(|mut map| {
+                            map.set_chain_tag(&config_chain.tag);
+                            map
+                        })
                     })
-                    .collect::<Vec<_>>();
+                    .try_collect();
 
-                if let Some(last_m) = chain.last_mut() {
-                    last_m.set_is_tail_of_chain(true);
-                } else {
-                    warn!("the outbound chain has no maps, {:?}", config_chain.tag);
-                }
-
-                chain
+                chain.map(|mut chain| {
+                    if let Some(last_m) = chain.last_mut() {
+                        last_m.set_is_tail_of_chain(true);
+                    } else {
+                        warn!("the outbound chain has no maps, {:?}", config_chain.tag);
+                    }
+                    chain
+                })
             })
-            .collect::<Vec<_>>()
+            .try_collect()
     }
 
     /// (out_tag, outbound)
     pub fn get_default_and_outbounds_map(
         &self,
         file_source: Arc<Option<FileSource>>,
-    ) -> (DMIterBox, HashMap<String, DMIterBox>) {
-        let obs = self.get_outbounds(file_source.clone());
+    ) -> anyhow::Result<(DMIterBox, HashMap<String, DMIterBox>)> {
+        let obs = self.get_outbounds(file_source.clone())?;
 
         let mut first_o: Option<DMIterBox> = None;
 
@@ -154,7 +179,7 @@ impl StaticConfig {
                 (ts, outbound_iter)
             })
             .collect();
-        (first_o.expect("has an outbound"), o_map)
+        Ok((first_o.expect("has an outbound"), o_map))
     }
 
     /// panic if the given tag isn't presented in outbounds
@@ -242,34 +267,52 @@ pub struct BindDialerConfig {
 
     pub ext: Option<Ext>,
 }
-impl ToMapBox for BindDialerConfig {
-    fn to_map_box(&self) -> MapBox {
-        let opt_bind_a = self
-            .bind_addr
-            .clone()
-            .map(|a| net::Addr::from_name_network_addr_url(&a).expect("network_ip_addr is valid"));
+impl TryFrom<BindDialerConfig> for MapBox {
+    type Error = anyhow::Error;
 
-        let opt_dial_a = self
-            .dial_addr
-            .clone()
-            .map(|a| net::Addr::from_name_network_addr_url(&a).expect("network_ip_addr is valid"));
+    fn try_from(value: BindDialerConfig) -> Result<Self, Self::Error> {
+        use anyhow::Context;
+
+        // let opt_bind_a = value
+        //     .bind_addr
+        //     .clone()
+        //     .map(|a| net::Addr::from_name_network_addr_url(&a).context("network_ip_addr invalid"));
+
+        let opt_bind_a = match value.bind_addr {
+            Some(a) => {
+                Some(net::Addr::from_name_network_addr_url(&a).context("network_ip_addr invalid")?)
+            }
+            None => None,
+        };
+
+        // let opt_dial_a = value.dial_addr.clone().map(|a| {
+        //     net::Addr::from_name_network_addr_url(&a).context("network_ip_addr invalid")
+        // })?;
+
+        let opt_dial_a = match value.dial_addr {
+            Some(a) => {
+                Some(net::Addr::from_name_network_addr_url(&a).context("network_ip_addr invalid")?)
+            }
+            None => None,
+        };
+
         let mut d = ruci::map::network::BindDialer::new();
 
         d.dial_addr = opt_dial_a;
         d.bind_addr = opt_bind_a;
         #[cfg(feature = "tun")]
         {
-            d.in_auto_route = self.in_auto_route.clone();
-            d.out_auto_route = self.out_auto_route.clone();
+            d.in_auto_route = value.in_auto_route.clone();
+            d.out_auto_route = value.out_auto_route.clone();
         }
-        d.ext_fields = self.ext.as_ref().map(|e| e.to_ext_fields());
+        d.ext_fields = value.ext.as_ref().map(|e| e.to_ext_fields());
 
-        d.opt_dns_client = self
+        d.opt_dns_client = value
             .dns_client
             .as_ref()
             .map(|dc| Arc::new(dns::AsyncClient::new(dc.clone())));
 
-        Box::new(d)
+        Ok(Box::new(d))
     }
 }
 
@@ -279,29 +322,31 @@ pub struct StdioConfig {
     pub ext: Option<Ext>,
 }
 
-impl ToMapBox for StdioConfig {
-    fn to_map_box(&self) -> MapBox {
+impl TryFrom<StdioConfig> for MapBox {
+    type Error = anyhow::Error;
+
+    fn try_from(value: StdioConfig) -> Result<Self, Self::Error> {
         let mut s = ruci::map::stdio::Stdio::default();
 
-        if let Some(ext) = &self.ext {
+        if let Some(ext) = &value.ext {
             let ext_f = ext.to_ext_fields();
 
             s.set_ext_fields(Some(ext_f));
         }
 
-        if let Some(m) = self.write_mode {
+        if let Some(m) = value.write_mode {
             s.write_mode = m;
         }
-        Box::new(s)
+        Ok(Box::new(s))
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapConfig {
-    Echo,                              //单流消耗器
-    Stdio(StdioConfig),                //单流发生器
-    Fileio(FileConfig),                //单流发生器
-    BindDialer(Box<BindDialerConfig>), //单流发生器 (Box: #[warn(clippy::large_enum_variant)])
+    Echo,                         //单流消耗器
+    Stdio(StdioConfig),           //单流发生器
+    Fileio(FileConfig),           //单流发生器
+    BindDialer(BindDialerConfig), //单流发生器 (Box: #[warn(clippy::large_enum_variant)])
     Listener {
         listen_addr: String,
         ext: Option<Ext>,
@@ -371,11 +416,11 @@ pub enum InMapConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapConfig {
-    Blackhole,                         //单流消耗器
-    Direct(DirectConfig),              //单流发生器
-    Stdio(StdioConfig),                //单流发生器
-    Fileio(FileConfig),                //单流发生器
-    BindDialer(Box<BindDialerConfig>), //单流发生器
+    Blackhole,                    //单流消耗器
+    Direct(DirectConfig),         //单流发生器
+    Stdio(StdioConfig),           //单流发生器
+    Fileio(FileConfig),           //单流发生器
+    BindDialer(BindDialerConfig), //单流发生器
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
@@ -454,20 +499,6 @@ pub struct FileConfig {
     pub ext: Option<Ext>,
 }
 
-// #[derive(Debug, Serialize, Deserialize, Clone)]
-// pub struct TlsIn {
-//     pub cert: String,
-//     pub key: String,
-//     pub alpn: Option<Vec<String>>,
-// }
-
-// #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-// pub struct TlsOut {
-//     pub host: Option<String>,
-//     pub insecure: Option<bool>,
-//     pub alpn: Option<Vec<String>>,
-// }
-
 /// 明文密码配置
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct PlainTextSet {
@@ -490,12 +521,29 @@ pub struct TrojanPassSet {
     pub more: Option<Vec<String>>,
 }
 
-pub trait AdvancedToMapBox {
-    fn to_map_box(&self, file_source: Arc<Option<FileSource>>) -> MapBox;
+pub struct InMapConfigWithFileSource {
+    pub config: InMapConfig,
+    pub file_source: Arc<Option<FileSource>>,
 }
 
-impl AdvancedToMapBox for InMapConfig {
-    fn to_map_box(&self, file_source: Arc<Option<FileSource>>) -> ruci::map::MapBox {
+impl TryFrom<InMapConfig> for MapBox {
+    type Error = anyhow::Error;
+
+    fn try_from(config: InMapConfig) -> Result<Self, Self::Error> {
+        let ic = InMapConfigWithFileSource {
+            config,
+            file_source: Arc::new(None),
+        };
+        ic.try_into()
+    }
+}
+
+impl TryFrom<InMapConfigWithFileSource> for MapBox {
+    type Error = anyhow::Error;
+
+    fn try_from(value: InMapConfigWithFileSource) -> Result<Self, Self::Error> {
+        let file_source = value.file_source;
+
         let read_file_fn: Box<dyn Fn(PathBuf) -> std::io::Result<String>> = {
             let fc = file_source.clone();
 
@@ -510,9 +558,9 @@ impl AdvancedToMapBox for InMapConfig {
             Box::new(f)
         };
 
-        match self {
-            InMapConfig::Echo => Box::<Echo>::default(),
-            InMapConfig::Stdio(sc) => sc.to_map_box(),
+        match value.config {
+            InMapConfig::Echo => Ok(Box::<Echo>::default()),
+            InMapConfig::Stdio(sc) => sc.try_into(),
             InMapConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
                     i_name: f.i.clone(),
@@ -521,37 +569,37 @@ impl AdvancedToMapBox for InMapConfig {
                     bytes_per_turn: f.bytes_per_turn,
                     ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
                 };
-                Box::new(s)
+                Ok(Box::new(s))
             }
-            InMapConfig::BindDialer(dc) => dc.to_map_box(),
+            InMapConfig::BindDialer(dc) => dc.try_into(),
             InMapConfig::Listener { listen_addr, ext } => {
                 let a =
-                    net::Addr::from_network_addr_url(listen_addr).expect("network_addr is valid");
+                    net::Addr::from_network_addr_url(&listen_addr).expect("network_addr is valid");
                 let g = ruci::map::network::Listener {
                     listen_addr: a,
                     ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
                 };
 
-                Box::new(g)
+                Ok(Box::new(g))
             }
-            InMapConfig::Adder(i) => i.to_map_box(),
-            InMapConfig::Counter => Box::<Counter>::default(),
-            InMapConfig::Recorder(c) => Box::new(RecorderMap::new(c.clone())),
+            InMapConfig::Adder(i) => Ok(i.into()),
+            InMapConfig::Counter => Ok(Box::<Counter>::default()),
+            InMapConfig::Recorder(c) => Ok(Box::new(RecorderMap::new(c.clone()))),
 
             InMapConfig::TLS(sc) => {
-                let sc = ServerPEMOptions::from(&sc, read_file_fn).unwrap();
+                let sc = ServerPEMOptions::from(&sc, read_file_fn)?;
 
-                Box::new(ruci::map::tls::server::Server::new(sc))
+                Ok(Box::new(ruci::map::tls::server::Server::new(sc)))
             }
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-            InMapConfig::NativeTLS(c) => Box::new(
+            InMapConfig::NativeTLS(c) => Ok(Box::new(
                 crate::map::native_tls::Server::from(&c, read_file_fn)
                     .expect("native_tls server config valid"),
-            ),
+            )),
 
             InMapConfig::Http(c) => {
-                let so = http_proxy::ServerConfig {
+                let sc = http_proxy::ServerConfig {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
@@ -561,10 +609,10 @@ impl AdvancedToMapBox for InMapConfig {
                     ..Default::default()
                 };
 
-                so.to_map_box()
+                Ok(sc.into())
             }
             InMapConfig::Socks5(c) => {
-                let so = socks5::server::Config {
+                let sc = socks5::server::Config {
                     support_udp: true, //默认打开udp 支持
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
@@ -574,10 +622,10 @@ impl AdvancedToMapBox for InMapConfig {
                     }),
                 };
 
-                so.to_map_box()
+                Ok(sc.into())
             }
             InMapConfig::Socks5Http(c) => {
-                let so = socks5http::Config {
+                let sc = socks5http::Config {
                     user_whitespace_pass: c.userpass.clone(),
                     user_passes: c.more.as_ref().map(|up_v| {
                         up_v.iter()
@@ -586,97 +634,95 @@ impl AdvancedToMapBox for InMapConfig {
                     }),
                 };
 
-                so.to_map_box()
+                Ok(sc.into())
             }
             InMapConfig::Trojan(c) => {
-                let so = trojan::server::Config {
+                let sc = trojan::server::Config {
                     pass: c.password.clone(),
                     passes: c.more.as_ref().map(|up_v| up_v.to_vec()),
                 };
 
-                so.to_map_box()
+                Ok(sc.into())
             }
             InMapConfig::WebSocket {
                 http_config: config,
-            } => Box::new(crate::map::ws::server::Server {
+            } => Ok(Box::new(crate::map::ws::server::Server {
                 config: config.clone(),
                 ..Default::default()
-            }),
-            InMapConfig::HttpFilter(c) => Box::new(ruci::map::http_filter::Server {
+            })),
+            InMapConfig::HttpFilter(c) => Ok(Box::new(ruci::map::http_filter::Server {
                 config: c.clone(),
                 ..Default::default()
-            }),
+            })),
             InMapConfig::H2 {
                 http_config: config,
                 is_grpc,
-            } => Box::new(crate::map::h2::server::Server::new(
-                *is_grpc,
+            } => Ok(Box::new(crate::map::h2::server::Server::new(
+                is_grpc,
                 config.clone(),
-            )),
+            ))),
             #[cfg(feature = "quic")]
-            InMapConfig::Quic(c) => Box::new(quic::server::Server::new(c.clone())),
+            InMapConfig::Quic(c) => Ok(Box::new(quic::server::Server::new(c.clone()))),
 
             #[cfg(feature = "quinn")]
-            InMapConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
+            InMapConfig::Quic(c) => Ok(Box::new(crate::map::quinn::server::Server::new(c.clone()))),
 
             #[cfg(feature = "sockopt")]
             InMapConfig::TcpOptListener {
                 listen_addr,
                 sockopt,
                 ext,
-            } => Box::new(crate::map::opt_net::TcpOptListener {
-                listen_addr: net::Addr::from_network_addr_url(listen_addr).expect("listen_addr ok"),
+            } => Ok(Box::new(crate::map::opt_net::TcpOptListener {
+                listen_addr: net::Addr::from_network_addr_url(&listen_addr)?,
                 sopt: sockopt.clone(),
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
-            }),
+            })),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
-            InMapConfig::TproxyTcpResolver(opts) => {
-                Box::new(TcpResolver::new(opts.clone()).expect("ok"))
-            }
+            InMapConfig::TproxyTcpResolver(opts) => Ok(Box::new(TcpResolver::new(opts.clone()))),
 
             #[cfg(all(feature = "sockopt", target_os = "linux"))]
             InMapConfig::TproxyUdpListener {
                 listen_addr,
                 sockopt,
                 ext,
-            } => Box::new(crate::map::tproxy::UDPListener {
-                listen_addr: net::Addr::from_network_addr_url(listen_addr).expect("listen_addr ok"),
+            } => Ok(Box::new(crate::map::tproxy::UDPListener {
+                listen_addr: net::Addr::from_network_addr_url(listen_addr),
                 sopt: sockopt.clone(),
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
-            }),
+            })),
             #[cfg(feature = "smoltcp")]
-            InMapConfig::Stack => Box::<crate::map::tcp_ip_stack_smoltcp::Stack>::default(),
+            InMapConfig::Stack => Ok(Box::<crate::map::tcp_ip_stack_smoltcp::Stack>::default()),
 
             #[cfg(feature = "steganography")]
-            InMapConfig::SPE1 { qa } => Box::new(spe1::ClientOrServer {
+            InMapConfig::SPE1 { qa } => Ok(Box::new(spe1::ClientOrServer {
                 qa: Arc::new(match qa {
                     Some(qa) => spe1::QaData::from(qa.to_vec()),
                     None => spe1::QaData::new_simple(),
                 }),
                 is_server: true,
                 ext_fields: Some(MapExtFields::default()),
-            }),
+            })),
             #[cfg(any(feature = "lua", feature = "lua54"))]
             InMapConfig::Lua {
                 file_name,
                 handshake_function,
             } => {
-                let r = crate::utils::try_get_file_content("", Some(file_name));
+                let r = crate::utils::try_get_file_content("", Some(&file_name));
                 match r {
-                    Ok(lua_bytes) => Box::new(crate::map::lua::LuaMap {
+                    Ok(lua_bytes) => Ok(Box::new(crate::map::lua::LuaMap {
                         lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
                         file_source: file_source.clone(),
-                    }),
+                    })),
                     Err(e) => panic!("get lua file content err {e}"),
                 }
             }
             #[cfg(feature = "lwip")]
-            InMapConfig::StackLwip => Box::new(tcp_ip_stack_lwip::Stack {
+            InMapConfig::StackLwip => Ok(Box::new(tcp_ip_stack_lwip::Stack {
                 ext_fields: Some(MapExtFields::default()),
-            }),
+            })),
             InMapConfig::MITM(c) => {
                 let sc = tls::server::TlsServerOptions {
                     cert: PathBuf::from(c.cert.clone()),
@@ -684,20 +730,39 @@ impl AdvancedToMapBox for InMapConfig {
                     alpn: c.alpn.clone(),
                 };
 
-                let sc = ServerPEMOptions::from(&sc, read_file_fn).unwrap();
+                let sc = ServerPEMOptions::from(&sc, read_file_fn)?;
 
-                Box::new(ruci::map::tls::mitm::MITM {
+                Ok(Box::new(ruci::map::tls::mitm::MITM {
                     sc,
                     ext_fields: None,
-                })
+                }))
             }
         }
     }
 }
-impl AdvancedToMapBox for OutMapConfig {
-    fn to_map_box(&self, file_source: Arc<Option<FileSource>>) -> ruci::map::MapBox {
-        match self {
-            OutMapConfig::Stdio(sc) => sc.to_map_box(),
+pub struct OutMapConfigWithFileSource {
+    pub config: OutMapConfig,
+    pub file_source: Arc<Option<FileSource>>,
+}
+
+impl TryFrom<OutMapConfig> for MapBox {
+    type Error = anyhow::Error;
+
+    fn try_from(config: OutMapConfig) -> Result<Self, Self::Error> {
+        let ic = OutMapConfigWithFileSource {
+            config,
+            file_source: Arc::new(None),
+        };
+        ic.try_into()
+    }
+}
+
+impl TryFrom<OutMapConfigWithFileSource> for MapBox {
+    type Error = anyhow::Error;
+
+    fn try_from(value: OutMapConfigWithFileSource) -> Result<Self, Self::Error> {
+        match value.config {
+            OutMapConfig::Stdio(sc) => sc.try_into(),
             OutMapConfig::Fileio(f) => {
                 let s = ruci::map::fileio::FileIO {
                     i_name: f.i.clone(),
@@ -706,9 +771,9 @@ impl AdvancedToMapBox for OutMapConfig {
                     bytes_per_turn: f.bytes_per_turn,
                     ext_fields: f.ext.clone().map(|e| e.to_ext_fields()),
                 };
-                Box::new(s)
+                Ok(Box::new(s))
             }
-            OutMapConfig::Blackhole => Box::<BlackHole>::default(),
+            OutMapConfig::Blackhole => Ok(Box::<BlackHole>::default()),
 
             OutMapConfig::Direct(dc) => {
                 let mut m = Box::<Direct>::default();
@@ -716,24 +781,24 @@ impl AdvancedToMapBox for OutMapConfig {
                     m.opt_dns_client = Some(Arc::new(dns::AsyncClient::new(dc.clone())));
                 }
                 m.leak_target_addr = dc.leak_target_addr.unwrap_or_default();
-                m
+                Ok(m)
             }
-            OutMapConfig::BindDialer(dc) => dc.to_map_box(),
-            OutMapConfig::Adder(i) => i.to_map_box(),
-            OutMapConfig::Counter => Box::<counter::Counter>::default(),
-            OutMapConfig::Recorder(c) => Box::new(RecorderMap::new(c.clone())),
+            OutMapConfig::BindDialer(dc) => dc.try_into(),
+            OutMapConfig::Adder(i) => Ok(i.into()),
+            OutMapConfig::Counter => Ok(Box::<counter::Counter>::default()),
+            OutMapConfig::Recorder(c) => Ok(Box::new(RecorderMap::new(c.clone()))),
 
             OutMapConfig::TLS(c) => {
                 let a = tls::client::Client::new(c.clone());
-                Box::new(a)
+                Ok(Box::new(a))
             }
 
             #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-            OutMapConfig::NativeTLS(c) => Box::new(crate::map::native_tls::Client {
+            OutMapConfig::NativeTLS(c) => Ok(Box::new(crate::map::native_tls::Client {
                 config: c.clone(),
                 ext_fields: Some(MapExtFields::default()),
-            }),
-            OutMapConfig::Http => Box::new(http_proxy::Client::default()),
+            })),
+            OutMapConfig::Http => Ok(Box::new(http_proxy::Client::default())),
             OutMapConfig::Socks5(c) => {
                 let u = c.userpass.clone().unwrap_or_default();
                 let mut a = socks5::client::Client {
@@ -748,24 +813,24 @@ impl AdvancedToMapBox for OutMapConfig {
                 if let Some(ext) = &c.ext {
                     a.set_ext_fields(Some(ext.to_ext_fields()))
                 }
-                Box::new(a)
+                Ok(Box::new(a))
             }
             OutMapConfig::Trojan(pass) => {
-                let a = trojan::client::Client::new(pass);
-                Box::new(a)
+                let a = trojan::client::Client::new(&pass);
+                Ok(Box::new(a))
             }
             OutMapConfig::WebSocket(c) => {
                 let client = ws::client::Client::new(c.clone());
 
-                Box::new(client)
+                Ok(Box::new(client))
             }
             OutMapConfig::H2Single {
                 http_config: config,
                 is_grpc,
-            } => Box::new(crate::map::h2::client::SingleClient::new(
+            } => Ok(Box::new(crate::map::h2::client::SingleClient::new(
                 is_grpc.unwrap_or_default(),
                 config.clone(),
-            )),
+            ))),
             OutMapConfig::H2Mux {
                 http_config: config,
                 is_grpc,
@@ -775,61 +840,58 @@ impl AdvancedToMapBox for OutMapConfig {
                     config.clone(),
                 );
 
-                Box::new(m)
+                Ok(Box::new(m))
             }
             #[cfg(feature = "quic")]
-            OutMapConfig::Quic(c) => {
-                Box::new(quic::client::Client::new(c.clone()).expect("legal quic client config"))
-            }
+            OutMapConfig::Quic(c) => Ok(Box::new(
+                quic::client::Client::new(c.clone()).expect("legal quic client config"),
+            )),
 
             #[cfg(feature = "quinn")]
-            OutMapConfig::Quic(c) => Box::new(
+            OutMapConfig::Quic(c) => Ok(Box::new(
                 crate::map::quinn::client::Client::new(c.clone())
                     .expect("legal quic client config"),
-            ),
+            )),
 
             #[cfg(feature = "sockopt")]
             OutMapConfig::OptDirect {
                 sockopt,
                 more_num_of_files,
                 dns_client,
-            } => Box::new(
-                crate::map::opt_net::OptDirect::new(
-                    sockopt.clone(),
-                    *more_num_of_files,
-                    dns_client
-                        .as_ref()
-                        .map(|c| Arc::new(dns::AsyncClient::new(c.clone()))),
-                )
-                .expect("ok"),
-            ),
+            } => Ok(Box::new(crate::map::opt_net::OptDirect::new(
+                sockopt.clone(),
+                more_num_of_files,
+                dns_client
+                    .as_ref()
+                    .map(|c| Arc::new(dns::AsyncClient::new(c.clone()))),
+            )?)),
             #[cfg(feature = "sockopt")]
             OutMapConfig::OptDialer(sopt) => {
-                Box::new(crate::map::opt_net::OptDialer::new(sopt.clone()).expect("ok"))
+                Ok(Box::new(crate::map::opt_net::OptDialer::new(sopt.clone())?))
             }
 
             #[cfg(feature = "steganography")]
-            OutMapConfig::SPE1 { qa } => Box::new(spe1::ClientOrServer {
+            OutMapConfig::SPE1 { qa } => Ok(Box::new(spe1::ClientOrServer {
                 qa: Arc::new(match qa {
                     Some(qa) => spe1::QaData::from(qa.to_vec()),
                     None => spe1::QaData::new_simple(),
                 }),
                 is_server: false,
                 ext_fields: Some(MapExtFields::default()),
-            }),
+            })),
             #[cfg(any(feature = "lua", feature = "lua54"))]
             OutMapConfig::Lua {
                 file_name,
                 handshake_function,
             } => {
-                let r = crate::utils::try_get_file_content("", Some(file_name));
+                let r = crate::utils::try_get_file_content("", Some(&file_name));
                 match r {
-                    Ok(lua_bytes) => Box::new(crate::map::lua::LuaMap {
+                    Ok(lua_bytes) => Ok(Box::new(crate::map::lua::LuaMap {
                         lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
-                        file_source: file_source.clone(),
-                    }),
+                        file_source: value.file_source.clone(),
+                    })),
                     Err(_) => todo!(),
                 }
             }

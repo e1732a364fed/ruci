@@ -27,7 +27,7 @@ use crate::{
     Name,
 };
 
-use super::{Map, MapBox, MapExtFields, Stream, ToMapBox};
+use super::{Map, MapBox, MapExtFields, Stream};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
@@ -53,9 +53,9 @@ pub struct ServerConfig {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapBox for ServerConfig {
-    fn to_map_box(&self) -> MapBox {
-        let a = block_on(Server::new(self.clone()));
+impl From<ServerConfig> for MapBox {
+    fn from(value: ServerConfig) -> Self {
+        let a = block_on(Server::new(value.clone()));
         Box::new(a)
     }
 }
