@@ -47,6 +47,8 @@ pub fn load_finite_dynamic(
     Ok((sc, ibs, fb, obm))
 }
 
+/// load StaticConfig and generate LuaNextSelector from lua code
+/// by tag of each chain
 fn load_finite_config_and_selector_map(
     lua_text: &str,
 ) -> mlua::Result<(StaticConfig, HashMap<String, LuaNextSelector>)> {
@@ -206,6 +208,9 @@ mod test {
     use mlua::{Error, Lua, LuaSerdeExt};
     use ruci::map;
     use ruci::user::PlainText;
+    //https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua
+
+    pub const INSPECT: &str = include_str!("inspect.lua");
 
     #[test]
     fn testin() -> mlua::Result<()> {
@@ -532,7 +537,7 @@ mod test {
         use mlua::chunk;
         use mlua::Function;
 
-        let inspect: LuaTable = lua.load(lua_inspect::INSPECT).eval()?;
+        let inspect: LuaTable = lua.load(INSPECT).eval()?;
         lua.globals().set("inspect", inspect)?;
 
         //rust None in lua will be: userdata: 0x0000000000000000,

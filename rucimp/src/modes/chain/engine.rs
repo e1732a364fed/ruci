@@ -1,3 +1,5 @@
+use crate::route::{RuleSet, RuleSetOutSelector};
+
 use super::config::StaticConfig;
 use anyhow;
 use futures::Future;
@@ -22,7 +24,10 @@ use tokio::task::JoinSet;
 
 #[derive(Default)]
 pub struct Engine {
-    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁，若有值说明 is running
+    /// 存储关闭所有inbound 的 Sender
+    ///
+    ///  若有值说明 is running
+    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<GlobalTrafficRecorder>,
 
     pub newconn_recorder: OptNewInfoSender,
@@ -34,6 +39,7 @@ pub struct Engine {
     outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
     default_outbound: Option<DMIterBox>,        // init 后一定有值
     tag_routes: Option<HashMap<String, String>>,
+    rule_sets: Option<Vec<RuleSet>>,
 }
 
 impl Engine {
@@ -49,8 +55,13 @@ impl Engine {
             self.ti = Arc::<GlobalTrafficRecorder>::default();
             info!("Engine is reset successful");
         } else {
-            warn!("Engine is running, can't be reset");
+            warn!("Engine is running, can't be reset. You should try to stop before reset.");
         }
+    }
+
+    pub fn load_routes_from(&mut self, sc: StaticConfig) {
+        self.tag_routes = sc.get_tag_route();
+        self.rule_sets = sc.get_rule_route();
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) {
@@ -68,10 +79,10 @@ impl Engine {
         let (d, m) = sc.get_default_and_outbounds_map();
         self.default_outbound = Some(d);
         self.outbounds = Arc::new(m);
-        self.tag_routes = sc.get_tag_route();
+        self.load_routes_from(sc);
     }
 
-    /// try dynamic first, then try static
+    /// finite dynamic or static, depends on the content of the lua code
     #[cfg(feature = "lua")]
     pub fn init_lua(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
@@ -107,7 +118,7 @@ impl Engine {
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);
         self.outbounds = ods;
-        self.tag_routes = sc.get_tag_route();
+        self.load_routes_from(sc);
         Ok(())
     }
 
@@ -219,27 +230,40 @@ impl Engine {
     }
 
     fn get_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
-        if self.tag_routes.is_some() {
+        if self.rule_sets.is_some() {
+            self.get_rulesets_out_selector()
+        } else if self.tag_routes.is_some() {
             self.get_tag_route_out_selector()
         } else {
             self.get_fixed_out_selector()
         }
     }
+
+    fn get_rulesets_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
+        let s = RuleSetOutSelector {
+            outbounds_rules_vec: self.rule_sets.clone().expect("has rule_sets"),
+            outbounds_map: self.outbounds.clone(),
+            default: self.default_outbound.clone().expect("has default_outbound"),
+        };
+
+        Arc::new(Box::new(s))
+    }
+
     fn get_tag_route_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
-        let t = TagOutSelector {
+        let s = TagOutSelector {
             outbounds_tag_route_map: self.tag_routes.clone().expect("has tag_routes"),
             outbounds_map: self.outbounds.clone(),
             default: self.default_outbound.clone().expect("has default_outbound"),
         };
 
-        Arc::new(Box::new(t))
+        Arc::new(Box::new(s))
     }
 
     fn get_fixed_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
         let ib = self.default_outbound.clone().expect("has default_outbound");
-        let fixed_selector = FixedOutSelector { default: ib };
+        let s = FixedOutSelector { default: ib };
 
-        Arc::new(Box::new(fixed_selector))
+        Arc::new(Box::new(s))
     }
 
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
