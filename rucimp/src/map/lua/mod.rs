@@ -6,8 +6,10 @@ In order to let lua take full use of rust code, we have to wrap everything for l
 
 use std::future::Future;
 use std::io;
+use std::os::raw::c_void;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::task::Context;
 use std::task::Poll;
 
 use async_trait::async_trait;
@@ -30,6 +32,7 @@ use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
+use tokio::io::ReadBuf;
 
 /// 被用于 infinite.rs 中 给 lua 添加 Create_out_map 和 Create_in_map 函数.
 #[derive(Clone)]
@@ -105,10 +108,7 @@ impl UserData for WritePollResult {
 
         methods.add_async_method_mut("is_err", |_, this, ()| async move {
             Ok(match &this.0 {
-                Poll::Ready(r) => match r {
-                    Ok(_) => false,
-                    Err(_) => true,
-                },
+                Poll::Ready(r) => r.is_err(),
                 Poll::Pending => false,
             })
         });
@@ -137,6 +137,84 @@ impl UserData for EmptyPollResult {
                 Poll::Ready(r) => r.is_err(),
                 Poll::Pending => false,
             })
+        });
+    }
+}
+
+pub struct ReadBufWrapper {
+    pub real_buf: Option<BytesMut>,
+    pub ptr: LuaLightUserData,
+}
+
+impl ReadBufWrapper {
+    pub fn new(n: usize) -> Self {
+        let mut bs = BytesMut::zeroed(n);
+        let rb = Box::new(ReadBuf::new(&mut bs));
+
+        let raw_ptr: *mut c_void = Box::into_raw(rb) as *mut c_void;
+
+        ReadBufWrapper {
+            real_buf: Some(bs),
+            ptr: LuaLightUserData(raw_ptr),
+        }
+    }
+
+    pub fn release(&mut self) {
+        let buf_void = self.ptr.0;
+        assert!(!buf_void.is_null());
+
+        let rb = buf_void as *mut ReadBuf<'_>;
+
+        unsafe {
+            let _ = Box::from_raw(rb);
+        };
+        self.real_buf = None;
+        self.ptr = LuaLightUserData(std::ptr::null_mut())
+    }
+}
+
+impl UserData for ReadBufWrapper {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method_mut("drop", |_lua, this, ()| {
+            this.release();
+            Ok(())
+        });
+
+        methods.add_method_mut("remaining", |_, this, ()| {
+            let void = this.ptr.0;
+            assert!(!void.is_null());
+
+            let rb = unsafe { &mut *(void as *mut ReadBuf<'_>) };
+
+            Ok(rb.remaining())
+        });
+
+        methods.add_method_mut("filled_len", |_, this, ()| {
+            let void = this.ptr.0;
+            assert!(!void.is_null());
+
+            let rb = unsafe { &mut *(void as *mut ReadBuf<'_>) };
+
+            Ok(rb.filled().len())
+        });
+
+        methods.add_method_mut("filled_content", |lua, this, n: usize| {
+            let void = this.ptr.0;
+            assert!(!void.is_null());
+
+            let rb = unsafe { &mut *(void as *mut ReadBuf<'_>) };
+
+            lua.create_string(&rb.filled()[..n])
+        });
+
+        methods.add_method_mut("put_slice", |_lua, this, data: mlua::BString| {
+            let buf_void = this.ptr.0;
+            assert!(!buf_void.is_null());
+
+            let rb = unsafe { &mut *(buf_void as *mut ReadBuf<'_>) };
+
+            rb.put_slice(data.as_slice());
+            Ok(())
         });
     }
 }
@@ -178,20 +256,11 @@ impl UserData for RustConn {
             Ok(())
         });
 
-        methods.add_function("get_read_buf_filled_len", |_, rb_ll: LuaLightUserData| {
-            let buf_void = rb_ll.0;
-            assert!(!buf_void.is_null());
-
-            let rb = unsafe { &mut *(buf_void as *mut tokio::io::ReadBuf<'_>) };
-
-            Ok(rb.filled().len())
-        });
-
         methods.add_method_mut("poll_flush", |_, this, cx_ll: LuaLightUserData| {
             let void = cx_ll.0;
             assert!(!void.is_null());
 
-            let cx = unsafe { &mut *(void as *mut std::task::Context<'_>) };
+            let cx = unsafe { &mut *(void as *mut Context<'_>) };
 
             let x = this.conn.as_mut().poll_flush(cx);
             Ok(EmptyPollResult(x))
@@ -201,7 +270,7 @@ impl UserData for RustConn {
             let void = cx_ll.0;
             assert!(!void.is_null());
 
-            let cx = unsafe { &mut *(void as *mut std::task::Context<'_>) };
+            let cx = unsafe { &mut *(void as *mut Context<'_>) };
 
             let x = this.conn.as_mut().poll_shutdown(cx);
             Ok(EmptyPollResult(x))
@@ -213,7 +282,7 @@ impl UserData for RustConn {
                 let cx_void = params.0 .0;
                 assert!(!cx_void.is_null());
 
-                let cx = unsafe { &mut *(cx_void as *mut std::task::Context<'_>) };
+                let cx = unsafe { &mut *(cx_void as *mut Context<'_>) };
 
                 let x = this.conn.as_mut().poll_write(cx, &params.1);
                 Ok(WritePollResult(x))
@@ -228,9 +297,9 @@ impl UserData for RustConn {
                 assert!(!cx_void.is_null());
                 assert!(!buf_void.is_null());
 
-                let cx = unsafe { &mut *(cx_void as *mut std::task::Context<'_>) };
+                let cx = unsafe { &mut *(cx_void as *mut Context<'_>) };
 
-                let rb = unsafe { &mut *(buf_void as *mut tokio::io::ReadBuf<'_>) };
+                let rb = unsafe { &mut *(buf_void as *mut ReadBuf<'_>) };
 
                 // debug!("reading...");
                 let r = this.conn.as_mut().poll_read(cx, rb);
@@ -253,18 +322,18 @@ pub struct LuaConn {
 
 impl AsyncRead for LuaConn {
     fn poll_read(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-        buf: &mut tokio::io::ReadBuf<'_>,
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
     ) -> Poll<std::io::Result<()>> {
         let read_f = &self.read_f;
 
-        let raw_ptr1 = cx as *mut std::task::Context<'_> as *mut std::os::raw::c_void;
+        let raw_ptr1 = cx as *mut Context<'_> as *mut c_void;
 
-        let raw_ptr2 = buf as *mut tokio::io::ReadBuf<'_> as *mut std::os::raw::c_void;
+        let raw_ptr2 = buf as *mut ReadBuf<'_> as *mut c_void;
 
         let x = read_f
-            .call::<i64>((LuaLightUserData(raw_ptr2), LuaLightUserData(raw_ptr1)))
+            .call::<i64>((LuaLightUserData(raw_ptr1), LuaLightUserData(raw_ptr2)))
             .unwrap();
 
         match x {
@@ -277,16 +346,16 @@ impl AsyncRead for LuaConn {
 
 impl AsyncWrite for LuaConn {
     fn poll_write(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, std::io::Error>> {
         let wf = &self.write_f;
 
-        let raw_ptr = cx as *mut std::task::Context<'_> as *mut std::os::raw::c_void;
+        let raw_ptr = cx as *mut Context<'_> as *mut c_void;
 
         let x = wf
-            .call::<i64>((BString::from(buf), LuaLightUserData(raw_ptr)))
+            .call::<i64>((LuaLightUserData(raw_ptr), BString::from(buf)))
             .unwrap();
 
         match x {
@@ -296,13 +365,10 @@ impl AsyncWrite for LuaConn {
         }
     }
 
-    fn poll_flush(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Result<(), std::io::Error>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), std::io::Error>> {
         let ff = &self.flush_f;
 
-        let raw_ptr = cx as *mut std::task::Context<'_> as *mut std::os::raw::c_void;
+        let raw_ptr = cx as *mut Context<'_> as *mut c_void;
 
         let f = ff.call_async(LuaLightUserData(raw_ptr));
 
@@ -322,13 +388,13 @@ impl AsyncWrite for LuaConn {
     }
 
     fn poll_shutdown(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), std::io::Error>> {
         // debug!("shutdown called");
         let close_f = &self.close_f;
 
-        let raw_ptr = cx as *mut std::task::Context<'_> as *mut std::os::raw::c_void;
+        let raw_ptr = cx as *mut Context<'_> as *mut c_void;
 
         let f = close_f.call_async(LuaLightUserData(raw_ptr));
 
@@ -378,6 +444,23 @@ impl Map for LuaMap {
             .unwrap();
         let handshake_f: LuaFunction = lua.globals().get(self.handshake_f_key.as_str()).unwrap();
 
+        let f = lua
+            .create_function(|_, n: usize| Ok(ReadBufWrapper::new(n)))
+            .unwrap();
+        lua.globals().set("Create_read_buf", f).unwrap();
+
+        let f = lua
+            .create_function(|_, rb: LuaLightUserData| {
+                let rbw = ReadBufWrapper {
+                    real_buf: None,
+                    ptr: rb,
+                };
+
+                Ok(rbw)
+            })
+            .unwrap();
+        lua.globals().set("Wrap_read_buf", f).unwrap();
+
         match params.c {
             Stream::Conn(c) => {
                 let a = match params.a {
@@ -392,7 +475,7 @@ impl Map for LuaMap {
                     None => BytesMutWrapper(BytesMut::new(), true),
                 };
 
-                let cid_v = lua.to_value(&cid).ok().unwrap();
+                let cid_v = cid.to_string();
 
                 let bi: usize = behavior.into(); // 将 behavior enum 传成数字
 

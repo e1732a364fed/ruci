@@ -1,3 +1,5 @@
+local inspect = require("inspect")
+
 function Handshake1(cid, behavior, addr, firstbuff, conn)
     -- print("lua Handshake1 called")
     return conn, addr, firstbuff
@@ -12,32 +14,56 @@ function Handshake2(cid, behavior, addr, firstbuff, conn)
 
     Behavior = behavior
 
+    -- 下面演示创建一个 read_buf 并向其中写内容
+
+    local b = Create_read_buf(10)
+    local fl = b:filled_len()
+    print("fl", fl)
+    b:put_slice("00123")
+    fl = b:filled_len()
+    print("fl", fl)
+    local s = b:filled_content(fl)
+    print("written head ", inspect(s))
+    b:drop() --调用完 Create_read_buf 后，需要 调用 drop 来释放内存
+
     return { Read2, Write2, Close2, Flush2 }, addr, firstbuff
 end
 
-function Read2(buf, cx)
+function Read2(cx, buf)
     -- print("lua read2 called")
-    local x = TheConn:poll_read(cx, buf)
+    local result = TheConn:poll_read(cx, buf)
 
-    if x:is_pending() then
+    if result:is_pending() then
         return -1
-    elseif x:is_err() then
+    elseif result:is_err() then
         return -2
     else
+        local rb = Wrap_read_buf(buf) -- 用 Wrap_read_buf 将 buf 转为 lua 可调用的 版本 (未转时仅能作 poll_read 的参数)
+
+        local n = rb:filled_len()
+        print("lua read2 got", n, Cid)
+
+        if n > 10 then
+            n = 10
+        end
+
+        local s = rb:filled_content(n)
+        print("read head ", inspect(s:sub(1, 1))) --获取第一个字节的值 并打印出来
+
         return 0
     end
 end
 
-function Write2(str, cx)
+function Write2(cx, str)
     -- print("lua write2 called", str:len())
-    local x = TheConn:poll_write(cx, str)
+    local result = TheConn:poll_write(cx, str)
 
-    if x:is_pending() then
+    if result:is_pending() then
         return -1
-    elseif x:is_err() then
+    elseif result:is_err() then
         return -2
     else
-        local n = x:get_n()
+        local n = result:get_n()
         -- print("lua write2 finish", n)
 
         return n
@@ -46,11 +72,11 @@ end
 
 function Close2(cx)
     -- print("close2 called")
-    local x = TheConn:poll_close(cx)
+    local result = TheConn:poll_close(cx)
 
-    if x:is_pending() then
+    if result:is_pending() then
         return -1
-    elseif x:is_err() then
+    elseif result:is_err() then
         return -2
     else
         return 0
@@ -60,11 +86,11 @@ end
 function Flush2(cx)
     -- print("flush2 called")
 
-    local x = TheConn:poll_flush(cx)
+    local result = TheConn:poll_flush(cx)
 
-    if x:is_pending() then
+    if result:is_pending() then
         return -1
-    elseif x:is_err() then
+    elseif result:is_err() then
         return -2
     else
         return 0
