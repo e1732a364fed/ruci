@@ -514,7 +514,10 @@ pub async fn accumulate_from_start(
 ///
 /// 将每一条子连接的accumulate 结果 用 tx 发送出去;
 ///
-/// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
+/// 如果子连接又是一个 Stream::Generator, 则不会继续调用 自己 进行递归
+/// 因为 会报错 cycle detected when computing type;
+///
+/// 这里只能返回给调用者去处理
 pub async fn in_iter_accumulate_forever(
     cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
@@ -566,24 +569,6 @@ pub async fn in_iter_accumulate_forever(
 
         tokio::spawn(async move {
             let r = accumulate(cid, ProxyBehavior::DECODE, MapResult::s(stream), mc).await;
-            if r.e.is_none() {
-                if let Stream::Generator(_s_rx) = r.c {
-                    //todo: solve
-                    // cycle detected when computing type of opaque `map::in_iter_accumulate_forever::{opaque#0}`
-
-                    // let cid = r.id.unwrap();
-
-                    // tokio::spawn(in_iter_accumulate_forever::<IterMapperBoxRef>(
-                    //     cid,
-                    //     s_rx,
-                    //     txc,
-                    //     r.left_mappers_iter,
-                    //     oti,
-                    // ));
-
-                    return;
-                }
-            }
             let _ = txc.send(r).await;
         });
     }
