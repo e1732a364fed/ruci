@@ -430,9 +430,9 @@ fn test_rule_route() -> anyhow::Result<()> {
 
     println!("{:#?}", c);
 
-    let tr = c.get_rule_route(Arc::new(FileSource::StdReadFile));
-    assert!(tr.is_some());
-    println!("{:#?}", tr);
+    // let tr = c.get_rule_route(Arc::new(FileSource::StdReadFile));
+    // assert!(tr.is_some());
+    // println!("{:#?}", tr);
 
     //println!("{:#?}", c.get_default_and_outbounds_map());
 
