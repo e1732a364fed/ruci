@@ -41,8 +41,8 @@ jobs:
       - name: Install Openssl
         run: |
           sudo apt-get update
-          sudo dpkg --add-architecture aarch64
-          sudo apt-get update && sudo apt-get install --assume-yes libssl-dev:aarch64
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update && sudo apt-get install --assume-yes libssl-dev:arm64
 
       - name: Build ${{ matrix.target }}
         run: |
