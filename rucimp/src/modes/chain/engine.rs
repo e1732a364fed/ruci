@@ -75,6 +75,9 @@ impl Engine {
     #[cfg(feature = "lua")]
     pub fn init_lua(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
+
+        debug!("trying init_lua");
+
         let r = lua::try_load_finite_dynamic(&config_string);
         match r {
             Ok(_) => self.init_lua_finite_dynamic(config_string),
@@ -86,6 +89,7 @@ impl Engine {
     pub fn init_lua_static(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::lua;
         use anyhow::Context;
+        debug!("trying init_lua_static");
 
         let sc = lua::load_static(&config_string).context("init_lua_static failed")?;
         Ok(self.init_static(sc))
@@ -94,6 +98,8 @@ impl Engine {
     #[cfg(feature = "lua")]
     pub fn init_lua_finite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
         use anyhow::Context;
+
+        debug!("trying init_lua_finite_dynamic");
 
         use crate::modes::chain::config::lua;
         let (sc, ibs, default_o, ods) =

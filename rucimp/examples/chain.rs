@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
 
     // se.init_static(sc);
 
-    se.init_lua_finite_dynamic(contents)?;
+    se.init_lua(contents)?;
 
     let conn_info_record_file = OpenOptions::new()
         .append(true)

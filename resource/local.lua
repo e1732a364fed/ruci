@@ -314,7 +314,7 @@ end
 -- 下面两个selector 示例都是 最简单的示例, 使得动态链的行为和静态链相同
 
 dyn_inbound_next_selector = function(this_index, ovov)
-    print("ovov:is_some()",ovov:is_some())
+    --print("ovov:is_some()",ovov:is_some())
 
     if ovov:is_some() then
         -- print("ovov:len()",ovov:len())
