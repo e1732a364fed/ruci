@@ -25,8 +25,7 @@ use rucimp::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
 use rucimp::suit::config::{Config, LDConfig};
-use rucimp::suit::engine::relay::listen_ser;
-use rucimp::suit::engine::SuitEngine;
+use rucimp::suit::engine2::{listen_ser2, SuitEngine};
 use rucimp::suit::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -348,12 +347,13 @@ async fn lisen_ser() -> std::io::Result<(
 
     let (tx, rx) = oneshot::channel();
 
-    let alsuitc = Box::leak(Box::new(lsuit));
+    let alsuitc: Arc<Box<dyn Suit>> = Arc::new(Box::new(lsuit));
+    let alsuitcc = alsuitc.clone();
 
     let listen_future = async {
         info!("try start listen");
 
-        let r = listen_ser(alsuitc, Box::leak(Box::new(csuit)), Some(arc_ti), rx).await;
+        let r = listen_ser2(alsuitc, Arc::new(Box::new(csuit)), Some(arc_ti), rx).await;
 
         info!("r {:?}", r);
     };
@@ -361,7 +361,7 @@ async fn lisen_ser() -> std::io::Result<(
         listen_future,
         tx,
         arc_tic,
-        alsuitc.get_config().unwrap().clone(),
+        alsuitcc.get_config().unwrap().clone(),
     ))
 }
 
@@ -519,9 +519,9 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
     let listen_future = async {
         info!("try start listen, {}", wn);
 
-        let r = listen_ser(
-            Box::leak(Box::new(lsuit)),
-            Box::leak(Box::new(csuit)),
+        let r = listen_ser2(
+            Arc::new(Box::new(lsuit)),
+            Arc::new(Box::new(csuit)),
             None,
             rx,
         )
@@ -663,11 +663,12 @@ async fn suit_engine_socks5_direct_and_request_block_or_non_block(
     let c: Config = get_config();
     let cc = c.clone();
 
-    let mut se = SuitEngine::new(
+    let mut se = SuitEngine::new();
+    se.load_config(
+        c,
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-    se.load_config(c);
 
     let listen_future = async {
         if even {
@@ -733,11 +734,12 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
     let c: Config = get_nl_config(3);
     let cc = c.clone();
 
-    let mut se = SuitEngine::new(
+    let mut se = SuitEngine::new();
+    se.load_config(
+        c,
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-    se.load_config(c);
 
     let listen_future = async {
         if even {

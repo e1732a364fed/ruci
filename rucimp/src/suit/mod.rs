@@ -7,11 +7,6 @@
 pub mod config;
 
 /// uses self-defined relay procedure, which is similar to what's in verysimple project.
-pub mod engine;
-
-/// mock of engine, but relay procedure is listen_ser2 -> listen_tcp2
-///   -> ruci::relay::handle_conn_clonable
-///
 pub mod engine2;
 
 #[cfg(test)]

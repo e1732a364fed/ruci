@@ -119,14 +119,15 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
     let (ws, port) = get_lconfig_str();
     let c: Config = toml::from_str(&ws).unwrap();
 
-    let se = rucimp::suit::engine::SuitEngine::new(
-        load_in_mappers_by_str_and_ldconfig,
-        load_out_mappers_by_str_and_ldconfig,
-    );
+    let se = rucimp::suit::engine2::SuitEngine::new();
     let se = Arc::new(Mutex::new(Box::new(se)));
     let sec = se.clone();
 
-    se.lock().load_config(c);
+    se.lock().load_config(
+        c,
+        load_in_mappers_by_str_and_ldconfig,
+        load_out_mappers_by_str_and_ldconfig,
+    );
 
     let se = &se;
     //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future
