@@ -38,6 +38,7 @@ where
 pub fn create_fd_device(fd: std::os::raw::c_int) -> anyhow::Result<Box<AsyncDevice>> {
     let mut cfg = tun::Configuration::default();
     cfg.raw_fd(fd);
+    #[cfg(unix)]
     cfg.close_fd_on_drop(false);
     #[cfg(target_os = "ios")]
     cfg.platform_config(|p_cfg| {
