@@ -1,5 +1,5 @@
 /*!
-Tproxy related Map. Tproxy is shortcut for transparent proxy,
+Tproxy related Maps. Tproxy is shortcut for transparent proxy,
 
 Only support linux
  */
@@ -134,78 +134,74 @@ impl Name for UDPListener {
 }
 
 impl UDPListener {
-    pub async fn listen(
+    pub async fn start_listen(
         &self,
         cid: CID,
         listen_a: &net::Addr,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> anyhow::Result<MapResult> {
-        let r = match listen_a.network {
-            Network::UDP => {
-                use anyhow::Context;
+        match listen_a.network {
+            Network::UDP => {}
+            _ => anyhow::bail!(
+                "tproxy_udp_listener need dial udp, got {}",
+                listen_a.network
+            ),
+        }
 
-                rlimit::prlimit(
-                    std::process::id().try_into().unwrap(),
-                    rlimit::Resource::NOFILE,
-                    Some((1024000, 1024000)),
-                    None,
-                )
-                .context("run rlimit::prlimit failed")?;
+        use anyhow::Context;
 
-                let mut listener = udp::Listener::new(listen_a.clone(), self.sopt.clone()).await?;
+        rlimit::prlimit(
+            std::process::id().try_into().unwrap(),
+            rlimit::Resource::NOFILE,
+            Some((1024000, 1024000)),
+            None,
+        )
+        .context("run rlimit::prlimit failed")?;
 
-                let (tx, rx) = mpsc::channel(100);
+        let mut listener = udp::Listener::new(listen_a.clone(), self.sopt.clone()).await?;
 
-                tokio::spawn(async move {
-                    let mut count = 0;
+        let (tx, rx) = mpsc::channel(100);
 
-                    loop {
-                        tokio::select! {
-                            _ = &mut shutdown_rx=>{
-                                debug!("tproxy udp listener got shutdown_rx");
-                                listener.shutdown();
-                                break
-                            }
-                            r = listener.accept()=>{
-                                match r {
-                                    Ok(accept_data) => {
-                                        count +=1;
+        tokio::spawn(async move {
+            let mut count = 0;
 
-                                        let mut cidc = cid.clone();
-                                        cidc.push_num(count);
+            loop {
+                tokio::select! {
+                    _ = &mut shutdown_rx=>{
+                        debug!("tproxy udp listener got shutdown_rx");
+                        listener.shutdown();
+                        break
+                    }
+                    r = listener.accept()=>{
+                        match r {
+                            Ok(accept_data) => {
+                                count +=1;
 
-                                        let mr = MapResult::new_u(accept_data.ac)
-                                            .a(Some(accept_data.dst.clone()))
-                                            .b(Some(accept_data.first_buf))
-                                            .d(Some(Box::new(map::data::RLAddr(accept_data.dst, accept_data.src))))
-                                            .new_id(cidc)
-                                            .build();
-                                        let r = tx.send(mr).await;
-                                        if let Err(e) = r {
-                                            debug!("tproxy udp listener accept tx.send got e: {e}");
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        debug!("tproxy udp listener accept got e: {e}");
-                                        break},
+                                let mut cidc = cid.clone();
+                                cidc.push_num(count);
+
+                                let mr = MapResult::new_u(accept_data.ac)
+                                    .a(Some(accept_data.dst.clone()))
+                                    .b(Some(accept_data.first_buf))
+                                    .d(Some(Box::new(map::data::RLAddr(accept_data.dst, accept_data.src))))
+                                    .new_id(cidc)
+                                    .build();
+                                let r = tx.send(mr).await;
+                                if let Err(e) = r {
+                                    debug!("tproxy udp listener accept tx.send got e: {e}");
+                                    break;
                                 }
                             }
-                        } //select
-                    } //loop
-                }); //spawn
+                            Err(e) => {
+                                debug!("tproxy udp listener accept got e: {e}");
+                                break},
+                        }
+                    }
+                } //select
+            } //loop
+        }); //spawn
 
-                rx
-            }
-            _ => {
-                anyhow::bail!(
-                    "tproxy_udp_listener need dial udp, got {}",
-                    listen_a.network
-                );
-            }
-        };
-
-        let s = Stream::Generator(r);
+        let s = Stream::Generator(rx);
         Ok(MapResult::builder().c(s).build())
     }
 }
@@ -216,7 +212,7 @@ impl Map for UDPListener {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::None => {
-                let r = self.listen(cid,&self.listen_addr, params.shutdown_rx.expect("tproxy_udp_listener requires a shutdown_rx to support graceful shutdown")).await;
+                let r = self.start_listen(cid,&self.listen_addr, params.shutdown_rx.expect("tproxy_udp_listener requires a shutdown_rx to support graceful shutdown")).await;
                 match r {
                     Ok(r) => r,
                     Err(e) => MapResult::from_e(e),

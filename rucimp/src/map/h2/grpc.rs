@@ -245,10 +245,7 @@ impl AsyncRead for Stream {
                         .recv
                         .flow_control()
                         .release_capacity(data.len())
-                        .map_or_else(
-                            |e| Err(Error::new(ErrorKind::ConnectionReset, e)),
-                            |_| Ok(()),
-                        );
+                        .map_err(|e| Error::new(ErrorKind::ConnectionReset, e));
                     if let Err(e) = r {
                         return Poll::Ready(Err(e));
                     }
@@ -321,7 +318,7 @@ impl AsyncWrite for Stream {
                 let r = self
                     .send
                     .send_data(Bytes::new(), true)
-                    .map_or_else(|e| Err(Error::new(ErrorKind::BrokenPipe, e)), |_| Ok(()));
+                    .map_err(|e| Error::new(ErrorKind::BrokenPipe, e));
 
                 if let Some(tx) = self.shutdown_tx.take() {
                     debug!("grpc sending shutdown_tx ");

@@ -79,10 +79,7 @@ impl AsyncRead for H2Stream {
                 self.recv
                     .flow_control()
                     .release_capacity(r_len)
-                    .map_or_else(
-                        |e| Err(Error::new(ErrorKind::ConnectionReset, e)),
-                        |_| Ok(()),
-                    )
+                    .map_err(|e| Error::new(ErrorKind::ConnectionReset, e))
             }
             // no more data frames
             // maybe trailer
@@ -129,7 +126,7 @@ impl AsyncWrite for H2Stream {
                 let r = self
                     .send
                     .send_data(Bytes::new(), true)
-                    .map_or_else(|e| Err(Error::new(ErrorKind::BrokenPipe, e)), |_| Ok(()));
+                    .map_err(|e| Error::new(ErrorKind::BrokenPipe, e));
 
                 if let Some(tx) = self.shutdown_tx.take() {
                     debug!("h2 sending shutdown_tx ");

@@ -43,7 +43,7 @@ impl Server {
             ext_fields: Some(MapExtFields::default()),
         }
     }
-    async fn handshake(&self, cid: CID) -> anyhow::Result<map::MapResult> {
+    async fn start_listen(&self, cid: CID) -> anyhow::Result<map::MapResult> {
         let server_config = rustls21::sc(rustls21::ServerOptions {
             alpn: self.alpn.clone(),
             cert_path: self.tls_cert_path.clone(),
@@ -119,7 +119,7 @@ impl Map for Server {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let conn = params.c;
         if let Stream::None = conn {
-            let r = self.handshake(cid).await;
+            let r = self.start_listen(cid).await;
             match r {
                 anyhow::Result::Ok(r) => r,
                 Err(e) => MapResult::from_e(e.context("quic_server maps failed")),

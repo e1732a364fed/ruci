@@ -115,6 +115,9 @@ local dial = {
 }
 
 --[[
+-- 在本示例中 tproxy 是单机自连测试, 因此没有用到 OptDialer
+-- 在实际使用中, 如果是dial 一个真实的远程服务器, 需要用 OptDialer
+加 so_mark 和 bind_to_device
 
 local opt_dial = {
     OptDialer = {

@@ -43,7 +43,7 @@ impl Server {
             ext_fields: Some(MapExtFields::default()),
         }
     }
-    async fn handshake(&self, cid: CID) -> anyhow::Result<map::MapResult> {
+    async fn start_listen(&self, cid: CID) -> anyhow::Result<map::MapResult> {
         //builder() use default, default will use h3 as alpn
         let mut tls = s2n_quic_rustls::Server::builder().with_certificate(
             Path::new(self.tls_cert_path.as_str()),
@@ -113,7 +113,7 @@ impl Map for Server {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let conn = params.c;
         if let Stream::None = conn {
-            let r = self.handshake(cid).await;
+            let r = self.start_listen(cid).await;
             match r {
                 anyhow::Result::Ok(r) => r,
                 Err(e) => MapResult::from_e(e.context("quic_server maps failed")),

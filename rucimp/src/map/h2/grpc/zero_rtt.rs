@@ -1,3 +1,10 @@
+/*!
+这里说的 0rtt 是指在 h2 握手后, 客户端发送 "建立子连接请求" 后, 无须等待服务端
+的回复确认包 而直接发送 子连接初始数据的 做法.
+
+也可以叫 early data
+ */
+
 use futures_lite::FutureExt;
 use h2::client::ResponseFuture;
 
@@ -112,10 +119,7 @@ impl AsyncRead for Stream {
                         .unwrap()
                         .flow_control()
                         .release_capacity(data.len())
-                        .map_or_else(
-                            |e| Err(Error::new(ErrorKind::ConnectionReset, e)),
-                            |_| Ok(()),
-                        );
+                        .map_err(|e| Error::new(ErrorKind::ConnectionReset, e));
                     if let Err(e) = r {
                         return Poll::Ready(Err(e));
                     }
@@ -177,7 +181,7 @@ impl AsyncWrite for Stream {
                 let r = self
                     .send
                     .send_data(Bytes::new(), true)
-                    .map_or_else(|e| Err(Error::new(ErrorKind::BrokenPipe, e)), |_| Ok(()));
+                    .map_err(|e| Error::new(ErrorKind::BrokenPipe, e));
 
                 if let Some(tx) = self.shutdown_tx.take() {
                     debug!("grpc sending shutdown_tx ");

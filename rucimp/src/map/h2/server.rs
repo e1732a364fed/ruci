@@ -36,7 +36,7 @@ impl Server {
             ..Default::default()
         }
     }
-    async fn handshake(
+    async fn start_listen(
         &self,
         cid: net::CID,
         mut conn: net::Conn,
@@ -190,7 +190,7 @@ impl Map for Server {
     ) -> map::MapResult {
         let conn = params.c;
         if let net::Stream::Conn(conn) = conn {
-            let r = self.handshake(cid, conn, params.b).await;
+            let r = self.start_listen(cid, conn, params.b).await;
             match r {
                 anyhow::Result::Ok(r) => r,
                 Err(e) => MapResult::from_e(e.context("h2_server handshake failed")),

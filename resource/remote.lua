@@ -157,6 +157,8 @@ Config = {
         -- 对应 local.lua 使用 tproxy 的 outbound 配置
         -- 如果 用 tproxy 时 direct 不用 opt_direct 设置 somark, 将造成无限回环, 无法联网
 
+        -- 不过这是 本示例中 单机自连的做法. 如果实现 remote.lua 部署在远程服务器上, 是不需要 OptDirect 的
+
         outbounds = {{
             tag = "dial1",
             chain = opt_direct_chain

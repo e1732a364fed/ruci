@@ -8,10 +8,12 @@ pub fn rem_first(value: &str) -> &str {
     chars.as_str()
 }
 
+/// generate an io::ErrorKind::Other
 pub fn io_error<T: std::fmt::Display>(message: T) -> io::Error {
     io::Error::new(io::ErrorKind::Other, format!("{}", message))
 }
 
+/// generate an io::ErrorKind::Other
 pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
     message: T,
     message2: T2,
