@@ -2,9 +2,9 @@
  * 集成测试 socks5 -> direct 的情况, 采用了随机端口，以百度为目标网页
 测试了 earlydata 的情况
 测试了 同时监听三个端口 的情况
-测试了 不监视流量 的情况 （no_transmission_info)
+测试了 不监视流量 的情况  (no_transmission_info)
 测试了 监视实际流量的情况 (counter)
-测试了 直接调用 rucimp::listen_ser 和 用 rucimp::SuitEngine 的情况
+测试了 直接调用 rucimp::suit::engine::relay::listen_ser 和 用 rucimp::suit::engine::SuitEngine 的情况
 测试了 SuitEngine 的 block_run 和 run 两种情况
 测试了 同时发起两个请求的情况 (异步)
 测试了 发起长时间挂起的请求的情况 （非法）
