@@ -4,6 +4,7 @@ Defines the engine to run the chain config.
 
 #[cfg(feature = "route")]
 use crate::route::{RuleSet, RuleSetOutSelector};
+use crate::utils::FileSource;
 
 use super::config::StaticConfig;
 use anyhow;
@@ -41,6 +42,8 @@ pub struct Engine {
 
     #[cfg(feature = "trace")]
     pub conn_info_updater: net::OptUpdater,
+
+    pub file_source: FileSource,
 
     inbounds: Vec<DMIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, DMIterBox>>, //不为空
@@ -83,6 +86,7 @@ impl Engine {
             self.default_outbound = None;
             self.tag_routes = None;
             self.gtr = Arc::<GlobalTrafficRecorder>::default();
+            self.file_source = FileSource::default();
             info!("Engine reset successful");
         } else {
             warn!("Engine is running, can't be reset. Should call stop before reset.");
@@ -95,7 +99,7 @@ impl Engine {
 
         #[cfg(feature = "route")]
         {
-            self.rule_sets = sc.get_rule_route();
+            self.rule_sets = sc.get_rule_route(&self.file_source);
         }
     }
 
@@ -106,8 +110,8 @@ impl Engine {
             .map(|v| {
                 let inbound: Vec<_> = v.into_iter().map(Arc::new).collect();
 
-                let x: DMIterBox = Box::new(DynVecIterWrapper(inbound.into_iter()));
-                x
+                let dbox: DMIterBox = Box::new(DynVecIterWrapper(inbound.into_iter()));
+                dbox
             })
             .collect();
 

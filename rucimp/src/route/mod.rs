@@ -312,8 +312,6 @@ mod test {
 
     use ruci::map::{fold::DynVecIterWrapper, math::Adder, MapBox};
 
-    use crate::COMMON_DIRS;
-
     use super::*;
 
     #[test]
@@ -367,7 +365,7 @@ mod test {
     #[cfg(feature = "geoip")]
     fn rs_country() -> anyhow::Result<()> {
         let mut rs = RuleSet::default();
-        let mr = maxmind::open_mmdb("Country.mmdb", &COMMON_DIRS)?;
+        let mr = maxmind::open_mmdb("Country.mmdb", &crate::utils::FileSource::default())?;
         rs.mmdb_reader = Some(Arc::new(mr));
 
         let mut ip_countries = HashSet::new();
