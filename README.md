@@ -147,6 +147,7 @@ o2node-.->collector
 - [x] 日志 （env_logger)
 - [x] 流量记录 (两种实现，分别用于记录原始流量与实际流量)
 - [x] tls,socks5,trojan
+- [ ] http proxy
 - [x] adder (按字节加法器), counter (层流量计)
 - [x] suit配置格式 （即旧 verysimple 的 toml 配置）
 - [x] 链式配置格式 (新增)

@@ -139,7 +139,7 @@ impl ToMapper for InMapperConfig {
         match self {
             InMapperConfig::Listener(lis) => match lis {
                 Listener::TcpListener(tcp_l_str) => {
-                    let a = net::Addr::from_ip_addr_str("tcp", tcp_l_str.to_string()).unwrap();
+                    let a = net::Addr::from_ip_addr_str("tcp", tcp_l_str).unwrap();
                     Box::new(ruci::map::network::TcpStreamGenerator { addr: Some(a) })
                 }
                 Listener::UnixListener(_) => todo!(),
@@ -184,7 +184,7 @@ impl ToMapper for OutMapperConfig {
             OutMapperConfig::Direct => Box::new(ruci::map::network::Direct),
             OutMapperConfig::Dialer(d) => match d {
                 Dialer::TcpDialer(td_str) => {
-                    let a = net::Addr::from_ip_addr_str("tcp", td_str.to_string()).unwrap();
+                    let a = net::Addr::from_ip_addr_str("tcp", td_str).unwrap();
                     Box::new(ruci::map::network::TcpDialer { addr: Some(a) })
                 }
                 Dialer::UnixDialer(_) => todo!(),

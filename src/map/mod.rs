@@ -26,6 +26,7 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 pub mod counter;
 
+pub mod http;
 /// math 中有一些基本数学运算的 adder
 pub mod math;
 pub mod network;
