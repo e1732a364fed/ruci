@@ -321,9 +321,33 @@ impl<'a> Display for OptAddrRef<'a> {
     }
 }
 
+pub enum Stream {
+    ///  tcp / unix domain socket 等 目标 Addr 唯一的 情况
+    TCP(Conn),
+    UDP(AddrConn),
+    None,
+}
+impl Stream {
+    pub fn try_unwrap_tcp(self) -> io::Result<Conn> {
+        if let Stream::TCP(t) = self {
+            return Ok(t);
+        }
+        Err(io::Error::other("not tcp"))
+    }
+
+    pub fn try_unwrap_udp(self) -> io::Result<AddrConn> {
+        if let Stream::UDP(t) = self {
+            return Ok(t);
+        }
+        Err(io::Error::other("not tcp"))
+    }
+}
+
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 
 use crate::Name;
+
+use self::addr_conn::AddrConn;
 
 /// 用于状态监视和流量统计；可以用 Arc<TransmissionInfo> 进行全局的监视和统计。
 #[derive(Debug, Default)]

@@ -15,7 +15,7 @@ use std::{env::set_var, io, sync::Arc, time::Duration};
 use bytes::{BufMut, BytesMut};
 use futures::{pin_mut, select, FutureExt};
 use log::{info, warn};
-use ruci::map::{self, socks5::*};
+use ruci::map::socks5::*;
 use ruci::map::{socks5, MappersVec};
 use ruci::{map::Mapper, net, user::UserPass};
 use rucimp::suit::config::adapter::{
@@ -155,7 +155,7 @@ async fn f_dial_future_out_adder(
             0,
             ruci::map::ProxyBehavior::ENCODE,
             ruci::map::MapParams {
-                c: map::Stream::TCP(Box::new(cs)),
+                c: ruci::net::Stream::TCP(Box::new(cs)),
                 a: Some(net::Addr::from_strs(
                     "tcp",
                     the_target_name,

@@ -1,4 +1,7 @@
-use crate::{net, Name};
+use crate::{
+    net::{self, Stream},
+    Name,
+};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use std::{io, pin::Pin, task::Poll};

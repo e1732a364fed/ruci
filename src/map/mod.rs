@@ -32,7 +32,7 @@ pub mod trojan;
 #[cfg(test)]
 mod test;
 
-use crate::net::{self, addr_conn::AddrConn};
+use crate::net::{self, addr_conn::AddrConn, Stream};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -113,28 +113,6 @@ pub type OptData = Option<AnyData>;
 pub struct InputData {
     pub calculated_data: OptData, //由上层计算得到的数据
     pub hyperparameter: OptData,  // 超参数, 即不上层计算决定的数据
-}
-
-pub enum Stream {
-    ///  tcp / unix domain socket 等 目标 Addr 唯一的 情况
-    TCP(net::Conn),
-    UDP(AddrConn),
-    None,
-}
-impl Stream {
-    pub fn try_unwrap_tcp(self) -> io::Result<net::Conn> {
-        if let Stream::TCP(t) = self {
-            return Ok(t);
-        }
-        Err(io::Error::other("not tcp"))
-    }
-
-    pub fn try_unwrap_udp(self) -> io::Result<AddrConn> {
-        if let Stream::UDP(t) = self {
-            return Ok(t);
-        }
-        Err(io::Error::other("not tcp"))
-    }
 }
 
 /// map方法的参数

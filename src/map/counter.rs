@@ -14,7 +14,10 @@ use std::{
     task::Poll,
 };
 
-use crate::{net, Name};
+use crate::{
+    net::{self, Stream},
+    Name,
+};
 use async_trait::async_trait;
 use log::{debug, log_enabled};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
