@@ -449,7 +449,10 @@ impl ToMapperBox for OutMapperConfig {
             OutMapperConfig::Adder(i) => i.to_mapper_box(),
             OutMapperConfig::Counter => Box::<counter::Counter>::default(),
             OutMapperConfig::TLS(c) => {
-                let a = tls::client::Client::new(c.host.as_str(), c.insecure.unwrap_or_default());
+                let a = tls::client::Client::new(tls::client::ClientOptions {
+                    domain: c.host.clone(),
+                    is_insecure: c.insecure.unwrap_or_default(),
+                });
                 Box::new(a)
             }
 

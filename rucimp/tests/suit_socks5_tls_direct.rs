@@ -2,7 +2,11 @@ use crate::net::CID;
 use futures::FutureExt;
 use parking_lot::Mutex;
 use ruci::{
-    map::{socks5, tls, MapParams, Mapper},
+    map::{
+        socks5,
+        tls::{self, client::ClientOptions},
+        MapParams, Mapper,
+    },
     net,
     user::PlainText,
 };
@@ -67,7 +71,10 @@ async fn f_dial_future_tls_out_adder(
 
     let mut readbuf = [0u8; 1024];
 
-    let a = tls::client::Client::new("do.main", true);
+    let a = tls::client::Client::new(ClientOptions {
+        domain: "do.main".to_string(),
+        is_insecure: true,
+    });
 
     let cid = CID::default();
 

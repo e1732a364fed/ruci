@@ -70,7 +70,7 @@ impl Server {
     }
 }
 
-pub struct SeverTLSConnDescriber {}
+// pub struct SeverTLSConnDescriber {}
 
 impl Name for Server {
     fn name(&self) -> &'static str {

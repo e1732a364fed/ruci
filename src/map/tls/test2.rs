@@ -11,6 +11,8 @@ use tokio::{
     net::{TcpListener, TcpStream},
 };
 
+use super::client::ClientOptions;
+
 async fn dial_future(
     listen_host_str: &str,
     listen_port: u16,
@@ -20,7 +22,10 @@ async fn dial_future(
         .await
         .expect("dial tcp succeed");
 
-    let a = super::client::Client::new("test.domain", true);
+    let a = super::client::Client::new(ClientOptions {
+        domain: "test.domain".to_string(),
+        is_insecure: true,
+    });
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.
 
     let mut last_result: MapResult = MapResult::c(Box::new(cs));

@@ -80,10 +80,10 @@ pub fn load_out_mappers_by_str_and_ld_config(s: &str, c: LDConfig) -> Option<Map
         }
 
         "tls" => {
-            let a = tls::client::Client::new(
-                c.host.unwrap_or_default().as_str(),
-                c.insecure.unwrap_or_default(),
-            );
+            let a = tls::client::Client::new(tls::client::ClientOptions {
+                domain: c.host.unwrap_or_default(),
+                is_insecure: c.insecure.unwrap_or_default(),
+            });
             Some(Box::new(a))
         }
 

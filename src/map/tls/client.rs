@@ -34,19 +34,25 @@ fn default_cc() -> ClientConfig {
         .with_no_client_auth()
 }
 
+#[derive(Debug, Default)]
+pub struct ClientOptions {
+    pub domain: String,
+    pub is_insecure: bool,
+}
+
 impl Client {
-    pub fn new(domain: &str, is_insecure: bool) -> Self {
+    pub fn new(opt: ClientOptions) -> Self {
         let mut config = default_cc();
 
-        if is_insecure {
+        if opt.is_insecure {
             config
                 .dangerous()
                 .set_certificate_verifier(Arc::new(SuperDanVer {}));
         }
 
         Client {
-            domain: domain.to_string(),
-            is_insecure,
+            domain: opt.domain,
+            is_insecure: opt.is_insecure,
             client_config: Arc::new(config),
             ext_fields: Some(MapperExtFields::default()),
         }
@@ -100,7 +106,7 @@ impl rustls::client::danger::ServerCertVerifier for SuperDanVer {
     }
 }
 
-pub struct ClientTLSConnDescriber {}
+// pub struct ClientTLSConnDescriber {}
 
 impl Client {
     async fn handshake(
@@ -125,7 +131,7 @@ impl Client {
 
         if self.is_tail_of_chain() {
             if let Some(ed) = b {
-                debug!("tls client writing ed, because is_tail_of_chain");
+                //debug!("tls client writing ed, because is_tail_of_chain");
                 bc.write_all(&ed).await?;
                 bc.flush().await?;
             }

@@ -179,10 +179,10 @@ impl Suit for SuitStruct {
                     self.push_mapper(Arc::new(Box::new(a)));
                 }
                 if self.has_tls() {
-                    let a = tls::client::Client::new(
-                        c.host.unwrap_or_default().as_str(),
-                        c.insecure.unwrap_or(false),
-                    );
+                    let a = tls::client::Client::new(tls::client::ClientOptions {
+                        domain: c.host.unwrap_or_default(),
+                        is_insecure: c.insecure.unwrap_or_default(),
+                    });
                     self.push_mapper(Arc::new(Box::new(a)));
                 }
             }
