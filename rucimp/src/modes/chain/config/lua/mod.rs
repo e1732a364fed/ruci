@@ -407,7 +407,10 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                 let r = {
                     let t = mg.thread_map.get(&cid).expect("ok");
                     if let LuaThreadStatus::Resumable = t.status() {
-                        let r = t.resume::<_, (i64, Value)>((this_index, mg.lua.to_value(&data)));
+                        let cidv = mg.lua.to_value(&cid).ok()?;
+
+                        let r =
+                            t.resume::<_, (i64, Value)>((cidv, this_index, mg.lua.to_value(&data)));
 
                         let r = r.ok()?;
                         match r.1 {
@@ -440,7 +443,10 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
                     let r = {
                         let l = &mg.lua;
                         let t = l.create_thread(f.to_ref()).ok()?;
-                        let r = t.resume::<_, (i64, Value)>((this_index, l.to_value(&data)));
+
+                        let cidv = mg.lua.to_value(&cid).ok()?;
+
+                        let r = t.resume::<_, (i64, Value)>((cidv, this_index, l.to_value(&data)));
 
                         let r = r.ok()?;
 
@@ -475,10 +481,11 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
 
         let r = {
             let l = &mg.lua;
+            let cidv = l.to_value(&cid).ok()?;
             let r = l
                 .registry_value::<LuaFunction>(&mg.key)
                 .expect("must get generator from lua")
-                .call::<_, (i64, Value)>((this_index, l.to_value(&data)));
+                .call::<_, (i64, Value)>((cidv, this_index, l.to_value(&data)));
             let r = r.ok()?;
 
             let v = match r.1 {

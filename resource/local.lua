@@ -1,6 +1,8 @@
 print("this is a lua config file")
 
+
 -- lua 的好处有很多，你可以定义很多变量
+-- 真正的配置块是 config 变量，可以用搜索快速找到它
 
 listen = {
     Listener = "0.0.0.0:10800"
@@ -335,6 +337,8 @@ end
 -- generator, generator 根据参数内容来动态生成 [Mapper], 如果不想
 -- 重复生成以前生成过的Mapper, 则可以返回一个已存在的索引
 
+local inspect = require("inspect")
+
 infinite = {
 
     -- 下面这个演示 与第一个普通示例 形式上等价
@@ -342,14 +346,15 @@ infinite = {
     inbounds = {{
         tag = "listen1",
 
-        generator = function(this_index, data)
+        generator = function(cid, this_index, data)
             if this_index == -1 then
                 return 0, {
                     stream_generator = {
                         Listener = "0.0.0.0:10800"
                     },
-                    new_thread_fn = function(this_index, data)
-                        local newi, new_data = coroutine.yield(1, {
+                    new_thread_fn = function(cid, this_index, data)
+                        --print("lua: cid",inspect(cid))
+                        local new_cid, newi, new_data = coroutine.yield(1, {
                             Socks5 = {}
                         })
                         return -1, {}
@@ -361,7 +366,7 @@ infinite = {
 
     outbounds = {{
         tag = "dial1",
-        generator = function(this_index, data)
+        generator = function(cid, this_index, data)
             if this_index == -1 then
                 return 0, "Direct"
             else

@@ -4,7 +4,7 @@ use ruci::map;
 use ruci::user::PlainText;
 //https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua
 
-pub const INSPECT: &str = include_str!("inspect.lua");
+pub const INSPECT: &str = include_str!("../../../../../../resource/inspect.lua");
 
 #[test]
 fn testin() -> mlua::Result<()> {
