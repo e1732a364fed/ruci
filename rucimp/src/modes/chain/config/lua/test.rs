@@ -5,7 +5,7 @@ use mlua::{Error, Lua, LuaSerdeExt};
 use ruci::map;
 use ruci::user::PlainText;
 //https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua
-pub const INSPECT: &str = include_str!("../../../../../../resource/inspect.lua");
+pub const INSPECT: &str = include_str!("../../../../../../dev_res/inspect.lua");
 
 #[test]
 fn test_in() -> anyhow::Result<()> {

@@ -154,8 +154,8 @@ mod test {
     #[test]
     fn test_load_key() {
         //println!("{:?}", env::current_dir()); //ruci
-        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource"))
-            .expect("go to resource folder");
+        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/dev_res"))
+            .expect("go to dev_res folder");
 
         let mut path = PathBuf::new();
         path.push("test.key");
@@ -171,8 +171,8 @@ mod test {
 
     #[test]
     fn test_load_cert() {
-        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource"))
-            .expect("go to resource folder");
+        std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/dev_res"))
+            .expect("go to dev_res folder");
 
         let mut path = PathBuf::new();
         path.push("test.crt");
@@ -196,7 +196,6 @@ mod test {
 
         let r = load_ser_config(
             &TlsServerOptions {
-                // addr: "addr".to_string(),
                 cert: path,
                 key: path2,
                 ..Default::default()

@@ -4,7 +4,7 @@
 
 首先从 [README.md](../README.md) 读. 之后读 [crates/ruci-cmd/README.md](../crates/ruci-cmd/README.md)
 
-然后读 配置文件 [local.lua](../resource/local.lua) 和 [remote.lua](../resource/remote.lua)
+然后读 配置文件 [local.lua](../dev_res/local.lua) 和 [remote.lua](../dev_res/remote.lua)
 
 读完后，只是有了一个大概的印象。还是要编译、运行一下
 

@@ -460,7 +460,9 @@ impl Engine {
     /// A helper function to start an engine with a static config, run it until it got shutdown signal, then stop it.
     pub async fn new_and_run_static(sc: StaticConfig) -> anyhow::Result<()> {
         let f = move |e: &mut Engine| {
-            e.file_source = Arc::new(FileSource::StdReadFile);
+            let mut fs = crate::utils::default_file_source();
+            fs.insert_current_working_dir()?;
+            e.file_source = Arc::new(fs);
 
             e.init_static(sc)
         };

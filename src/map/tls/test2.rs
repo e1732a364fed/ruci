@@ -62,7 +62,7 @@ async fn listen_future(
     listen_port: u16,
     layer_num: u8,
 ) -> anyhow::Result<()> {
-    std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource"))?;
+    std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/dev_res"))?;
 
     let mut path = PathBuf::new();
     path.push("test.crt");

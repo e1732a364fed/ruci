@@ -13,7 +13,7 @@ run_h2_trojans_recorder_pair.sh 同时运行h2 的 local 和 remote端用于测�
 
 # 通用
 
-接受 一个 命令行参数, 将其作为配置文件读取, 未提供或者找不到时, 会在工作目录, ruci_config/ , resource/ , ../resource 等 目录下找默认的配置文件.
+接受 一个 命令行参数, 将其作为配置文件读取, 未提供或者找不到时, 会在工作目录, ruci_config/ , resource/ , ../resource, dev_res/ 等 目录下找默认的配置文件.
 
 ```sh
 # in folder rucimp, run:
@@ -59,7 +59,7 @@ sudo RUST_LOG=debug cargo run --example lua -F tun -F lua
 
 ### macos test
 
-使用 [resource/local.lua](../../resource/local.lua) 的对应示例 config_16_tun, inbounds 如
+使用 [dev_res/local.lua](../../dev_res/local.lua) 的对应示例 config_16_tun, inbounds 如
 
 ```lua
 inbounds = { 
@@ -80,6 +80,6 @@ ping 10.0.0.2
 
 如果您要将您个人电脑的全局网络流量全交由 ruci 代理, 则可以使用 in_auto_route 和 out_auto_route, 或自行配置系统的路由. 
 
-自动路由的配置示例见 [resource/local.lua](../../resource/local.lua)  和 [resource/remote.lua](../../resource/remote.lua) 
+自动路由的配置示例见 [dev_res/local.lua](../../dev_res/local.lua)  和 [dev_res/remote.lua](../../dev_res/remote.lua) 
 (在文件中搜索 auto_route )
 

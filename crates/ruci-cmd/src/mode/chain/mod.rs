@@ -8,8 +8,6 @@ use tracing::info;
 #[cfg(feature = "api_server")]
 use crate::api;
 
-#[cfg(feature = "api_server")]
-use std::sync::Arc;
 use std::{sync::Arc, time::Duration};
 
 ///blocking

@@ -47,6 +47,7 @@ ruci-cmd 会在 下面文件夹中 找 指定的 配置文件
     "./",
     "ruci_config/",
     "resource/",
+    "dev_res/"
 
 因此如果不想使用 默认打包的 resource 文件夹，可以将其改名为 resource_default, 
 然后 自己创建一个 ruci_config 文件夹，将自己的配置放在 ruci_config 中，这样

@@ -107,7 +107,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
 }
 
 async fn listen_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<()> {
-    std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resource"))?;
+    std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/dev_res"))?;
 
     let mut path = PathBuf::new();
     path.push("test.crt");

@@ -57,7 +57,7 @@ ruci-cmd is the ultimate full feature executable, including utils, api-client an
 
 ## Configuration Mode
 
-For lua configuration, see [local.lua](resource/local.lua), [remote.lua](resource/remote.lua)  和 [lua配置说明](doc/lua.md) 
+For lua configuration, see [local.lua](dev_res/local.lua), [remote.lua](dev_res/remote.lua)  和 [lua配置说明](doc/lua.md) 
 以及 [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
 
 ## Compile/Run

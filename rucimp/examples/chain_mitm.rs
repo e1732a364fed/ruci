@@ -24,8 +24,8 @@ async fn main() -> anyhow::Result<()> {
                 },
                 InMapConfig::Socks5Http(PlainTextPassSet::default()),
                 InMapConfig::MITM(TlsServerOptions {
-                    cert: "resource/test_ca_cert.pem".into(),
-                    key: "resource/test_ca_key.pem".into(),
+                    cert: "test_ca_cert.pem".into(),
+                    key: "test_ca_key.pem".into(),
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
                 }),
             ],
@@ -63,8 +63,8 @@ async fn run_engine_server_end() -> anyhow::Result<()> {
                     ext: None,
                 },
                 InMapConfig::TLS(TlsServerOptions {
-                    cert: "resource/test_ca_cert.pem".into(),
-                    key: "resource/test_ca_key.pem".into(),
+                    cert: "test_ca_cert.pem".into(),
+                    key: "test_ca_key.pem".into(),
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
                 }),
                 InMapConfig::Trojan(ruci::map::trojan::server::Config::default()),

@@ -202,7 +202,7 @@ ruci-cmd的使用请用 --help 查阅，或参阅 notes 和 ruci-cmd
 # v0.0.2
 Feb 29, 2024
 
-添加的功能均通过了测试并有配 resource/local.lua 和 remote.lua 中的相应配置示例。
+添加的功能均通过了测试并有配 dev_res/local.lua 和 remote.lua 中的相应配置示例。
 
 +UDP, UDS, IP(tun)
 

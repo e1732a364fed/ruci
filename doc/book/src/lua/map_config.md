@@ -670,7 +670,7 @@ listen 一个 本地的 udp 端口 (a), 指定 ext.fixed_target_addr (b), 其为
 
 # 接下来
 
-现在再读 resource/local.lua 就会轻松很多了。
+现在再读 dev_res/local.lua 就会轻松很多了。
 
 学点难的？
 [Infinite](infinite.md)
