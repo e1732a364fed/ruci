@@ -517,7 +517,10 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     println!("Mode: {:?}", args.mode);
     println!("Config: {}", args.config);
-    println!("LogLevel(flag): {:?}", args.log_level);
+    match args.log_level {
+        Some(ll) => println!("LogLevel(flag): {}", ll),
+        None => println!("LogLevel(flag): none"),
+    }
 
     const RL: &str = "RUST_LOG";
 

@@ -24,6 +24,19 @@ pub enum Mode {
 #[derive(Debug, Clone, Copy)]
 pub struct LevelWrapper(pub tracing::Level);
 
+impl std::fmt::Display for LevelWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self.0 {
+            Level::ERROR => "ERROR",
+            Level::WARN => "WARN",
+            Level::INFO => "INFO",
+            Level::DEBUG => "DEBUG",
+            Level::TRACE => "TRACE",
+        };
+        f.write_str(s)
+    }
+}
+
 #[cfg(feature = "api_server")]
 impl utoipa::PartialSchema for LevelWrapper {
     fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
