@@ -725,14 +725,6 @@ impl AsyncWrite for Conn {
             )));
         }
 
-        // if self.is_server || !self.hasnt_written {
-        //     //一次最多只传送 少数 字节，以防出问题
-        //     // 客户端的第一次传送除外
-        //     if buf.len() > 1500 {
-        //         buf = &buf[..1500];
-        //     }
-        // }
-
         if self.is_server {
             match self.write_state {
                 WriteState::ReadyForNew => {

@@ -109,6 +109,8 @@ pub fn addr_to_socks5_bytes(ta: &Addr, buf: &mut BytesMut) {
 }
 
 /// wrap [`mpsc::Receiver<BytesMut>`] as a readonly AsyncConn
+///
+/// Its write method will return OK(n) immediately with input buf, buf.len() == n
 pub struct MpscRWrapper {
     pub r: mpsc::Receiver<BytesMut>,
 }
@@ -277,6 +279,7 @@ pub enum BytesDisplayMode {
     Bytes,
 }
 
+/// It will print using debug! when reading or writing data.
 pub struct PrintWrapper {
     base: Pin<Conn>,
     pub mode: BytesDisplayMode,
@@ -337,18 +340,18 @@ impl AsyncWrite for PrintWrapper {
         const MAX_DISPLAY_LEN: usize = 64;
         match &r {
             Poll::Ready(r) => match r {
-                Ok(u) => match self.mode {
+                Ok(n) => match self.mode {
                     BytesDisplayMode::UTF8 => {
                         debug!(
                             "write: {}, {}",
-                            *u,
-                            String::from_utf8_lossy(&buf[..min(*u, MAX_DISPLAY_LEN)])
+                            *n,
+                            String::from_utf8_lossy(&buf[..min(*n, MAX_DISPLAY_LEN)])
                         )
                     }
                     BytesDisplayMode::Bytes => {
-                        let buf = crate::utils::HexSlice(&buf[..min(*u, MAX_DISPLAY_LEN)]);
+                        let buf = crate::utils::HexSlice(&buf[..min(*n, MAX_DISPLAY_LEN)]);
                         let str = format!("{buf}");
-                        debug!("write: {}, {str}", *u,)
+                        debug!("write: {}, {str}", *n,)
                     }
                 },
                 Err(e) => match self.mode {
