@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::*;
 use conn::GeneralConn;
 use serde_json::json;
@@ -296,7 +298,7 @@ async fn test_basic_write_sequence() -> Result<()> {
     let (client_tcp, server_tcp) = tokio::io::duplex(1024);
 
     // 创建使用模拟服务器的 AIGeneratedMap
-    let ai_map = AIGeneratedProcessor {
+    let map = AIGeneratedProcessor {
         config: AIProtocolConfig {
             api_key: "test".to_string(),
             model: "test".to_string(),
@@ -307,12 +309,9 @@ async fn test_basic_write_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = GeneralConn::new(
+    let mut conn = GeneralConn::new(
         Box::new(client_tcp),
-        GeneralMap {
-            is_server: false,
-            processor: Box::new(ai_map),
-        },
+        GeneralMap::from_processor(false, Arc::new(Box::new(map))),
         None,
         None,
     );
@@ -326,14 +325,14 @@ async fn test_basic_write_sequence() -> Result<()> {
 
     debug!("write_all");
     // 写入测试数据
-    ai_conn.write_all(b"test_data").await?;
+    conn.write_all(b"test_data").await?;
     debug!("write_all done");
 
     // 等待一段时间确保所有操作完成
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     // 正常关闭连接
-    ai_conn.shutdown().await?;
+    conn.shutdown().await?;
 
     // 等待服务端处理完成
     server_handle.await??;
@@ -361,7 +360,7 @@ async fn test_basic_read_sequence() -> Result<()> {
     let (client_tcp, server_tcp) = tokio::io::duplex(1024);
 
     // 创建使用模拟服务器的 AIGeneratedMap
-    let ai_map = AIGeneratedProcessor {
+    let map = AIGeneratedProcessor {
         config: AIProtocolConfig {
             api_key: "test".to_string(),
             model: "test".to_string(),
@@ -372,12 +371,9 @@ async fn test_basic_read_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = GeneralConn::new(
+    let mut conn = GeneralConn::new(
         Box::new(client_tcp),
-        GeneralMap {
-            is_server: false,
-            processor: Box::new(ai_map),
-        },
+        GeneralMap::from_processor(false, Arc::new(Box::new(map))),
         None,
         None,
     );
@@ -387,7 +383,7 @@ async fn test_basic_read_sequence() -> Result<()> {
 
     // 读取数据
     let mut read_buf = vec![0u8; 1024];
-    let n = AsyncReadExt::read(&mut ai_conn, &mut read_buf).await?;
+    let n = AsyncReadExt::read(&mut conn, &mut read_buf).await?;
 
     // 验证解密后的数据
     assert_eq!(&read_buf[..n], b"decrypted_data");
@@ -413,7 +409,7 @@ async fn test_multiple_read_write_sequence() -> Result<()> {
     mock_set_post_decrypt_data(&mock_server).await;
 
     let (client_tcp, mut server_tcp) = tokio::io::duplex(1024);
-    let ai_map = AIGeneratedProcessor {
+    let map = AIGeneratedProcessor {
         config: AIProtocolConfig {
             api_key: "test".to_string(),
             model: "test".to_string(),
@@ -424,12 +420,9 @@ async fn test_multiple_read_write_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = GeneralConn::new(
+    let mut conn = GeneralConn::new(
         Box::new(client_tcp),
-        GeneralMap {
-            is_server: false,
-            processor: Box::new(ai_map),
-        },
+        GeneralMap::from_processor(false, Arc::new(Box::new(map))),
         None,
         None,
     );
@@ -450,16 +443,16 @@ async fn test_multiple_read_write_sequence() -> Result<()> {
     // 客户端操作
     // 第一轮读写
     let mut read_buf = vec![0u8; 1024];
-    let n = AsyncReadExt::read(&mut ai_conn, &mut read_buf).await?;
+    let n = AsyncReadExt::read(&mut conn, &mut read_buf).await?;
     assert_eq!(&read_buf[..n], b"decrypted_data");
 
-    ai_conn.write_all(b"test_data_1").await?;
+    conn.write_all(b"test_data_1").await?;
 
     // 第二轮读写
-    let n = AsyncReadExt::read(&mut ai_conn, &mut read_buf).await?;
+    let n = AsyncReadExt::read(&mut conn, &mut read_buf).await?;
     assert_eq!(&read_buf[..n], b"decrypted_data");
 
-    ai_conn.write_all(b"test_data_2").await?;
+    conn.write_all(b"test_data_2").await?;
 
     // 等待服务端处理完成
     server_handle.await??;

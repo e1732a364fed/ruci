@@ -1,5 +1,5 @@
 /*!
- * Defines a GeneralConn for general steganography
+ * Defines a [`GeneralConn`] for general steganography
  */
 
 use super::{GeneralMap, ParsedResult, ReadSequence, WriteSequence};
@@ -50,7 +50,7 @@ impl std::fmt::Debug for ConnState {
 
 pub struct GeneralConn {
     pub inner: ruci::net::Conn,
-    pub ai_map: GeneralMap,
+    pub map: GeneralMap,
     pub state: ConnState,
     read_waker: Option<std::task::Waker>,  // 存储读操作的 waker
     write_waker: Option<std::task::Waker>, // 存储写操作的 waker
@@ -64,13 +64,13 @@ pub struct GeneralConn {
 impl GeneralConn {
     pub fn new(
         inner: ruci::net::Conn,
-        ai_map: GeneralMap,
+        map: GeneralMap,
         first_buf: Option<BytesMut>,
         target_addr: Option<Addr>,
     ) -> Self {
         Self {
             inner,
-            ai_map,
+            map,
             state: ConnState::Ready,
             read_waker: None,
             write_waker: None,
@@ -81,7 +81,7 @@ impl GeneralConn {
     }
 
     fn is_server(&self) -> bool {
-        self.ai_map.is_server
+        self.map.is_server
     }
 
     fn is_handshake(&self, is_write: bool) -> bool {
@@ -93,15 +93,14 @@ impl GeneralConn {
 
     /// 开始一个写序列
     ///
-    /// It creates a future to call self.ai_map.generate_sequence
+    /// It creates a future to call self.map.generate_sequence
     /// and change self.state to ConnState::ProcessingParse
     fn initiate_ai_write_processing(&mut self, data: Vec<u8>) -> Result<()> {
-        let ai_map = self.ai_map.clone();
+        let map = self.map.clone();
         let is_handshake = self.is_handshake(true);
         let target_addr = self.target_addr.take();
         let future = Box::pin(async move {
-            ai_map
-                .generate_sequence(&data, target_addr, is_handshake, false)
+            map.generate_sequence(&data, target_addr, is_handshake, false)
                 .await
         });
         self.state = ConnState::ProcessingParse {
@@ -114,16 +113,13 @@ impl GeneralConn {
 
     /// 处理读取到的数据，可能开始新的读序列
     ///
-    /// It creates a future to call self.ai_map.process_with_ai
+    /// It creates a future to call self.map.process_with_ai
     /// and change self.state to ConnState::ProcessingParse
     fn initiate_ai_read_processing(&mut self, data: Vec<u8>) -> Result<()> {
-        let ai_map = self.ai_map.clone();
+        let map = self.map.clone();
         let is_handshake = self.is_handshake(false);
-        let future = Box::pin(async move {
-            ai_map
-                .generate_sequence(&data, None, is_handshake, true)
-                .await
-        });
+        let future =
+            Box::pin(async move { map.generate_sequence(&data, None, is_handshake, true).await });
         self.state = ConnState::ProcessingParse {
             future: Arc::new(Mutex::new(future)),
             is_write: false,
@@ -228,7 +224,7 @@ impl AsyncRead for GeneralConn {
                             if is_handshake {
                                 this.handshake_completed = true;
 
-                                if this.ai_map.is_server {
+                                if this.map.is_server {
                                     // 服务端在握手时会收到客户端的目标地址
                                     this.target_addr = addr;
                                 }
@@ -305,10 +301,11 @@ impl AsyncRead for GeneralConn {
                             combined_data.extend(sequence.read_packets.drain(..).flatten());
 
                             // 创建解密future
-                            let ai_map = this.ai_map.clone();
-                            let future = Box::pin(async move {
-                                ai_map.decrypt_read_sequence(combined_data).await
-                            });
+                            let map = this.map.clone();
+                            let future =
+                                Box::pin(
+                                    async move { map.decrypt_read_sequence(combined_data).await },
+                                );
 
                             this.state = ConnState::ProcessingDecoding {
                                 future: Arc::new(Mutex::new(future)),

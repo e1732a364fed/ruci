@@ -1,6 +1,21 @@
 /*!
  * Defines an general steganography protocol.
+ *
+ *
+ * 隐写协议的实现，在 [`SteganographyProcessor`] 中。
+ *
+ * 通用的隐写协议实现原理：
+ *
+ * 隐写协议对于每一个数据包，都生成一个写序列和一个读序列。
+ *
+ * 也就是说，对于一个 要写入的 w,生成的是一个 (w1, r1, w2, r2, ...) 的 读写序列
+ * 对于一个要读取的 r,生成的是一个 (r1, w1, r2, w2, ...) 的 读写序列
+ *
+ * 而 SteganographyProcessor 中的实现 要保证所生成的序列 满足所要隐写协议的统计特征。
+ *
  */
+
+use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -78,8 +93,13 @@ pub enum ParsedResult {
     },
 }
 
+/// 隐写协议处理器
+///
+/// 这里是实际的隐写协议的实现之处
 #[async_trait]
-pub trait SteganographyProcessor: Send + Sync + DynClone {
+pub trait SteganographyProcessor: Send + Sync + Name + DynClone {
+    /// 在客户端，处理目标地址和数据，生成写序列
+    /// 在服务端，处理读到的客户端握手的写序列中的第一个包，生成读序列
     async fn generate_sequence(
         &self,
         data: &[u8],
@@ -97,8 +117,8 @@ dyn_clone::clone_trait_object!(SteganographyProcessor);
 pub struct GeneralMap {
     pub is_server: bool,
 
-    pub processor: Box<dyn SteganographyProcessor>,
-    // ext_fields: Option<MapExtFields>,
+    pub processor: Arc<Box<dyn SteganographyProcessor>>,
+    cached_name: String,
 }
 
 impl std::fmt::Debug for GeneralMap {
@@ -108,6 +128,19 @@ impl std::fmt::Debug for GeneralMap {
 }
 
 impl GeneralMap {
+    pub fn from_processor(
+        is_server: bool,
+        processor: Arc<Box<dyn SteganographyProcessor>>,
+    ) -> Self {
+        let mut map = Self {
+            is_server,
+            processor,
+            cached_name: "".to_string(),
+        };
+        map.generate_name();
+        map
+    }
+
     /// 在客户端，处理目标地址和数据，生成写序列
     /// 在服务端，处理读到的客户端握手的写序列中的第一个包，生成读序列
     async fn generate_sequence(
@@ -126,11 +159,19 @@ impl GeneralMap {
     async fn decrypt_read_sequence(&self, combined_data: Vec<u8>) -> Result<Vec<u8>> {
         self.processor.decrypt_read_sequence(combined_data).await
     }
+
+    /// generated cached name from its processor
+    fn generate_name(&mut self) {
+        self.cached_name = format!(
+            "general_steganography_map[processor: {}]",
+            self.processor.name()
+        );
+    }
 }
 
 impl Name for GeneralMap {
     fn name(&self) -> &str {
-        "general_steganography_map"
+        self.cached_name.as_str()
     }
 }
 

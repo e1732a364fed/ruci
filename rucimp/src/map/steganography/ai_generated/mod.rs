@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use reqwest;
  
-use ruci::net;
+use ruci::{net, Name};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -137,6 +137,12 @@ impl AIGeneratedProcessor {
         Ok(result)
     }
 
+}
+
+impl Name for AIGeneratedProcessor {
+    fn name(&self) -> &str {
+        "AIGeneratedProcessor"
+    }
 }
 
 #[async_trait]
