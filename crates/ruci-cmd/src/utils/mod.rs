@@ -21,7 +21,7 @@ pub const RUCI_WEBUI_DOWNLOAD_LINK: &str =
 
 // 运行示例： ruci-cmd utils convert-format local.lua json
 
-#[derive(Subcommand, Clone, Serialize, Deserialize)]
+#[derive(Subcommand, Debug, Clone, Serialize, Deserialize)]
 pub enum Commands {
     /// download Country.mmdb
     Mmdb,

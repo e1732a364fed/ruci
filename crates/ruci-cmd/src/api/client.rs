@@ -8,7 +8,7 @@ use rucimp::api::DEFAULT_API_ADDR;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Subcommand, Clone, Serialize, Deserialize)]
+#[derive(Subcommand, Debug, Clone, Serialize, Deserialize)]
 pub enum Commands {
     ConnectionCount {
         addr: Option<String>,

@@ -18,7 +18,10 @@ mod mode;
 pub use rucimp;
 use serde::{Deserialize, Serialize};
 
-use std::env::{self, set_var};
+use std::{
+    env::{self, set_var},
+    sync::Arc,
+};
 
 use clap::{Parser, Subcommand, ValueEnum};
 use parking_lot::RwLock;
@@ -45,11 +48,12 @@ impl Mode {
 }
 
 /// ruci command line parameters:
-#[derive(Parser, Clone, Default, Serialize, Deserialize)]
+#[derive(Parser, Clone, Default, Debug, Serialize, Deserialize)]
 #[command(author = "e")]
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// choose the rucimp core mode
+    #[serde(default)]
     #[arg(short, long, value_enum, default_value_t = Mode::C )]
     pub mode: Mode,
 
@@ -57,12 +61,14 @@ pub struct Args {
     ///
     /// If the given string is a url, then the app will try to download the file first.
     #[arg(short, long, value_name = "FILE", default_value = DEFAULT_LUA_CONFIG_FILE_NAME)]
+    #[serde(default)]
     pub config: String,
 
     /// If this arg is given, and the "config" arg is a url, then the app will try to download
     /// the config file but will not store it in the file system.
     ///
     /// This will cause the app to download the config file every time it runs.
+    #[serde(default)]
     #[arg(long)]
     pub in_memory: bool,
 
@@ -88,15 +94,18 @@ pub struct Args {
     /// Use infinite dynamic chain that is written in the lua config file (the "Infinite"
     /// global variable must exist)
     #[cfg(any(feature = "lua", feature = "lua54"))]
+    #[serde(default)]
     #[arg(long)]
     pub infinite: bool,
 
     /// Enable flux trace (might slow down performance)
     #[cfg(feature = "trace")]
+    #[serde(default)]
     #[arg(long)]
     pub trace: bool,
 
     #[cfg(feature = "api_server")]
+    #[serde(default)]
     #[arg(short, long, default_value_t = false)]
     pub api_server: bool,
 
@@ -132,7 +141,7 @@ impl Args {
     }
 }
 
-#[derive(Subcommand, Clone, Serialize, Deserialize)]
+#[derive(Subcommand, Clone, Debug, Serialize, Deserialize)]
 pub enum SubCommands {
     /// Api client
     #[cfg(feature = "api_client")]
@@ -161,6 +170,32 @@ pub async fn run_main_with_json_args(json: &str) -> anyhow::Result<()> {
     run_main_with_args(args).await
 }
 
+#[test]
+fn parse_json() -> anyhow::Result<()> {
+    let args: Args = rucimp::serde_json::from_str(
+        "{ \"api_server\": true, \"mode\": \"C\" , \"config\": \"local.lua\" }",
+    )?;
+    println!("{args:?}");
+    Ok(())
+}
+
+#[derive(Debug, Default)]
+pub enum State {
+    #[default]
+    NotRun,
+    RunResult(anyhow::Result<()>),
+    Running,
+    RunningEngine,
+    Stopped(anyhow::Result<()>),
+}
+
+use std::sync::OnceLock;
+use tokio::runtime::Runtime;
+static GLOBAL_RUNTIME: OnceLock<Runtime> = OnceLock::new();
+pub static CORE_STATE: OnceLock<std::sync::Arc<parking_lot::Mutex<State>>> = OnceLock::new();
+
+//注意，安卓运行 log 时若 没有 取消 日志文件输出，则会panic
+
 /// non-blocking, using a new multithread tokio runtime.
 #[no_mangle]
 pub unsafe extern "C" fn c_run_main_with_json_args(
@@ -170,19 +205,37 @@ pub unsafe extern "C" fn c_run_main_with_json_args(
     let json_content_as_str = match json_content.to_str() {
         Ok(s) => s,
         Err(e) => {
-            return std::ffi::CString::new(e.to_string()).unwrap().into_raw();
+            return std::ffi::CString::new(format!("to_str err: {}", e))
+                .unwrap()
+                .into_raw();
         }
     };
 
-    let x = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build();
-    match x {
-        Ok(rt) => {
-            rt.spawn(run_main_with_json_args(json_content_as_str));
+    let dr = &mut rucimp::serde_json::Deserializer::from_str(json_content_as_str);
+
+    let args: Args = match serde_path_to_error::deserialize(dr) {
+        Ok(args) => args,
+        Err(e) => {
+            return std::ffi::CString::new(format!("serde err: {e:#?}"))
+                .unwrap()
+                .into_raw();
         }
-        Err(e) => return std::ffi::CString::new(e.to_string()).unwrap().into_raw(),
-    }
+    };
+    let rt = GLOBAL_RUNTIME.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+    });
+
+    CORE_STATE.get_or_init(|| Arc::new(parking_lot::Mutex::new(State::default())));
+
+    let f = async {
+        let r = run_main_with_args(args).await;
+
+        std::mem::replace(&mut *CORE_STATE.get().unwrap().lock(), State::RunResult(r))
+    };
+    let _ = rt.spawn(f);
 
     let r = "ok".to_string();
 
@@ -239,6 +292,22 @@ pub mod android {
         java_pattern: JString,
     ) -> jstring {
         Java_com_example_myapplication_MainActivity_run(env, jc, java_pattern)
+    }
+
+    #[no_mangle]
+    pub unsafe extern "C" fn Java_com_ruci_android_Class1_result(
+        env: JNIEnv,
+        _: JClass,
+    ) -> jstring {
+        let r = CORE_STATE.get().unwrap().lock();
+
+        let x = std::ffi::CString::new(format!("{:?}", &*r)).unwrap();
+
+        let output = env
+            .new_string(x.to_str().unwrap())
+            .expect("Couldn't create java string!");
+
+        output.into_raw()
     }
 
     /// export an example function for testing
@@ -335,6 +404,11 @@ pub async fn run_main_with_args(args: Args) -> anyhow::Result<()> {
                             let _ = epots.lock().await.insert(opts);
 
                             info!("api server started, running api...");
+
+                            let _ = std::mem::replace(
+                                &mut *CORE_STATE.get().unwrap().lock(),
+                                State::Running,
+                            );
 
                             rucimp::utils::wait_close_sig().await?
                         }
@@ -524,12 +598,31 @@ pub async fn start_engine(
             args.config_file_content = fc;
             args.data_source = Some(std::sync::Arc::new(ds));
 
-            rucimp::modes::run(
+            let _ = std::mem::replace(&mut *CORE_STATE.get().unwrap().lock(), State::RunningEngine);
+
+            let r = rucimp::modes::run(
                 args,
                 #[cfg(feature = "api_server")]
                 api_server_opts,
             )
-            .await?;
+            .await;
+
+            match &r {
+                Ok(_) => {
+                    let _ = std::mem::replace(
+                        &mut *CORE_STATE.get().unwrap().lock(),
+                        State::Stopped(Ok(())),
+                    );
+                }
+                Err(e) => {
+                    let _ = std::mem::replace(
+                        &mut *CORE_STATE.get().unwrap().lock(),
+                        State::Stopped(Err(anyhow::anyhow!("{e:?}"))),
+                    );
+                }
+            };
+
+            r?
         }
     }
 
