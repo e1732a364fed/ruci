@@ -74,7 +74,7 @@ where
                 c.generate_upper_mappers();
                 let r_proxy_outadder = (self.load_outmappers_func)(c.protocol(), c.config.clone());
                 if let Some(proxy_outadder) = r_proxy_outadder {
-                    c.push_mapper(proxy_outadder);
+                    c.push_mapper(Arc::new(proxy_outadder));
                 }
 
                 let outc: &'static dyn Suit = Box::leak(Box::new(c));
@@ -101,7 +101,7 @@ where
                 s.generate_upper_mappers();
                 let r_proxy_inadder = (self.load_inmappers_func)(s.protocol(), s.config.clone());
                 if let Some(proxy_inadder) = r_proxy_inadder {
-                    s.push_mapper(proxy_inadder);
+                    s.push_mapper(Arc::new(proxy_inadder));
                 }
 
                 let ins: &'static dyn Suit = Box::leak(Box::new(s));

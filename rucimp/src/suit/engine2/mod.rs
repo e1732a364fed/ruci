@@ -5,7 +5,14 @@ use config::LDConfig;
 use futures::{future::select_all, Future};
 use log::{debug, info};
 use parking_lot::Mutex;
-use ruci::{map::*, net::TransmissionInfo, relay::route::FixedOutSelector};
+use ruci::{
+    map::*,
+    net::TransmissionInfo,
+    relay::{
+        conn2,
+        route2::{FixedOutSelector, OutSelector},
+    },
+};
 
 use tokio::{
     sync::oneshot::{self, Sender},
@@ -72,7 +79,7 @@ where
                 s.generate_upper_mappers();
                 let r_proxy_outadder = (self.load_outmappers_func)(s.protocol(), s.config.clone());
                 if let Some(proxy_outadder) = r_proxy_outadder {
-                    s.push_mapper(proxy_outadder);
+                    s.push_mapper(Arc::new(proxy_outadder));
                 }
                 let x: Box<dyn Suit> = Box::new(s);
                 let x: &'static dyn Suit = Box::leak(x);
@@ -100,7 +107,7 @@ where
                 s.generate_upper_mappers();
                 let r_proxy_inadder = (self.load_inmappers_func)(s.protocol(), s.config.clone());
                 if let Some(proxy_inadder) = r_proxy_inadder {
-                    s.push_mapper(proxy_inadder);
+                    s.push_mapper(Arc::new(proxy_inadder));
                 }
                 let x: Box<dyn Suit> = Box::new(s);
                 let x: &'static dyn Suit = Box::leak(x);
@@ -241,10 +248,10 @@ async fn listen_tcp2(
 
     let clone_oti = move || oti.clone();
 
-    let iter = outc.get_mappers_vec().iter();
+    let iter = outc.get_mappers_vec().into_iter();
     let ib = Box::new(iter);
-    let selector = Box::new(FixedOutSelector { default: ib });
-    let selector = Box::leak(selector);
+    let selector: Box<dyn OutSelector> = Box::new(FixedOutSelector { default: ib });
+    let selector = Arc::new(selector);
 
     tokio::select! {
         r = async {
@@ -256,13 +263,14 @@ async fn listen_tcp2(
                     debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
                 }
 
-                let iter = ins.get_mappers_vec().iter();
+                let iter = ins.get_mappers_vec().into_iter();
                 let ib = Box::new(iter);
 
-                tokio::spawn( relay::conn::handle_conn_clonable(
+                let slt = selector.clone();
+                tokio::spawn(  conn2::handle_conn_clonable(
                         Box::new(tcpstream),
                         ib,
-                        selector,
+                        slt,
                         ti,
                     )
                 );

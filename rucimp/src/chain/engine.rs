@@ -23,9 +23,9 @@ pub struct StaticEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁，若有值说明 is running
     pub ti: Arc<TransmissionInfo>,
 
-    inbounds: Vec<MIterBox>, //Vec<Vec<Box<dyn MapperSync>>>,   // 不为空
+    inbounds: Vec<MIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, MIterBox>>, //不为空
-    default_outbound: Option<MIterBox>, // init 后一定有值
+    default_outbound: Option<MIterBox>,        // init 后一定有值
     tag_routes: Option<HashMap<String, String>>,
 }
 

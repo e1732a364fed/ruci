@@ -18,11 +18,12 @@ pub mod engine2;
 #[cfg(test)]
 mod test;
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use log::log_enabled;
 use log::Level::Debug;
 use ruci::map::tls;
-use ruci::relay;
 use tokio::io;
 use tokio::net::TcpListener;
 
@@ -61,9 +62,9 @@ pub trait SuitConfigHolder: Send + Sync {
 
 /// 一种 Mapper 的容器
 pub trait MappersVec {
-    fn get_mappers_vec(&self) -> &Vec<MapperBox>;
+    fn get_mappers_vec(&self) -> Vec<Arc<MapperBox>>;
 
-    fn push_mapper(&mut self, adder: MapperBox);
+    fn push_mapper(&mut self, adder: Arc<MapperBox>);
 }
 
 #[async_trait]
@@ -82,8 +83,8 @@ pub struct SuitStruct {
 
     pub config: config::LDConfig,
 
-    pub inmappers: Vec<MapperBox>,
-    pub outmappers: Vec<MapperBox>,
+    pub inmappers: Vec<Arc<MapperBox>>,
+    pub outmappers: Vec<Arc<MapperBox>>,
 
     addr: Option<Addr>,
     protocol_str: String,
@@ -155,14 +156,14 @@ impl SuitConfigHolder for SuitStruct {
 }
 
 impl MappersVec for SuitStruct {
-    fn get_mappers_vec(&self) -> &Vec<MapperBox> {
-        &self.inmappers
+    fn get_mappers_vec(&self) -> Vec<Arc<MapperBox>> {
+        self.inmappers.clone()
     }
 
     /// 添加 mapper 到尾部。会自动推导出 whole_name.
     ///
     /// 可多次调用, 每次都会更新 whole_name
-    fn push_mapper(&mut self, mapper: MapperBox) {
+    fn push_mapper(&mut self, mapper: Arc<MapperBox>) {
         self.inmappers.push(mapper);
         self.whole_name = self
             .inmappers
@@ -185,7 +186,7 @@ impl Suit for SuitStruct {
                         c.host.unwrap_or_default().as_str(),
                         c.insecure.unwrap_or(false),
                     );
-                    self.push_mapper(Box::new(a));
+                    self.push_mapper(Arc::new(Box::new(a)));
                 }
             }
             ProxyBehavior::DECODE => {
@@ -196,7 +197,7 @@ impl Suit for SuitStruct {
                         key: c.key.expect("need key file in config").into(),
                     };
                     let sa = tls::server::Server::new(so);
-                    self.inmappers.push(Box::new(sa));
+                    self.inmappers.push(Arc::new(Box::new(sa)));
                 }
             }
             ProxyBehavior::UNSPECIFIED => {}

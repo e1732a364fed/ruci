@@ -337,7 +337,7 @@ async fn lisen_ser() -> std::io::Result<(
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
     let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Box::new(a));
+    lsuit.push_mapper(Arc::new(Box::new(a)));
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
 
@@ -503,10 +503,10 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
     lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
     let a = ruci::map::counter::Counter::default();
-    lsuit.push_mapper(Box::new(a));
+    lsuit.push_mapper(Arc::new(Box::new(a)));
 
     let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Box::new(a));
+    lsuit.push_mapper(Arc::new(Box::new(a)));
 
     let wn = lsuit.whole_name.clone();
 

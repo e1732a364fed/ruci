@@ -3,7 +3,7 @@ use std::{fmt::Display, time::Duration};
 use super::*;
 use log::warn;
 use ruci::{
-    map::acc::MIterBox,
+    map::acc2::MIterBox,
     net::{Stream, CID},
     relay::{cp_stream, READ_HANDSHAKE_TIMEOUT},
 };
@@ -83,8 +83,8 @@ async fn listen_tcp(
 
                 let laddr = laddr.clone();
                 let ti = clone_oti();
-                let iiter = ins.get_mappers_vec().iter();
-                let oiter =  outc.get_mappers_vec().iter();
+                let iiter = ins.get_mappers_vec().into_iter();
+                let oiter =  outc.get_mappers_vec().into_iter();
 
                 tokio::spawn(async move {
                     if log_enabled!(Debug) {
@@ -150,7 +150,7 @@ pub async fn handle_conn<'a>(
     let cidc = cid.clone();
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            acc::accumulate(
+            acc2::accumulate(
                 cidc,
                 ProxyBehavior::DECODE,
                 MapResult::c(in_conn),
@@ -217,7 +217,7 @@ pub async fn handle_conn<'a>(
         let cidc = cid.clone();
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                acc::accumulate(
+                acc2::accumulate(
                     cidc,
                     ProxyBehavior::ENCODE,
                     MapResult {
