@@ -266,7 +266,10 @@ async fn listen_tcp(
                         ib,
                         slt,
                         ti,
-                        None,None
+                        None,
+
+                        #[cfg(feature = "trace")]
+                        None
                     )
                 );
             }

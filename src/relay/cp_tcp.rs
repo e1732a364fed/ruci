@@ -49,7 +49,15 @@ pub fn cp_conn(
 async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
     debug!("{cid}, relay start");
 
-    let _ = net::copy(in_conn, out_conn, &cid, None, None).await;
+    let _ = net::copy(
+        in_conn,
+        out_conn,
+        &cid,
+        None,
+        #[cfg(feature = "trace")]
+        None,
+    )
+    .await;
     debug!("{cid}, relay end",);
 }
 
@@ -113,7 +121,15 @@ async fn no_ti_ed(
         }
     }
 
-    let _ = net::copy(in_conn, out_conn, &cid, None, None).await;
+    let _ = net::copy(
+        in_conn,
+        out_conn,
+        &cid,
+        None,
+        #[cfg(feature = "trace")]
+        None,
+    )
+    .await;
 
     debug!("{}, relay end", cid);
 }

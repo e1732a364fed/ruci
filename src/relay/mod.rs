@@ -70,7 +70,15 @@ pub async fn handle_in_stream(
         }
     };
 
-    handle_in_accumulate_result(listen_result, out_selector, ti, newc_recorder, updater).await
+    handle_in_accumulate_result(
+        listen_result,
+        out_selector,
+        ti,
+        newc_recorder,
+        #[cfg(feature = "trace")]
+        updater,
+    )
+    .await
 }
 
 /// block until out handshake is over
@@ -209,6 +217,7 @@ pub async fn handle_in_accumulate_result(
         dial_result.b,
         dial_result.a,
         tr,
+        #[cfg(feature = "trace")]
         updater,
     );
 

@@ -23,6 +23,9 @@ impl std::fmt::Display for NewConnInfo {
             "{}, {} -> {}, ta: {}\n",
             self.cid, self.in_tag, self.out_tag, self.target_addr
         )?;
+        #[cfg(not(feature = "trace"))]
+        return Ok(());
+
         #[cfg(feature = "trace")]
         {
             write!(
