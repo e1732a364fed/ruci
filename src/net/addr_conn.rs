@@ -343,7 +343,7 @@ pub async fn cp(
     cid: CID,
     c1: AddrConn,
     c2: AddrConn,
-    opt: Option<Arc<TransmissionInfo>>,
+    opt: Option<Arc<TrafficRecorder>>,
 ) -> Result<u64, Error> {
     cp_between(cid, c1.r, c1.w, c2.r, c2.w, opt).await
 }
@@ -359,7 +359,7 @@ pub async fn cp_between<
     w1: W1,
     r2: R2,
     w2: W2,
-    opt: Option<Arc<TransmissionInfo>>,
+    opt: Option<Arc<TrafficRecorder>>,
 ) -> Result<u64, Error> {
     let (c1_to_c2, c2_to_c1) = (cp_addr(r1, w2).fuse(), cp_addr(r2, w1).fuse());
     pin_mut!(c1_to_c2, c2_to_c1);

@@ -4,7 +4,7 @@ use log::{debug, info, warn};
 use parking_lot::Mutex;
 use ruci::{
     map::{acc::MIterBox, *},
-    net::TransmissionInfo,
+    net::TrafficRecorder,
     relay::{handle_in_accumulate_result, route::*},
 };
 use std::{collections::HashMap, sync::Arc};
@@ -18,7 +18,7 @@ use super::config::StaticConfig;
 #[derive(Default)]
 pub struct Engine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁，若有值说明 is running
-    pub ti: Arc<TransmissionInfo>,
+    pub ti: Arc<TrafficRecorder>,
 
     inbounds: Vec<MIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, MIterBox>>, //不为空
@@ -36,7 +36,7 @@ impl Engine {
             self.outbounds = Arc::<HashMap<String, MIterBox>>::default();
             self.default_outbound = None;
             self.tag_routes = None;
-            self.ti = Arc::<TransmissionInfo>::default();
+            self.ti = Arc::<TrafficRecorder>::default();
             info!("Engine is reset successful");
         } else {
             warn!("Engine is running, can't be reset");
@@ -141,7 +141,7 @@ impl Engine {
     async fn loop_a(
         mut arx: Receiver<acc::AccumulateResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
-        ti: Arc<TransmissionInfo>,
+        ti: Arc<TrafficRecorder>,
     ) -> anyhow::Result<()> {
         loop {
             let ar = arx.recv().await;

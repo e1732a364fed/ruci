@@ -49,17 +49,11 @@ impl Debug for AccumulateResult {
 /// cid 为 跟踪 该连接的 标识
 /// 返回的元组包含新的 Conn 和 可能的目标地址
 ///
-/// decode: 用途： 从listen得到的tcp开始, 一层一层往上加, 直到加到能解析出代理目标地址为止
+/// decode: 用途： 从listen得到的ip/tcp/udp/uds开始, 一层一层往上加, 直到加到能解析出代理目标地址为止
 ///
 /// 一般 【中同层是返回的 target_addr都是None, 只有最后一层会返回出目标地址, 即,
 ///只有代理层会有目标地址】
 ///
-/// 注意, 考虑在两个累加结果的Conn之间拷贝, 若用 ruci::net::cp 拷贝并给出 TransmissionInfo,
-/// 则它统计出的流量为 未经加密的原始流量, 实际流量一般会比原始流量大。要想用
-/// ruci::net::cp 统计真实流量, 只能有一种情况, 那就是 tcp到tcp的直接拷贝,
-/// 不使用累加器。
-///
-/// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 counter 模块
 ///
 /// accumulate 只适用于 不含 Stream::Generator 的情况,
 ///
@@ -154,7 +148,7 @@ pub async fn accumulate_from_start(
     shutdown_rx: oneshot::Receiver<()>,
 
     mut inmappers: MIterBox,
-    oti: Option<Arc<TransmissionInfo>>,
+    oti: Option<Arc<TrafficRecorder>>,
 ) -> anyhow::Result<()> {
     let first = inmappers.next().expect("first inmapper");
     let first_r = first
@@ -216,7 +210,7 @@ pub async fn in_iter_accumulate_forever(
     mut rx: tokio::sync::mpsc::Receiver<MapResult>,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     miter: MIterBox,
-    oti: Option<Arc<TransmissionInfo>>,
+    oti: Option<Arc<TrafficRecorder>>,
 ) {
     loop {
         let opt_stream_info = rx.recv().await;
@@ -248,7 +242,7 @@ fn spawn_acc_forever(
     new_stream_info: MapResult,
     miter: Box<dyn MIter>,
     txc: tokio::sync::mpsc::Sender<AccumulateResult>,
-    oti: Option<Arc<TransmissionInfo>>,
+    oti: Option<Arc<TrafficRecorder>>,
 ) {
     tokio::spawn(async move {
         let r = accumulate(cid, ProxyBehavior::DECODE, new_stream_info, miter).await;

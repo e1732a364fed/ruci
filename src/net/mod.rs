@@ -1,14 +1,14 @@
 /*!
  * module net defines some important parts for proxy.
  *
- * important parts: CID, Network, Addr, ConnTrait, Conn, Stream, TransmissionInfo,
+ * important parts: CID, Network, Addr, ConnTrait, Conn, Stream, TrafficRecorder,
  *  and a cp function for copying data between Conn
 
  enums:
 CID, Network ,Addr ,Stream
 
  structs:
- CIDChain, TransmissionInfo,
+ CIDChain, TrafficRecorder,
 
 trait: ConnTrait
 
@@ -112,7 +112,7 @@ impl CID {
         CID::Unit(li)
     }
 
-    pub fn new_by_opti(oti: Option<Arc<TransmissionInfo>>) -> CID {
+    pub fn new_by_opti(oti: Option<Arc<TrafficRecorder>>) -> CID {
         match oti {
             Some(ti) => CID::new_ordered(&ti.last_connection_id),
             None => CID::new(),
@@ -124,9 +124,9 @@ impl CID {
     ///
     /// ```
     /// use ruci::net::CID;
-    /// use ruci::net::TransmissionInfo;
+    /// use ruci::net::TrafficRecorder;
     /// use std::sync::Arc;
-    /// let oti = Some(Arc::new(TransmissionInfo::default()));
+    /// let oti = Some(Arc::new(TrafficRecorder::default()));
     ///
     /// let mut x = CID::new_by_opti(oti.clone());
     /// assert!(matches!(x, CID::Unit(1)));
@@ -139,7 +139,7 @@ impl CID {
     /// );
     ///
     /// ```
-    pub fn push(&mut self, oti: Option<Arc<TransmissionInfo>>) {
+    pub fn push(&mut self, oti: Option<Arc<TrafficRecorder>>) {
         let newidnum = match oti.as_ref() {
             Some(ti) => new_ordered_cid(&ti.last_connection_id),
             None => new_rand_cid(),
@@ -159,7 +159,7 @@ impl CID {
             CID::Chain(c) => c.id_list.push(newidnum),
         };
     }
-    pub fn clone_push(&self, oti: Option<Arc<TransmissionInfo>>) -> Self {
+    pub fn clone_push(&self, oti: Option<Arc<TrafficRecorder>>) -> Self {
         let mut cid = self.clone();
         cid.push(oti);
         cid
@@ -718,11 +718,13 @@ impl<'a> Display for OptAddrRef<'a> {
 
 pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 
+/// default is None
 #[derive(Default)]
 pub enum Stream {
-    ///  ip/ tcp / unix domain socket 等 目标 Addr 唯一的 情况
+    ///  rawip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
     Conn(Conn),
 
+    //如果 从 rawip 解析出了 ip 目标, 那么该ip流就是 AddrConn
     /// udp 的情况
     AddrConn(AddrConn),
 
@@ -845,9 +847,19 @@ use crate::Name;
 use self::addr_conn::AddrConn;
 use self::addr_conn::AsyncWriteAddrExt;
 
-/// 用于状态监视和流量统计；可以用 Arc<TransmissionInfo> 进行全局的监视和统计。
+/// 用于状态监视和流量统计；可以用 Arc<TrafficRecorder> 进行全局的监视和统计。
+///
+/// ## About Real Data Traffic and Original Traffic
+///
+/// 注意, 考虑在两个累加结果的Conn之间拷贝, 若用 ruci::net::cp 拷贝并给出 TrafficRecorder,
+/// 则它统计出的流量为 未经加密的原始流量, 实际流量一般会比原始流量大。要想用
+/// ruci::net::cp 统计真实流量, 只能有一种情况, 那就是 tcp到tcp的直接拷贝,
+/// 不使用累加器。
+///
+/// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 counter 模块
+///
 #[derive(Debug, Default)]
-pub struct TransmissionInfo {
+pub struct TrafficRecorder {
     pub last_connection_id: AtomicU32,
 
     pub alive_connection_count: AtomicU32,
@@ -885,7 +897,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
     c1: C1,
     c2: C2,
     cid: &CID,
-    opt: Option<Arc<TransmissionInfo>>,
+    opt: Option<Arc<TrafficRecorder>>,
 ) -> Result<u64, Error> {
     if log_enabled!(log::Level::Debug) {
         debug!("cp start, {} c1: {}, c2: {}", cid, c1.name(), c2.name());

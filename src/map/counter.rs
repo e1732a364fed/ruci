@@ -1,5 +1,5 @@
 /*!
- * 使用 Counter 与 Arc<TransmissionInfo> 的区别是, Arc<TransmissionInfo> 是全局解密流量的统计,
+ * 使用 Counter 与 Arc<TrafficRecorder> 的区别是, Arc<TrafficRecorder> 是全局解密流量的统计,
  * 而Counter是针对自己持有的 Conn的流量的统计
  */
 

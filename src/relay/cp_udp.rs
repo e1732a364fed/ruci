@@ -25,7 +25,7 @@ pub async fn cp_udp_tcp(
     ed_from_ac: bool,
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
-    ti: Option<Arc<net::TransmissionInfo>>,
+    ti: Option<Arc<net::TrafficRecorder>>,
 ) -> io::Result<u64> {
     info!("{cid}, relay udp to tcp start",);
 
