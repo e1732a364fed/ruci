@@ -366,7 +366,7 @@ pub fn convert_config(
 
     // 然后将 StaticConfig 转换为目标格式
     match output_format.to_lowercase().as_str() {
-        "toml" => Ok(toml::to_string_pretty(&config)?),
+        "toml" => Ok(toml::to_string(&config)?),
         "yaml" | "yml" => Ok(serde_yaml::to_string(&config)?),
         "lua" => {
             #[cfg(any(feature = "lua", feature = "lua54"))]

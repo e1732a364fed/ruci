@@ -45,9 +45,7 @@ async fn main() -> anyhow::Result<()> {
                 OutMapConfig::Trojan("".to_string()),
             ],
         }],
-        tag_route: None,
-        fallback_route: None,
-        rule_route: None,
+        ..Default::default()
     };
 
     Engine::new_and_run_static(sc).await
@@ -83,9 +81,7 @@ async fn run_engine_server_end() -> anyhow::Result<()> {
                 }),
             ],
         }],
-        tag_route: None,
-        fallback_route: None,
-        rule_route: None,
+        ..Default::default()
     };
     Engine::new_and_run_static(sc).await
 }

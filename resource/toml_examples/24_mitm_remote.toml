@@ -1,7 +1,4 @@
-fallback_route = [[
-    "listen1",
-    "fallback_d",
-]]
+fallback_route = [["listen1", "fallback_d"]]
 
 [[inbounds]]
 tag = "listen1"
@@ -16,10 +13,7 @@ listen_addr = "0.0.0.0:10801"
 [inbounds.chain.TLS]
 cert = "test2.crt"
 key = "test2.key"
-alpn = [
-    "h2",
-    "http/1.1",
-]
+alpn = ["h2", "http/1.1"]
 
 [[inbounds.chain]]
 
@@ -38,10 +32,7 @@ leak_target_addr = true
 
 [outbounds.chain.TLS]
 insecure = false
-alpn = [
-    "h2",
-    "http/1.1",
-]
+alpn = ["h2", "http/1.1"]
 
 [[outbounds]]
 tag = "fallback_d"
@@ -49,4 +40,4 @@ tag = "fallback_d"
 [[outbounds.chain]]
 
 [outbounds.chain.BindDialer]
-dial_addr = "tcp://0.0.0.0:80"
+dial_addr = "tcp://0.0.0.0:4433"

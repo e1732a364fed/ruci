@@ -1,42 +1,21 @@
-[[inbounds]]
-tag = "listen1"
-
-[[inbounds.chain]]
-
-[inbounds.chain.Listener]
-listen_addr = "0.0.0.0:10800"
-
-[[inbounds.chain]]
-
-[inbounds.chain.Socks5Http]
-
-[[inbounds.chain]]
-
-[inbounds.chain.MITM]
-cert = "test_ca_cert.pem"
-key = "test_ca_key.pem"
-alpn = [
-    "h2",
-    "http/1.1",
+inbounds = [
+    { tag = "listen1", chain = [
+        { Listener = { listen_addr = "0.0.0.0:10800" } },
+        { Socks5Http = {} },
+        { MITM = { cert = "test_ca_cert.pem", key = "test_ca_key.pem", alpn = [
+            "h2",
+            "http/1.1",
+        ] } },
+    ] },
 ]
 
-[[outbounds]]
-tag = "dial1"
-
-[[outbounds.chain]]
-
-[outbounds.chain.BindDialer]
-dial_addr = "tcp://127.0.0.1:10801"
-
-[[outbounds.chain]]
-
-[outbounds.chain.TLS]
-host = "www.google.com"
-insecure = true
-alpn = [
-    "h2",
-    "http/1.1",
+outbounds = [
+    { tag = "dial1", chain = [
+        { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
+        { TLS = { host = "www.google.com", insecure = true, alpn = [
+            "h2",
+            "http/1.1",
+        ] } },
+        { Trojan = "mypassword" },
+    ] },
 ]
-
-[[outbounds.chain]]
-Trojan = "mypassword"
