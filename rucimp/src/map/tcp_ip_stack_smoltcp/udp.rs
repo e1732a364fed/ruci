@@ -68,11 +68,11 @@ fn addr2_ip_end_point(a: &Addr) -> IpEndpoint {
             let ip = so.ip();
             match ip {
                 std::net::IpAddr::V4(i) => IpEndpoint {
-                    addr: IpAddress::Ipv4(i.into()),
+                    addr: IpAddress::Ipv4(i),
                     port: so.port(),
                 },
                 std::net::IpAddr::V6(i) => IpEndpoint {
-                    addr: IpAddress::Ipv6(i.into()),
+                    addr: IpAddress::Ipv6(i),
                     port: so.port(),
                 },
             }
@@ -86,16 +86,11 @@ fn ip_end_point_to_addr(a: &IpEndpoint) -> Addr {
     match a.addr {
         IpAddress::Ipv4(i) => Addr {
             network: ruci::net::Network::UDP,
-            addr: ruci::net::NetAddr::Socket(SocketAddr::V4(SocketAddrV4::new(i.into(), a.port))),
+            addr: ruci::net::NetAddr::Socket(SocketAddr::V4(SocketAddrV4::new(i, a.port))),
         },
         IpAddress::Ipv6(i) => Addr {
             network: ruci::net::Network::UDP,
-            addr: ruci::net::NetAddr::Socket(SocketAddr::V6(SocketAddrV6::new(
-                i.into(),
-                a.port,
-                0,
-                0,
-            ))),
+            addr: ruci::net::NetAddr::Socket(SocketAddr::V6(SocketAddrV6::new(i, a.port, 0, 0))),
         },
     }
 }

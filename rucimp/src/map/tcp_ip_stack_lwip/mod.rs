@@ -77,7 +77,7 @@ impl Map for Stack {
                     let r = r.read(&mut bs).await;
                     if let Ok(n) = r {
                         // debug!("tun got pkt {:?},  {:?}", n, &bs[..n]);
-                        stack_sink.send((&bs[..n]).to_vec()).await.unwrap();
+                        stack_sink.send((bs[..n]).to_vec()).await.unwrap();
                     } else {
                         break;
                     }
@@ -102,7 +102,7 @@ impl Map for Stack {
 
                     if let Ok(pkt) = pkt {
                         // debug!("stack wrting");
-                        w.write(&pkt).await.unwrap();
+                        w.write_all(&pkt).await.unwrap();
                         // debug!("stack wrting ok");
                     }
                 }

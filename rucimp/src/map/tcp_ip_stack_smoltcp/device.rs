@@ -794,15 +794,15 @@ impl SmoltcpDevice {
 
         if !src_list.is_empty() {
             for src in src_list {
-                if let Some(_) = tcp_src_handle_map_lock.get(&src) {
+                if tcp_src_handle_map_lock.get(&src).is_some() {
                     tcp_src_handle_map_lock.remove(&src);
                 }
             }
         }
 
         for h in sh_list {
-            tcp_read_data_tx_map_lock.remove(&h);
-            tcp_handle_src_map_lock.remove(&h);
+            tcp_read_data_tx_map_lock.remove(h);
+            tcp_handle_src_map_lock.remove(h);
 
             self.tcp_sockets.remove(*h);
             self.tcp_handle_set.lock().remove(h);
@@ -836,7 +836,7 @@ impl SmoltcpDevice {
 
         if !src_list.is_empty() {
             for src in src_list {
-                if let Some(_) = udp_src_handle_map_lock.get(&src) {
+                if udp_src_handle_map_lock.get(&src).is_some() {
                     udp_src_handle_map_lock.remove(&src);
                 }
                 udp_read_data_tx_map_lock.remove(&src);

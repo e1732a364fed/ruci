@@ -46,7 +46,7 @@ pub(crate) async fn run(
 
             file_name = url.split('/').last().unwrap().to_string();
 
-            let v = match args.in_memory {
+            match args.in_memory {
                 true => crate::utils::dl_url(&url, None).await?.unwrap(),
                 false => {
                     let _ = crate::utils::dl_url(&url, Some(&file_name)).await?;
@@ -58,8 +58,7 @@ pub(crate) async fn run(
 
                     v
                 }
-            };
-            v
+            }
         }
 
         #[cfg(not(feature = "utils"))]

@@ -231,7 +231,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     println!(
         "Log Level(flag/env): {:?}",
-        std::env::var(RL).map_or_else(|_| String::new(), |v| v)
+        std::env::var(RL).unwrap_or_else(|_| String::new())
     );
 
     #[allow(unused_mut)]

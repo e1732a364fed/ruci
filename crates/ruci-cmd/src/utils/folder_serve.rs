@@ -10,19 +10,17 @@ async fn index(Path(folder): Path<String>) -> Html<String> {
     let mut body = String::new();
 
     if let Ok(entries) = fs::read_dir(&folder_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                let filename = path.file_name().unwrap().to_string_lossy();
-                if path.is_dir() {
-                    body.push_str(&format!(
-                        "<a href=\"{folder}/{filename}\">{filename}/</a><br>",
-                    ));
-                } else if path.is_file() {
-                    body.push_str(&format!(
-                        "<a href=\"/download/{folder}/{filename}\">{filename}</a><br>",
-                    ));
-                }
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let filename = path.file_name().unwrap().to_string_lossy();
+            if path.is_dir() {
+                body.push_str(&format!(
+                    "<a href=\"{folder}/{filename}\">{filename}/</a><br>",
+                ));
+            } else if path.is_file() {
+                body.push_str(&format!(
+                    "<a href=\"/download/{folder}/{filename}\">{filename}</a><br>",
+                ));
             }
         }
     }
@@ -65,7 +63,7 @@ async fn download(Path(filename): Path<String>) -> impl axum::response::IntoResp
         }
         Err(err) => {
             info!("download called, not found, {filename} ");
-            return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err)));
+            Err((StatusCode::NOT_FOUND, format!("File not found: {}", err)))
         }
     }
 }

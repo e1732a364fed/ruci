@@ -31,7 +31,7 @@ pub async fn deal_args(
     args: &crate::Args,
 ) -> Option<(Server, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>)> {
     match cmd {
-        Command::Run => return Some(Server::new(args.api_addr.clone()).await),
+        Command::Run => Some(Server::new(args.api_addr.clone()).await),
     }
 }
 
@@ -152,9 +152,8 @@ async fn get_last_ok_cid(State(all_conn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
     let m = all_conn.read();
     let last_kv = m.last_key_value();
-    match last_kv {
-        Some(e) => s.push_str(&e.0.to_string()),
-        None => {}
+    if let Some(e) = last_kv {
+        s.push_str(&e.0.to_string())
     }
     s
 }

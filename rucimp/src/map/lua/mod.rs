@@ -51,7 +51,7 @@ pub fn create_load_file_func(lua: &Lua, file_source: &crate::utils::FileSource) 
 
             let r = file_source
                 .get_file_content(file_name)
-                .map_err(|e| mlua::Error::external(e))?;
+                .map_err(mlua::Error::external)?;
 
             lua.create_string(&r.0)
         })
@@ -522,7 +522,7 @@ impl LuaMap {
         lua.globals().set("Warn_print", f).unwrap();
 
         if let Some(fs) = &self.file_source {
-            create_load_file_func(&lua, &fs);
+            create_load_file_func(&lua, fs);
         }
 
         let _: () = lua

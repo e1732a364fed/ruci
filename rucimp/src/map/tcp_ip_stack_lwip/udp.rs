@@ -63,7 +63,7 @@ pub async fn loop_accept_udp(
 
         let (data, src, dst) = r;
 
-        if data.len() != 0 {
+        if !data.is_empty() {
             let r = tx.try_send((data, src, dst));
 
             if let Err(e) = r {
@@ -120,28 +120,19 @@ impl Listener {
                         };
 
                         let mut map_mg = conn_map.lock().await;
-                        let k = (dst.clone(),src.clone());
+                        let k = (dst ,src );
 
-                        if map_mg.contains_key(&k) {
-
-                            let msg_tx = map_mg.get(&k).unwrap();
-                            let r = msg_tx.send(data).await;
-                            if let Err(e) = r {
-                                debug!("lwip UdpListener tx send got e: {e}");
-                                map_mg.remove(&k);
-                                continue;
-                            }
-                        } else {
+                        if let std::collections::hash_map::Entry::Vacant(e) = map_mg.entry(k) {
                             let (msg_tx, msg_rx) = mpsc::channel(100);
 
-                            map_mg.insert(k.clone(), msg_tx);
+                            e.insert( msg_tx);
                             let first_buf = BytesMut::from(data.as_slice());
 
                             let ac = new_addr_conn(
                                 sender.clone(),
                                 msg_rx,
-                                src.clone(),
-                                dst.clone(),
+                                src ,
+                                dst ,
                                 conn_map.clone(),
                             );
 
@@ -149,6 +140,15 @@ impl Listener {
                             if let Err(e) = r {
                                 debug!("lwip UdpListener loop got e: {e}");
                                 break;
+                            }
+
+                        } else {
+                            let msg_tx = map_mg.get(&k).unwrap();
+                            let r = msg_tx.send(data).await;
+                            if let Err(e) = r {
+                                debug!("lwip UdpListener tx send got e: {e}");
+                                map_mg.remove(&k);
+                                continue;
                             }
                         }
 
@@ -207,7 +207,7 @@ fn new_addr_conn(
     conn_map: ConnMap,
 ) -> AddrConn {
     let r = Reader {
-        dst: dst.clone(),
+        dst,
         rx: r,
         last_buf: None,
         state: ReadState::Buf,
@@ -257,7 +257,7 @@ impl AsyncWriteAddr for Writer {
 
         match std::pin::pin!(lock_future).poll(cx) {
             Poll::Ready(mut map) => {
-                map.remove(&(self.dst.clone(), self.src.clone()));
+                map.remove(&(self.dst, self.src));
 
                 Poll::Ready(Ok(()))
             }
@@ -314,7 +314,7 @@ impl AsyncReadAddr for Reader {
                         return Poll::Ready(Ok((
                             r_len,
                             Addr {
-                                addr: NetAddr::Socket(self.dst.clone()),
+                                addr: NetAddr::Socket(self.dst),
                                 network: Network::UDP,
                             },
                         )));

@@ -1,4 +1,7 @@
 Clippy:
+ruci-cmd 目录下
+cargo clippy --all-targets --features "steganography lua file_server api_server api_client utils quinn use-native-tls tun smoltcp"
+
 在 rucimp 目录下
 cargo clippy --all-targets --features "tun quinn lua route geoip sockopt use-native-tls rustls21 trace steganography"
 

@@ -577,7 +577,7 @@ impl Conn {
 
         let pr = ruci::net::http::parse_h1_request(data, false);
         match pr.parse_result {
-            Err(e) => return Poll::Ready(Err(io::Error::other(format!("{e:?}")))),
+            Err(e) => Poll::Ready(Err(io::Error::other(format!("{e:?}")))),
 
             Ok(_) => {
                 match pr
@@ -586,15 +586,13 @@ impl Conn {
                     .find(|h| h.head.contains("Content-Length"))
                 {
                     None => {
-                        return Poll::Ready(Err(io::Error::other(
-                            "Content-Length not found in header",
-                        )))
+                        Poll::Ready(Err(io::Error::other("Content-Length not found in header")))
                     }
 
                     Some(h) => {
                         let clr: Result<usize, _> = h.value.parse();
                         match clr {
-                            Err(e) => return Poll::Ready(Err(io::Error::other(format!("{e:?}")))),
+                            Err(e) => Poll::Ready(Err(io::Error::other(format!("{e:?}")))),
 
                             Ok(content_len) => {
                                 let si = pr.body_start_index;
@@ -629,7 +627,7 @@ impl Conn {
 
                                         let mut new_rc = BytesMut::with_capacity(READ_CAP);
 
-                                        new_rc.extend_from_slice(&data[..]);
+                                        new_rc.extend_from_slice(data);
 
                                         self.read_state = ReadState::ContinueReadRemote(
                                             content_len,
@@ -893,7 +891,7 @@ impl Conn {
 
                                     let mut new_rc = BytesMut::with_capacity(READ_CAP);
 
-                                    new_rc.extend_from_slice(&data[..]);
+                                    new_rc.extend_from_slice(data);
 
                                     self.read_state =
                                         ReadState::ContinueReadRemote(content_len, si, data.len());

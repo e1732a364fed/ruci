@@ -2,7 +2,7 @@
 Wrap Ipv4Packet and Ipv6Packet into an enum [`IpPacket`].
  */
 use smoltcp::wire::{IpProtocol, IpVersion, Ipv4Packet, Ipv6Packet};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::IpAddr;
 
 /// Represents a Ipv4Packet or a Ipv6Packet.
 #[derive(Debug)]
@@ -22,15 +22,15 @@ impl<T: AsRef<[u8]>> IpPacket<T> {
 
     pub fn src_addr(&self) -> IpAddr {
         match *self {
-            IpPacket::Ipv4(ref packet) => IpAddr::from(Ipv4Addr::from(packet.src_addr())),
-            IpPacket::Ipv6(ref packet) => IpAddr::from(Ipv6Addr::from(packet.src_addr())),
+            IpPacket::Ipv4(ref packet) => IpAddr::from(packet.src_addr()),
+            IpPacket::Ipv6(ref packet) => IpAddr::from(packet.src_addr()),
         }
     }
 
     pub fn dst_addr(&self) -> IpAddr {
         match *self {
-            IpPacket::Ipv4(ref packet) => IpAddr::from(Ipv4Addr::from(packet.dst_addr())),
-            IpPacket::Ipv6(ref packet) => IpAddr::from(Ipv6Addr::from(packet.dst_addr())),
+            IpPacket::Ipv4(ref packet) => IpAddr::from(packet.dst_addr()),
+            IpPacket::Ipv6(ref packet) => IpAddr::from(packet.dst_addr()),
         }
     }
 

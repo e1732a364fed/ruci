@@ -195,7 +195,7 @@ pub fn lua_repl() {
                     ..
                 }) => {
                     // continue reading input and append it to `line`
-                    line.push_str("\n"); // separate input lines
+                    line.push('\n'); // separate input lines
                     prompt = ">> ";
                 }
                 Err(e) => {

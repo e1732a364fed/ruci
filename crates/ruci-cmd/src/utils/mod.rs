@@ -17,10 +17,10 @@ pub const MMDB_DOWNLOAD_LINK: &str =
 #[derive(Subcommand, Clone)]
 pub enum Commands {
     /// download Country.mmdb
-    MMDB,
+    Mmdb,
 
     /// download wintun.zip
-    WINTUN,
+    Wintun,
 
     /// calculate trojan hash for a plain text password
     CalcuTrojanHash { password: String },
@@ -56,10 +56,10 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         None => return Ok(()),
     };
     match cmd {
-        Commands::MMDB => {
+        Commands::Mmdb => {
             download_mmdb().await?;
         }
-        Commands::WINTUN => {
+        Commands::Wintun => {
             download_wintun().await?;
         }
         Commands::CalcuTrojanHash { password } => calcu_trojan_hash(&password),
@@ -164,23 +164,18 @@ pub async fn dl_url(url: &str, file_name: Option<&str>) -> anyhow::Result<Option
     tokio::spawn(async move {
         let mut i: usize = 0;
         let mut total: u64 = 0;
-        loop {
-            match rx.recv().await {
-                Some((_, db)) => {
-                    i += 1;
-                    total += db;
-                    let p = total as f64 / sf;
-                    let p100 = p * 100 as f64;
-                    print!(
-                        "\r progress: {:>5.2}%; {:>5}; db +{}, total: {}; ",
-                        p100,
-                        i,
-                        ByteSize(db),
-                        ByteSize(total),
-                    )
-                }
-                None => break,
-            }
+        while let Some((_, db)) = rx.recv().await {
+            i += 1;
+            total += db;
+            let p = total as f64 / sf;
+            let p100 = p * 100_f64;
+            print!(
+                "\r progress: {:>5.2}%; {:>5}; db +{}, total: {}; ",
+                p100,
+                i,
+                ByteSize(db),
+                ByteSize(total),
+            )
         }
     });
 
