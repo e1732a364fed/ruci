@@ -1,4 +1,5 @@
 use std::{
+    cmp::min,
     io::{self, Error, ErrorKind},
     pin::Pin,
     task::{Context, Poll},
@@ -23,6 +24,7 @@ use h2::{RecvStream, SendStream};
 use ruci::utils::io_error;
 use thiserror::Error;
 use tokio::io::{AsyncRead, AsyncWrite};
+use tracing::debug;
 
 #[derive(Error, Debug)]
 pub enum UVariantErr {
@@ -75,6 +77,8 @@ pub fn encode(payload: &[u8]) -> BytesMut {
     buf
 }
 
+const READ_HEAD_LEN: usize = 6;
+
 pub struct Stream {
     recv: RecvStream,
     send: SendStream<Bytes>,
@@ -86,6 +90,7 @@ pub struct Stream {
 impl Stream {
     #[inline]
     pub fn new(recv: RecvStream, send: SendStream<Bytes>) -> Self {
+        debug!("new grpc stream");
         Stream {
             recv,
             send,
@@ -96,6 +101,7 @@ impl Stream {
 
     fn try_read_next_len(&mut self) -> Result<(), UVariantErr> {
         if self.next_data_len == 0 {
+            self.buffer.advance(READ_HEAD_LEN);
             let (len, oe) = read_uvarint(&mut self.buffer);
             if let Some(e) = oe {
                 return Err(e);
@@ -113,7 +119,7 @@ impl AsyncRead for Stream {
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         loop {
-            if !self.buffer.is_empty() {
+            if self.next_data_len > 0 || self.buffer.len() >= READ_HEAD_LEN {
                 let r = self.try_read_next_len();
                 if let Err(e) = r {
                     return Poll::Ready(Err(io_error(e)));
@@ -161,13 +167,14 @@ impl AsyncWrite for Stream {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
+        let old_len = buf.len();
         let real_buf = encode(buf);
 
         self.send.reserve_capacity(real_buf.len());
         Poll::Ready(match ready!(self.send.poll_capacity(cx)) {
             Some(Ok(write_len)) => self.send.send_data(real_buf.into(), false).map_or_else(
                 |e| Err(Error::new(ErrorKind::BrokenPipe, e)),
-                |_| Ok(write_len),
+                |_| Ok(min(old_len, write_len)),
             ),
             // is_send_streaming returns false
             // which indicates the state is

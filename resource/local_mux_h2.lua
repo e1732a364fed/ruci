@@ -20,6 +20,7 @@ socks5_out = {
 
 h2_out = {
     H2Mux = {
+        is_grpc = true,
         http_config = {
             host = "myhost",
             path = "/path1"

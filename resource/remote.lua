@@ -66,6 +66,7 @@ ws_trojans_chain = {tcp, tls, http_filter, basic_ws, trojan_in}
 
 h2_trojans_chain = {tcp, tls, {
     H2 = {
+        is_grpc = true,
         http_config = {
             host = "myhost",
             path = "/path1"
