@@ -45,6 +45,7 @@ use macro_map::*;
 use rand::Rng;
 use ruci::net::helpers::BufContentLenProtocolReader;
 use ruci::net::http::CommonHttp;
+use ruci::net::Addr;
 use ruci::{
     map::{self, MapParams, MapResult, ProxyBehavior},
     net::CID,
@@ -452,6 +453,7 @@ fn get_pr_header_content_length_body_index(pr: Box<dyn CommonHttp>) -> Result<(u
 }
 
 impl Conn {
+    /// parse steganography string into real data.
     fn common_real_read(
         &mut self,
         from: usize,
@@ -524,11 +526,14 @@ impl AsyncRead for Conn {
     ) -> Poll<Result<()>> {
         match self.reader.read(cx) {
             Poll::Ready(r) => match r {
-                Ok((rc, from, to)) => {
+                Ok(Some((rc, from, to))) => {
+                    debug_assert!(from < to);
+
                     let r = self.common_real_read(from, to, buf, &rc);
                     self.reader.put_back(rc);
                     r
                 }
+                Ok(None) => Poll::Ready(Ok(())),
                 Err(e) => Poll::Ready(Err(e)),
             },
             Poll::Pending => Poll::Pending,
@@ -830,42 +835,55 @@ impl ruci::Name for ClientOrServer {
         "spe1"
     }
 }
+
+impl ClientOrServer {
+    fn connect_with_rw(
+        &self,
+        r: Box<dyn AsyncRead + Send + Sync + 'static + Unpin>,
+        w: Box<dyn AsyncWrite + Send + Sync + 'static + Unpin>,
+        a: Option<Addr>,
+        b: Option<BytesMut>,
+        cid: CID,
+    ) -> MapResult {
+        let is_ser = self.is_server;
+
+        let content_len_body_start_index_parse_fn = move |data: &[u8]| {
+            let pr = ruci::net::http::common_parse(is_ser, data);
+            get_pr_header_content_length_body_index(pr)
+        };
+        let c = Conn {
+            hasnt_written: true,
+            cid,
+            qa: self.qa.clone(),
+            is_server: self.is_server,
+            server_cached_answers: vec![],
+            base_w: Box::pin(w),
+            write_cache: Some(BytesMut::with_capacity(READ_CAP)),
+            write_state: WriteState::default(),
+            reader: BufContentLenProtocolReader {
+                read_cache: None,
+                read_state: Default::default(),
+                read_cap: READ_CAP,
+                reader: Box::pin(r),
+                content_len_body_start_index_parse_fn: Box::new(
+                    content_len_body_start_index_parse_fn,
+                ),
+            },
+        };
+
+        return MapResult::new_c(Box::new(c)).a(a).b(b).build();
+    }
+}
+
 #[async_trait::async_trait]
 impl map::Map for ClientOrServer {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
+            ruci::net::Stream::RW((r, w)) => self.connect_with_rw(r, w, params.a, params.b, cid),
             ruci::net::Stream::Conn(base) => {
-                let is_ser = self.is_server;
-
-                let content_len_body_start_index_parse_fn = move |data: &[u8]| {
-                    let pr = ruci::net::http::common_parse(is_ser, data);
-                    get_pr_header_content_length_body_index(pr)
-                };
                 let (r, w) = tokio::io::split(base);
-                let c = Conn {
-                    hasnt_written: true,
-                    cid,
-                    qa: self.qa.clone(),
-                    is_server: self.is_server,
-                    server_cached_answers: vec![],
-                    base_w: Box::pin(Box::new(w)),
-                    write_cache: Some(BytesMut::with_capacity(READ_CAP)),
-                    write_state: WriteState::default(),
-                    reader: BufContentLenProtocolReader {
-                        read_cache: None,
-                        read_state: Default::default(),
-                        read_cap: READ_CAP,
-                        reader: Box::pin(r),
-                        content_len_body_start_index_parse_fn: Box::new(
-                            content_len_body_start_index_parse_fn,
-                        ),
-                    },
-                };
 
-                return MapResult::new_c(Box::new(c))
-                    .a(params.a)
-                    .b(params.b)
-                    .build();
+                self.connect_with_rw(Box::new(r), Box::new(w), params.a, params.b, cid)
             }
             _ => MapResult::err_str("spe1 only support tcplike stream"),
         }

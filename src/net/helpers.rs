@@ -440,10 +440,16 @@ impl BufContentLenProtocolReader {
     ///
     /// This is implemented this way to avoid extra memory copy.
     /// [`put_back`] is called.
+    ///
+    /// Returned number is "from" and "to".
+    /// It's not possible that from >= to.
+    ///
+    /// If the returned result is None, then it marks EOF.
+    ///
     pub fn read(
         &mut self,
         cx: &mut Context<'_>,
-    ) -> Poll<std::io::Result<(BytesMut, usize, usize)>> {
+    ) -> Poll<std::io::Result<Option<(BytesMut, usize, usize)>>> {
         let rc = self.read_cache.take();
 
         match self.read_state {
@@ -466,7 +472,7 @@ impl BufContentLenProtocolReader {
                             if l == 0 {
                                 self.read_state = BufferReadState::Closed;
                                 tracing::trace!("bufprotocolreader read ok empty(EOF), will close");
-                                return Poll::Ready(Ok((BytesMut::new(), 0, 0)));
+                                return Poll::Ready(Ok(None));
                             }
 
                             self.read_header(cx, rc, 0, l)
@@ -489,26 +495,26 @@ impl BufContentLenProtocolReader {
                 body_start_index,
                 filled_data_len,
             } => {
-                let mut rc = rc.unwrap_or(BytesMut::zeroed(self.read_cap));
+                let mut rc = rc.unwrap();
 
-                unsafe {
-                    rc.set_len(self.read_cap);
-                }
+                debug_assert_eq!(self.read_cap, rc.len());
+
                 let mut rb = ReadBuf::new(&mut rc);
 
                 rb.set_filled(filled_data_len);
 
-                let mut rb = ReadBuf::new(&mut rc);
                 match self.reader.as_mut().poll_read(cx, &mut rb) {
                     Poll::Ready(r) => match r {
                         Ok(_) => {
                             let data = rb.filled();
                             let dl = data.len();
 
+                            debug_assert!(dl >= filled_data_len);
+
                             if dl == filled_data_len {
                                 trace!("  ContinueReadRemote got empty(EOF), will close");
                                 self.read_state = BufferReadState::Closed;
-                                return Poll::Ready(Ok((BytesMut::new(), 0, 0)));
+                                return Poll::Ready(Ok(None));
                             }
 
                             let real_len = data[body_start_index..].len();
@@ -548,11 +554,11 @@ impl BufContentLenProtocolReader {
                                     self.read_state = BufferReadState::ReadyForNew;
                                 }
 
-                                Poll::Ready(Ok((
+                                Poll::Ready(Ok(Some((
                                     rc,
                                     body_start_index,
                                     body_start_index + content_len,
-                                )))
+                                ))))
                             }
                         }
                         Err(e) => {
@@ -569,7 +575,9 @@ impl BufContentLenProtocolReader {
                 }
             }
             BufferReadState::ContinueReadLocalCache { from, to } => {
-                let rc = rc.unwrap_or(BytesMut::zeroed(self.read_cap));
+                let rc = rc.unwrap();
+
+                debug_assert_eq!(rc.len(), self.read_cap);
 
                 self.read_header(cx, rc, from, to)
             }
@@ -582,38 +590,42 @@ impl BufContentLenProtocolReader {
         rc: BytesMut,
         from: usize,
         to: usize,
-    ) -> Poll<std::io::Result<(BytesMut, usize, usize)>> {
+    ) -> Poll<std::io::Result<Option<(BytesMut, usize, usize)>>> {
         let data = &rc[from..to];
         let (content_len, body_start_index) = (self.content_len_body_start_index_parse_fn)(data)?;
         let real_len = data[body_start_index..].len();
 
         match content_len.cmp(&real_len) {
             std::cmp::Ordering::Less => {
-                // let r = (self.real_read_fn)(body_start_index, content_len, buf, data);
+                debug_assert!(from + body_start_index + content_len < to);
 
                 self.read_state = BufferReadState::ContinueReadLocalCache {
                     from: from + body_start_index + content_len,
                     to,
                 };
 
-                Poll::Ready(Ok((
+                Poll::Ready(Ok(Some((
                     rc,
                     from + body_start_index,
                     from + body_start_index + content_len,
-                )))
+                ))))
             }
             std::cmp::Ordering::Equal => {
                 self.read_state = BufferReadState::ReadyForNew;
-                Poll::Ready(Ok((
+                Poll::Ready(Ok(Some((
                     rc,
                     from + body_start_index,
                     from + body_start_index + content_len,
-                )))
+                ))))
             }
             std::cmp::Ordering::Greater => {
                 let mut new_rc = BytesMut::with_capacity(self.read_cap);
 
                 new_rc.extend_from_slice(data);
+
+                unsafe {
+                    new_rc.set_len(self.read_cap);
+                }
 
                 self.read_state = BufferReadState::ContinueReadRemote {
                     content_len,
