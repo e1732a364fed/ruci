@@ -8,3 +8,4 @@ testfile.txt
 *.log
 *.mmdb
 wintun.*
+logs/

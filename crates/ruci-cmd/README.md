@@ -1,4 +1,5 @@
 
+产生的日志会的 logs 文件夹中, daily rolling
 
 features: api_server, api_client, utils, trace
 default enables none.

@@ -92,9 +92,9 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Mode: {:?}", args.mode);
     println!("Config: {}", args.config);
-    println!("LogLevel: {:?}", args.log_level);
+    println!("LogLevel(flag): {:?}", args.log_level);
 
-    print_env_version(args.log_level);
+    let _g = env_and_version(args.log_level);
 
     match args.sub_cmds {
         None => {
@@ -131,7 +131,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn print_env_version(ll: Option<Level>) {
+pub fn env_and_version(ll: Option<Level>) -> tracing_appender::non_blocking::WorkerGuard {
     println!("ruci-cmd\n");
     let cdir = std::env::current_dir().expect("has current directory");
     println!("working dir: {:?} \n", cdir);
@@ -161,25 +161,37 @@ pub fn print_env_version(ll: Option<Level>) {
 
     set_var(RL, l);
 
+    use tracing_appender::{non_blocking, rolling};
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+
+    let file_appender = rolling::daily("logs", "ruci-cmd.log");
+    let (non_blocking_appender, guard) = non_blocking(file_appender);
+    let file_layer = fmt::layer()
+        .with_ansi(false)
+        .with_writer(non_blocking_appender);
+
+    let console_layer = fmt::layer().with_writer(std::io::stderr);
+
     tracing_subscriber::registry()
-        .with(fmt::layer())
         .with(EnvFilter::from_default_env())
+        .with(console_layer)
+        .with(file_layer)
         .init();
 
     println!(
-        "Log Level(env): {:?}",
+        "Log Level(flag/env): {:?}",
         std::env::var(RL).map_or_else(|_| String::new(), |v| v)
     );
 
-    if !log_enabled!(Level::Info) {
-        return;
+    if log_enabled!(Level::Info) {
+        info!(
+            "version: ruci-cmd:{}, rucimp_{}",
+            env!("CARGO_PKG_VERSION"),
+            rucimp::VERSION,
+        );
     }
-    info!(
-        "version: ruci-cmd:{}, rucimp_{}",
-        env!("CARGO_PKG_VERSION"),
-        rucimp::VERSION,
-    )
+
+    guard
 }
 
 /// blocking
