@@ -1,6 +1,7 @@
 name: Ruci-Cmd Release Cross
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       tag:
@@ -14,6 +15,7 @@ env:
 jobs:
 
   build-cross:
+    permissions: write-all
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: full
@@ -35,7 +37,7 @@ jobs:
           rustup override set stable
 
       - name: Install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross #cargo install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
       
       - name: Build ${{ matrix.target }}
         run: |

@@ -12,6 +12,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  build-cross:
+    uses: ./.github/workflows/build_ruci_cmd_cross.yml
 
   build-ubuntu:
     permissions: write-all
