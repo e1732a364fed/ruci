@@ -13,6 +13,7 @@ Refer to rucimp sub crate for config file format related implmetations and for m
 
 use std::{any::Any, sync::Arc};
 
+use bytes::BytesMut;
 use parking_lot::Mutex;
 
 pub mod map;
@@ -37,3 +38,11 @@ impl<T: Name + ?Sized> Name for Box<T> {
 pub type AnyS = dyn Any + Send + Sync; // 加 Send+ Sync 以支持多线程
 pub type AnyBox = Box<AnyS>;
 pub type AnyArc = Arc<Mutex<AnyS>>;
+
+pub fn buf_to_ob(b: BytesMut) -> Option<BytesMut> {
+    if b.is_empty() {
+        None
+    } else {
+        Some(b)
+    }
+}

@@ -187,9 +187,7 @@ impl crate::map::Mapper for Adder {
                     a: params.a,
                     b: params.b,
                     c: Stream::TCP(Box::new(cc)),
-                    d: None,
-                    e: None,
-                    new_id: None,
+                    ..Default::default()
                 }
             }
             Stream::UDP(_) => {

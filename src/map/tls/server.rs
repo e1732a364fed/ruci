@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use macro_mapper::DefaultMapperExt;
 
 use crate::map::{MapperBox, ToMapper};
@@ -53,7 +54,7 @@ impl Server {
         mut conn: net::Conn,
         b: Option<BytesMut>,
         a: Option<net::Addr>,
-    ) -> io::Result<map::MapResult> {
+    ) -> anyhow::Result<map::MapResult> {
         if let Some(pre_read_data) = b {
             debug!("tls server got pre_read_data, init with EarlyDataWrapper");
             let nc = EarlyDataWrapper::from(pre_read_data, conn);
@@ -63,14 +64,10 @@ impl Server {
 
         let c = self.ta.accept(conn).await?;
 
-        Ok(MapResult {
-            a,
-            b: None,
-            c: map::Stream::TCP(Box::new(c)),
-            d: Some(map::AnyData::B(Box::new(SeverTLSConnDescriber {}))),
-            e: None,
-            new_id: None,
-        })
+        Ok(MapResult::newc(Box::new(c))
+            .a(a)
+            .d(map::AnyData::B(Box::new(SeverTLSConnDescriber {})))
+            .build())
     }
 }
 
@@ -93,7 +90,7 @@ impl map::Mapper for Server {
         if let map::Stream::TCP(conn) = conn {
             let r = self.handshake(cid, conn, params.b, params.a).await;
             match r {
-                Ok(r) => r,
+                anyhow::Result::Ok(r) => r,
                 Err(e) => MapResult::from_e(e),
             }
         } else {

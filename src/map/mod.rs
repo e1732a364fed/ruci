@@ -204,14 +204,6 @@ impl MapResult {
     }
 }
 
-fn buf_to_ob(b: BytesMut) -> Option<BytesMut> {
-    if b.is_empty() {
-        None
-    } else {
-        Some(b)
-    }
-}
-
 /// indicate the meaning of what the Mapper is really doing
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProxyBehavior {

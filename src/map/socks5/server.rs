@@ -3,6 +3,7 @@ pub mod udp;
 use super::*;
 
 use crate::{
+    buf_to_ob,
     map::{self, AnyData, MapResult, MapperBox, ProxyBehavior, ToMapper, CID},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, User, UsersMap},
@@ -452,36 +453,30 @@ impl Server {
 
             return Ok(MapResult {
                 a: Some(ad),
-                b: if buf.is_empty() { None } else { Some(buf) },
+                b: buf_to_ob(buf),
                 c: map::Stream::TCP(base),
                 d: ou_to_oad(the_user), //将 该登录的用户信息 作为 额外信息 传回
-                e: None,
-                new_id: None,
+                ..Default::default()
             });
         }
         if cmd == CMD_UDPASSOCIATE && self.support_udp {
             udp::udp_associate(cid, base, ad).await?;
 
             return Ok(MapResult {
-                a: None,
-                b: if buf.is_empty() { None } else { Some(buf) },
-                c: net::Stream::None,
+                b: buf_to_ob(buf),
                 d: Some(map::AnyData::B(Box::new(map::NewConnectionOptData {
                     new_connection: map::NewConnection::UdpConnection,
                     data: ou_to_oad(the_user),
                 }))), //标记我们 采用了新的udp连接
-                e: None,
-                new_id: None,
+                ..Default::default()
             });
         }
 
         Ok(MapResult {
-            a: None,
-            b: if buf.is_empty() { None } else { Some(buf) },
+            b: buf_to_ob(buf),
             c: map::Stream::TCP(base),
-            d: None,
             e: Some(anyhow!("socks5: not supported cmd, {}", cmd)),
-            new_id: None,
+            ..Default::default()
         })
     }
 }

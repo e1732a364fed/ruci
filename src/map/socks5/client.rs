@@ -5,7 +5,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use self::map::{MapParams, ProxyBehavior, CID};
 use super::*;
 use crate::{map::MapResult, net};
-use anyhow::anyhow;
+use anyhow::{anyhow, Ok};
 
 #[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Client {
@@ -91,14 +91,9 @@ impl Client {
             base.write_all(&ed).await?;
         }
 
-        Ok(MapResult {
-            a: None,
-            b: None,
-            c: map::Stream::TCP(base),
-            d: Some(map::AnyData::B(Box::new(adopted_method))),
-            e: None,
-            new_id: None,
-        })
+        Ok(MapResult::newc(base)
+            .d(map::AnyData::B(Box::new(adopted_method)))
+            .build())
     }
 }
 

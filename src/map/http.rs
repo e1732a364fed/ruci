@@ -12,6 +12,7 @@ use macro_mapper::DefaultMapperExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
+use crate::buf_to_ob;
 use crate::map::{self, MapResult};
 use crate::net::http::Method;
 use crate::net::CID;
@@ -227,14 +228,13 @@ impl Server {
 
         Ok(MapResult {
             a: Some(ta),
-            b: if buf.is_empty() { None } else { Some(buf) },
+            b: buf_to_ob(buf),
             c: map::Stream::TCP(base),
             d: authed_user.map(|up| {
                 let b: Box<dyn User> = Box::new(up);
                 map::AnyData::B(Box::new(b))
             }), //将 该登录的用户信息 作为 额外信息 传回
-            e: None,
-            new_id: None,
+            ..Default::default()
         })
     }
 }
