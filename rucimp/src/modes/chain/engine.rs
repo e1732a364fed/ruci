@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use ruci::{
     map::{acc::MIterBox, *},
     net::GlobalTrafficRecorder,
-    relay::{handle_in_accumulate_result, route::*},
+    relay::{handle_in_accumulate_result, record::*, route::*},
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{
@@ -20,8 +20,7 @@ pub struct Engine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁，若有值说明 is running
     pub ti: Arc<GlobalTrafficRecorder>,
 
-    pub conn_info_recorder:
-        Option<Arc<tokio::sync::Mutex<Box<dyn ruci::relay::record::NewInfoRecorder>>>>,
+    pub conn_info_recorder: OptNewInfoSender,
 
     inbounds: Vec<MIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, MIterBox>>, //不为空
@@ -150,9 +149,7 @@ impl Engine {
         mut arx: Receiver<acc::AccumulateResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
         ti: Arc<GlobalTrafficRecorder>,
-        conn_info_recorder: Option<
-            Arc<tokio::sync::Mutex<Box<dyn ruci::relay::record::NewInfoRecorder>>>,
-        >,
+        conn_info_recorder: OptNewInfoSender,
     ) -> anyhow::Result<()> {
         loop {
             let ar = arx.recv().await;

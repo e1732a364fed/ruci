@@ -3,9 +3,6 @@
  用户提供的参数作为配置文件 读取它并以 chain 模式运行。
 */
 
-use std::sync::Arc;
-
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use log::warn;
 use ruci::relay::record::*;
@@ -37,15 +34,32 @@ async fn main() -> anyhow::Result<()> {
         .open("newconn.log")
         .await?;
 
-    let fr = FileRecorder {
+    let mut fr = FileRecorder {
         f: conn_info_record_file,
         failed: false,
     };
-    se.conn_info_recorder = Some(Arc::new(tokio::sync::Mutex::new(Box::new(fr))));
+
+    let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+
+    se.conn_info_recorder = Some(tx);
 
     let se = Box::new(se);
 
     se.run().await?;
+
+    tokio::spawn(async move {
+        loop {
+            let x = rx.recv().await;
+            match x {
+                Some(nc) => {
+                    if !fr.record(nc).await {
+                        break;
+                    }
+                }
+                None => break,
+            }
+        }
+    });
 
     wait_close_sig().await?;
 
@@ -59,11 +73,10 @@ struct FileRecorder {
     failed: bool,
 }
 
-#[async_trait]
-impl NewInfoRecorder for FileRecorder {
-    async fn record(&mut self, state: NewConnInfo) {
+impl FileRecorder {
+    async fn record(&mut self, state: NewConnInfo) -> bool {
         if self.failed {
-            return;
+            return false;
         }
         let now: DateTime<Utc> = Utc::now();
         let r = self
@@ -77,5 +90,6 @@ impl NewInfoRecorder for FileRecorder {
                 self.failed = true;
             }
         }
+        true
     }
 }

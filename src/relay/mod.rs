@@ -10,16 +10,15 @@ pub mod route;
 
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use bytes::BytesMut;
 use log::{debug, info, log_enabled, warn};
-use tokio::sync::Mutex;
 
 use crate::net::addr_conn::AsyncWriteAddrExt;
 use crate::net::{self, Addr, Stream, CID};
 
 use self::acc::{AccumulateParams, MIterBox};
 use self::route::OutSelector;
+use record::*;
 
 use anyhow::anyhow;
 use std::time::Duration;
@@ -36,7 +35,7 @@ pub async fn handle_in_stream(
     out_selector: Arc<Box<dyn OutSelector>>,
     ti: Option<Arc<net::GlobalTrafficRecorder>>,
 
-    recorder: Option<Arc<Mutex<Box<dyn record::NewInfoRecorder>>>>,
+    recorder: OptNewInfoSender,
 ) -> anyhow::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
@@ -79,7 +78,7 @@ pub async fn handle_in_accumulate_result(
 
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
 
-    recorder: Option<Arc<Mutex<Box<dyn record::NewInfoRecorder>>>>,
+    recorder: OptNewInfoSender,
 ) -> anyhow::Result<()> {
     let cid = listen_result.id;
     let target_addr = match listen_result.a.take() {
@@ -182,23 +181,20 @@ pub async fn handle_in_accumulate_result(
 
     if let Some(r) = recorder {
         let cid = cid.clone();
-        tokio::spawn(async move {
-            r.lock()
-                .await
-                .record(record::NewConnInfo {
-                    cid,
-                    in_tag: listen_result.chain_tag,
-                    out_tag: dial_result.chain_tag,
-                    target_addr,
 
-                    #[cfg(feature = "trace")]
-                    in_trace: listen_result.trace,
+        r.send(NewConnInfo {
+            cid,
+            in_tag: listen_result.chain_tag,
+            out_tag: dial_result.chain_tag,
+            target_addr,
 
-                    #[cfg(feature = "trace")]
-                    out_trace: dial_result.trace,
-                })
-                .await;
-        });
+            #[cfg(feature = "trace")]
+            in_trace: listen_result.trace,
+
+            #[cfg(feature = "trace")]
+            out_trace: dial_result.trace,
+        })
+        .await?;
     }
 
     cp_stream(

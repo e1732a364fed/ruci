@@ -1,5 +1,10 @@
 use super::*;
 
+pub type OptNewInfoSender = Option<tokio::sync::mpsc::Sender<NewConnInfo>>;
+
+/// (ub,db)
+pub type OptUpdateInfoSender = Option<tokio::sync::mpsc::Sender<(u64, u64)>>;
+
 #[derive(Clone, Debug)]
 pub struct NewConnInfo {
     pub cid: CID,
@@ -30,9 +35,4 @@ impl std::fmt::Display for NewConnInfo {
             )
         }
     }
-}
-
-#[async_trait]
-pub trait NewInfoRecorder: Send + Sync {
-    async fn record(&mut self, state: NewConnInfo);
 }
