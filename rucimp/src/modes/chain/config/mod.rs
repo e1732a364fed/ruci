@@ -375,7 +375,7 @@ pub enum InMapConfig {
         http_config: Option<CommonConfig>,
     },
     // #[cfg(any(feature = "quic", feature = "quinn"))]
-    #[cfg(any(feature = "quinn"))]
+    #[cfg(feature = "quinn")]
     Quic(crate::map::quic_common::ServerConfig),
 
     /// tcp/ip stack
@@ -440,7 +440,7 @@ pub enum OutMapConfig {
         http_config: Option<CommonConfig>,
     },
     // #[cfg(any(feature = "quic", feature = "quinn"))]
-    #[cfg(any(feature = "quinn"))]
+    #[cfg(feature = "quinn")]
     Quic(crate::map::quic_common::ClientConfig),
 
     #[cfg(feature = "steganography")]

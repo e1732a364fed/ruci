@@ -40,7 +40,8 @@ pub fn load_static(
     let ct: LuaTable = lua
         .globals()
         .get(CONFIG_KEY)
-        .map_err(|e| anyhow::anyhow!("get lua global Config failed: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("get lua global Config failed: {}", e))
+        .context("get lua global Config failed")?;
 
     let dr = mlua::serde::de::Deserializer::new(Value::Table(ct));
 

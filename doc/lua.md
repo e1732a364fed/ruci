@@ -20,7 +20,7 @@ chain1 = {
     "Counter",
 
 }
-len = table.getn(chain1)
+len = #chain1
 for i=1,5 do 
     chain1[len+1] = tls
     chain1[len+2] = c 

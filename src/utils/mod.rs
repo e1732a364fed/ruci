@@ -147,7 +147,7 @@ impl FileSource {
         Ok(())
     }
 
-    pub fn read_to_string<'a, P>(&'a self, file_name: P) -> io::Result<String>
+    pub fn read_to_string<P>(&self, file_name: P) -> io::Result<String>
     where
         P: AsRef<std::path::Path>,
     {
@@ -156,7 +156,7 @@ impl FileSource {
     }
 
     /// 返回读到的 数据。如果 source 为 Folders ， 则还会返回 成功找到的路径
-    pub fn get_file_content<'a, P>(&'a self, file_name: P) -> io::Result<(Vec<u8>, Option<&'a str>)>
+    pub fn get_file_content<P>(&self, file_name: P) -> io::Result<(Vec<u8>, Option<&str>)>
     where
         P: AsRef<std::path::Path>,
     {
@@ -180,7 +180,10 @@ impl FileSource {
                         }
                     }
                 }
-                Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found").into())
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "not found",
+                ))
             }
             FileSource::StdReadFile => {
                 let s = std::fs::read_to_string(file_name)?;

@@ -1,7 +1,8 @@
 use super::*;
+use anyhow::Context;
 use fold::OVOD;
 use infinite::load_infinite_io;
-use mlua::{Error, Lua, LuaSerdeExt};
+use mlua::{Error, ErrorContext, Lua, LuaSerdeExt};
 use ruci::map;
 use ruci::user::PlainText;
 //https://raw.githubusercontent.com/kikito/inspect.lua/master/inspect.lua
@@ -24,7 +25,7 @@ fn test_in() -> anyhow::Result<()> {
             c,
 
         }
-        len = table.getn(chain1)
+        len = #chain1
         for i=1,5 do 
             chain1[len+1] = tls
             chain1[len+2] = c 
@@ -39,27 +40,43 @@ fn test_in() -> anyhow::Result<()> {
         }
     "#;
 
-    let mut c: StaticConfig = load_static(text, Arc::new(FileSource::StdReadFile))?;
+    let mut c: StaticConfig =
+        load_static(text, Arc::new(FileSource::StdReadFile)).context("load_static failed")?;
 
     println!("{:#?}", c);
 
     let lua = save_static(&c)?;
-    let inspect: LuaTable = lua.load(INSPECT).eval()?;
-    lua.globals().set("inspect", inspect)?;
-    lua.load(
-        r#"
-        print(inspect(Config))
-    "#,
-    )
-    .exec()?;
+    let inspect: LuaTable = ErrorContext::context(lua.load(INSPECT).eval(), "eval inspect failed")?;
+    ErrorContext::context(
+        lua.globals().set("inspect", inspect),
+        "set inspect global failed",
+    )?;
+    ErrorContext::context(
+        lua.load(
+            r#"
+            print(inspect(Config))
+        "#,
+        )
+        .exec(),
+        "print inspect failed",
+    )?;
 
-    c = load_static(text, Arc::new(FileSource::StdReadFile))?;
+    c = load_static(text, Arc::new(FileSource::StdReadFile)).context("load_static again failed")?;
 
-    let first_listen_group = c.inbounds.first().unwrap();
-    let last_m = first_listen_group.chain.last().unwrap();
+    let first_listen_group = c
+        .inbounds
+        .first()
+        .ok_or(anyhow::anyhow!("inbounds is empty"))?;
+    let last_m = first_listen_group
+        .chain
+        .last()
+        .ok_or(anyhow::anyhow!("chain is empty"))?;
     assert!(matches!(InMapConfig::Counter, last_m));
 
-    let first_m = first_listen_group.chain.first().unwrap();
+    let first_m = first_listen_group
+        .chain
+        .first()
+        .ok_or(anyhow::anyhow!("chain is empty"))?;
     let str = "0.0.0.0:1080".to_string();
     assert!(matches!(
         first_m,
@@ -97,7 +114,7 @@ fn test_out() -> anyhow::Result<()> {
                 c,
     
             }
-            len = table.getn(chain1)
+            len = #chain1
             for i=1,5 do 
                 chain1[len+1] = tls
                 chain1[len+2] = c 
@@ -551,7 +568,7 @@ Infinite = {
         generator = function(this_index, data)
             return -1, {}
         end
-    }},
+    }}},
 
     outbounds = {{
         tag = "dial1",

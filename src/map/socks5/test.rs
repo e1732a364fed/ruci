@@ -269,12 +269,12 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
         }
 
         if let Some(b) = r.b {
-            assert_eq!(&b, &[b'h', b'e', b'l', b'l', b'o'][..]);
+            assert_eq!(&b, &b"hello"[..]);
         } else {
             //接收测试数据
             let mut readbuf = [0u8; 1024];
             let n = r.c.try_unwrap_tcp()?.read(&mut readbuf[..]).await?;
-            assert_eq!(&readbuf[..n], &[b'h', b'e', b'l', b'l', b'o']);
+            assert_eq!(&readbuf[..n], b"hello");
         }
 
         Ok::<(), anyhow::Error>(())
