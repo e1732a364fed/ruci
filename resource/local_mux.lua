@@ -1,4 +1,4 @@
-local inspect = require("inspect")
+-- local inspect = require("inspect")
 
 -- my_cid_record = {}
 dial = {

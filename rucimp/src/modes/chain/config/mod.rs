@@ -227,6 +227,7 @@ pub enum OutMapperConfig {
     Trojan(String),
     WebSocket(CommonConfig),
     H2Single,
+    H2Mux,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -471,6 +472,7 @@ impl ToMapperBox for OutMapperConfig {
                 Box::new(client)
             }
             OutMapperConfig::H2Single => Box::new(crate::map::h2::client::SingleClient {}),
+            OutMapperConfig::H2Mux => Box::new(crate::map::h2::client::MuxClient::default()),
         }
     }
 }
