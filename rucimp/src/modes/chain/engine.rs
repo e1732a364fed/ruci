@@ -29,6 +29,8 @@ use tracing::{debug, info, warn};
 
 #[derive(Default)]
 pub struct Engine {
+    pub global_data: ruci::map::GlobalData,
+
     /// 存储关闭所有inbound 的 Sender
     ///
     ///  若有值说明 is running
@@ -51,6 +53,21 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// 每 new 一个 Engine 都会随机生成一个 global_data.run_instance_id
+    pub fn new() -> Self {
+        use rand::Rng;
+
+        let mut rng = rand::thread_rng();
+
+        let run_instance_id = rng.gen();
+
+        debug!("new Engine {run_instance_id}");
+
+        Engine {
+            global_data: GlobalData { run_instance_id },
+            ..Default::default()
+        }
+    }
     /// 清空配置. reset 后 可以 接着调用 init
     pub async fn reset(&mut self) {
         debug!("Engine reset called");
@@ -243,10 +260,18 @@ impl Engine {
 
             let cid = CID::new(index);
             debug!(inbound_index = index, "fold_from_start");
-            let t1 = fold::fold_from_start(cid, atx, rx, miter.clone(), Some(self.gtr.clone()));
+            let t1 = fold::fold_from_start(
+                cid,
+                Some(self.global_data.clone()),
+                atx,
+                rx,
+                miter.clone(),
+                Some(self.gtr.clone()),
+            );
             index += 1;
 
-            let t2 = Engine::loop_a(
+            let t2 = Engine::loop_in_to_out(
+                self.global_data.clone(),
                 arx,
                 out_selector.clone(),
                 self.gtr.clone(),
@@ -264,18 +289,21 @@ impl Engine {
         Ok(tasks)
     }
 
-    async fn loop_a(
-        mut arx: Receiver<fold::FoldResult>,
+    async fn loop_in_to_out(
+        global_data: GlobalData,
+
+        mut rx: Receiver<fold::FoldResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
         gtr: Arc<GlobalTrafficRecorder>,
         conn_info_recorder: OptNewInfoSender,
         #[cfg(feature = "trace")] conn_info_updater: net::OptUpdater,
     ) -> anyhow::Result<()> {
         loop {
-            let ar = arx.recv().await;
+            let ar = rx.recv().await;
             if let Some(ar) = ar {
                 tokio::spawn(handle_in_fold_result(
                     ar,
+                    Some(global_data.clone()),
                     out_selector.clone(),
                     Some(gtr.clone()),
                     conn_info_recorder.clone(),

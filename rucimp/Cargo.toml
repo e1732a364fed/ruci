@@ -7,6 +7,7 @@ edition = "2021"
 ruci = { path = ".." }
 bytes = "1"
 tracing = "0.1.40"
+rand = { version = "0.8.5", features = ["small_rng"] }
 
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1.77"

@@ -24,6 +24,7 @@ use tracing::info;
 pub struct RecordData {
     pub cid: CID,
     pub behavior: ProxyBehavior,
+    pub global_data: Option<GlobalData>,
 
     /// customized by user as a marker
     pub custom_str: String,
@@ -53,10 +54,13 @@ impl Default for PayloadData {
 
 impl RecordData {
     fn save(&self) {
-        let r = serde_json::to_writer_pretty(
-            std::fs::File::create(format!("record_{}.log", self.cid)).unwrap(),
-            &self,
-        );
+        let name = if let Some(g) = &self.global_data {
+            format!("record_{}_{}.log", g.run_instance_id, self.cid)
+        } else {
+            format!("record_{}.log", self.cid)
+        };
+
+        let r = serde_json::to_writer_pretty(std::fs::File::create(name).unwrap(), &self);
         if let Err(e) = r {
             tracing::warn!("save to file got error: {e}");
         }
@@ -266,6 +270,7 @@ impl Map for Recorder {
                     record_buffer: RecordData {
                         cid: cid.clone(),
                         behavior,
+                        global_data: params.g,
                         custom_str: self.custom_str.clone(),
                         ..Default::default()
                     },
@@ -285,6 +290,8 @@ impl Map for Recorder {
                         record_buffer: RecordData {
                             cid: cid.clone(),
                             behavior,
+                            global_data: params.g.clone(),
+
                             custom_str: self.custom_str.clone(),
 
                             ..Default::default()
@@ -296,6 +303,8 @@ impl Map for Recorder {
                         record_buffer: RecordData {
                             cid: cid.clone(),
                             behavior,
+                            global_data: params.g,
+
                             custom_str: self.custom_str.clone(),
 
                             ..Default::default()

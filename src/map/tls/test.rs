@@ -47,9 +47,7 @@ async fn dial_tls_in_mem() {
             MapParams {
                 c: map::Stream::Conn(Box::new(client_tcp_s)),
                 a: Some(ta),
-                b: None,
-                d: Vec::new(),
-                shutdown_rx: None,
+                ..Default::default()
             },
         )
         .await
@@ -87,9 +85,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
             MapParams {
                 c: map::Stream::Conn(Box::new(cs)),
                 a: Some(ta),
-                b: None,
-                d: Vec::new(),
-                shutdown_rx: None,
+                ..Default::default()
             },
         )
         .await

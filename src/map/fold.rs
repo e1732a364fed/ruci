@@ -168,13 +168,13 @@ pub struct FoldParams {
 ///
 pub async fn fold(params: FoldParams) -> FoldResult {
     let cid = params.cid;
-    let initial_state = params.initial_state;
     let mut maps = params.maps;
 
     #[cfg(feature = "trace")]
     let mut trace = params.trace;
 
-    let mut last_r: MapResult = initial_state;
+    let mut last_r: MapResult = params.initial_state;
+    let global_data = last_r.g;
 
     let mut calculated_output_vec: Vec<Option<Box<dyn Data>>> = Vec::new();
     calculated_output_vec.push(last_r.d);
@@ -194,7 +194,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
         };
 
         if tracing::enabled!(Level::DEBUG) {
-            debug!(cid = %cid, map = adder.name(), behavior = ?params.behavior, "folding",)
+            debug!(cid = %cid, map = adder.name(), behavior = ?params.behavior, "folding")
         }
         last_r = adder
             .maps(
@@ -208,6 +208,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
                     a: last_r.a,
                     b: last_r.b,
                     d: calculated_output_vec.clone(),
+                    g: global_data.clone(),
                     shutdown_rx: last_r.shutdown_rx,
                 },
             )
@@ -267,21 +268,19 @@ pub async fn fold(params: FoldParams) -> FoldResult {
 ///
 pub async fn fold_from_start(
     in_cid: CID,
+    global_data: Option<GlobalData>,
+
     result_dealer: tokio::sync::mpsc::Sender<FoldResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
     inmaps: DMIterBox,
     o_gtr: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
-    // let first = inmaps
-    //     .next_with_data(in_cid.clone(), None)
-    //     .expect("has first inmap");
-    //let first_tag = first.get_chain_tag().to_string();
-
     let first_r = fold(FoldParams {
         cid: in_cid.clone(),
         behavior: ProxyBehavior::DECODE,
         initial_state: MapResult {
+            g: global_data.clone(),
             shutdown_rx: Some(shutdown_rx),
             ..Default::default()
         },
@@ -293,13 +292,6 @@ pub async fn fold_from_start(
     })
     .await;
 
-    // let first_r = first
-    //     .maps(
-    //         in_cid.clone(),
-    //         ProxyBehavior::DECODE,
-    //         MapParams::builder().shutdown_rx(shutdown_rx).build(),
-    //     )
-    //     .await;
     if let Some(e) = first_r.e {
         let e = e.context(format!(
             "fold_from_start failed, tag: {} ",
@@ -314,6 +306,7 @@ pub async fn fold_from_start(
     if let Stream::Generator(stream_generator) = first_r.c {
         in_iter_fold_forever(InIterFoldForeverParams {
             cid: in_cid,
+            global_data,
             stream_generator,
             result_dealer,
             dmiter: first_r.left_maps_iter,
@@ -325,23 +318,6 @@ pub async fn fold_from_start(
         })
         .await;
     } else {
-        /*
-         let cid = in_cid.clone_push(o_gtr);
-        tokio::spawn(async move {
-            let r = fold(FoldParams {
-                cid,
-                behavior: ProxyBehavior::DECODE,
-                initial_state: first_r,
-                maps: inmaps,
-                chain_tag: first_tag,
-
-                #[cfg(feature = "trace")]
-                trace: vec![first.name().to_string()],
-            })
-            .await;
-            let _ = result_dealer.send(r).await;
-        });
-         */
         match &first_r.c {
             Stream::None => {
                 warn!(
@@ -362,6 +338,7 @@ pub async fn fold_from_start(
 
 pub struct InIterFoldForeverParams {
     pub cid: CID,
+    pub global_data: Option<GlobalData>,
     pub stream_generator: tokio::sync::mpsc::Receiver<MapResult>,
     pub result_dealer: tokio::sync::mpsc::Sender<FoldResult>,
     pub dmiter: DMIterBox,
@@ -429,6 +406,7 @@ pub async fn in_iter_fold_forever(params: InIterFoldForeverParams) {
 
         spawn_fold_forever(SpawnFoldForeverParams {
             cid: new_cid,
+            global_data: params.global_data.clone(),
             new_stream_info,
             miter: dmiter.clone(),
             tx: tx.clone(),
@@ -443,24 +421,28 @@ pub async fn in_iter_fold_forever(params: InIterFoldForeverParams) {
 
 struct SpawnFoldForeverParams {
     cid: CID,
+    global_data: Option<GlobalData>,
+
     new_stream_info: MapResult,
     miter: DMIterBox,
     tx: tokio::sync::mpsc::Sender<FoldResult>,
     o_gtr: Option<Arc<GlobalTrafficRecorder>>,
-    pub first_tag: String,
+    first_tag: String,
 
     #[cfg(feature = "trace")]
-    pub trace: Vec<String>,
+    trace: Vec<String>,
 }
 
 // solve async recursive spawn issue by :
 //
 // https://github.com/tokio-rs/tokio/issues/2394
-fn spawn_fold_forever(params: SpawnFoldForeverParams) {
+fn spawn_fold_forever(mut params: SpawnFoldForeverParams) {
     let cid = params.cid;
     let tx = params.tx;
     let miter = params.miter;
     let o_gtr = params.o_gtr;
+
+    params.new_stream_info.g = params.global_data.clone();
 
     tokio::spawn(async move {
         let r = fold(FoldParams {
@@ -482,6 +464,7 @@ fn spawn_fold_forever(params: SpawnFoldForeverParams) {
             debug!(cid = %cid, "spawn_acc_forever recursive");
             in_iter_fold_forever(InIterFoldForeverParams {
                 cid,
+                global_data: params.global_data.clone(),
 
                 stream_generator: rx,
                 result_dealer: tx,

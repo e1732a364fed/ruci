@@ -39,9 +39,7 @@ async fn dial_future(
                 MapParams {
                     c: Stream::Conn(last_result.c.try_unwrap_tcp().expect("last_result as c")),
                     a: Some(ta.clone()),
-                    b: None,
-                    d: Vec::new(),
-                    shutdown_rx: None,
+                    ..Default::default()
                 },
             )
             .await;
@@ -93,10 +91,7 @@ async fn listen_future(
                     ProxyBehavior::DECODE,
                     MapParams {
                         c: Stream::Conn(last_result.c.try_unwrap_tcp().expect("last_result as c")),
-                        a: None,
-                        b: None,
-                        d: Vec::new(),
-                        shutdown_rx: None,
+                        ..Default::default()
                     },
                 )
                 .await;
@@ -142,7 +137,7 @@ pub async fn test_batch_run(l: usize, layer_num: u8) -> anyhow::Result<()> {
 
 pub async fn test_write(d: &mut Box<dyn AsyncConn>) -> anyhow::Result<()> {
     unsafe {
-        d.write_all(& *std::ptr::addr_of_mut!(VEC2)).await?;
+        d.write_all(&*std::ptr::addr_of_mut!(VEC2)).await?;
     }
 
     Ok(())

@@ -8,6 +8,11 @@ use super::*;
 
 use bitflags::bitflags;
 
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct GlobalData {
+    pub run_instance_id: u32,
+}
+
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub  struct DataFlags: u16 {

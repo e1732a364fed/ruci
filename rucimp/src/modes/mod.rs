@@ -3,4 +3,3 @@ Defines some proxying modes. Each mode defines a certain configuration format an
  */
 
 pub mod chain;
-pub mod suit;

@@ -84,6 +84,10 @@ pub struct MapParams {
     #[builder(default)]
     pub d: Vec<Option<Box<dyn Data>>>,
 
+    /// global data, same for all maps
+    #[builder(default, setter(strip_option))]
+    pub g: Option<GlobalData>,
+
     /// if Stream is a Generator, shutdown_rx should be provided.
     /// it will stop generating if shutdown_rx got msg.
     #[builder(default, setter(strip_option))]
@@ -95,7 +99,7 @@ impl MapParams {
         MapParams::builder().c(Stream::Conn(c)).build()
     }
 
-    pub fn newc(c: net::Conn) -> MapParamsBuilder<((), (), (Stream,), (), ())> {
+    pub fn newc(c: net::Conn) -> MapParamsBuilder<((), (), (Stream,), (), (), ())> {
         MapParams::builder().c(Stream::Conn(c))
     }
 
@@ -140,6 +144,9 @@ pub struct MapResult {
     #[builder(default, setter(strip_option, into))]
     pub e: Option<anyhow::Error>,
 
+    #[builder(default, setter(strip_option))]
+    pub g: Option<GlobalData>,
+
     /// 有值代表产生了与之前不同的 cid
     #[builder(default, setter(strip_option))]
     pub new_id: Option<CID>,
@@ -155,7 +162,8 @@ pub struct MapResult {
     pub shutdown_rx: Option<oneshot::Receiver<()>>,
 }
 
-type MapResultBuilderStreamFilled = MapResultBuilder<((), (), (Stream,), (), (), (), (), (), ())>;
+type MapResultBuilderStreamFilled =
+    MapResultBuilder<((), (), (Stream,), (), (), (), (), (), (), ())>;
 //some helper initializers
 impl MapResult {
     pub fn c(c: net::Conn) -> Self {
@@ -248,12 +256,13 @@ pub trait Map: Name + Debug {
     ///
     /// 一旦切换连接, 则原连接将不再被 ruci::relay 包控制关闭, 该 Map 自行处理.
     ///
-    /// 这里不用 Result<...> 的形式, 是因为 在有错误的同时也可能返回一些有用的数据, 比如用于路由,回落等
+    /// 这里不用 Result<...> 的形式, 是因为 在有错误的同时也可能返回一些有用的数据, 比如用于路由,回落等,
+    /// 因此 data 和 error 是同一级别的.
     ///
     /// # ENCODE
     ///
-    ///   是 out client 的 map, 从拨号基本连接开始,
-    ///  以 targetAddr (不是direct时就不是拔号的那个地址) 为参数创建新层
+    /// 是 out client 的 map, 从拨号基本连接开始,
+    /// 以 targetAddr (不是direct时就不是拔号的那个地址) 为参数创建新层
     ///
     /// 与 DECODE 相比, ENCODE 试图消耗 params.a 和 params.b
     ///

@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
 
     let contents = try_get_file_content(&default_fn, arg_f)?;
 
-    let mut e = Engine::default();
+    let mut e = Engine::new();
 
     e.init_lua(contents)?;
 

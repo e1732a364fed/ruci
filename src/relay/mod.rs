@@ -40,6 +40,7 @@ pub async fn handle_in_stream(
     ins_iterator: DMIterBox,
     out_selector: Arc<Box<dyn OutSelector>>,
     gtr: Option<Arc<net::GlobalTrafficRecorder>>,
+    global_data: Option<GlobalData>,
 
     newc_recorder: OptNewInfoSender,
 
@@ -79,6 +80,7 @@ pub async fn handle_in_stream(
 
     handle_in_fold_result(
         listen_result,
+        global_data,
         out_selector,
         gtr,
         newc_recorder,
@@ -94,6 +96,7 @@ pub async fn handle_in_stream(
 /// block until out handshake is over
 pub async fn handle_in_fold_result(
     mut listen_result: fold::FoldResult,
+    global_data: Option<GlobalData>,
 
     out_selector: Arc<Box<dyn OutSelector>>,
 
@@ -197,6 +200,7 @@ pub async fn handle_in_fold_result(
                 initial_state: MapResult {
                     a: Some(ta_clone),
                     b: listen_result.b,
+                    g: global_data,
                     ..Default::default()
                 },
                 maps: outbound,

@@ -2513,6 +2513,7 @@ dependencies = [
  "native-tls",
  "parking_lot",
  "quinn",
+ "rand 0.8.5",
  "regex",
  "rlimit",
  "ruci",
