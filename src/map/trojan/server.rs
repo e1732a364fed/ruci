@@ -160,7 +160,7 @@ impl Server {
         }
 
         let d = ou_to_od(opt_user);
-        let d = d.map(map::VecAnyData::Data);
+        let d = map::VecAnyData::from_opt_any(d);
 
         if is_udp {
             let u = udp::from(base);

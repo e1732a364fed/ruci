@@ -120,9 +120,7 @@ async fn test_counter1() -> anyhow::Result<()> {
         return Err(e);
     }
 
-    let d = r.d.expect("counter returns an extra data");
-
-    match d {
+    match r.d {
         crate::map::VecAnyData::Data(_) => {
             panic!("counter should return a vec instead of pure data")
         }

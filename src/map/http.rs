@@ -230,7 +230,7 @@ impl Server {
             let b: Box<dyn User> = Box::new(up);
             map::AnyData::User(b)
         });
-        let output_data = data.map(VecAnyData::Data);
+        let output_data = VecAnyData::from_opt_any(data);
 
         Ok(MapResult {
             a: Some(ta),

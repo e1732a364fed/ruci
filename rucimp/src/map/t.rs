@@ -21,21 +21,18 @@ impl Name for TproxyResolver {
 
 /// 同时传入 raddr 和 laddr 时, raddr 在前 , laddr 在后,
 /// 所以要 逆序查找 第一个 addr 才是 laddr
-fn get_addr_from_vvd_rev(vd: Vec<Option<VecAnyData>>) -> Option<ruci::net::Addr> {
-    for ovd in vd.iter() {
-        match ovd {
-            Some(vd) => match vd {
-                VecAnyData::Data(d) => return ruci::map::network::get_addr_from_d(d),
-                VecAnyData::Vec(vd) => {
-                    for x in vd.iter().rev() {
-                        let oa = ruci::map::network::get_addr_from_d(x);
-                        if oa.is_some() {
-                            return oa;
-                        }
+fn get_addr_from_vvd_rev(vd: Vec<VecAnyData>) -> Option<ruci::net::Addr> {
+    for vd in vd.iter() {
+        match vd {
+            VecAnyData::Data(d) => return ruci::map::network::get_addr_from_d(d),
+            VecAnyData::Vec(vd) => {
+                for x in vd.iter().rev() {
+                    let oa = ruci::map::network::get_addr_from_d(x);
+                    if oa.is_some() {
+                        return oa;
                     }
                 }
-            },
-            None => return None,
+            }
         }
     }
     None

@@ -174,8 +174,8 @@ impl LuaNextSelector {
 }
 
 impl NextSelector for LuaNextSelector {
-    fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64> {
-        let w = OptVecOptVecDataLuaWrapper(data);
+    fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::VecAnyData>>) -> Option<i64> {
+        let w = OptVecVecAnyDataLuaWrapper(data);
         let inner = self.0.lock();
 
         match inner.call::<_, i64>((this_index, w)) {
@@ -246,43 +246,34 @@ impl UserData for VecOfAnyDataLuaWrapper {
     }
 }
 
-pub struct OptVecDataLuaWrapper(OptVecData);
+pub struct VecAnyDataLuaWrapper(VecAnyData);
 
-impl UserData for OptVecDataLuaWrapper {
+impl UserData for VecAnyDataLuaWrapper {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("has_value", |_, this, ()| Ok(this.0.is_some()));
+        methods.add_method("has_value", |_, this, ()| Ok(!this.0.is_empty()));
 
         methods.add_method("get_type", |_, this, ()| match &this.0 {
-            Some(vd) => match vd {
-                VecAnyData::Data(_) => Ok("data"),
-                VecAnyData::Vec(_) => Ok("vec"),
-            },
-            None => Ok("None"),
+            VecAnyData::Data(_) => Ok("data"),
+            VecAnyData::Vec(_) => Ok("vec"),
         });
 
         methods.add_method("get_data", |_, this, ()| match &this.0 {
-            Some(vd) => match vd {
-                VecAnyData::Data(d) => Ok(AnyDataLuaWrapper(d.clone())),
-                VecAnyData::Vec(_) => Err(LuaError::DeserializeError("can't get data".to_string())),
-            },
-            None => Err(LuaError::DeserializeError("can't get data".to_string())),
+            VecAnyData::Data(d) => Ok(AnyDataLuaWrapper(d.clone())),
+            VecAnyData::Vec(_) => Err(LuaError::DeserializeError("can't get data".to_string())),
         });
 
         methods.add_method("get_vec", |_, this, ()| match &this.0 {
-            Some(vd) => match vd {
-                VecAnyData::Data(_) => Err(LuaError::DeserializeError("can't get vec".to_string())),
-                VecAnyData::Vec(v) => Ok(VecOfAnyDataLuaWrapper(v.clone())),
-            },
-            None => Err(LuaError::DeserializeError("can't get vec".to_string())),
+            VecAnyData::Data(_) => Err(LuaError::DeserializeError("can't get vec".to_string())),
+            VecAnyData::Vec(v) => Ok(VecOfAnyDataLuaWrapper(v.clone())),
         });
     }
 }
 
 /// 对 dynamic::NextSelector 的 next_index 方法 的 data 参数
 /// 的类型的包装
-pub struct OptVecOptVecDataLuaWrapper(Option<Vec<OptVecData>>);
+pub struct OptVecVecAnyDataLuaWrapper(Option<Vec<VecAnyData>>);
 
-impl UserData for OptVecOptVecDataLuaWrapper {
+impl UserData for OptVecVecAnyDataLuaWrapper {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method("is_some", |_, this, ()| Ok(this.0.is_some()));
 
@@ -291,7 +282,7 @@ impl UserData for OptVecOptVecDataLuaWrapper {
         methods.add_method("get", |_, this, index: usize| {
             let x = this.0.as_ref().unwrap().get(index);
             match x {
-                Some(d) => Ok(OptVecDataLuaWrapper(d.clone())),
+                Some(d) => Ok(VecAnyDataLuaWrapper(d.clone())),
                 None => Err(LuaError::DeserializeError("can't get u64".to_string())),
             }
         });
@@ -658,9 +649,9 @@ mod test {
 
         let sa22 = AnyData::AU64(Arc::new(AtomicU64::new(321)));
 
-        let va = Some(VecAnyData::Data(sa22));
+        let va = VecAnyData::Data(sa22);
         let vva = Some(vec![va]);
-        let vvaw = OptVecOptVecDataLuaWrapper(vva);
+        let vvaw = OptVecVecAnyDataLuaWrapper(vva);
 
         let lua = Lua::new();
         let lua = Rc::new(lua);
@@ -783,9 +774,9 @@ mod test {
         let func: LuaFunction = lua.globals().get("dyn_next_selector")?;
 
         let sa22 = AnyData::AU64(Arc::new(AtomicU64::new(321)));
-        let va = Some(VecAnyData::Data(sa22));
+        let va = VecAnyData::Data(sa22);
         let vva = Some(vec![va]);
-        let vvaw = OptVecOptVecDataLuaWrapper(vva);
+        let vvaw = OptVecVecAnyDataLuaWrapper(vva);
 
         match func.call::<_, u64>((1, vvaw)) {
             Ok(rst) => println!("{}", rst),

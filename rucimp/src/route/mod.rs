@@ -27,7 +27,7 @@ use ipnet::*;
 use iprange::IpRange;
 use regex::RegexSet;
 use ruci::{
-    map::{acc::DMIterBox, OptVecData},
+    map::{acc::DMIterBox, VecAnyData},
     net::{self, *},
     relay::route::{self, *},
     user::*,
@@ -46,7 +46,7 @@ impl route::OutSelector for RuleSetOutSelector {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: &[OptVecData],
+        params: &[VecAnyData],
     ) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {

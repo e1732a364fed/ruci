@@ -261,9 +261,7 @@ async fn auth_tcp_handshake_local() -> anyhow::Result<()> {
         assert_eq!(ad.get_port(), target_port);
         assert_eq!(r.b, None);
 
-        let d = r.d.expect("result.d has value");
-
-        match d {
+        match r.d {
             map::VecAnyData::Data(d) => match d {
                 map::AnyData::User(up) => {
                     assert_eq!(up.identity_str(), "u0");

@@ -33,7 +33,7 @@ use crate::{
     user::{self, UserVec},
 };
 
-use super::OptVecData;
+use super::VecAnyData;
 
 /// Send + Sync to use in async
 ///
@@ -52,14 +52,14 @@ pub trait OutSelector: Send + Sync {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: &[OptVecData],
+        params: &[VecAnyData],
     ) -> DMIterBox;
 }
 
-pub async fn get_user_from_anydata_vec(adv: &[OptVecData]) -> Option<UserVec> {
+pub async fn get_user_from_anydata_vec(adv: &[VecAnyData]) -> Option<UserVec> {
     let mut v = UserVec::default();
 
-    for anyd in adv.iter().filter_map(|d| d.as_ref()) {
+    for anyd in adv.iter() {
         match anyd {
             super::VecAnyData::Data(data) => {
                 if let AnyData::User(u) = data {
@@ -93,7 +93,7 @@ impl OutSelector for FixedOutSelector {
         &self,
         _addr: &net::Addr,
         _in_chain_tag: &str,
-        _params: &[OptVecData],
+        _params: &[VecAnyData],
     ) -> DMIterBox {
         self.default.clone()
     }
@@ -112,7 +112,7 @@ impl OutSelector for TagOutSelector {
         &self,
         _addr: &net::Addr,
         in_chain_tag: &str,
-        _params: &[OptVecData],
+        _params: &[VecAnyData],
     ) -> DMIterBox {
         let ov = self.outbounds_tag_route_map.get(in_chain_tag);
         match ov {
@@ -169,7 +169,7 @@ impl OutSelector for InboundInfoOutSelector {
         &self,
         addr: &net::Addr,
         in_chain_tag: &str,
-        params: &[OptVecData],
+        params: &[VecAnyData],
     ) -> DMIterBox {
         let users = get_user_from_anydata_vec(params).await;
         let r = InboundInfo {
@@ -300,9 +300,8 @@ mod test {
         let u = PlainText::new("user".to_string(), "pass".to_string());
         let ub: Box<dyn User> = Box::new(u);
 
-        let mut params: Vec<OptVecData> = Vec::new();
-        // params.push(Some(AnyData::B(Box::new(ub))));
-        params.push(Some(VecAnyData::Data(AnyData::User(ub))));
+        let mut params: Vec<VecAnyData> = Vec::new();
+        params.push(VecAnyData::Data(AnyData::User(ub)));
 
         let x = rsos.select(&Addr::default(), "l1", &params).await;
 

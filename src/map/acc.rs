@@ -27,7 +27,7 @@ pub type MIterBox = Box<dyn MIter>;
 /// if you want to count it, you might use get_miter to try to get MIterBox first
 ///
 pub trait DynIterator {
-    fn next_with_data(&mut self, data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>>;
+    fn next_with_data(&mut self, data: Option<Vec<VecAnyData>>) -> Option<Arc<MapperBox>>;
 
     fn next(&mut self) -> Option<Arc<MapperBox>> {
         self.next_with_data(None)
@@ -53,7 +53,7 @@ pub type DMIterBox = Box<dyn DMIter>;
 pub struct DynMIterWrapper(pub MIterBox);
 
 impl DynIterator for DynMIterWrapper {
-    fn next_with_data(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _data: Option<Vec<VecAnyData>>) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
@@ -77,7 +77,7 @@ impl DynIterator for DynMIterWrapper {
 pub struct DynVecIterWrapper(pub std::vec::IntoIter<Arc<MapperBox>>);
 
 impl DynIterator for DynVecIterWrapper {
-    fn next_with_data(&mut self, _data: Option<Vec<OptVecData>>) -> Option<Arc<MapperBox>> {
+    fn next_with_data(&mut self, _data: Option<Vec<VecAnyData>>) -> Option<Arc<MapperBox>> {
         self.0.next()
     }
 
@@ -98,7 +98,7 @@ pub struct AccumulateResult {
     pub a: Option<net::Addr>,
     pub b: Option<BytesMut>,
     pub c: Stream,
-    pub d: Vec<OptVecData>,
+    pub d: Vec<VecAnyData>,
     pub e: Option<anyhow::Error>,
 
     /// 代表 迭代完成后，最终的 cid
@@ -166,7 +166,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
 
     let mut last_r: MapResult = initial_state;
 
-    let mut calculated_output_vec: Vec<OptVecData> = Vec::new();
+    let mut calculated_output_vec: Vec<VecAnyData> = Vec::new();
 
     let mut tag: String = String::new();
 

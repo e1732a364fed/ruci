@@ -52,14 +52,14 @@ pub trait IndexNextInMapperGenerator {
         &self,
         this_index: usize,
         cache_len: usize,
-        data: Option<Vec<ruci::map::OptVecData>>,
+        data: Option<Vec<ruci::map::VecAnyData>>,
     ) -> Option<IndexMapperBox>;
 }
 
 impl DynIterator for IndexInfinite {
     fn next_with_data(
         &mut self,
-        data: Option<Vec<ruci::map::OptVecData>>,
+        data: Option<Vec<ruci::map::VecAnyData>>,
     ) -> Option<Arc<MapperBox>> {
         let cl = self.cache.len();
         let oi = self.selector.next_in_mapper(self.current_index, cl, data);
@@ -96,7 +96,7 @@ pub trait UuidInfiniteNextInMapperGenerator {
     fn next_in_mapper(
         &self,
         this_index: Uuid,
-        data: Option<Vec<ruci::map::OptVecData>>,
+        data: Option<Vec<ruci::map::VecAnyData>>,
     ) -> Option<UUIDMapperBox>;
 }
 
@@ -129,14 +129,14 @@ pub trait NextSelector: Debug + DynClone + Send + Sync {
     ///
     /// 初始index 传入 -1. 如果 返回值为 None, 或 返回值<0 或 返回值 大于最大索引值,
     /// 则意味着链终止
-    fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64>;
+    fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::VecAnyData>>) -> Option<i64>;
 }
 dyn_clone::clone_trait_object!(NextSelector);
 
 impl DynIterator for Finite {
     fn next_with_data(
         &mut self,
-        data: Option<Vec<ruci::map::OptVecData>>,
+        data: Option<Vec<ruci::map::VecAnyData>>,
     ) -> Option<Arc<MapperBox>> {
         let oi = self.selector.next_index(self.current_index, data);
         match oi {
