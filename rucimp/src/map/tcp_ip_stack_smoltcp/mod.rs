@@ -101,30 +101,34 @@ impl Map for Stack {
 
                                         //poll->socket_ingress->device.receive->rx_token.consume->process_ip->process_ipv4->process_tcp
 
-                                        iface.poll(now,&mut device, unsafe {
+                                        iface.poll_ingress_single(now,&mut device, unsafe {
                                             &mut *fake_sockets
                                         });
+
+
+
+
 
                                         match device.new_read_handle{
                                             device::NewReadType::None => {},
 
                                             device::NewReadType::TCP(_) =>{
-
                                                 let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 
                                                 iface.poll(now,&mut device, unsafe {
                                                     &mut *tcp_sockets
                                                 });
+
                                                 device.process_ingress();
 
                                             },
                                             device::NewReadType::UDP(_) =>{
+
                                                 let sockets = &mut device.udp_sockets as *mut smoltcp::iface::SocketSet;
 
                                                 iface.poll(now,&mut device, unsafe {
                                                     &mut *sockets
                                                 });
-
                                                 device.process_ingress();
 
                                             },
@@ -142,7 +146,7 @@ impl Map for Stack {
 
                                         let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 
-                                        iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
+                                        iface.poll_egress(smoltcp::time::Instant::now(),&mut device, unsafe {
                                             &mut *tcp_sockets
                                         });
 
@@ -162,7 +166,7 @@ impl Map for Stack {
 
                                         let udp_sockets = &mut device.udp_sockets as *mut smoltcp::iface::SocketSet;
 
-                                        iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
+                                        iface.poll_egress(smoltcp::time::Instant::now(),&mut device, unsafe {
                                             &mut *udp_sockets
                                         });
 

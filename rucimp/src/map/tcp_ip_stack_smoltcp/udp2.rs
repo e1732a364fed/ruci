@@ -137,7 +137,10 @@ impl AsyncReadAddr for R {
                 data.copy_to_slice(&mut buf[..min(data.len(), bl)]);
                 Poll::Ready(Ok((data.len(), ip_end_point_to_addr(&src))))
             }
-            None => Poll::Ready(Ok((0, Addr::default()))),
+            None => {
+                me.rx.close();
+                Poll::Ready(Ok((0, Addr::default())))
+            }
         }
     }
 

@@ -91,7 +91,7 @@ pub struct MyRxToken<'a> {
 impl<'a> RxToken for MyRxToken<'a> {
     fn consume<R, F>(self, f: F) -> R
     where
-        F: FnOnce(&mut [u8]) -> R,
+        F: FnOnce(&[u8]) -> R,
     {
         f(self.data)
     }
@@ -101,7 +101,6 @@ impl<'a> RxToken for MyRxToken<'a> {
 pub struct MyTxToken {
     tx: Sender<BytesMut>,
     //traffic: &'a mut Traffic,
-    //buf: [u8; BUF_SIZE],
 }
 impl TxToken for MyTxToken {
     fn consume<R, F>(self, len: usize, f: F) -> R
@@ -131,7 +130,6 @@ pub enum NewReadType {
 pub struct SmoltcpDevice {
     cid: CID,
 
-    //base_conn: Conn,
     r: tokio::io::ReadHalf<Conn>,
 
     /// base_conn read state
@@ -208,7 +206,6 @@ impl Device for SmoltcpDevice {
                 let tx = MyTxToken {
                     tx: self.device_write_tx.clone(),
                     //traffic: &mut self.traffic,
-                    //buf: [0u8; BUF_SIZE],
                 };
                 self.r_state = Poll::Pending;
                 Some((rx, tx))
@@ -220,7 +217,6 @@ impl Device for SmoltcpDevice {
         Some(MyTxToken {
             tx: self.device_write_tx.clone(),
             //traffic: &mut self.traffic,
-            //buf: [0u8; BUF_SIZE],
         })
     }
 
@@ -257,7 +253,6 @@ pub fn create(
     let (r, w) = tokio::io::split(base_conn);
 
     let device = SmoltcpDevice {
-        // base_conn,
         r,
         cid,
         //traffic: Traffic::new(),
@@ -351,6 +346,7 @@ impl SmoltcpDevice {
                             dst_ip_addr,
                             ruci::utils::HexSlice(ip_packet.payload())
                         );
+                        self.new_read_handle = NewReadType::None;
                         return;
                     }
                 };
@@ -675,6 +671,8 @@ impl SmoltcpDevice {
         }
     }
 
+    /// 发送tcp 数据
+    ///
     /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 socket 的 buffer,
     /// 之后可调用 iface.poll 来发出.
     pub fn process_tcp_egress(&mut self, sh: SocketHandle, mut data: BytesMut) {
@@ -720,6 +718,8 @@ impl SmoltcpDevice {
         }
     }
 
+    /// 发送udp 数据
+    ///
     /// 名称跟随 smoltcp 的规范. 对socket 的要写的数据 用 send_slice 写入 smoltcp 的 socket 的 buffer,
     /// 之后可调用 iface.poll 来发出.
     pub fn process_udp_egress(&mut self, sh: SocketHandle, src: IpEndpoint, data: BytesMut) {

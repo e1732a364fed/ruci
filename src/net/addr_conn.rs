@@ -501,8 +501,8 @@ pub async fn cp(
     let n1 = ac_in.cached_name.clone() + " to " + &ac_out.cached_name;
     let n2 = ac_out.cached_name.clone() + " to " + &ac_in.cached_name;
 
-    let (tx1, rx1) = oneshot::channel();
-    let (tx2, rx2) = oneshot::channel();
+    let (shut_tx1, shut_rx1) = oneshot::channel();
+    let (shut_tx2, shut_rx2) = oneshot::channel();
 
     let cp1 = tokio::spawn(cp_addr(
         cid.clone(),
@@ -510,7 +510,7 @@ pub async fn cp(
         ac_out.w,
         n1,
         no_timeout,
-        rx1,
+        shut_rx1,
         false,
         opt.clone(),
     ));
@@ -520,7 +520,7 @@ pub async fn cp(
         ac_in.w,
         n2,
         no_timeout,
-        rx2,
+        shut_rx2,
         true,
         opt.clone(),
     ));
@@ -532,8 +532,8 @@ pub async fn cp(
     let r = tokio::select! {
         r = cp1 =>{
 
-            let _ = tx1.send(());
-            let _ = tx2.send(());
+            let _ = shut_tx1.send(());
+            let _ = shut_tx2.send(());
 
             let count  =match r{
                 Ok(r) => r.unwrap_or(0),
@@ -548,8 +548,8 @@ pub async fn cp(
         }
         r = cp2 =>{
 
-            let _ = tx1.send(());
-            let _ = tx2.send(());
+            let _ = shut_tx1.send(());
+            let _ = shut_tx2.send(());
 
             let count  = match r{
                 Ok(r) => r.unwrap_or(0),
@@ -571,8 +571,8 @@ pub async fn cp(
         } =>{
             debug!(cid = %cid,"addr_conn::cp got shutdown1 signal");
 
-            let _ = tx1.send(());
-            let _ = tx2.send(());
+            let _ = shut_tx1.send(());
+            let _ = shut_tx2.send(());
 
             0
         }
@@ -585,8 +585,8 @@ pub async fn cp(
             }
         } =>{
             debug!(cid = %cid,"addr_conn::cp got shutdown2 signal");
-            let _ = tx1.send(());
-            let _ = tx2.send(());
+            let _ = shut_tx1.send(());
+            let _ = shut_tx2.send(());
 
             0
         }
