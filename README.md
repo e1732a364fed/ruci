@@ -92,7 +92,7 @@ The project is work in progress, 功能会陆续添加与调整.
 
 ### 其它生态
 
-[节点编辑器 webui ](https://github.com/e1732a364fed/ruci-webui)
+[webui](https://github.com/e1732a364fed/ruci-webui)
 
 
 ## Structure

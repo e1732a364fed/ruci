@@ -352,7 +352,8 @@ pub async fn serve(
             app.layer(TraceLayer::new_for_http()).layer(
                 CorsLayer::new()
                     .allow_origin(Any)
-                    .allow_methods([Method::GET]),
+                    .allow_methods([Method::GET, Method::POST])
+                    .allow_headers(Any),
             ),
         )
         .await
