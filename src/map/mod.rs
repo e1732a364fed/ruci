@@ -45,7 +45,7 @@ use crate::net::{
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
-use log::warn;
+use log::{info, log_enabled, warn};
 use tokio::{
     net::TcpStream,
     sync::{oneshot, Mutex},
@@ -533,10 +533,11 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
 {
     loop {
         let opt_stream = rx.recv().await;
-        if opt_stream.is_none() {
-            break;
-        }
-        let stream = opt_stream.unwrap();
+
+        let stream = match opt_stream {
+            Some(s) => s,
+            None => break,
+        };
 
         let mc = inmappers.clone();
         let txc = tx.clone();
@@ -567,6 +568,10 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef>(
                 }
             },
         };
+
+        if log_enabled!(log::Level::Info) {
+            info!("{cid}, new accepted stream");
+        }
 
         tokio::spawn(async move {
             let r = accumulate::<IterMapperBoxRef>(

@@ -4,7 +4,7 @@ use std::io::{self, Error};
 use base64::prelude::*;
 use bytes::BytesMut;
 use futures::executor::block_on;
-use log::{debug, log_enabled};
+use log::log_enabled;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
@@ -224,7 +224,6 @@ impl Server {
             }
         };
 
-        debug!("{cid},here, {}", ta);
         if is_connect {
             base.write(CONNECT_REPLY_STR.as_bytes()).await?;
         }

@@ -181,7 +181,7 @@ impl TcpStreamGenerator {
                                 }
 
                                 let (tcpstream, raddr) = r.unwrap();
-                                info!("new accepted tcp, raddr: {}", raddr);
+                                debug!("new accepted tcp, raddr: {}", raddr);
 
                                 let r = tx.send(Stream::TCP(Box::new(tcpstream))).await;
                                 if let Err(e) = r {
