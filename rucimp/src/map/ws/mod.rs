@@ -9,8 +9,8 @@ pub mod server;
 use std::{io, pin::Pin, task::Poll};
 
 use bytes::{Buf, Bytes, BytesMut};
+use futures::ready;
 use futures::Sink;
-use futures_lite::{ready, StreamExt};
 use ruci::{net::AsyncConn, utils::io_error};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
@@ -73,6 +73,7 @@ impl<T: AsyncConn> AsyncRead for WsStreamToConnWrapper<T> {
                 }
                 return Poll::Ready(Ok(()));
             }
+            use futures::Stream;
             let message = ready!(self.ws.as_mut().poll_next(cx));
             if message.is_none() {
                 return Poll::Ready(Err(io_error("ws stream got none message")));

@@ -1323,10 +1323,7 @@ version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5edaec856126859abb19ed65f39e90fea3a9574b9707f13539acf4abf7eb532"
 dependencies = [
- "fastrand",
  "futures-core",
- "futures-io",
- "parking",
  "pin-project-lite",
 ]
 
@@ -3356,7 +3353,6 @@ dependencies = [
  "data-source",
  "dyn-clone",
  "futures",
- "futures-lite",
  "geosite-rs",
  "h2",
  "hpack",

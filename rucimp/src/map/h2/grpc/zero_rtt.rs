@@ -5,7 +5,7 @@
 也可以叫 early data。*ray 等程序使用的就是这种做法。
  */
 
-use futures_lite::FutureExt;
+use futures::Future;
 use h2::client::ResponseFuture;
 
 use crate::map::h2::BUFFER_CAP;
@@ -93,7 +93,8 @@ impl AsyncRead for Stream {
                 let rv = if let Some(rv) = self.recv.as_mut() {
                     rv
                 } else {
-                    let r = self.resp_f.as_mut().unwrap().poll(cx);
+                    let pinned = std::pin::pin!(self.resp_f.as_mut().unwrap());
+                    let r = pinned.poll(cx);
                     match ready!(r) {
                         Ok(r) => {
                             self.recv = Some(r.into_body());
