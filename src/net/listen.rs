@@ -10,7 +10,7 @@ pub enum Listener {
     UNIX(UnixListener),
 }
 
-pub async fn listen(a: net::Addr) -> anyhow::Result<Listener> {
+pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
     match a.network {
         net::Network::TCP => {
             let r = TcpListener::bind(a.get_socket_addr().expect("a has socket addr")).await?;

@@ -2,10 +2,7 @@ pub mod accept;
 
 use log::{debug, info, log_enabled};
 use macro_mapper::{mapper_ext_fields, MapperExt, NoMapperExt};
-use tokio::{
-    net::TcpListener,
-    sync::mpsc::{self, Receiver},
-};
+use tokio::sync::mpsc::Receiver;
 
 use super::*;
 use crate::Name;
@@ -194,114 +191,20 @@ impl TcpStreamGenerator {
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
     ) -> anyhow::Result<Receiver<MapResult>> {
-        let r = TcpListener::bind(a.clone().get_socket_addr().expect("a has socket addr")).await;
+        let listener = listen::listen(a).await?;
 
-        match r {
-            Ok(listener) => {
-                let (tx, rx) = mpsc::channel(100); //todo: change this
+        let r = accept::loop_accept(listener, shutdown_rx).await;
 
-                tokio::spawn(async move {
-                    tokio::select! {
-                        r = async{
-                            let   lastr  ;
-                            loop {
-                                let r = listener.accept().await;
-
-                                let (tcpstream, raddr) =match r{
-                                    Ok(x) => x,
-                                    Err(e) => {
-                                        let e = anyhow!("listen tcp ended by listen e: {}",e);
-                                        info!("{}", e);
-                                        lastr = Err(e);
-                                        break;
-                                    },
-                                };
-
-                                debug!("new accepted tcp, raddr: {}", raddr);
-
-                                let pa = Addr{ addr:net::NetAddr::Socket(raddr), network: net::Network::TCP };
-
-                                let r = tx.send(
-                                    MapResult::newc(Box::new(tcpstream))
-                                    .d(AnyData::Addr(pa))
-                                    .build(),
-
-                                ).await;
-                                if let Err(e) = r {
-                                    let e = anyhow!("listen tcp ended by tx e: {}",e);
-                                    info!("{}", e);
-                                    lastr = Err(e);
-                                    break;
-                                }
-                            }
-
-                            lastr
-
-                        } =>{
-                            r
-                        }
-
-                        _ = shutdown_rx => {
-                            info!("terminating tcp listen");
-                            Ok(())
-                        }
-                    }
-                });
-                Ok(rx)
-            }
-            Err(e) => {
-                let mut e: anyhow::Error = e.into();
-                e = e.context(format!("listen {} failed", a));
-                Err(e)
-            }
-        }
+        Ok(r)
     }
 
     /// not recommended, use listen_addr
     pub async fn listen_addr_forever(a: &net::Addr) -> anyhow::Result<Receiver<MapResult>> {
-        let r = TcpListener::bind(a.clone().get_socket_addr().expect("a has socket addr")).await;
+        let listener = listen::listen(a).await?;
 
-        match r {
-            Ok(listener) => {
-                let (tx, rx) = mpsc::channel(100); //todo: change this
+        let r = accept::loop_accept_forever(listener).await;
 
-                tokio::spawn(async move {
-                    loop {
-                        let r = listener.accept().await;
-
-                        let (tcpstream, raddr) = match r {
-                            Ok(x) => x,
-                            Err(e) => {
-                                info!("loop tcp ended,listen e: {}", e);
-                                break;
-                            }
-                        };
-
-                        info!("new accepted tcp, raddr: {}", raddr);
-
-                        let pa = Addr {
-                            addr: net::NetAddr::Socket(raddr),
-                            network: net::Network::TCP,
-                        };
-
-                        let r = tx
-                            .send(
-                                MapResult::newc(Box::new(tcpstream))
-                                    .d(AnyData::Addr(pa))
-                                    .build(),
-                            )
-                            .await;
-
-                        if let Err(e) = r {
-                            info!("loop tcp ended,tx e: {}", e);
-                            break;
-                        }
-                    }
-                });
-                Ok(rx)
-            }
-            Err(e) => Err(e.into()),
-        }
+        Ok(r)
     }
 }
 

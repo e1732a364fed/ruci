@@ -30,6 +30,14 @@ pub async fn loop_accept(
     rx
 }
 
+pub async fn loop_accept_forever(listener: Listener) -> Receiver<MapResult> {
+    let (tx, rx) = mpsc::channel(100);
+
+    tokio::spawn(real_loop_accept(listener, tx));
+
+    rx
+}
+
 async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::Result<()> {
     let lastr;
 
