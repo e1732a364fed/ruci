@@ -25,13 +25,13 @@ endef
 
 define copy_default_target
 	mkdir -p dist
-	cd ../../target/release && cp ruci-cmd ../../../crates/ruci-cmd/dist/
+	cd ../../target/release && cp ruci-cmd ../../crates/ruci-cmd/dist/
 	cp -r ../../resource dist/
 endef
 
 define copy_exe_default_target
 	mkdir -p dist
-	cd ../../target/release && cp ruci-cmd.exe ../../../crates/ruci-cmd/dist/
+	cd ../../target/release && cp ruci-cmd.exe ../../crates/ruci-cmd/dist/
 	cp -r ../../resource dist/
 endef
 
