@@ -18,7 +18,7 @@ async fn test_adder_r(_l: usize) -> anyhow::Result<()> {
     let x2 = &mut *x2;
     let x2 = unsafe { std::mem::transmute::<&mut Vec<u8>, &'static mut Vec<u8>>(x2) };
 
-    let client_tcps = MockTcpStream2 {
+    let client_tcp_s = MockTcpStream2 {
         read_data: &mut *x,
         write_data: &mut *x2,
         write_target: None,
@@ -32,7 +32,7 @@ async fn test_adder_r(_l: usize) -> anyhow::Result<()> {
         .maps(
             CID::default(),
             ProxyBehavior::UNSPECIFIED,
-            MapParams::new(Box::new(client_tcps)),
+            MapParams::new(Box::new(client_tcp_s)),
         )
         .await;
 
@@ -69,7 +69,7 @@ lazy_static! {
 
 fn ma(c: &mut Criterion) {
     let l = 1024;
-    c.bench_function("mathadd", move |b| {
+    c.bench_function("math_add", move |b| {
         b.iter_custom(|iters| {
             let start = Instant::now();
             for _i in 0..iters {

@@ -25,15 +25,15 @@ pub fn mapper_ext_fields(_args: TokenStream, input: TokenStream) -> TokenStream 
 }
 
 #[proc_macro_derive(MapperExt)]
-pub fn commonext_macro_derive(input: TokenStream) -> TokenStream {
+pub fn common_ext_macro_derive(input: TokenStream) -> TokenStream {
     // 基于 input 构建 AST 语法树
     let ast: DeriveInput = syn::parse(input).unwrap();
 
     // 构建特征实现代码
-    impl_common_mapperext_macro(&ast)
+    impl_common_mapper_ext_macro(&ast)
 }
 
-fn impl_common_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
+fn impl_common_mapper_ext_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let gen = quote! {
         impl map::MapperExt for #name {
@@ -54,10 +54,10 @@ pub fn ext_macro_derive(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
 
     // 构建特征实现代码
-    impl_mapperext_macro(&ast)
+    impl_mapper_ext_macro(&ast)
 }
 
-fn impl_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
+fn impl_mapper_ext_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let gen = quote! {
         impl map::MapperExt for #name {
