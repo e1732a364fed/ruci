@@ -326,7 +326,7 @@ where
 ////////////////////////////////////////////////////////////////////
 */
 
-pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: change this
+pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: adjust this
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 pub const MTU: usize = 1400;
 
@@ -350,9 +350,9 @@ async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
 /// CP_UDP_TIMEOUT 为 最长等待时间, 一旦读不到, 就会退出函数
 ///
 /// 读到后, 如果写超过了同样的时间, 也退出函数
-pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
-    mut r1: R1,
-    mut w1: W1,
+pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
+    mut r: R,
+    mut w: W,
     name: String,
     no_timeout: bool,
     mut shutdown_rx: broadcast::Receiver<()>,
@@ -367,7 +367,7 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
 
     if no_timeout {
         loop {
-            let rf = read_once(&mut r1, &mut w1, buf.as_mut());
+            let rf = read_once(&mut r, &mut w, buf.as_mut());
 
             tokio::select! {
                 r = rf =>{
@@ -399,7 +399,7 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
         } //loop
     } else {
         loop {
-            let rf = read_once(&mut r1, &mut w1, buf.as_mut());
+            let rf = read_once(&mut r, &mut w, buf.as_mut());
             let timeout_f = tokio::time::sleep(CP_UDP_TIMEOUT);
 
             tokio::select! {
@@ -409,11 +409,12 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
                         Err(e) => {
                             match e.kind(){
                                 io::ErrorKind::Other => {
-                                    debug!("cp_addr got other e, will continue. {e}");
+                                    debug!("cp_addr got other e, will continue: {e}");
                                     continue;
                                 },
                                 _ => {
-                                    warn!(name = name,"cp_addr got e, will break {e}");
+                                    // udp timeout 时 常会发生, 因此不能认为是错误
+                                    info!(name = name,"cp_addr got e, will break: {e}");
                                 },
                             }
 
@@ -445,6 +446,7 @@ pub async fn cp_addr<R1: AddrReadTrait + 'static, W1: AddrWriteTrait + 'static>(
             a.ub.fetch_add(l, Ordering::Relaxed);
         }
     }
+    let _ = w.shutdown().await;
 
     Ok(l)
 }

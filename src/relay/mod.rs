@@ -419,7 +419,7 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
 
     if let Some(real_ed) = ed {
         if let Some(real_first_target) = first_target {
-            debug!("cp_addr_conn: writing ed {:?}", real_ed);
+            debug!("cp_addr_conn: writing ed {:?}", real_ed.len());
             let r = out_conn.w.write(&real_ed, &real_first_target).await;
             if let Err(e) = r {
                 warn!("cp_addr_conn: writing ed failed: {e}");
@@ -429,7 +429,7 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
         } else {
             debug!(
                 "cp_addr_conn: writing ed without real_first_target {:?}",
-                real_ed
+                real_ed.len()
             );
             let r = out_conn.w.write(&real_ed, &Addr::default()).await;
             if let Err(e) = r {

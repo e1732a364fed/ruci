@@ -7,13 +7,15 @@ use std::{
 };
 
 use bytes::{Buf, BytesMut};
+use futures::Future;
 use tokio::{
     net::UdpSocket,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::{
+        mpsc::{self, Receiver, Sender},
+        Mutex,
+    },
 };
 use tracing::debug;
-
-use crate::utils::io_error;
 
 use super::{
     addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr, MAX_DATAGRAM_SIZE},
@@ -42,7 +44,8 @@ impl FixedTargetAddrUDPListener {
 
         tokio::spawn(async move {
             let mut buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
-            let mut hs: HashMap<Addr, Sender<BytesMut>> = HashMap::new();
+            let conn_map: Arc<Mutex<HashMap<Addr, Sender<BytesMut>>>> =
+                Arc::new(Mutex::new(HashMap::new()));
             loop {
                 let r = udp.recv_from(&mut buf).await;
                 let (u, a) = match r {
@@ -56,11 +59,14 @@ impl FixedTargetAddrUDPListener {
                     network: Network::UDP,
                     addr: NetAddr::Socket(a),
                 };
+                let mut mg = conn_map.lock().await;
 
-                if hs.contains_key(&src) {
+                if mg.contains_key(&src) {
                     //debug!("UdpListener loop got old conn msg: {src} {u}");
-                    let tx = hs.get(&src).unwrap();
+
                     let new_buf = BytesMut::from(&buf[..u]);
+
+                    let tx = mg.get(&src).unwrap();
                     let r = tx.send(new_buf).await;
                     if let Err(e) = r {
                         debug!("UdpListener tx send got e: {e}");
@@ -70,10 +76,17 @@ impl FixedTargetAddrUDPListener {
                     //debug!("UdpListener loop got new conn: {src} {u}");
                     let (tx2, rx2) = mpsc::channel(100);
 
-                    hs.insert(src.clone(), tx2);
+                    mg.insert(src.clone(), tx2);
                     let first_buf = BytesMut::from(&buf[..u]);
 
-                    let ac = new(udp.clone(), rx2, src.clone(), dst_c.clone(), first_buf);
+                    let ac = new(
+                        udp.clone(),
+                        rx2,
+                        src.clone(),
+                        dst_c.clone(),
+                        first_buf,
+                        conn_map.clone(),
+                    );
 
                     let r = tx.send((ac, src)).await;
                     if let Err(e) = r {
@@ -105,24 +118,32 @@ impl FixedTargetAddrUDPListener {
 ///
 pub fn new(
     u: Arc<UdpSocket>,
-    rx2: Receiver<BytesMut>,
+    r: Receiver<BytesMut>,
     src: Addr,
     dst: Addr,
 
     first_buf: BytesMut,
+    conn_map: Arc<Mutex<HashMap<Addr, Sender<BytesMut>>>>,
 ) -> AddrConn {
     let r = Reader {
         dst,
-        rx2,
+        r,
         first_buf: Some(first_buf),
     };
-    let w = Writer { u: u.clone(), src };
-    AddrConn::new(Box::new(r), Box::new(w))
+    let w = Writer {
+        u: u.clone(),
+        src,
+        conn_map,
+    };
+    let mut ac = AddrConn::new(Box::new(r), Box::new(w));
+    ac.cached_name = String::from("udp_fixed");
+    ac
 }
 
 pub struct Writer {
     u: Arc<UdpSocket>,
     src: Addr,
+    conn_map: Arc<Mutex<HashMap<Addr, Sender<BytesMut>>>>,
 }
 impl crate::Name for Writer {
     fn name(&self) -> &str {
@@ -149,13 +170,30 @@ impl AsyncWriteAddr for Writer {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
+    fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        let x = &self.conn_map;
+        let f = x.lock();
+        let x = Future::poll(Pin::new(&mut Box::pin(f)), cx);
+        match x {
+            Poll::Ready(mut map) => {
+                map.remove(&self.src);
+                //debug!("udp_fixed_w got closed, removed from conn map {}", self.src);
+
+                // 移除 tx 后 (drop了), Reader 端的 rx 也会自动失效
+
+                Poll::Ready(Ok(()))
+            }
+            Poll::Pending => {
+                //debug!("udp_fixed_w got closed, pending lock");
+
+                Poll::Pending
+            }
+        }
     }
 }
 
 pub struct Reader {
-    rx2: Receiver<BytesMut>,
+    r: Receiver<BytesMut>,
     dst: Addr,
     first_buf: Option<BytesMut>,
 }
@@ -178,7 +216,7 @@ impl AsyncReadAddr for Reader {
 
             return Poll::Ready(Ok((r_len, self.dst.clone())));
         }
-        let r = self.rx2.poll_recv(cx);
+        let r = self.r.poll_recv(cx);
         match r {
             Poll::Ready(r) => match r {
                 Some(mut b) => {
@@ -188,7 +226,10 @@ impl AsyncReadAddr for Reader {
 
                     Poll::Ready(Ok((r_len, self.dst.clone())))
                 }
-                None => Poll::Ready(Err(io_error("closed"))),
+                None => Poll::Ready(Err(io::Error::new(
+                    io::ErrorKind::ConnectionAborted,
+                    "udp_fixed_r r closed",
+                ))),
             },
             Poll::Pending => Poll::Pending,
         }
