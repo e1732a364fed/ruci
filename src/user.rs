@@ -8,11 +8,13 @@ use std::fmt::Debug;
 use async_trait::async_trait;
 use dyn_clone::DynClone;
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
 //use crate::{AnyBox, AnyS};
 
 /// 用于用户鉴权
+#[typetag::serde]
 pub trait UserTrait: Debug + Send + Sync {
     /// 每个user唯一, 通过比较这个string 即可 判断两个User 是否相等。相当于 user name. 用于在非敏感环境显示该用户
     fn identity_str(&self) -> String;
@@ -99,7 +101,7 @@ pub trait AsyncUserAuthenticator<T: User> {
 }
 
 /// 简单以字符串存储用户名和密码, 实现User
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct PlainText {
     pub user: String,
     pub pass: String,
@@ -140,6 +142,7 @@ impl PlainText {
     }
 }
 
+#[typetag::serde]
 impl UserTrait for PlainText {
     fn identity_str(&self) -> String {
         self.user.clone()

@@ -3,6 +3,7 @@
  */
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
 
 pub mod client;
@@ -68,7 +69,7 @@ pub fn sha224_hexstring_lower_case(pass: &str) -> String {
     format!("{}", bs.hex_display())
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
 pub struct User {
     pub plain_text_pass: String, //store the original password
     pub hex: String,             //len = 56
@@ -87,6 +88,7 @@ impl User {
     }
 }
 
+#[typetag::serde]
 impl crate::user::UserTrait for User {
     fn identity_str(&self) -> String {
         self.hex.clone()
