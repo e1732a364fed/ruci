@@ -5,14 +5,14 @@ use std::{
     pin::Pin,
     sync::{atomic::AtomicBool, Arc},
     task::{Context, Poll},
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use bytes::{Buf, BytesMut};
 use dashmap::DashMap;
 use futures::channel::oneshot;
 use ruci::{
-    net::{self, MTU},
+    net::{self, addr_conn::CP_UDP_TIMEOUT, MTU},
     Name,
 };
 use tokio::sync::mpsc::{self, Receiver, Sender};
@@ -28,8 +28,14 @@ use super::{
     Addr, NetAddr, Network,
 };
 
-/// (buf_index, left_bound, right_bound), dst, src
-type DataIndexDstSrc = ((usize, usize, usize), net::Addr, net::Addr);
+pub struct DataIndex {
+    pub buf_index: usize,
+    pub left_bound: usize,
+    pub right_bound: usize,
+}
+
+///dst, src
+type DataIndexDstSrc = (DataIndex, net::Addr, net::Addr);
 
 static mut BUF1: [u8; MAX_DATAGRAM_SIZE] = [0u8; MAX_DATAGRAM_SIZE];
 static mut BUF2: [u8; MAX_DATAGRAM_SIZE] = [0u8; MAX_DATAGRAM_SIZE];
@@ -94,7 +100,15 @@ pub fn loop_accept_udp<T>(
                 network: Network::UDP,
             };
 
-            let r = tx.try_send(((current_buf_i, left_bound, left_bound + n), dst_a, src_a));
+            let r = tx.try_send((
+                DataIndex {
+                    buf_index: current_buf_i,
+                    left_bound,
+                    right_bound: left_bound + n,
+                },
+                dst_a,
+                src_a,
+            ));
             left_bound += n;
             if left_bound + MTU > MAX_DATAGRAM_SIZE {
                 left_bound = 0;
@@ -138,7 +152,7 @@ pub struct AcceptData {
 
 /// 新增连接信息结构体
 struct ConnInfo {
-    tx: Sender<BytesMut>,
+    tx: Sender<DataIndex>,
     last_active: Instant,
 }
 
@@ -167,11 +181,11 @@ impl Listener {
         {
             let cleanup_map = conn_map.clone();
             tokio::spawn(async move {
-                let mut interval = tokio::time::interval(Duration::from_secs(60));
+                let mut interval = tokio::time::interval(CP_UDP_TIMEOUT);
                 loop {
                     interval.tick().await;
                     let now = Instant::now();
-                    let timeout = Duration::from_secs(300);
+                    let timeout = CP_UDP_TIMEOUT * 2;
 
                     // 使用 retain 方法清理过期连接
                     cleanup_map.retain(|_, conn_info| {
@@ -186,7 +200,6 @@ impl Listener {
         }
 
         tokio::spawn(async move {
-            let conn_map: ConnMap = Arc::new(DashMap::new());
             loop {
                 tokio::select! {
                     _ = &mut shutdown_rx => {
@@ -195,7 +208,7 @@ impl Listener {
                     }
 
                     r = udp_msg_rx.recv() => {
-                        let ((i,lb,rb), dst,src) = match r {
+                        let (data_index, dst,src) = match r {
                             Some(r) => r,
                             None => {
                                 debug!("tproxy UdpListener loop rx got none, will break");
@@ -203,17 +216,7 @@ impl Listener {
                             }
                         };
 
-                        let b = unsafe {
-                            if i == 0 { &mut *std::ptr::addr_of_mut!(BUF1) }
-                            else { &mut *std::ptr::addr_of_mut!(BUF2) }
-                        };
-                        let buf = &b[lb..rb];
-
-
-
                         let k = (dst.clone(),src.clone());
-
-                        // debug!("new with {:?}",k);
 
                         let now = Instant::now();
 
@@ -221,8 +224,7 @@ impl Listener {
                             // 更新已存在连接的最后活动时间
                             entry.last_active = now;
 
-                            let new_buf = BytesMut::from(buf);
-                            let r = entry.tx.send(new_buf).await;
+                            let r = entry.tx.send(data_index).await;
                             if let Err(e) = r {
                                 debug!("tproxy UdpListener tx send got e: {e}");
                                 conn_map.remove(&k);
@@ -238,6 +240,17 @@ impl Listener {
                             };
 
                             conn_map.insert(k.clone(), conn_info);
+
+                            let i = data_index.buf_index;
+                            let lb = data_index.left_bound;
+                            let rb = data_index.right_bound;
+
+                            let b = unsafe {
+                                if i == 0 { &mut *std::ptr::addr_of_mut!(BUF1) }
+                                else { &mut *std::ptr::addr_of_mut!(BUF2) }
+                            };
+                            let buf = &b[lb..rb];
+
                             let first_buf = BytesMut::from(buf);
 
                             let ac = new_addr_conn(
@@ -312,7 +325,7 @@ impl Drop for Listener {
 /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
 /// 以及用 send 而不是 send_to
 ///
-fn new_addr_conn(r: Receiver<BytesMut>, src: Addr, dst: Addr, conn_map: ConnMap) -> AddrConn {
+fn new_addr_conn(r: Receiver<DataIndex>, src: Addr, dst: Addr, conn_map: ConnMap) -> AddrConn {
     let r = Reader {
         dst: dst.clone(),
         rx: r,
@@ -363,9 +376,9 @@ impl AsyncWriteAddr for Writer {
 }
 
 pub struct Reader {
-    rx: Receiver<BytesMut>,
+    rx: Receiver<DataIndex>,
     dst: Addr,
-    last_buf: Option<BytesMut>,
+    last_buf: Option<DataIndex>,
     state: ReadState,
 }
 impl ruci::Name for Reader {
@@ -388,7 +401,21 @@ impl AsyncReadAddr for Reader {
         loop {
             match self.state {
                 ReadState::Buf => {
-                    if let Some(mut b) = self.last_buf.take() {
+                    if let Some(di) = self.last_buf.take() {
+                        let i = di.buf_index;
+                        let lb = di.left_bound;
+                        let rb = di.right_bound;
+
+                        let b = unsafe {
+                            if i == 0 {
+                                &mut *std::ptr::addr_of_mut!(BUF1)
+                            } else {
+                                &mut *std::ptr::addr_of_mut!(BUF2)
+                            }
+                        };
+
+                        let mut b = &b[lb..rb];
+
                         let r_len = b.len();
 
                         let min_l = min(r_len, buf.len());
@@ -398,7 +425,7 @@ impl AsyncReadAddr for Reader {
                         if b.is_empty() {
                             self.state = ReadState::Rx;
                         } else {
-                            self.last_buf = Some(b);
+                            self.last_buf = Some(di);
                         }
 
                         return Poll::Ready(Ok((r_len, self.dst.clone())));

@@ -4,7 +4,6 @@
 
 use std::{
     cmp::min,
-    collections::HashMap,
     io,
     net::SocketAddr,
     pin::Pin,
@@ -14,13 +13,10 @@ use std::{
 };
 
 use bytes::BytesMut;
-use futures::{channel::oneshot, Future};
+use futures::channel::oneshot;
 use netstack_lwip::udp::RecvHalf;
-use ruci::Name;
-use tokio::sync::{
-    mpsc::{self, Receiver, Sender},
-    Mutex,
-};
+use ruci::{net::addr_conn::CP_UDP_TIMEOUT, Name};
+use tokio::sync::mpsc::{self, Receiver, Sender};
 use tracing::{debug, warn};
 
 use ruci::net::{
@@ -28,12 +24,18 @@ use ruci::net::{
     Addr, NetAddr, Network,
 };
 
+use dashmap::DashMap;
+
 /// (buf_index, left_bound, right_bound), dst, src
-type DataIndexDstSrc = (Vec<u8>, SocketAddr, SocketAddr);
+type DataDstSrc = (Vec<u8>, SocketAddr, SocketAddr);
+
+const UDP_CHANNEL_SIZE: usize = 4096;
+const UDP_CONN_CHANNEL_SIZE: usize = 100;
+const UDP_TIMEOUT_MULTIPLIER: u32 = 2;
 
 pub async fn loop_accept_udp(
     mut r: RecvHalf,
-    tx: mpsc::Sender<DataIndexDstSrc>,
+    tx: mpsc::Sender<DataDstSrc>,
     shutdown_atomic: Arc<AtomicBool>,
 ) {
     loop {
@@ -100,10 +102,34 @@ impl Listener {
         mut udp_rx: Receiver<(Vec<u8>, SocketAddr, SocketAddr)>,
     ) -> anyhow::Result<Self> {
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
-        let (new_ac_tx, new_ac_rx) = mpsc::channel(4096);
+        let (new_ac_tx, new_ac_rx) = mpsc::channel(UDP_CHANNEL_SIZE);
+
+        let conn_map: ConnMap = Arc::new(DashMap::new());
+
+        // 添加清理任务
+        {
+            let cleanup_map = conn_map.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(CP_UDP_TIMEOUT);
+                loop {
+                    interval.tick().await;
+                    let now = Instant::now();
+                    let timeout = CP_UDP_TIMEOUT * UDP_TIMEOUT_MULTIPLIER;
+
+                    // 使用 retain 方法清理过期连接
+                    cleanup_map.retain(|_, conn_info| {
+                        let is_active = now.duration_since(conn_info.last_active) < timeout;
+                        if !is_active {
+                            debug!("Removing inactive UDP connection");
+                        }
+                        is_active
+                    });
+                }
+            });
+        }
 
         tokio::spawn(async move {
-            let conn_map: ConnMap = Arc::new(Mutex::new(HashMap::new()));
+            let conn_map = conn_map.clone();
             loop {
                 tokio::select! {
                     _ = &mut shutdown_rx=>{
@@ -120,19 +146,17 @@ impl Listener {
                             }
                         };
 
-                        let mut map_mg = conn_map.lock().await;
-                        let k = (dst ,src );
+                        let k = (dst, src);
 
-                        if let std::collections::hash_map::Entry::Vacant(e) = map_mg.entry(k) {
-                            let (msg_tx, msg_rx) = mpsc::channel(100);
+                        if !conn_map.contains_key(&k) {
+                            let (msg_tx, msg_rx) = mpsc::channel(UDP_CONN_CHANNEL_SIZE);
 
-                           // 创建新的 ConnInfo
                             let conn_info = ConnInfo {
                                 tx: msg_tx,
                                 last_active: Instant::now(),
                             };
 
-                            e.insert(conn_info);
+                            conn_map.insert(k, conn_info);
                             let first_buf = BytesMut::from(data.as_slice());
 
                             let ac = new_addr_conn(
@@ -150,13 +174,12 @@ impl Listener {
                             }
 
                         } else {
-                            // 更新已存在连接的最后活动时间
-                            if let Some(conn_info) = map_mg.get_mut(&k) {
-                                conn_info.last_active = Instant::now();
-                                let r = conn_info.tx.send(data).await;
+                            if let Some(mut entry) = conn_map.get_mut(&k) {
+                                entry.last_active = Instant::now();
+                                let r = entry.tx.send(data).await;
                                 if let Err(e) = r {
                                     debug!("lwip UdpListener tx send got e: {e}");
-                                    map_mg.remove(&k);
+                                    conn_map.remove(&k);
                                     continue;
                                 }
                             }
@@ -207,7 +230,7 @@ struct ConnInfo {
 }
 
 // 修改 ConnMap 类型定义
-type ConnMap = Arc<Mutex<HashMap<(SocketAddr, SocketAddr), ConnInfo>>>;
+type ConnMap = Arc<DashMap<(SocketAddr, SocketAddr), ConnInfo>>;
 
 /// init a AddrConn from a UdpSocket
 ///
@@ -258,10 +281,9 @@ impl AsyncWriteAddr for Writer {
         buf: &[u8],
         dst: &Addr,
     ) -> Poll<io::Result<usize>> {
-        if let Ok(mut map) = self.conn_map.try_lock() {
-            if let Some(conn_info) = map.get_mut(&(self.dst, self.src)) {
-                conn_info.last_active = Instant::now();
-            }
+        let k = (self.dst, self.src);
+        if let Some(mut entry) = self.conn_map.get_mut(&k) {
+            entry.last_active = Instant::now();
         }
 
         let r = self
@@ -273,21 +295,9 @@ impl AsyncWriteAddr for Writer {
         }
     }
 
-    fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        let lock_future = self.conn_map.lock();
-
-        match std::pin::pin!(lock_future).poll(cx) {
-            Poll::Ready(mut map) => {
-                map.remove(&(self.dst, self.src));
-
-                Poll::Ready(Ok(()))
-            }
-            Poll::Pending => {
-                debug!("tproxy_udp_w got closed, pending lock");
-
-                Poll::Pending
-            }
-        }
+    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        self.conn_map.remove(&(self.dst, self.src));
+        Poll::Ready(Ok(()))
     }
 }
 
