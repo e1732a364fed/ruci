@@ -7,6 +7,7 @@
 use crate::net::{self, TransmissionInfo};
 use log::Level::Debug;
 use log::{debug, info, log_enabled, warn};
+use scopeguard::defer;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
@@ -37,9 +38,13 @@ async fn no_ti_no_ed(cid: u32, in_conn: net::Conn, out_conn: net::Conn) {
 
 async fn ti_no_ed(cid: u32, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TransmissionInfo>) {
     ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
+
+    defer! {
+        ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
+        info!("cid: {}, relay end", cid);
+    }
+
     let _ = net::cp(in_conn, out_conn, cid, Some(ti.clone())).await;
-    ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-    info!("cid: {}, relay end", cid);
 }
 
 async fn no_ti_ed(
@@ -79,8 +84,6 @@ async fn ti_ed(
     ti: Arc<TransmissionInfo>,
     earlydata: bytes::BytesMut,
 ) {
-    ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
-
     if log_enabled!(Debug) {
         debug!("cid: {}, relay with earlydata, {}", cid, earlydata.len());
     }
@@ -102,8 +105,14 @@ async fn ti_ed(
         }
     }
 
+    ti.alive_connection_count.fetch_add(1, Ordering::Relaxed);
+
+    defer! {
+        ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
+        info!("cid: {}, relay end", cid);
+    }
+
     let _ = net::cp(in_conn, out_conn, cid, Some(ti.clone())).await;
-    ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
 
     info!("cid: {}, relay end", cid);
 }
