@@ -91,14 +91,16 @@ local in_h2_trojans_chain = { tcp, tls, {
     }
 }, trojan_in }
 
-local in_quic_chain = { {
+local quic_in = {
     Quic = {
         key_path = "test2.key",
         cert_path = "test2.crt",
-        listen_addr = "127.0.0.1:10801",
+        listen_addr = "0.0.0.0:10801",
         alpn = { "h3" }
     }
-}, trojan_in }
+}
+
+local in_quic_chain = { quic_in, trojan_in }
 
 local dial = {
     BindDialer = {
@@ -118,12 +120,13 @@ local direct_out_chain = { "Direct" }
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
-        { chain = trojans_chain, tag = "listen1" },
+        -- { chain = trojans_chain, tag = "listen1" },
         -- { chain = ws_trojans_chain,  tag = "listen1"  }
         -- { chain = in_h2_trojans_chain, tag = "listen1" }
         -- { chain = in_quic_chain, tag = "listen1" }
         -- { chain = socks5http_chain, tag = "listen1"} ,
         -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
+         { chain =  { tcp,tls, ws,  "IpRelayTest1" }, tag = "listen1"} ,
         --[[
         {
             chain = {{
@@ -153,7 +156,7 @@ Config = {
     } },
     -- ]]
 
-    ---[[
+    --[[
     -- 对应 local.lua 使用 tproxy 的 outbound 配置
     -- 如果 用 tproxy 时 direct 不用 opt_direct 设置 somark, 将造成无限回环, 无法联网
 
@@ -164,6 +167,22 @@ Config = {
         chain = opt_direct_chain
     } },
     --]]
+
+    ---[[
+    -- 对应 local.lua 使用 tun+IpRelayTest1 的 outbound 配置
+
+    outbounds = { {
+        tag = "dial1",
+        chain = {
+            {
+                BindDialer = {
+                    bind_addr = "ip://10.0.0.2:24#utun321",
+                }
+            }
+        }
+    } },
+    --]]
+
 
     -- outbounds = { { tag="dial1", chain = out_stdio_chain  } }, --以命令行为出口
 

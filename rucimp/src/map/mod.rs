@@ -15,6 +15,8 @@ pub mod ws;
 
 pub mod quic_common;
 
+pub mod ip;
+
 #[cfg(feature = "quic")]
 pub mod quic;
 

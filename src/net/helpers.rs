@@ -254,7 +254,9 @@ impl AsyncRead for PrintWrapper {
                         String::from_utf8_lossy(&slice[..min(sl, 64)])
                     )
                 }
-                Err(_) => {}
+                Err(e) => {
+                    debug!("PrintWrapper read got e: {e}")
+                }
             },
             Poll::Pending => {}
         }
@@ -280,7 +282,13 @@ impl AsyncWrite for PrintWrapper {
                         String::from_utf8_lossy(&buf[..min(*u, 64)])
                     )
                 }
-                Err(_) => {}
+                Err(e) => {
+                    debug!(
+                        "PrintWrapper write got e:{} {}, {e}",
+                        buf.len(),
+                        String::from_utf8_lossy(&buf[..min(buf.len(), 64)])
+                    );
+                }
             },
             Poll::Pending => {}
         };

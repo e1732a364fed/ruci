@@ -171,7 +171,8 @@ impl AsyncRead for EarlyConn {
     ) -> Poll<io::Result<()>> {
         match &mut self.real_c {
             Some(c) => c.as_mut().poll_read(cx, buf),
-            None => Poll::Ready(Err(io_error("can't poll_read when not established"))),
+            //None => Poll::Ready(Err(io_error("can't poll_read when not established"))),
+            None => Poll::Pending,
         }
     }
 }

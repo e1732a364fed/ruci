@@ -539,7 +539,7 @@ local config_15_tun = {
                     bind_addr = "ip://10.0.0.1:24#utun321",
 
                     -- 自动配置 系统路由 以 代理全局
-                    auto_route = {
+                    in_auto_route = {
                         tun_dev_name = "utun321",
                         tun_gateway = "10.0.0.1",
                         router_ip = "192.168.0.1",
@@ -551,6 +551,7 @@ local config_15_tun = {
             tag = "listen1"
         },
     },
+    outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
 
     --[[
 
@@ -564,12 +565,56 @@ local config_15_tun = {
 
     --]]
 
-    outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
 }
 
-Config = config_15_tun
+local config_16_tun = {
 
----[[
+    inbounds = {
+
+        {
+            chain = { {
+                BindDialer = {
+                    bind_addr = "ip://10.0.0.1:24#utun321",
+
+                    in_auto_route = {
+                        tun_dev_name = "utun321",
+                        tun_gateway = "10.0.0.1",
+                        router_ip = "192.168.0.1",
+                        original_dev_name = "enp0s1",
+                        direct_list = { "192.168.0.226" }, -- 服务端的ip要直连
+                        dns_list = { "114.114.114.114" }
+                    }
+                }
+            } },
+            tag = "listen1"
+        },
+    },
+    outbounds = { {
+        tag = "dial1",
+        chain = { {
+            --OptDialer = { -- 如果自动路由没写 direct_list, 也可以用 OptDialer+ bind_to_device 的方法
+
+            BindDialer = {
+                dial_addr = "tcp://192.168.0.226:10801",
+                -- sockopt = {
+                --     bind_to_device = "enp0s1"
+                -- }
+            }
+        }, tlsout, websocket_out,  "IpRelayTest1" }
+    } }
+
+    --[[
+
+        演示 inbound 是 ip, outbound 是 IpRelayTest1
+
+    --]]
+
+}
+
+
+Config = config_16_tun
+
+--[[
 
 -- 有限动态链的 选择器用法 的基本演示
 -- 有限动态链使用 Config 所提供的列表, 在 Dyn_Selectors 中动态地

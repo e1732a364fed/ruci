@@ -17,7 +17,7 @@ pub struct InAutoRouteParams {
     pub dns_list: Option<Vec<String>>,
 }
 
-const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
+// const DEFAULT_ROUTER_IP: &str = "192.168.0.1";
 const DEFAULT_ORIGINAL_DEV_NAME: &str = "enp0s1";
 
 pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<String>>> {
@@ -27,7 +27,7 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
 
         let tun_gateway = params.tun_gateway.as_deref().unwrap_or("10.0.0.1");
         let tun_dev_name = params.tun_dev_name.as_deref().unwrap_or("utun321");
-        let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
+        //let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
         let original_dev_name = params
             .original_dev_name
             .as_deref()
@@ -37,16 +37,17 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
         //  因此该命令的成败不影响大局
         let _r = utils::run_command("ip", "route del default");
 
-        let list = format!(
-            r#"ip route add default via {tun_gateway} dev {tun_dev_name} metric 1
-ip route add default via {router_ip} dev {original_dev_name} metric 10"#,
-        );
+        let list =
+            format!(r#"ip route add default via {tun_gateway} dev {tun_dev_name} metric 1"#,);
+
+        //ip route add default via {router_ip} dev {original_dev_name} metric 10
+
         let mut list: Vec<_> = list.split('\n').map(String::from).collect();
 
         if let Some(direct_list) = &params.direct_list {
             for v in direct_list.iter() {
                 list.push(format!(
-                    "ip route add {v} via {router_ip} dev {original_dev_name} metric 10"
+                    "ip route add {v} dev {original_dev_name} metric 100"
                 ))
             }
         }
@@ -77,7 +78,7 @@ pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
         info!("tun down auto route for linux...");
         let mut list = vec![];
 
-        let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
+        //let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
         let original_dev_name = params
             .original_dev_name
             .as_deref()
@@ -86,7 +87,7 @@ pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
         if let Some(direct_list) = &params.direct_list {
             for v in direct_list {
                 list.push(format!(
-                    "ip route del {v} via {router_ip} dev {original_dev_name} metric 10"
+                    "ip route del {v} dev {original_dev_name} metric 100"
                 ))
             }
         }

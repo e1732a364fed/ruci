@@ -55,18 +55,35 @@ fn test_url() {
     assert_ne!(u.authority().unwrap(), u.host().unwrap());
 }
 
-pub fn match_request_http_header<'a, T: 'a>(
+pub fn match_request_http_header<'a, T: 'a + std::fmt::Debug>(
     c: &'a CommonConfig,
     r: &'a Request<T>,
 ) -> Result<(), HttpMatchError<'a>> {
     let a = r.uri().authority();
     let given_host = if let Some(a) = a { a.as_str() } else { "" };
 
+    //debug!("checking  {r:?}");
+
     if c.authority != given_host {
-        return Err(HttpMatchError::InvalidHost {
-            expected: &c.authority,
-            found: given_host,
-        });
+        if given_host == "" {
+            let hh = r
+                .headers()
+                .get("host")
+                .map(|x| x.to_str().unwrap_or(""))
+                .unwrap();
+
+            if hh != c.authority {
+                return Err(HttpMatchError::InvalidHost {
+                    expected: &c.authority,
+                    found: hh,
+                });
+            }
+        } else {
+            return Err(HttpMatchError::InvalidHost {
+                expected: &c.authority,
+                found: given_host,
+            });
+        }
     }
 
     let given_path = r.uri().path();

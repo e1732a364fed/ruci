@@ -147,10 +147,11 @@ impl BindDialer {
     #[cfg(feature = "tun")]
 
     pub fn down_route(&mut self) {
-        debug!("BindDialer down auto route");
         let mut mg = self.auto_route_state.lock();
         match &*mg {
             AutoRouteState::Up(opt_dns_list) => {
+                debug!("BindDialer down auto route");
+
                 let mut params = self.in_auto_route.take().unwrap();
                 params.dns_list = opt_dns_list.to_owned();
                 let r = tun::route::in_down_route(&params);

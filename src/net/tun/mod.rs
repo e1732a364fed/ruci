@@ -47,6 +47,8 @@ where
         "tun: create_bind succeed"
     );
 
+    // let dev = crate::net::helpers::PrintWrapper::from(Box::new(dev));
+
     Ok(Box::new(dev))
 }
 
