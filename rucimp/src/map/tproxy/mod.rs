@@ -34,7 +34,7 @@ pub struct TcpResolver {
 
 impl Name for TcpResolver {
     fn name(&self) -> &'static str {
-        "tproxy_resolver"
+        "tproxy_tcp_resolver"
     }
 }
 
@@ -108,7 +108,6 @@ impl Map for TcpResolver {
                         "tproxy TcpResolver needs data for local_addr, did't get it from the data.",
                     );
                 }
-                //debug!(cid = %cid, a=?oa, "tproxy TcpResolver got target_addr: ");
 
                 // laddr in tproxy is in fact target_addr
                 MapResult::new_c(c).a(oa).b(params.b).build()
@@ -169,16 +168,16 @@ impl UDPListener {
                             }
                             r = listener.accept()=>{
                                 match r {
-                                    Ok(r) => {
+                                    Ok(accept_data) => {
                                         count +=1;
 
                                         let mut cidc = cid.clone();
                                         cidc.push_num(count);
 
-                                        let mr = MapResult::new_u(r.0)
-                                            .a(Some(r.1.clone()))
-                                            .b(Some(r.3))
-                                            .d(Some(Box::new(map::data::RLAddr(r.1, r.2))))
+                                        let mr = MapResult::new_u(accept_data.ac)
+                                            .a(Some(accept_data.dst.clone()))
+                                            .b(Some(accept_data.first_buf))
+                                            .d(Some(Box::new(map::data::RLAddr(accept_data.dst, accept_data.src))))
                                             .new_id(cidc)
                                             .build();
                                         let r = tx.send(mr).await;

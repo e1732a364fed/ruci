@@ -126,13 +126,6 @@ pub fn block_listen_udp_socket(na: &net::Addr, so: &SockOpt) -> anyhow::Result<S
     Ok(socket)
 }
 
-// /// bind to na
-// pub fn blocklisten_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
-//     let socket = new_socket2(na, so, true)?;
-//     let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
-//     Ok(s)
-// }
-
 pub fn new_socket2_udp_tproxy_dial(laddr: &net::Addr) -> anyhow::Result<Socket> {
     let laddr = laddr
         .get_socket_addr()
@@ -177,9 +170,8 @@ pub fn connect_tproxy_udp(laddr: &net::Addr, raddr: &net::Addr) -> anyhow::Resul
         .context("connect_tproxy_udp failed, requires raddr has socket addr")?;
 
     socket
-        .connect_timeout(&ra.into(), Duration::from_secs(1))
-        .context("connect failed")?;
-    //socket.set_nonblocking(true);
+        .connect_timeout(&ra.into(), Duration::from_millis(200))
+        .context("connect_tproxy_udp failed timeout")?;
 
     Ok(socket)
 }

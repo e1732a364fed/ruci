@@ -53,18 +53,18 @@ pub(crate) async fn run(
             )
             .await;
 
-            run_engine(&se, Some(s.1)).await?;
+            run_engine(&mut se, Some(s.1)).await?;
 
             return Ok(());
         }
     }
 
-    run_engine(&se, None).await?;
+    run_engine(&mut se, None).await?;
 
     Ok(())
 }
 
-async fn run_engine(e: &Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow::Result<()> {
+async fn run_engine(e: &mut Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow::Result<()> {
     let mut js = e.run().await?;
 
     info!("started rucimp chain engine");
@@ -75,15 +75,19 @@ async fn run_engine(e: &Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow:
     }
 
     std::thread::spawn(|| {
-        std::thread::sleep(Duration::from_secs(3));
-        tracing::warn!("Force shutdown after 3 secs!");
-        println!("Force shutdown after 3 secs!");
+        std::thread::sleep(Duration::from_secs(4));
+        tracing::warn!("Force shutdown after 4 secs!");
+        println!("Force shutdown after 4 secs!");
         std::process::exit(1);
     });
 
     e.stop().await;
 
     js.shutdown().await;
+
+    e.reset().await;
+    tracing::info!("chain engine shutted down gracefully");
+
     Ok(())
 }
 

@@ -398,6 +398,12 @@ linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 同时, udp 的 timeout 默认设为 40 秒, 这样超时没有新信息产生就会断开连接, opened files
 就会自动减少恢复
 
+可用 `ls /proc/138471/fd/ | wc -l` 查看一个进程 打开文件的数量, 数字换成 进程的 pid
+
+
+run `ulimit -a` to see. run `ulimit -n 1000000` as root to set
+
+ruci tproxy 在启动监听后, 进程所打开的文件在12个左右.
 
 ## 其它
 

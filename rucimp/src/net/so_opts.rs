@@ -35,7 +35,6 @@ pub fn set_tproxy_socket_opts<T: AsRawFd>(v4: bool, is_udp: bool, socket: &T) ->
 
     let enable: libc::c_int = 1;
     unsafe {
-        // 1. Set IP_TRANSPARENT to allow binding to non-local addresses
         let sol = if v4 { libc::SOL_IP } else { libc::SOL_IPV6 };
         let ret = libc::setsockopt(
             fd,
@@ -49,7 +48,6 @@ pub fn set_tproxy_socket_opts<T: AsRawFd>(v4: bool, is_udp: bool, socket: &T) ->
         }
 
         if is_udp {
-            // 2. Set IP_RECVORIGDSTADDR, IPV6_RECVORIGDSTADDR
             let (sol, opt) = if v4 {
                 (libc::SOL_IP, libc::IP_RECVORIGDSTADDR)
             } else {

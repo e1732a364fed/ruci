@@ -328,7 +328,7 @@ where
 // quic uses 30 secs, so we use a little more
 pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(40); //todo: adjust this
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
-pub const MTU: usize = 1400;
+pub const MTU: usize = 1500;
 
 async fn rw_once<R: AddrReadTrait, W: AddrWriteTrait>(
     r: &mut R,

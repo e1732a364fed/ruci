@@ -4,14 +4,16 @@ use std::{
     io,
     os::fd::AsRawFd,
     pin::Pin,
-    sync::Arc,
+    sync::{atomic::AtomicBool, Arc},
     task::{Context, Poll},
 };
 
 use bytes::{Buf, BytesMut};
 use futures::{channel::oneshot, Future};
-use ruci::{net, Name};
-use socket2::Socket;
+use ruci::{
+    net::{self, addr_conn::MTU},
+    Name,
+};
 use tokio::sync::{
     mpsc::{self, Receiver, Sender},
     Mutex,
@@ -28,35 +30,49 @@ use super::{
     Addr, NetAddr, Network,
 };
 
-// (buf_index, left_bound, right_bound)
-type DataDstSrc = ((usize, usize, usize), net::Addr, net::Addr);
+/// (buf_index, left_bound, right_bound), dst, src
+type DataIndexDstSrc = ((usize, usize, usize), net::Addr, net::Addr);
 
-static mut VEC: [u8; MAX_DATAGRAM_SIZE] = [0u8; MAX_DATAGRAM_SIZE];
-static mut VEC2: [u8; MAX_DATAGRAM_SIZE] = [0u8; MAX_DATAGRAM_SIZE];
+static mut BUF1: [u8; MAX_DATAGRAM_SIZE] = [0u8; MAX_DATAGRAM_SIZE];
+static mut BUF2: [u8; MAX_DATAGRAM_SIZE] = [0u8; MAX_DATAGRAM_SIZE];
 
 /// blocking
-pub fn loop_accept_udp<T>(us: &T, tx: mpsc::Sender<DataDstSrc>)
-where
+pub fn loop_accept_udp<T>(
+    us: &T,
+    tx: mpsc::Sender<DataIndexDstSrc>,
+    shutdown_atomic: Arc<AtomicBool>,
+) where
     T: AsRawFd,
 {
-    let mut current_using_i = 0;
-    let mut last_i = 0;
+    let mut current_buf_i = 0;
+    let mut left_bound = 0;
 
     loop {
+        if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
+            debug!("tproxy udp thread got shutdown_atomic = true");
+            break;
+        }
         let b = unsafe {
-            if current_using_i == 0 {
-                // is actually &mut VEC, followed the compiler prompt for 2024 edition
+            if current_buf_i == 0 {
+                // is actually &mut BUF1, followed the compiler prompt for 2024 edition
                 // and changed to using addr_of_mut!
                 // https://github.com/rust-lang/rust/issues/114447
 
-                &mut *std::ptr::addr_of_mut!(VEC)
+                &mut *std::ptr::addr_of_mut!(BUF1)
             } else {
-                &mut *std::ptr::addr_of_mut!(VEC2)
+                &mut *std::ptr::addr_of_mut!(BUF2)
             }
         };
-        let buf = &mut b[last_i..last_i + 1500];
+        let buf = &mut b[left_bound..left_bound + MTU];
 
         let r = tproxy_recv_from_with_destination(us, buf);
+
+        if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
+            debug!("tproxy udp thread got shutdown_atomic = true");
+
+            break;
+        }
+
         let r = match r {
             Ok(r) => r,
             Err(e) => {
@@ -80,13 +96,13 @@ where
                 network: Network::UDP,
             };
 
-            let r = tx.try_send(((current_using_i, last_i, last_i + n), dst_a, src_a));
-            last_i += n;
-            if last_i + 1500 > MAX_DATAGRAM_SIZE {
-                last_i = 0;
-                current_using_i += 1;
-                if current_using_i >= 2 {
-                    current_using_i = 0
+            let r = tx.try_send(((current_buf_i, left_bound, left_bound + n), dst_a, src_a));
+            left_bound += n;
+            if left_bound + MTU > MAX_DATAGRAM_SIZE {
+                left_bound = 0;
+                current_buf_i += 1;
+                if current_buf_i >= 2 {
+                    current_buf_i = 0
                 }
             }
 
@@ -96,7 +112,8 @@ where
                 return;
             }
         } else {
-            debug!("tproxy loop_accept_udp read got n=0");
+            // shouldn't happen
+            warn!("tproxy loop_accept_udp read got n=0, will continue");
 
             continue;
         }
@@ -108,30 +125,32 @@ where
 #[derive(Debug)]
 pub struct Listener {
     laddr: Addr,
-    rx: mpsc::Receiver<(AddrConn, Addr, Addr, BytesMut)>,
+    rx: mpsc::Receiver<AcceptData>,
     shutdown_tx: Option<oneshot::Sender<()>>,
+    shutdown_thread_atomic: Arc<AtomicBool>,
+    fd: i32,
+}
+
+pub struct AcceptData {
+    pub ac: AddrConn,
+    pub dst: Addr,
+    pub src: Addr,
+    pub first_buf: BytesMut,
 }
 
 impl Listener {
     pub async fn new(listen_a: Addr, sopt: SockOpt) -> anyhow::Result<Self> {
         let udp = so2::block_listen_udp_socket(&listen_a, &sopt)?;
+        let fd = udp.as_raw_fd();
 
-        // let u: tokio::net::UdpSocket =
-        //     tokio::net::UdpSocket::from_std(std::net::UdpSocket::from(u))?;
+        let (udp_msg_tx, mut udp_msg_rx) = mpsc::channel(1000);
 
-        let (udp_msg_tx, mut udp_msg_rx) = mpsc::channel(1000); //todo: adjust this
-
-        let _jh = std::thread::spawn(move || loop_accept_udp(&udp, udp_msg_tx));
-
-        // tokio::spawn(async move {
-        //     let _ = shutdown_rx.await;
-        //     info!("tproxy udp got shutdown signal");
-        //     // thr.terminate();
-        //     // info!("tproxy udp terminated");
-        // });
+        let shutdown_thread_atomic = Arc::new(AtomicBool::new(false));
+        let stac = shutdown_thread_atomic.clone();
+        let _jh = std::thread::spawn(move || loop_accept_udp(&udp, udp_msg_tx, stac));
 
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
-        let (new_ac_tx, new_ac_rx) = mpsc::channel(1000); //todo: adjust this
+        let (new_ac_tx, new_ac_rx) = mpsc::channel(1000);
 
         tokio::spawn(async move {
             let conn_map: Arc<Mutex<HashMap<(Addr, Addr), Sender<BytesMut>>>> =
@@ -154,19 +173,19 @@ impl Listener {
 
                         let b = unsafe {
                             if i == 0 {
-                                &mut VEC
+                                &mut BUF1
                             } else {
-                                &mut VEC2
+                                &mut BUF2
                             }
                         };
-                        let buf2 = &b[lb..rb];
+                        let buf = &b[lb..rb];
 
                         let mut mg = conn_map.lock().await;
                         let k = (dst.clone(),src.clone());
 
                         if mg.contains_key(&k) {
 
-                            let new_buf = BytesMut::from(buf2);
+                            let new_buf = BytesMut::from(buf);
 
                             let tx = mg.get(&k).unwrap();
                             let r = tx.send(new_buf).await;
@@ -178,7 +197,7 @@ impl Listener {
                             let (tx2, rx2) = mpsc::channel(100);
 
                             mg.insert(k.clone(), tx2);
-                            let first_buf = BytesMut::from(buf2);
+                            let first_buf = BytesMut::from(buf);
 
                             let ac = new_addr_conn(
                                 rx2,
@@ -187,7 +206,7 @@ impl Listener {
                                 conn_map.clone(),
                             );
 
-                            let r = new_ac_tx.send((ac,dst, src,first_buf)).await;
+                            let r = new_ac_tx.send(AcceptData{ac,dst, src,first_buf}).await;
                             if let Err(e) = r {
                                 debug!("tproy UdpListener loop got e: {e}");
                                 break;
@@ -200,26 +219,40 @@ impl Listener {
         });
 
         Ok(Self {
+            fd,
             shutdown_tx: Some(shutdown_tx),
             laddr: listen_a,
             rx: new_ac_rx,
+            shutdown_thread_atomic,
         })
     }
 
-    /// conn, dst, src, first_data
-    pub async fn accept(&mut self) -> anyhow::Result<(AddrConn, Addr, Addr, BytesMut)> {
-        let (ac, dst, src, buf) = self
+    pub async fn accept(&mut self) -> anyhow::Result<AcceptData> {
+        let ad = self
             .rx
             .recv()
             .await
             .ok_or(anyhow::anyhow!("tproxy udplistener accept got rx closed"))?;
-        Ok((ac, dst, src, buf))
+        Ok(ad)
     }
 
+    /// the listener is not reuseable after shutdown
     pub fn shutdown(&mut self) {
+        debug!("tproxy udp got shutdown called");
+
         let tx = self.shutdown_tx.take();
         if let Some(tx) = tx {
+            debug!("tproxy udp will shutdown");
+
+            self.shutdown_thread_atomic
+                .store(true, std::sync::atomic::Ordering::Relaxed);
             let _ = tx.send(());
+
+            unsafe {
+                //光 调用 close 是不会令 recvmsg 端返回的, shutdown is necessary.
+                // 且 shutdown 后 再调用 close 有10% 左右的几率得到报错 Bad file Descriptor, 所以没必要
+                libc::shutdown(self.fd, libc::SHUT_RDWR);
+            }
         }
     }
 
@@ -239,7 +272,7 @@ impl Drop for Listener {
 /// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
 /// 以及用 send 而不是 send_to
 ///
-pub fn new_addr_conn(
+fn new_addr_conn(
     r: Receiver<BytesMut>,
     src: Addr,
     dst: Addr,
@@ -252,12 +285,7 @@ pub fn new_addr_conn(
         last_buf: None,
         state: ReadState::Buf,
     };
-    let w = Writer {
-        src,
-        dst,
-        conn_map,
-        back_established_map: HashMap::new(),
-    };
+    let w = Writer { src, dst, conn_map };
     let mut ac = AddrConn::new(Box::new(r), Box::new(w));
     ac.cached_name = String::from("tproxy_udp");
     ac
@@ -267,7 +295,6 @@ pub struct Writer {
     src: Addr,
     dst: Addr,
     conn_map: Arc<Mutex<HashMap<(Addr, Addr), Sender<BytesMut>>>>,
-    back_established_map: HashMap<(Addr, Addr), Socket>,
 }
 impl Name for Writer {
     fn name(&self) -> &str {
@@ -284,56 +311,30 @@ impl AsyncWriteAddr for Writer {
     ) -> Poll<io::Result<usize>> {
         //debug!("tproxy_udp_w write called {} {dst} {}", buf.len(), self.src);
 
-        // let x = self.back_established_map.get(&k);
+        let us = so2::connect_tproxy_udp(dst, &self.src).unwrap();
 
-        let x: Option<()> = None;
-        match x {
-            Some(_) => {
-                //let r = us.send(buf);
+        let r = us.send(buf);
 
-                // prevent too many open files
-                // if self.back_established_map.len() > LIMIT {
-                //     self.back_established_map.clear()
-                // }
-                //Poll::Ready(r)
-                panic!("shit")
-            }
-            None => {
-                let us = so2::connect_tproxy_udp(dst, &self.src).unwrap();
+        // socket2 is automatically closed when dropped
 
-                let r = us.send(buf);
+        // let fd = us.as_raw_fd();
+        // unsafe {
+        //     libc::close(fd);
+        // }
 
-                let fd = us.as_raw_fd();
-                unsafe {
-                    libc::close(fd);
-                }
+        // 没必要 用 一个 "hashmap with timeout" 缓存. 因为 udp 主要的用途是 dns,
+        // 而 dns 都是一次性的 连接
 
-                //debug!("clear back_established_map ");
+        // 如果要大量传 udp 单连接 大数据, 用 tun 是更好的选择
 
-                // if self.back_established_map.len() > LIMIT {
-                //     self.back_established_map.iter().for_each(|(_, v)| {
-                //         let _ = v.shutdown(std::net::Shutdown::Both);
-
-                //         // let s: tokio::net::UdpSocket =
-                //         //     tokio::net::UdpSocket::from_std(std::net::UdpSocket::from(v)).unwrap();
-
-                //         //unimplemented!()
-                //     });
-                //     self.back_established_map.clear()
-                // }
-                // self.back_established_map.insert(k, us);
-
-                Poll::Ready(r)
-            }
-        }
+        Poll::Ready(r)
     }
 
     fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close_addr(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        self.back_established_map.clear();
+    fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         let x = &self.conn_map;
         let f = x.lock();
         let x = Future::poll(std::pin::pin!(f), cx);

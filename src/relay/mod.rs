@@ -244,19 +244,17 @@ pub async fn handle_in_fold_result(
                         "fold outbound succeed with empty target_addr",
                     );
                 }
-            } else {
-                if let Stream::AddrConn(_) = dial_result.c {
-                    if tracing::enabled!(tracing::Level::DEBUG) {
-                        debug!( cid = %cid, is_fallback = is_fallback,
+            } else if let Stream::AddrConn(_) = dial_result.c {
+                if tracing::enabled!(tracing::Level::DEBUG) {
+                    debug!( cid = %cid, is_fallback = is_fallback,
                             "fold outbound succeed with AddrConn and target_addr {rta} ",);
-                    } else {
-                        info!( cid = %cid, is_fallback = is_fallback,
-                            "fold outbound succeed with AddrConn",);
-                    }
                 } else {
-                    info!( cid = %cid, is_fallback = is_fallback, target_addr = %rta, stream = %dial_result.c,
-                        "fold outbound succeed, but the target_addr is not consumed ",);
+                    info!( cid = %cid, is_fallback = is_fallback,
+                            "fold outbound succeed with AddrConn",);
                 }
+            } else {
+                info!( cid = %cid, is_fallback = is_fallback, target_addr = %rta, stream = %dial_result.c,
+                        "fold outbound succeed, but the target_addr is not consumed ",);
             }
         } else {
             info!(cid = %cid, is_fallback = is_fallback,"fold outbound succeed, will start relay");

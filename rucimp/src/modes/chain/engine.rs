@@ -49,6 +49,7 @@ pub struct Engine {
 impl Engine {
     /// 清空配置. reset 后 可以 接着调用 init
     pub async fn reset(&mut self) {
+        debug!("Engine reset called");
         let running = self.running.lock();
 
         if running.is_none() {
@@ -57,9 +58,9 @@ impl Engine {
             self.default_outbound = None;
             self.tag_routes = None;
             self.gtr = Arc::<GlobalTrafficRecorder>::default();
-            info!("Engine is reset successful");
+            info!("Engine reset successful");
         } else {
-            warn!("Engine is running, can't be reset. You should try to stop before reset.");
+            warn!("Engine is running, can't be reset. Should call stop before reset.");
         }
     }
 
@@ -179,7 +180,7 @@ impl Engine {
         self.outbounds.len()
     }
 
-    /// non-blocking
+    /// non-blocking. it calls start_with_tasks
     pub async fn run(&self) -> anyhow::Result<JoinSet<anyhow::Result<()>>> {
         let mut set = JoinSet::new();
         self.start_with_tasks().await.map(|tasks| {
@@ -191,7 +192,7 @@ impl Engine {
         Ok(set)
     }
 
-    /// blocking
+    /// blocking. it calls run
     pub async fn block_run(&self) -> anyhow::Result<Vec<anyhow::Result<()>>> {
         let mut set = self.run().await?;
         let mut hv = Vec::new();
@@ -339,7 +340,7 @@ impl Engine {
         Arc::new(Box::new(s))
     }
 
-    /// 停止所有的 server, 但并不清空配置. 意味着可以stop后接着调用 run
+    /// 停止所有的 server, 但并不清空配置. 意味着可以stop后接着调用 run/block_run
     pub async fn stop(&self) {
         info!("chain engine: stop called");
         let mut running = self.running.lock();
