@@ -521,7 +521,28 @@ pub async fn accumulate_from_start(
     if let Stream::Generator(rx) = r.c {
         in_iter_accumulate_forever(CID::default(), rx, tx, inmappers, oti).await;
     } else {
-        warn!("accumulate_from_start, not a stream generator, {}", r.c);
+        warn!(
+            "accumulate_from_start: not a stream generator, will accumulate directly. {}",
+            r.c
+        );
+
+        tokio::spawn(async move {
+            let r = accumulate(
+                CID::new_by_opti(oti),
+                ProxyBehavior::DECODE,
+                MapResult {
+                    a: r.a,
+                    b: r.b,
+                    c: r.c,
+                    d: r.d,
+                    e: None,
+                    new_id: None,
+                },
+                inmappers,
+            )
+            .await;
+            let _ = tx.send(r).await;
+        });
     }
 }
 

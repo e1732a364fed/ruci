@@ -44,7 +44,7 @@ impl AdderConn {
 }
 impl Name for AdderConn {
     fn name(&self) -> &'static str {
-        "adder"
+        "adder_conn"
     }
 }
 

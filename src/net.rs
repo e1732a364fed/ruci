@@ -91,6 +91,13 @@ impl CID {
         let li = new_ordered_cid(lastid);
         CID::Unit(li)
     }
+
+    pub fn new_by_opti(oti: Option<Arc<TransmissionInfo>>) -> CID {
+        match oti {
+            Some(ti) => CID::new_ordered(&ti.last_connection_id),
+            None => CID::new(),
+        }
+    }
 }
 
 impl Default for CID {
@@ -277,8 +284,20 @@ impl Addr {
         Addr::from(network, host, ip, port)
     }
 
+    // tcp://127.0.0.1:80 or tcp://www.b.com:80. if :// is not present, use tcp as network
+    pub fn from_network_addr_str(s: &str) -> io::Result<Self> {
+        let ns: Vec<_> = s.splitn(2, "://").collect();
+        match ns.len() {
+            1 => Addr::from_addr_str("tcp", s),
+            2 => Addr::from_addr_str(ns[0], ns[1]),
+            _ => Err(io::Error::other(
+                "Addr::from_network_addr_str, split :// got len!=2 && len!=1",
+            )),
+        }
+    }
+
     //127.0.0.1:80 or www.b.com:80
-    pub fn from_addr_str(network: &'static str, s: &str) -> io::Result<Self> {
+    pub fn from_addr_str(network: &str, s: &str) -> io::Result<Self> {
         let ns: Vec<_> = s.split(':').collect();
         if ns.len() != 2 {
             return Err(io::Error::other(
@@ -486,9 +505,9 @@ impl Debug for Stream {
 impl Display for Stream {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            Stream::TCP(_) => write!(f, "TcpStream"),
-            Stream::UDP(_) => write!(f, "UdpStream"),
-            Stream::Generator(_) => write!(f, "StreamGenerator"),
+            Stream::TCP(c) => write!(f, "{}", c.name()),
+            Stream::UDP(_) => write!(f, "SomeUdplikeStream"),
+            Stream::Generator(_) => write!(f, "SomeStreamGenerator"),
             Stream::None => write!(f, "NoStream"),
         }
     }

@@ -12,7 +12,7 @@ chain1 = {
     tls,
     c,
     { Socks5 = {  userpass = "u0 p0", more = {"u1 p1"} } },
-    c,
+    "Counter",
 
 }
 len = table.getn(chain1)

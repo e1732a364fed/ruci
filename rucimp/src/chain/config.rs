@@ -73,7 +73,7 @@ pub struct OutMapperConfigChain {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
-    Stdio,
+    Stdio(String),
     Listener(Listener),
     Adder(i8),
     Counter,
@@ -87,7 +87,7 @@ pub enum InMapperConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapperConfig {
     Direct,
-    Stdio,
+    Stdio(String),
     Dialer(Dialer),
     Adder(i8),
     Counter,
@@ -141,7 +141,7 @@ pub struct TrojanIn {
 impl ToMapper for InMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            InMapperConfig::Stdio => Box::new(ruci::map::stdio::Stdio),
+            InMapperConfig::Stdio(s) => ruci::map::stdio::Stdio::from(s),
             InMapperConfig::Listener(lis) => match lis {
                 Listener::TcpListener(tcp_l_str) => {
                     let a = net::Addr::from_ip_addr_str("tcp", tcp_l_str).unwrap();
@@ -212,7 +212,7 @@ impl ToMapper for InMapperConfig {
 impl ToMapper for OutMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            OutMapperConfig::Stdio => Box::new(ruci::map::stdio::Stdio),
+            OutMapperConfig::Stdio(s) => ruci::map::stdio::Stdio::from(s),
             OutMapperConfig::Direct => Box::new(ruci::map::network::Direct),
             OutMapperConfig::Dialer(d) => match d {
                 Dialer::TcpDialer(td_str) => {
@@ -252,7 +252,7 @@ mod test {
 
     use super::*;
     #[test]
-    fn serialize() {
+    fn serialize_toml() {
         let sc = StaticConfig {
             listen: vec![InMapperConfigChain {
                 tag: None,

@@ -60,7 +60,10 @@ impl AsyncWrite for Conn {
 }
 
 #[derive(Clone, Debug)]
-pub struct Stdio;
+pub struct Stdio {
+    // 存一个可选的addr, 可作为指定的连接目标。 这样stdio的decode行为就像一个 socks5一样
+    pub addr: Option<net::Addr>,
+}
 
 impl Name for Stdio {
     fn name(&self) -> &'static str {
@@ -68,8 +71,23 @@ impl Name for Stdio {
     }
 }
 
+impl Stdio {
+    pub fn from(s: &str) -> MapperBox {
+        if s == "" {
+            Box::new(Stdio { addr: None })
+        } else {
+            let a = net::Addr::from_network_addr_str(s).unwrap();
+            Box::new(Stdio { addr: Some(a) })
+        }
+    }
+}
+
 #[async_trait]
 impl Mapper for Stdio {
+    fn configured_target_addr(&self) -> Option<net::Addr> {
+        self.addr.clone()
+    }
+
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.c.is_not_none() {
             return MapResult::err_str("stdio can't generate stream when there's already one");
@@ -83,6 +101,11 @@ impl Mapper for Stdio {
             out: Box::pin(stdout),
         };
 
-        MapResult::oabc(params.a, params.b, Box::new(c))
+        let a = if params.a.is_some() {
+            params.a
+        } else {
+            self.configured_target_addr()
+        };
+        MapResult::oabc(a, params.b, Box::new(c))
     }
 }

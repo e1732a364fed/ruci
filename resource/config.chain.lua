@@ -15,6 +15,14 @@ dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
 
 dial_trojan_chain = { dial,tls, { Trojan = "mypassword"} }
 
+stdio_socks5_chain = { { Stdio="fake.com:80" } , { Socks5 = {} } }
+
+stdin_adder_chain = { { Stdio="fake.com:80" } , { Adder = 1 } }
+
+stdout_chain = { { Stdio="" } }
+
+direct_out_chain = { "Direct" }
+
 -- config = {
 --     listen = { {chain = listen_socks5http, tag = "listen1"} },
 --     dial = { { tag="dial1", chain = { "Direct" } } }
@@ -22,9 +30,9 @@ dial_trojan_chain = { dial,tls, { Trojan = "mypassword"} }
 
 config = {
     listen = { 
-        {chain = listen_socks5, tag = "listen1"} ,
+        {chain = stdin_adder_chain, tag = "listen1"} ,
     },
 
-    dial = { { tag="dial1", chain = dial_trojan_chain } }
+    dial = { { tag="dial1", chain = direct_out_chain } }
 }
 
