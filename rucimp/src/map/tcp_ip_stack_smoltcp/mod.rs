@@ -5,6 +5,7 @@ pub mod device;
 pub mod ip_packet;
 pub mod tcp;
 pub mod udp;
+pub mod udp2;
 
 use async_trait::async_trait;
 use ruci::map::{self, *};
@@ -47,7 +48,7 @@ impl Map for Stack {
                 let (new_stream_tx, new_stream_rx) = mpsc::channel(1000);
 
                 tokio::spawn(async move {
-                    let (mut device, mut tcp_rx) =
+                    let (mut device, mut tcp_rx, mut udp_rx) =
                         SmoltcpDevice::new(cid, base_conn, new_stream_tx);
 
                     let mut iface = device::create_interface(&mut device);
@@ -79,7 +80,27 @@ impl Map for Stack {
                             r = tcp_rx.recv() =>{
                                 match r {
                                     Some((sh,_,b)) => {
-                                        device.process_egress2(sh, b);
+                                        device.process_tcp_egress(sh, b);
+
+                                        // egress 之后还是要 poll 一次，否则不会真发出去.
+
+                                        let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
+
+                                        iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
+                                            &mut *sockets
+                                        });
+
+                                    },
+                                    None => {
+                                        tracing::warn!("SmoltcpDevice tcp_rx read got None");
+                                        break;
+                                    },
+                                }
+                            }
+                            r = udp_rx.recv() =>{
+                                match r {
+                                    Some((sh,d,b)) => {
+                                        device.process_udp_egress(sh,d, b);
 
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
