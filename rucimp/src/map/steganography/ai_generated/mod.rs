@@ -39,6 +39,10 @@ pub struct AIGeneratedProcessor {
     client: reqwest::Client,
 }
 
+const YOU_ARE_PROMPT: &str = "You are a cybersecurity expert and network protocol designer specializing in network steganography. ";
+
+const GENERATE_ALGO_SYSTEM_PROMPT: &str = "Your goal is to design a covert HTTP steganography protocol that is undetectable by modern DPI systems while maintaining efficient data transmission.";
+
 impl AIGeneratedProcessor {
     pub fn new(config: AIProtocolConfig) -> Self {
         Self {
@@ -53,36 +57,11 @@ impl AIGeneratedProcessor {
         let messages = vec![
             json!({
                 "role": "system",
-                "content": "You are a network protocol design expert, specializing in steganography protocols that can hide within HTTPS traffic."
+                "content": format!("{} {}", YOU_ARE_PROMPT, GENERATE_ALGO_SYSTEM_PROMPT)
             }),
             json!({
                 "role": "user",
-                "content": "Please design a steganography protocol algorithm with the following requirements:
-                1. Steganography Principle:
-                   - Each actual write operation (W) is converted into a series of alternating write and read operations (w1,r1,w2,r2,...,wN,rN)
-                   - wi contains the actual information to be transmitted, ri is padding data for steganography
-                   - The first packet w1 contains metadata for the entire sequence, enabling the receiver to understand subsequent interaction patterns
-                2. Protocol Characteristics:
-                   - After sending w1, the sender waits for r1 from the receiver before sending w2
-                   - After receiving w1, the receiver can parse the structure of the entire sequence and know when to send ri
-                   - This alternating read-write pattern helps hide the true data flow direction
-                   - Special case: when ri length is 0, skip that read step and directly send wi+1
-                3. HTTPS Camouflage Requirements:
-                   - All packets must conform to TLS format
-                   - Packet length distribution must match typical HTTPS traffic
-                   - Read-write operation timing patterns must mimic HTTP over TLS characteristics
-                   - Ensure overall traffic characteristics (packet size distribution, read-write frequency, burstiness) match normal HTTPS traffic
-                4. Handshake Phase Special Requirements:
-                   - Client handshake: input contains target address information (network type, domain, IP, port), must encode this in handshake packets
-                   - Server handshake: must be able to parse complete target address information from handshake packets
-                   - Handshake packets must follow the w1,r1,w2,r2,...,wN,rN sequence format
-                
-                Please describe the algorithm in a structured way that other AI systems can accurately understand and execute.
-                Algorithm description must include:
-                1. How to encode sequence information in w1
-                2. How to ensure packets conform to TLS format
-                3. How to control packet size and timing distribution
-                4. How to handle target address information during handshake"
+                "content":  include_str!("ai_generate_protocol_prompt.md")
             }),
         ];
 
@@ -115,13 +94,12 @@ impl AIGeneratedProcessor {
         Ok(())
     }
 
-    pub async fn from_generated_algorithm(
+    pub async fn new_by_generate_algorithm(
         api_key: String,
         model: String,
         api_base_url: String,
         is_server: bool,
     ) -> Result<Self> {
-        // 创建临时实例来生成算法
         let mut result = Self::new(AIProtocolConfig {
             api_key: api_key.clone(),
             model: model.clone(),
@@ -130,7 +108,6 @@ impl AIGeneratedProcessor {
             api_base_url: api_base_url.clone(),
         });
 
-        // 生成算法描述并修改自身配置
         result.generate_algorithm().await?;
 
         // 创建最终实例
@@ -167,9 +144,9 @@ impl SteganographyProcessor for AIGeneratedProcessor {
         } else {
             "client"
         };
-        let operation = if is_read { "read" } else { "write" };
+        let read_or_write = if is_read { "read" } else { "write" };
         let system_prompt = format!(
-            "You are the {} of a network protocol processor. You need to decode a {} data sequence for a steganography protocol according to the following algorithm description:\n\
+            "{YOU_ARE_PROMPT} You need to decode a {read_or_write} data sequence for a steganography protocol of the {role} endpoint according to the following algorithm description:\n\
              {}\n\n\
              Response Format:\n\
              For write sequences, please return:\n\
@@ -179,7 +156,7 @@ impl SteganographyProcessor for AIGeneratedProcessor {
              WRITE_PACKETS: [base64 encoded response packet sequence w1,w2,...,wN]\n\
              READ_LENGTHS: [expected received packet length sequence r1,r2,...,rN]\n\
              TARGET_ADDR_*: [address information, only needed for server handshake]",
-            role, operation, self.config.algorithm_description
+             self.config.algorithm_description
         );
 
         let operation_type = if is_handshake {
@@ -275,7 +252,7 @@ impl SteganographyProcessor for AIGeneratedProcessor {
 
         // 构建system提示
         let system_prompt = format!(
-            "You are a network protocol processor. You need to decrypt data read from the steganography protocol according to the following algorithm description:\n\
+            "{YOU_ARE_PROMPT} You need to decrypt data read from the steganography protocol according to the following algorithm description:\n\
              {}\n\n\
              Please decrypt the following data and return the original data.\n\
              Response format:\n\

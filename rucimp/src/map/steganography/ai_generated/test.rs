@@ -208,58 +208,54 @@ async fn server_handle_read(
     Ok::<_, anyhow::Error>(server_tcp)
 }
 
-// 设置生成序列的 Mock
 async fn mock_set_post_generate_sequence_for_read(mock_server: &MockServer) {
     Mock::given(method("POST"))
-    .and(path("/v1/chat/completions"))
-    .and(header("Authorization", "Bearer test"))
-    .and(body_string_contains(
-        "You need to decode a read data sequence for a steganography protocol according to the following algorithm description",
-    ))
-
-    // packet_1, packet_2
-    .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-        "choices": [{
-            "message": {
-                "content": "\
-                    WRITE_PACKETS: cGFja2V0XzE=,cGFja2V0XzI=\n\
-                    READ_LENGTHS: 15,15\n\
-                    TARGET_ADDR_NETWORK: tcp\n\
-                    TARGET_ADDR_HOST: example.com\n\
-                    TARGET_ADDR_PORT: 443"
-            }
-        }]
-    })))
-    // .expect(2) // 期望被调用两次，因为会有两轮读写
-    .mount(&mock_server)
-    .await;
+        .and(path("/v1/chat/completions"))
+        .and(header("Authorization", "Bearer test"))
+        .and(body_string_contains(
+            "You need to decode a read data sequence for a steganography protocol",
+        ))
+        // packet_1, packet_2
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "choices": [{
+                "message": {
+                    "content": "\
+                        WRITE_PACKETS: cGFja2V0XzE=,cGFja2V0XzI=\n\
+                        READ_LENGTHS: 15,15\n\
+                        TARGET_ADDR_NETWORK: tcp\n\
+                        TARGET_ADDR_HOST: example.com\n\
+                        TARGET_ADDR_PORT: 443"
+                }
+            }]
+        })))
+        // .expect(2) // 期望被调用两次，因为会有两轮读写
+        .mount(&mock_server)
+        .await;
 }
 
-// 设置生成序列的 Mock
 async fn mock_set_post_generate_sequence_for_write(mock_server: &MockServer) {
     Mock::given(method("POST"))
-    .and(path("/v1/chat/completions"))
-    .and(header("Authorization", "Bearer test"))
-    .and(body_string_contains(
-        "You need to decode a write data sequence for a steganography protocol according to the following algorithm description",
-    ))
-
-    // test_packet_1, test_packet_2
-    .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-        "choices": [{
-            "message": {
-                "content": "\
-                    WRITE_PACKETS: dGVzdF9wYWNrZXRfMQ==,dGVzdF9wYWNrZXRfMg==\n\
-                    READ_LENGTHS: 10,10\n\
-                    TARGET_ADDR_NETWORK: tcp\n\
-                    TARGET_ADDR_HOST: example.com\n\
-                    TARGET_ADDR_PORT: 443"
-            }
-        }]
-    })))
-    // .expect(1) // 期望被调用一次
-    .mount(&mock_server)
-    .await;
+        .and(path("/v1/chat/completions"))
+        .and(header("Authorization", "Bearer test"))
+        .and(body_string_contains(
+            "You need to decode a write data sequence",
+        ))
+        // test_packet_1, test_packet_2
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "choices": [{
+                "message": {
+                    "content": "\
+                        WRITE_PACKETS: dGVzdF9wYWNrZXRfMQ==,dGVzdF9wYWNrZXRfMg==\n\
+                        READ_LENGTHS: 10,10\n\
+                        TARGET_ADDR_NETWORK: tcp\n\
+                        TARGET_ADDR_HOST: example.com\n\
+                        TARGET_ADDR_PORT: 443"
+                }
+            }]
+        })))
+        // .expect(1) // 期望被调用一次
+        .mount(&mock_server)
+        .await;
 }
 
 async fn mock_set_post_decrypt_data(mock_server: &MockServer) {
@@ -267,7 +263,7 @@ async fn mock_set_post_decrypt_data(mock_server: &MockServer) {
     Mock::given(method("POST"))
     .and(path("/v1/chat/completions"))
     .and(header("Authorization", "Bearer test"))
-    .and(body_string_contains("You are a network protocol processor. You need to decrypt data read from the steganography protocol according to the following algorithm"))
+    .and(body_string_contains("You need to decrypt data read from the steganography protocol according to the following algorithm"))
     .and(body_string_contains("ENCRYPTED_DATA:"))
     .respond_with(ResponseTemplate::new(200).set_body_json(json!({
         "choices": [{
