@@ -330,8 +330,8 @@ fn new_addr_conn(r: Receiver<DataIndex>, src: Addr, dst: Addr, conn_map: ConnMap
         state: ReadState::Buf,
     };
     let w = Writer { src, dst, conn_map };
-    let mut ac = AddrConn::new(Box::new(r), Box::new(w));
-    ac.cached_name = String::from("tproxy_udp");
+    let ac = AddrConn::new(Box::new(r), Box::new(w));
+    // ac.cached_name = String::from("tproxy_udp");
     ac
 }
 

@@ -5,7 +5,7 @@ use ruci::{
         socks5http::{self, Config},
         MapBox,
     },
-    relay::route::FixedOutSelector,
+    relay::{route::FixedOutSelector, HandleInStreamOptions},
 };
 use tokio::net::TcpListener;
 
@@ -41,11 +41,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(Box::new(FixedOutSelector {
             default: Box::new(outbounds),
         })),
-        None,
-        None,
-        None,
-        #[cfg(feature = "trace")]
-        None,
+        HandleInStreamOptions::default(),
     )
     .await?;
 

@@ -27,6 +27,15 @@ use std::time::Duration;
 
 use crate::map::*;
 
+#[derive(Default)]
+pub struct HandleInStreamOptions {
+    pub gtr: Option<Arc<net::GlobalTrafficRecorder>>,
+    pub global_data: Option<GlobalData>,
+    pub newc_recorder: OptNewInfoSender,
+    #[cfg(feature = "trace")]
+    pub updater: net::OptUpdater,
+}
+
 /// this function utilizes [`handle_in_fold_result`] and  [`OutSelector`]
 /// to select an outbound, fold it and then copy streams.
 ///
@@ -36,13 +45,21 @@ pub async fn handle_in_stream(
     in_conn: Stream,
     ins_iterator: DMIterBox,
     out_selector: Arc<Box<dyn OutSelector>>,
-    gtr: Option<Arc<net::GlobalTrafficRecorder>>,
-    global_data: Option<GlobalData>,
 
-    newc_recorder: OptNewInfoSender,
+    mut options: HandleInStreamOptions,
+    // gtr: Option<Arc<net::GlobalTrafficRecorder>>,
+    // global_data: Option<GlobalData>,
 
-    #[cfg(feature = "trace")] updater: net::OptUpdater,
+    // newc_recorder: OptNewInfoSender,
+
+    // #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) -> anyhow::Result<()> {
+    let gtr = options.gtr.take();
+    let global_data = options.global_data.take();
+    let newc_recorder = options.newc_recorder.take();
+    #[cfg(feature = "trace")]
+    let updater = options.updater.take();
+
     let cid = match gtr.as_ref() {
         Some(gtr) => CID::new_ordered(&gtr.last_connection_id),
         None => CID::new_random(),
