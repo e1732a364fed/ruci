@@ -16,7 +16,7 @@ use crate::{
     Name,
 };
 
-use super::{http, socks5, MapperBox, ToMapper};
+use super::{http, socks5, MapperBox, ToMapperBox};
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -24,8 +24,8 @@ pub struct Config {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapper for Config {
-    fn to_mapper(&self) -> MapperBox {
+impl ToMapperBox for Config {
+    fn to_mapper_box(&self) -> MapperBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
     }

@@ -150,9 +150,9 @@ impl std::fmt::Display for Adder {
     }
 }
 
-impl ToMapper for i8 {
+impl ToMapperBox for i8 {
     /// AddDirection = Read
-    fn to_mapper(&self) -> MapperBox {
+    fn to_mapper_box(&self) -> MapperBox {
         Box::new(Adder {
             addnum: *self,
             ..Default::default()

@@ -51,7 +51,7 @@ impl StaticConfig {
                     .chain
                     .iter()
                     .map(|mapper_config| {
-                        let mut mapper = mapper_config.to_mapper();
+                        let mut mapper = mapper_config.to_mapper_box();
                         mapper.set_chain_tag(config_chain.tag.as_ref().unwrap_or(&String::new()));
                         mapper
                     })
@@ -79,7 +79,7 @@ impl StaticConfig {
                     .chain
                     .iter()
                     .map(|mapper_config| {
-                        let mut mapper = mapper_config.to_mapper();
+                        let mut mapper = mapper_config.to_mapper_box();
                         mapper.set_chain_tag(&config_chain.tag);
                         mapper
                     })
@@ -269,8 +269,8 @@ pub struct TrojanPassSet {
     more: Option<Vec<String>>,
 }
 
-impl ToMapper for InMapperConfig {
-    fn to_mapper(&self) -> ruci::map::MapperBox {
+impl ToMapperBox for InMapperConfig {
+    fn to_mapper_box(&self) -> ruci::map::MapperBox {
         match self {
             InMapperConfig::Echo => Box::new(ruci::map::network::echo::Echo::default()),
             InMapperConfig::Stdio(ext) => {
@@ -303,14 +303,14 @@ impl ToMapper for InMapperConfig {
                 g.set_configured_target_addr(Some(a));
                 Box::new(g)
             }
-            InMapperConfig::Adder(i) => i.to_mapper(),
+            InMapperConfig::Adder(i) => i.to_mapper_box(),
             InMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),
             InMapperConfig::TLS(c) => tls::server::ServerOptions {
                 addr: "todo!()".to_string(),
                 cert: PathBuf::from(c.cert.clone()),
                 key: PathBuf::from(c.key.clone()),
             }
-            .to_mapper(),
+            .to_mapper_box(),
             InMapperConfig::Http(c) => {
                 let so = http::Config {
                     user_whitespace_pass: c.userpass.clone(),
@@ -322,7 +322,7 @@ impl ToMapper for InMapperConfig {
                     ..Default::default()
                 };
 
-                so.to_mapper()
+                so.to_mapper_box()
             }
             InMapperConfig::Socks5(c) => {
                 let so = socks5::server::Config {
@@ -336,7 +336,7 @@ impl ToMapper for InMapperConfig {
                     ..Default::default()
                 };
 
-                so.to_mapper()
+                so.to_mapper_box()
             }
             InMapperConfig::Socks5Http(c) => {
                 let so = socks5http::Config {
@@ -348,7 +348,7 @@ impl ToMapper for InMapperConfig {
                     }),
                 };
 
-                so.to_mapper()
+                so.to_mapper_box()
             }
             InMapperConfig::Trojan(c) => {
                 let so = trojan::server::Config {
@@ -356,14 +356,14 @@ impl ToMapper for InMapperConfig {
                     passes: c.more.as_ref().map(|up_v| up_v.to_vec()),
                 };
 
-                so.to_mapper()
+                so.to_mapper_box()
             }
         }
     }
 }
 
-impl ToMapper for OutMapperConfig {
-    fn to_mapper(&self) -> ruci::map::MapperBox {
+impl ToMapperBox for OutMapperConfig {
+    fn to_mapper_box(&self) -> ruci::map::MapperBox {
         match self {
             OutMapperConfig::Stdio(ext) => {
                 let extf = ext.to_ext_fields();
@@ -392,7 +392,7 @@ impl ToMapper for OutMapperConfig {
                 d.set_configured_target_addr(Some(a));
                 Box::new(d)
             }
-            OutMapperConfig::Adder(i) => i.to_mapper(),
+            OutMapperConfig::Adder(i) => i.to_mapper_box(),
             OutMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),
             OutMapperConfig::TLS(c) => {
                 let a = tls::client::Client::new(c.host.as_str(), c.insecure.unwrap_or_default());

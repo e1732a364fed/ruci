@@ -12,7 +12,7 @@ use super::*;
 
 use crate::{
     buf_to_ob,
-    map::{self, MapResult, MapperBox, ProxyBehavior, ToMapper, CID},
+    map::{self, MapResult, MapperBox, ProxyBehavior, ToMapperBox, CID},
     net::{self, Addr, Conn},
     user::{self, AsyncUserAuthenticator, PlainText, UsersMap},
     Name,
@@ -42,8 +42,8 @@ pub struct Config {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapper for Config {
-    fn to_mapper(&self) -> MapperBox {
+impl ToMapperBox for Config {
+    fn to_mapper_box(&self) -> MapperBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
     }

@@ -219,7 +219,7 @@ pub enum ProxyBehavior {
 /// After encode/decode data in the new Stream,it will be passed to next Mapper
 ///
 #[async_trait]
-pub trait Mapper: crate::Name + Debug {
+pub trait Mapper: Name + Debug {
     /// Mapper 在代理逻辑上分 DECODE 和 ENCODE 两种
     ///
     ///   由 behavior 区分。
@@ -255,8 +255,8 @@ pub trait Mapper: crate::Name + Debug {
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult;
 }
 
-pub trait ToMapper {
-    fn to_mapper(&self) -> MapperBox;
+pub trait ToMapperBox {
+    fn to_mapper_box(&self) -> MapperBox;
 }
 
 //令 Mapper 实现 Send + Sync, 否则异步/多线程报错

@@ -11,10 +11,7 @@ Refer to rucimp sub crate for config file format related implements and for more
 
 */
 
-use std::{any::Any, sync::Arc};
-
 use bytes::BytesMut;
-use parking_lot::Mutex;
 
 pub mod map;
 pub mod net;
@@ -40,10 +37,6 @@ impl<T: Name + ?Sized> Name for &mut T {
         (**self).name()
     }
 }
-
-pub type AnyS = dyn Any + Send + Sync; //  Send + Sync for multi-thread
-pub type AnyBox = Box<AnyS>;
-pub type AnyArc = Arc<Mutex<AnyS>>;
 
 pub fn buf_to_ob(b: BytesMut) -> Option<BytesMut> {
     if b.is_empty() {

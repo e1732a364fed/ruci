@@ -23,7 +23,7 @@ use crate::{
     Name,
 };
 
-use super::{MapperBox, Stream, ToMapper};
+use super::{MapperBox, Stream, ToMapperBox};
 
 pub const CONNECT_REPLY_STR: &str = "HTTP/1.1 200 Connection established\r\n\r\n";
 pub const BASIC_AUTH_VALUE_PREFIX: &str = "Basic ";
@@ -48,8 +48,8 @@ pub struct Config {
     pub user_passes: Option<Vec<PlainText>>,
 }
 
-impl ToMapper for Config {
-    fn to_mapper(&self) -> MapperBox {
+impl ToMapperBox for Config {
+    fn to_mapper_box(&self) -> MapperBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
     }

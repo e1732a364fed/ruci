@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    map::{self, Data, MapResult, Mapper, MapperBox, ToMapper, CID},
+    map::{self, Data, MapResult, Mapper, MapperBox, ToMapperBox, CID},
     net::{self, helpers, Network},
     user::{AsyncUserAuthenticator, UsersMap},
     Name,
@@ -18,8 +18,8 @@ pub struct Config {
     pub passes: Option<Vec<String>>,
 }
 
-impl ToMapper for Config {
-    fn to_mapper(&self) -> MapperBox {
+impl ToMapperBox for Config {
+    fn to_mapper_box(&self) -> MapperBox {
         let a = block_on(Server::new(self.clone()));
         Box::new(a)
     }

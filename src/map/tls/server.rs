@@ -1,6 +1,6 @@
 use macro_mapper::NoMapperExt;
 
-use crate::map::{MapperBox, ToMapper};
+use crate::map::{MapperBox, ToMapperBox};
 
 use self::map::CID;
 
@@ -13,8 +13,8 @@ pub struct ServerOptions {
     pub key: PathBuf,
 }
 
-impl ToMapper for ServerOptions {
-    fn to_mapper(&self) -> MapperBox {
+impl ToMapperBox for ServerOptions {
+    fn to_mapper_box(&self) -> MapperBox {
         let a = Server::new(self.clone());
         Box::new(a)
     }
