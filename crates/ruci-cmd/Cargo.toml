@@ -17,7 +17,7 @@ tracing-appender = "=0.2.3"
 parking_lot = "0.12.1"
 
 anyhow = "1"
-clap = { version = "4.5.1", features = ["derive"] }
+clap = { version = "4.5.13", features = ["derive"] }
 bytesize = "1.3.0"
 
 
