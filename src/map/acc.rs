@@ -286,7 +286,7 @@ pub async fn accumulate_from_start(
 
     if let Stream::Generator(rx) = first_r.c {
         in_iter_accumulate_forever(InIterAccumulateForeverParams {
-            cid: CID::Unit(0),
+            cid: in_cid,
             rx,
             tx,
             miter: inmappers,
@@ -359,13 +359,14 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
             Some(s) => s,
             None => break,
         };
+        let new_cid = cid.clone_push(oti.clone());
 
         if log_enabled!(log::Level::Info) {
-            info!("{cid}, new accepted stream");
+            info!("{cid}, new accepted stream, newcid: {new_cid}");
         }
 
         spawn_acc_forever(SpawnAccForeverParams {
-            cid: cid.clone_push(oti.clone()),
+            cid: new_cid,
             new_stream_info,
             miter: miter.clone(),
             tx: tx.clone(),
