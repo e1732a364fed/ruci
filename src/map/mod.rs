@@ -22,9 +22,9 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 pub mod counter;
 
-pub mod basic;
 /// math 中有一些基本数学运算的 adder
 pub mod math;
+pub mod network;
 pub mod socks5;
 pub mod tls;
 pub mod trojan;
