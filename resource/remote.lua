@@ -34,10 +34,10 @@ local socks5http_chain = { tcp, {
 } }
 
 local tls = {
-    -- NativeTLS = {
-    TLS = {
-        cert = "test.crt",
-        key = "test.key",
+    NativeTLS = { --NativeTLS 要用 test2.crt 而不是 test.crt
+        --TLS = {
+        cert = "test2.crt",
+        key = "test2.key",
         alpn = { "h2", "http" }
 
     }
@@ -126,9 +126,9 @@ local direct_out_chain = { { Direct = {} } }
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
-        { chain = trojans_chain, tag = "listen1" },
+        -- { chain = trojans_chain, tag = "listen1" },
         -- { chain = ws_trojans_chain,  tag = "listen1"  }
-        -- { chain = in_h2_trojans_chain, tag = "listen1" }
+        { chain = in_h2_trojans_chain, tag = "listen1" }
         -- { chain = in_quic_chain, tag = "listen1" }
         -- { chain = socks5http_chain, tag = "listen1"} ,
         -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,

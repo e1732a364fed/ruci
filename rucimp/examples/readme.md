@@ -4,10 +4,12 @@ rucimp 的 examples 提供数个示例可执行文件,主要目的是提供演�
 (若要全功能, See [ruci-cmd](crates/ruci-cmd/README.md))
 
 
-suit, chain 分为以不同的代码运行 suit模式和 chain 模式，
 
-还有 chain_trace 演示 单连接流量监控
+chain_trace 演示 单连接流量监控
 chain_infinite 演示 完全动态链, 其与 chain 的运行方式一样, 不再赘述
+
+run_h2_trojans_recorder_pair.sh 同时运行h2 的 local 和 remote端用于测试并生成 recorder记录文件
+
 
 # 通用
 
@@ -25,9 +27,6 @@ RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun" --example chain_in
 # linux
 RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun sockopt" --example chain
 
-# suit mode
-cargo run --example suit -- local.suit.toml
-cargo run --example suit -- remote.suit.toml
 ```
 
 ( (h2 的代码实现所依赖的 h2包)、 quic 包、 rustls 等包 都会在debug 下打印大量日志输出, 影响观察ruci本身的日志信息, 
@@ -76,10 +75,3 @@ ping 10.0.0.2
 自动路由的配置示例见 [resource/local.lua](../../resource/local.lua)  和 [resource/remote.lua](../../resource/remote.lua) 
 (在文件中搜索 auto_route )
 
-
-# suit 的功能还不全
-
-目前 ruci 项目处于开发阶段, 关注点主要在 chain 模式上面. suit 模式目前只有tcp ,
- 没有 udp 和 unix domain socket, 也没有路由 
-(suit 模式是仿照verysimple的架构的模式, ruci 目前有此 suit 模式 的意图主要是为了指出，ruci 的新的设计可以
-导出 很多其它架构，即ruci 的设计是更一般的设计)

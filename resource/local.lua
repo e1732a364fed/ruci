@@ -730,7 +730,14 @@ local function get_recorder(label)
     }
 end
 
-
+local function random_host()
+    local hosts = {
+        "www.baidu.com",
+        "www.bilibili.com",
+        -- "www.qq.com",
+    }
+    return hosts[math.random(1, #hosts)]
+end
 
 local config_19_recorder_trojans = {
     tag_route = { { "listen_socks5", "dial_trojan" }, { "listen_trojan", "dial_direct" } },
@@ -780,7 +787,15 @@ local config_19_recorder_trojans = {
                     }
                 },
 
-                tlsout,
+                {
+                    NativeTLS = {
+                        --TLS = {
+                        host = random_host(), --"www.1234.com",
+                        insecure = true,
+                        alpn = { "http" }
+
+                    }
+                },
                 get_recorder("trojan"),
                 trojan_out
 
