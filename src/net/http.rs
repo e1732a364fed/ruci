@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 /// used by various Mappers in ruci that has a http layer
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CommonConfig {
+    pub method: Option<String>,
     pub host: String,
     pub path: String,
     pub headers: Option<BTreeMap<String, String>>,

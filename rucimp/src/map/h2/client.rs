@@ -8,7 +8,7 @@ use http::Request;
 use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
-    net::{self, Conn, CID},
+    net::{self, http::CommonConfig, Conn, CID},
 };
 use tokio::sync::Mutex;
 
@@ -44,7 +44,8 @@ impl SingleClient {
 
         //let cc = cid.clone();
 
-        let stream = new_stream_by_send_request(cid, &mut send_request, Some(connection)).await?;
+        let stream =
+            new_stream_by_send_request(cid, &mut send_request, None, Some(connection)).await?;
 
         let m = MapResult::new_c(Box::new(stream))
             .a(a)
@@ -57,6 +58,7 @@ impl SingleClient {
 async fn new_stream_by_send_request(
     cid: CID,
     send_request: &mut SendRequest<Bytes>,
+    req: Option<Request<()>>,
     connection: Option<Connection<Conn>>,
 ) -> anyhow::Result<H2Stream> {
     //这是 h2 包规定的奇怪用法
@@ -69,9 +71,10 @@ async fn new_stream_by_send_request(
         });
     }
 
-    let request = Request::builder().body(()).unwrap();
-
-    let (resp, send_stream) = send_request.send_request(request, false)?;
+    let (resp, send_stream) = match req {
+        Some(r) => send_request.send_request(r, false)?,
+        None => send_request.send_request(Request::builder().body(()).unwrap(), false)?,
+    };
 
     let recv_stream = resp.await?.into_body();
 
@@ -104,6 +107,10 @@ impl Mapper for SingleClient {
 /// MuxClient 使用 h2 的多路复用特性
 #[derive(Clone, Debug, NoMapperExt, Default)]
 pub struct MuxClient {
+    pub http_config: Option<CommonConfig>,
+
+    req: Option<Request<()>>,
+
     cache: Arc<Mutex<Option<SendRequest<Bytes>>>>,
 }
 impl ruci::Name for MuxClient {
@@ -113,6 +120,16 @@ impl ruci::Name for MuxClient {
 }
 
 impl MuxClient {
+    pub fn new(http_config: Option<CommonConfig>) -> Self {
+        Self {
+            req: http_config
+                .clone()
+                .map(|c| crate::net::build_request_from(&c, "http://")),
+            http_config,
+            ..Default::default()
+        }
+    }
+
     async fn handshake(
         &self,
         cid: net::CID,
@@ -135,8 +152,13 @@ impl MuxClient {
 
                 //let cc = cid.clone();
 
-                let stream =
-                    new_stream_by_send_request(cid, &mut send_request, Some(connection)).await?;
+                let stream = new_stream_by_send_request(
+                    cid,
+                    &mut send_request,
+                    self.req.clone(),
+                    Some(connection),
+                )
+                .await?;
 
                 let m = MapResult::new_c(Box::new(stream))
                     .a(a)
@@ -159,7 +181,7 @@ impl MuxClient {
                     let cc = cid.clone();
 
                     let rrr = &mut real_r;
-                    let stream = new_stream_by_send_request(cc, rrr, None).await;
+                    let stream = new_stream_by_send_request(cc, rrr, self.req.clone(), None).await;
                     let stream = match stream {
                         Ok(s) => s,
                         Err(e) => {

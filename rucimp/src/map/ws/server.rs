@@ -46,14 +46,9 @@ impl Server {
             use http::Response;
 
             if let Some(c) = &self.config {
-                let given_host = r
-                    .headers()
-                    .get("Host")
-                    .unwrap_or(&EMPTY_HV)
-                    .to_str()
-                    .expect("ok");
+                let r = crate::net::match_request_http_header(c, r);
 
-                if c.host != given_host {
+                if let Err(e) = r {
                     let r: Response<Option<String>> = Response::builder()
                         .status(StatusCode::BAD_REQUEST)
                         .body(None)
@@ -61,25 +56,8 @@ impl Server {
 
                     warn!(
                         cid = %cid,
-                        given = given_host,
-                        expected = c.host,
-                        "ws server got wrong host"
-                    );
-                    return Err(r);
-                }
-
-                let given_path = r.uri().path();
-                if c.path != given_path {
-                    let r: Response<Option<String>> = Response::builder()
-                        .status(StatusCode::BAD_REQUEST)
-                        .body(None)
-                        .expect("ok");
-
-                    warn!(
-                        cid = %cid,
-                        given = given_path,
-                        expected = c.path,
-                        "ws server got wrong path"
+                        e= %e,
+                        "ws server got wrong http header"
                     );
                     return Err(r);
                 }
@@ -119,7 +97,7 @@ impl Server {
         };
         if let Some(b) = early_data {
             if !b.is_empty() {
-                debug!("wrap with earlydata_conn, {}", b.len());
+                //debug!("wrap with earlydata_conn, {}", b.len());
                 conn = Box::new(EarlyDataWrapper::from(b, conn));
             }
         }

@@ -12,6 +12,7 @@ use futures::ready;
 use h2::{RecvStream, SendStream};
 use tokio::io::{AsyncRead, AsyncWrite};
 
+// (MIT)
 // https://github.com/zephyrchien/midori/blob/master/src/transport/h2/stream.rs
 
 pub struct H2Stream {
