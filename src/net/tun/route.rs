@@ -53,7 +53,7 @@ pub fn down_route(
 
         for v in direct_list {
             list.push(format!(
-                "ip route add {v} via {router_ip} dev {router_name} metric 10"
+                "ip route del {v} via {router_ip} dev {router_name} metric 10"
             ))
         }
         sync_run_command_list_stop(list.iter().map(String::as_str).collect())?;

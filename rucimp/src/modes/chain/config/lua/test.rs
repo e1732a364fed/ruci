@@ -113,6 +113,7 @@ fn test_out() -> mlua::Result<()> {
         OutMapConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str,
+            auto_route: None,
             ext: None
         })
     ));
@@ -122,7 +123,8 @@ fn test_out() -> mlua::Result<()> {
         OutMapConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str2,
-            ext: None
+            ext: None,
+            auto_route: None
         }) //won't match inner fields
     ));
     assert!(!matches!(first_m, OutMapConfig::Counter));
@@ -167,7 +169,8 @@ fn test_out2() -> mlua::Result<()> {
         OutMapConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str,
-            ext: None
+            ext: None,
+            ..
         })
     ));
     let str2 = "0.0.0.0:1".to_string();
@@ -176,7 +179,8 @@ fn test_out2() -> mlua::Result<()> {
         OutMapConfig::BindDialer(DialerConfig {
             bind_addr: None,
             dial_addr: str2,
-            ext: None
+            ext: None,
+            ..
         }) //won't match inner fields
     ));
     assert!(!matches!(first_m, OutMapConfig::Counter));

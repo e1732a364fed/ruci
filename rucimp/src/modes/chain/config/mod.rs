@@ -198,10 +198,11 @@ pub struct OutMapConfigChain {
     chain: Vec<OutMapConfig>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct DialerConfig {
     bind_addr: Option<String>,
     dial_addr: Option<String>,
+    auto_route: Option<bool>,
     ext: Option<Ext>,
 }
 impl ToMapBox for DialerConfig {
@@ -218,6 +219,7 @@ impl ToMapBox for DialerConfig {
         let d = ruci::map::network::BindDialer {
             dial_addr: opt_dial_a,
             bind_addr: opt_bind_a,
+            auto_route: self.auto_route.clone(),
             ext_fields: self.ext.as_ref().map(|e| e.to_ext_fields()),
         };
 

@@ -110,6 +110,7 @@ impl Map for Direct {
 pub struct BindDialer {
     pub dial_addr: Option<net::Addr>,
     pub bind_addr: Option<net::Addr>,
+    pub auto_route: Option<bool>,
 }
 
 impl Name for BindDialer {

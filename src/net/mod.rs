@@ -8,6 +8,7 @@
 */
 pub mod addr;
 pub mod addr_conn;
+pub mod dns;
 pub mod helpers;
 pub mod http;
 pub mod listen;
