@@ -1,6 +1,6 @@
 /*
+defines socks5 server behavior.
 
-has 2 sub mods for udp.
 
 */
 
@@ -55,6 +55,11 @@ impl ToMapperBox for Config {
 ///  support_udp开关udp associate的支持
 ///
 /// 支持 AuthNone和 AuthUserPass
+///
+/// # Other:
+///
+/// 握手成功后, 会以100ms为限读一次 eary_data
+///
 #[derive(Debug, Clone, NoMapperExt)]
 pub struct Server {
     pub um: Option<UsersMap<PlainText>>,

@@ -4,9 +4,9 @@
 
 ## tls 证书
 
-tls 中， native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前又只写了pks8 一种情况;
+tls 中， native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前又只写了pks8 一种情况(即不支持 rsa 和 ecc key);
 
-而默认的 rustls 则支持得更广泛一些, x509, rsa, pks8, ecc , crl 都支持 ，但不支持 pks12 (pfx) 格式
+而默认的 rustls 则支持得更广泛一些,pem格式的 x509证书（后缀可能为 pem, cer 或 crt）, key(rsa, pks8, ecc) 都支持 ，但不支持 pks12 (pfx) 格式
 
 ## 名词
 
