@@ -13,7 +13,7 @@ pub struct Client {
 }
 
 impl Client {
-    //返回的 extra data 为 server 所选定的 adopted method
+    /// 返回的 extra data 为 server 所选定的 adopted method
     async fn handshake(
         &self,
         cid: CID,

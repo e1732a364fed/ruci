@@ -11,7 +11,7 @@ use super::*;
 
 /// 按字节加法器。
 ///
-/// 本端write 被调用时 进行输入，另一端read  被调用时进行输出,
+/// 本端write 被调用时 进行输入, 另一端read  被调用时进行输出,
 ///
 /// 输出为输入按字节+(add)
 ///
@@ -73,7 +73,7 @@ impl AsyncWrite for AdderConn {
             abuf.clear();
             abuf.extend_from_slice(buf);
 
-            //todo: 考虑使用 simd 或 rayon; 可以在其它impl包中实现，也可在此实现
+            //todo: 考虑使用 simd 或 rayon; 可以在其它impl包中实现, 也可在此实现
             for a in abuf.iter_mut() {
                 *a = (x + *a as i16) as u8;
             }

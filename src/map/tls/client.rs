@@ -30,12 +30,11 @@ impl Client {
             .with_root_certificates(root_certs)
             .with_no_client_auth();
 
-        //let server_name = rustls::ServerName::try_from(domain).unwrap();
-
-        config
-            .dangerous()
-            //.set_certificate_verifier(Arc::new(SuperDanVer { domain: server_name }));
-            .set_certificate_verifier(Arc::new(SuperDanVer {}));
+        if is_insecure {
+            config
+                .dangerous()
+                .set_certificate_verifier(Arc::new(SuperDanVer {}));
+        }
 
         Client {
             domain: domain.to_string(),
@@ -45,10 +44,7 @@ impl Client {
     }
 }
 
-/// only checks domain
-struct SuperDanVer {
-    //domain: rustls::ServerName,
-}
+struct SuperDanVer {}
 
 impl ServerCertVerifier for SuperDanVer {
     fn verify_server_cert(
@@ -60,7 +56,6 @@ impl ServerCertVerifier for SuperDanVer {
         _ocsp_response: &[u8],
         _now: std::time::SystemTime,
     ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
-        //debug!("superdanver called, {:?}",server_name);
         debug!("superdanver called");
         //if !server_name.eq(&self.domain) {}//server_name是client自己提供的，
         //在不验证cert的情况下，没有必要和自己比较
@@ -79,24 +74,7 @@ impl Client {
         b: Option<BytesMut>,
         a: Option<net::Addr>,
     ) -> io::Result<MapResult> {
-        let connector = if self.is_insecure {
-            TlsConnector::from(self.client_config.clone())
-        } else {
-            let mut root_certs = rustls::RootCertStore::empty();
-            root_certs.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
-                OwnedTrustAnchor::from_subject_spki_name_constraints(
-                    ta.subject,
-                    ta.spki,
-                    ta.name_constraints,
-                )
-            }));
-            let config = ClientConfig::builder()
-                .with_safe_defaults()
-                .with_root_certificates(root_certs)
-                .with_no_client_auth();
-
-            TlsConnector::from(Arc::new(config))
-        };
+        let connector = TlsConnector::from(self.client_config.clone());
 
         let mut new_c = connector
             .connect(
@@ -122,12 +100,11 @@ impl Client {
 
 impl Name for Client {
     fn name(&self) -> &'static str {
-        "tls"
+        "tls_client"
     }
 }
 #[async_trait]
 impl map::Mapper for Client {
-    // behavior is always encode
     async fn maps(
         &self,
         cid: CID,

@@ -7,7 +7,7 @@
 pub mod config;
 pub mod engine;
 
-/// mock of engine, but uses listen_ser2 -> listen_tcp2 -> handle_conn_clonable
+/// mock of engine, but uses listen_ser2 -> listen_tcp2 -> ruci::relay::handle_conn_clonable
 ///
 /// `Arc<Suit>` to  `&'static dyn Suit`
 pub mod engine2;

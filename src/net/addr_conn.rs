@@ -311,6 +311,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     Ok(whole_write as u64)
 }
 
+/// copy data between two AddrConn struct
 pub async fn cp(
     cid: CID,
     c1: AddrConn,

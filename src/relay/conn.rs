@@ -14,7 +14,7 @@ use crate::net;
 use crate::net::Stream;
 use crate::net::CID;
 
-/// mock of  handle_conn, utilize handle_in_accumulate_result and  OutSelector
+/// utilize handle_in_accumulate_result and  route::OutSelector
 pub async fn handle_conn_clonable<'a, T, T2>(
     in_conn: net::Conn,
     ins_iterator: T,
@@ -117,7 +117,8 @@ where
     if let Some(e) = dial_result.e {
         warn!("{cid}, dial out client failed, {e}",);
         return Err(e);
-    } else if let Stream::None = dial_result.c {
+    }
+    if let Stream::None = dial_result.c {
         warn!("{cid}, dial out client stream got consumed ",);
 
         return Ok(());

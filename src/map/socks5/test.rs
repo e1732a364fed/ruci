@@ -1,9 +1,9 @@
 /*！
-本测试文件中提供了大量纯手写的单元测试，测试了各种可能的情况，保证了 socks5 协议的实现的可靠性。
+本测试文件中提供了大量纯手写的单元测试, 测试了各种可能的情况, 保证了 socks5 协议的实现的可靠性。
 
-测试了 内存握手，回环握手，用户鉴权，ipv4,ipv6,domain, 和几种错误输入或攻击的情况
+测试了 内存握手, 回环握手, 用户鉴权, ipv4,ipv6,domain, 和几种错误输入或攻击的情况
 
-因为系统不会立即释放端口，所以连续运行test有可能会报错，手动运行是没问题的. 测试代码里面已经使用了随机端口。
+因为系统不会立即释放端口, 所以连续运行test有可能会报错, 手动运行是没问题的. 测试代码里面已经使用了随机端口。
 */
 
 use bytes::{BufMut, BytesMut};
@@ -53,7 +53,7 @@ async fn new_noauth_socks5_inadder() -> Server {
     Server::new(Config::default()).await
 }
 
-/// 从toml配置创建socks5的adder后，在内存中模拟连接 socks5 服务
+/// 从toml配置创建socks5的adder后, 在内存中模拟连接 socks5 服务
 #[tokio::test]
 async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
     let a = new_3user_socks5_inadder().await;
@@ -316,7 +316,7 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
-        // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
+        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
@@ -426,7 +426,7 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
-        // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
+        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
@@ -531,7 +531,7 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
 
         //tokio::time::sleep(time::Duration::from_secs(1));
 
-        // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
+        // 如果不read,  server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
@@ -589,9 +589,9 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
 async fn no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
     let a = new_noauth_socks5_inadder().await;
 
-    //因为我们无法再从 client_tcps 中取出数据了，因为它放到Box后就属于Addr了
+    //因为我们无法再从 client_tcps 中取出数据了, 因为它放到Box后就属于Addr了
     // 所以要用Arc<Mutex<>> 结构
-    // 和 clone ，从clone的 指针中获取数据。
+    // 和 clone , 从clone的 指针中获取数据。
 
     let writev = Arc::new(Mutex::new(Vec::new()));
     let writevc = writev.clone();
@@ -633,7 +633,7 @@ async fn no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
             assert!(r.a.unwrap().get_name().unwrap() == name);
             assert!(r.b == None);
 
-            //收到的应为两个 reply 相加，第一个为5 0, 第二个为 COMMMON_TCP_HANDSHAKE_REPLY
+            //收到的应为两个 reply 相加, 第一个为5 0, 第二个为 COMMMON_TCP_HANDSHAKE_REPLY
 
             let mut vf = Vec::from(&*socks5::COMMMON_TCP_HANDSHAKE_REPLY);
             let vhead = vec![VERSION5, AUTH_NONE];
@@ -727,7 +727,7 @@ async fn no_auth_tcp_handshake_in_mem_stick_hello() -> std::io::Result<()> {
 #[tokio::test]
 #[should_panic]
 async fn wrong0_no_auth_tcp_handshake_in_mem() {
-    //在下面客户端write的数据中，version不为5，server理应返回error
+    //在下面客户端write的数据中, version不为5, server理应返回error
     std::env::set_var("RUST_BACKTRACE", "0");
 
     let a = new_noauth_socks5_inadder().await;
@@ -774,7 +774,7 @@ async fn wrong0_no_auth_tcp_handshake_in_mem() {
 #[tokio::test]
 #[should_panic]
 async fn wrong1_no_auth_tcp_handshake_in_mem() {
-    //在下面客户端write的数据中，没有给出port，服务端理应返回error
+    //在下面客户端write的数据中, 没有给出port, 服务端理应返回error
     std::env::set_var("RUST_BACKTRACE", "0");
 
     let a = new_noauth_socks5_inadder().await;
@@ -839,8 +839,8 @@ async fn batch_random_bytes_request_no_auth_tcp_handshake_in_mem() -> std::io::R
 }
 
 async fn random_bytes_request_no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
-    //在下面客户端write的数据中，使用随机字节发送给服务端，服务端理应返回error
-    //不过第一位设为5，因为我们已知第一位不为5时肯定报错了(在 wrong0_no_auth_tcp_handshake_in_mem 中测了)
+    //在下面客户端write的数据中, 使用随机字节发送给服务端, 服务端理应返回error
+    //不过第一位设为5, 因为我们已知第一位不为5时肯定报错了(在 wrong0_no_auth_tcp_handshake_in_mem 中测了)
 
     let a = new_noauth_socks5_inadder().await;
 
@@ -895,8 +895,8 @@ async fn batch_random_bytes_request_auth_userpass_tcp_handshake_in_mem() -> std:
 }
 
 async fn random_bytes_request_auth_userpass_tcp_handshake_in_mem() -> std::io::Result<()> {
-    //在下面客户端write的数据中，使用随机字节发送给服务端，服务端理应返回error
-    //不过第一位设为5，因为我们已知第一位不为5时肯定报错了
+    //在下面客户端write的数据中, 使用随机字节发送给服务端, 服务端理应返回error
+    //不过第一位设为5, 因为我们已知第一位不为5时肯定报错了
 
     let a = new_3user_socks5_inadder().await;
 
