@@ -45,7 +45,7 @@ impl Mapper for TproxyResolver {
                 }
 
                 // laddr in tproxy is in fact target_addr
-                MapResult::newc(c).a(oa).build()
+                MapResult::new_c(c).a(oa).build()
             }
             Stream::AddrConn(_) => todo!(),
             _ => MapResult::err_str(&format!("Tproxy needs a stream, got {}", params.c)),
