@@ -5,7 +5,7 @@ use bytes::BytesMut;
 use tracing::{trace, warn};
 
 /// remove first character
-pub fn rem_first(value: &str) -> &str {
+pub fn rm_first(value: &str) -> &str {
     let mut chars = value.chars();
     chars.next();
     chars.as_str()

@@ -258,7 +258,7 @@ impl Addr {
     /// network must be a valid network str
     pub fn from_addr_str(network: &str, s: &str) -> Result<Self> {
         let ns: Vec<_> = if s.starts_with('[') && s.contains("]:") {
-            crate::utils::rem_first(s).split("]:").collect()
+            crate::utils::rm_first(s).split("]:").collect()
         } else {
             s.split(':').collect()
         };
@@ -278,7 +278,7 @@ impl Addr {
     /// like 127.0.0.1:80  or `[::1]:80`
     pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
         let ns: Vec<_> = if s.starts_with('[') && s.contains("]:") {
-            crate::utils::rem_first(s).split("]:").collect()
+            crate::utils::rm_first(s).split("]:").collect()
         } else {
             s.split(':').collect()
         };

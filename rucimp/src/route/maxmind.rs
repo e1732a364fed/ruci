@@ -72,10 +72,10 @@ pub fn get_ip_iso_by_reader(ip: IpAddr, reader: &maxminddb::Reader<Vec<u8>>) -> 
 /// Convert GOOGLE, TWITTER, TELEGRAM, FACEBOOK, NETFLIX, CLOUDFRONT,CLOUDFLARE etc. to US
 ///
 pub fn filter_iso_string_to_iso3166(s: &str) -> &str {
-    if s == "PRIVATE" {
-        return s;
-    }
     if s.len() > 2 {
+        if s == "PRIVATE" {
+            return s;
+        }
         return "US";
     }
 
