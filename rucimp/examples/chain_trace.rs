@@ -31,9 +31,9 @@ async fn main() -> anyhow::Result<()> {
 
     let contents = try_get_file_content(&default_fn, arg_f)?;
 
-    let mut se = Engine::default();
+    let mut e = Engine::default();
 
-    se.init_lua(contents)?;
+    e.init_lua(contents)?;
 
     let conn_info_record_file = OpenOptions::new()
         .append(true)
@@ -48,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
 
     let (nci_tx, mut nci_rx) = tokio::sync::mpsc::channel(100);
 
-    se.new_conn_recorder = Some(nci_tx);
+    e.new_conn_recorder = Some(nci_tx);
 
     #[cfg(feature = "trace")]
     {
@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
 
         let (db_tx, mut db_rx) = tokio::sync::mpsc::channel::<(ruci::net::CID, u64)>(4096);
 
-        se.conn_info_updater = Some((ub_tx, db_tx));
+        e.conn_info_updater = Some((ub_tx, db_tx));
 
         tokio::spawn(async move {
             loop {
@@ -83,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    let mut js = se.run().await?;
+    let mut js = e.run().await?;
 
     tokio::spawn(async move {
         loop {
@@ -101,7 +101,7 @@ async fn main() -> anyhow::Result<()> {
 
     wait_close_sig().await?;
 
-    se.stop().await;
+    e.stop().await;
 
     js.shutdown().await;
 

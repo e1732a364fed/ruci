@@ -23,15 +23,15 @@ async fn main() -> anyhow::Result<()> {
 
     let contents = try_get_file_content(&default_fn, arg_f)?;
 
-    let mut se = Engine::default();
+    let mut e = Engine::default();
 
-    se.init_lua(contents)?;
+    e.init_lua(contents)?;
 
-    let mut js = se.run().await?;
+    let mut js = e.run().await?;
 
     wait_close_sig().await?;
 
-    se.stop().await;
+    e.stop().await;
 
     js.shutdown().await;
 
