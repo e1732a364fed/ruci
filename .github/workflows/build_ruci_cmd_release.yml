@@ -1,0 +1,140 @@
+name: Ruci-Cmd Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-ubuntu:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: full
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-pc-windows-gnu
+          - x86_64-unknown-linux-gnu
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Rust
+      run: |
+        rustup set profile minimal
+        rustup toolchain install stable
+        rustup default stable
+        rustup override set stable
+        rustup target add --toolchain stable ${{ matrix.target }}
+
+    - name: Install mingw toolchain
+      if: ${{ matrix.target == 'x86_64-pc-windows-gnu' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends mingw-w64
+
+    - name: Build ${{ matrix.target }}
+      if: ${{ matrix.target != 'x86_64-pc-windows-gnu' }}
+      run: |
+        cd crates/ruci-cmd
+        make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+
+    - name: Build exe
+      if: ${{ matrix.target == 'x86_64-pc-windows-gnu' }}
+      run: |
+        cd crates/ruci-cmd
+        make exe BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+
+    - name: Upload Github Assets
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        files: crates/ruci-cmd/dist/*.tar.xz
+        tag_name: ${{ inputs.tag || github.ref_name }}      
+
+  build-unix:
+    permissions: write-all
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: full
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GNU tar
+        run: |
+          brew install gnu-tar
+          echo "/usr/local/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
+  
+      - name: Install Rust
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable
+          rustup default stable
+          rustup override set stable
+          rustup target add --toolchain stable ${{ matrix.target }}
+
+      - name: Build ${{ matrix.target }}
+        run: |
+          cd crates/ruci-cmd
+          make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+  
+      - name: Upload Github Assets
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: crates/ruci-cmd/dist/*.tar.xz
+          tag_name: ${{ inputs.tag || github.ref_name }}
+
+
+
+  build-windows:
+    permissions: write-all
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: full
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        target:
+          - x86_64-pc-windows-msvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable
+          rustup default stable
+          rustup override set stable
+          rustup target add --toolchain stable ${{ matrix.target }}
+
+      - name: Build ${{ matrix.target }}
+        run: |
+          cd crates/ruci-cmd
+          make exe BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
+  
+      - name: Upload Github Assets
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: crates/ruci-cmd/dist/*.tar.xz
+          tag_name: ${{ inputs.tag || github.ref_name }}

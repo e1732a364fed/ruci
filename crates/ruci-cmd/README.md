@@ -6,7 +6,7 @@ default enables none.
 api_server, trace 这两个feature都会少许降低 performace. 
 
 trace feature 就算启用了，
-也要在运行ruci-cmd时再加上 -trace 来启用, 因为它一定会影响性能. trace 一般只用于实验研究
+也要在运行ruci-cmd时再加上 --trace 来启用, 因为它一定会影响性能. trace 一般只用于实验/研究/debug
 
 utils feature 可用于下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.dll
 
@@ -17,7 +17,19 @@ run with api server:
 ```
 cargo run -F api_server -F api_client -F utils --release -- -a run
 
-RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run
+```
+
+debug:
+```
+RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run --trace
+
+```
+
+make:
+
+```sh
+#(for apple silicon)
+make BUILD_VERSION=myversion BUILD_TRIPLET=aarch64-apple-darwin
 ```
 
 # api server
@@ -39,11 +51,23 @@ api:
     stop rucimp core
 
 /gt/acc
+
+    all connection count
+
 /gt/lci
+
+    last conn id
+
 /gt/u
+
+    total upload bytes
+
 /gt/d
 
+    total download bytes
+
 /loci
+
     get last ok cid
 
 /allc
