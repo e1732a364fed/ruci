@@ -10,7 +10,7 @@ use std::{
     task::{ready, Context, Poll},
 };
 
-use bytes::{Buf, BytesMut};
+use bytes::BytesMut;
 use ruci::net::{
     addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr},
     Addr,
@@ -105,15 +105,18 @@ impl AsyncWriteAddr for W {
         let ipe = addr2_ip_end_point(&self.local);
         let me = self.get_mut();
 
-        if ready!(me.tx.poll_reserve(cx)).is_ok() {
-            if let Err(err) = me.tx.send_item((me.h, ipe, buf.into())) {
-                tracing::warn!("udp send response failed: {}", err);
-                Poll::Ready(Err(io::Error::other(err)))
-            } else {
-                Poll::Ready(Ok(buf.len()))
-            }
-        } else {
-            Poll::Pending
+        match ready!(me.tx.poll_reserve(cx)) {
+            Ok(_) => match me.tx.send_item((me.h, ipe, buf.into())) {
+                Ok(()) => Poll::Ready(Ok(buf.len())),
+                Err(e) => {
+                    tracing::warn!("UDP send failed: {}", e);
+                    Poll::Ready(Err(io::Error::other(e)))
+                }
+            },
+            Err(e) => Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::BrokenPipe,
+                format!("channel closed: {}", e),
+            ))),
         }
     }
 }
@@ -128,9 +131,10 @@ impl AsyncReadAddr for R {
 
         match ready!(me.rx.poll_recv(cx)) {
             Some((src, mut data)) => {
-                let bl = buf.len();
-                data.copy_to_slice(&mut buf[..min(data.len(), bl)]);
-                Poll::Ready(Ok((data.len(), ip_end_point_to_addr(&src))))
+                let n = min(data.len(), buf.len());
+                let chunk = data.split_to(n);
+                buf[..n].copy_from_slice(&chunk);
+                Poll::Ready(Ok((n, ip_end_point_to_addr(&src))))
             }
             None => {
                 me.rx.close();
@@ -143,5 +147,17 @@ impl AsyncReadAddr for R {
         let me = self.get_mut();
         me.rx.close();
         Poll::Ready(Ok(()))
+    }
+}
+
+impl Drop for R {
+    fn drop(&mut self) {
+        self.rx.close();
+    }
+}
+
+impl Drop for W {
+    fn drop(&mut self) {
+        self.tx.close();
     }
 }

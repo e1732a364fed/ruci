@@ -77,7 +77,7 @@ local opt_direct_chain = {
         OptDirect = {
             sockopt = {
                 so_mark = 255,
-                bind_to_device = "enp0s1"
+                bind_to_device = "en0" --"enp0s1"
             }
         }
     }
@@ -675,22 +675,22 @@ local config_17_tcp_ip_stack = {
         },
     },
     --outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
-    -- outbounds = { {
-    --     tag = "dial1",
-    --     chain = direct
-    -- } }
-
     outbounds = { {
         tag = "dial1",
-        chain = { {
-            OptDialer = {
-                dial_addr = "tcp://192.168.0.204:10801",
-                sockopt = {
-                    bind_to_device = "en0" -- "以太网"
-                }
-            }
-        }, tlsout, trojan_out }
+        chain = opt_direct_chain
     } }
+
+    -- outbounds = { {
+    --     tag = "dial1",
+    --     chain = { {
+    --         OptDialer = {
+    --             dial_addr = "tcp://192.168.0.204:10801",
+    --             sockopt = {
+    --                 bind_to_device = "en0" -- "以太网"
+    --             }
+    --         }
+    --     }, tlsout, trojan_out }
+    -- } }
 }
 --]]
 
@@ -883,7 +883,7 @@ local config_23_tcp_ip_stack_lwip = {
 --]]
 
 
-Config = config_20_spe1
+Config = config_17_tcp_ip_stack
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)

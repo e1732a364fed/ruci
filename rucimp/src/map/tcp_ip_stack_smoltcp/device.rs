@@ -3,7 +3,6 @@ Defines the [`SmoltcpDevice`] which is a [`Device`] required in [`smoltcp::iface
  */
 
 use bytes::{Buf, BytesMut};
-use parking_lot::Mutex;
 use smoltcp::iface::SocketHandle;
 use smoltcp::phy::{Device, RxToken, TxToken};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -17,13 +16,12 @@ use tracing::{debug, error, warn};
 
 use anyhow::Context;
 use smoltcp::wire::{IpEndpoint, IpProtocol, TcpPacket, UdpPacket};
-use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::task::Poll;
 
 use super::ip_packet::IpPacket;
+
+use dashmap::{DashMap, DashSet, Entry};
 
 const BUF_SIZE: usize = 65535;
 
@@ -97,8 +95,6 @@ pub enum NewReadType {
     None,
 }
 
-pub type AMap<K, V> = Arc<Mutex<HashMap<K, V>>>;
-
 /// 实现 smoltcp 的 Device trait.
 ///
 /// Device trait 的 receive 方法会在 smoltcp 的 iface.poll 被调用 后自动触发.
@@ -138,25 +134,38 @@ pub(crate) struct SmoltcpDevice {
     //traffic: Traffic,
 }
 
-#[derive(Default)]
 pub struct DeviceData {
     cid: CID,
-
     pub new_read_handle: NewReadType,
 
-    tcp_handle_set: Arc<Mutex<HashSet<SocketHandle>>>,
-    udp_handle_set: Arc<Mutex<HashSet<SocketHandle>>>,
+    tcp_handle_set: DashSet<SocketHandle>,
+    udp_handle_set: DashSet<SocketHandle>,
 
-    tcp_src_handle_map: AMap<IpEndpoint, SocketHandle>,
-    tcp_handle_src_map: AMap<SocketHandle, IpEndpoint>,
+    tcp_src_handle_map: DashMap<IpEndpoint, SocketHandle>,
+    tcp_handle_src_map: DashMap<SocketHandle, IpEndpoint>,
 
-    udp_src_handle_map: AMap<IpEndpoint, SocketHandle>,
-    udp_handle_src_map: AMap<SocketHandle, IpEndpoint>,
+    udp_src_handle_map: DashMap<IpEndpoint, SocketHandle>,
+    udp_handle_src_map: DashMap<SocketHandle, IpEndpoint>,
 
-    /// write the data read from smoltcp to tx, whose rx is inside TcpStream to be read
-    tcp_read_data_tx_map: AMap<SocketHandle, Sender<BytesMut>>,
+    tcp_read_data_tx_map: DashMap<SocketHandle, Sender<BytesMut>>,
+    udp_read_data_tx_map: DashMap<IpEndpoint, Sender<(IpEndpoint, BytesMut)>>,
+}
 
-    udp_read_data_tx_map: AMap<IpEndpoint, Sender<(IpEndpoint, BytesMut)>>,
+impl Default for DeviceData {
+    fn default() -> Self {
+        Self {
+            cid: CID::default(),
+            new_read_handle: NewReadType::default(),
+            tcp_handle_set: DashSet::new(),
+            udp_handle_set: DashSet::new(),
+            tcp_src_handle_map: DashMap::new(),
+            tcp_handle_src_map: DashMap::new(),
+            udp_src_handle_map: DashMap::new(),
+            udp_handle_src_map: DashMap::new(),
+            tcp_read_data_tx_map: DashMap::new(),
+            udp_read_data_tx_map: DashMap::new(),
+        }
+    }
 }
 
 impl Device for SmoltcpDevice {
@@ -351,7 +360,7 @@ impl SmoltcpDevice {
 
                 let ipe = src_addr.into();
 
-                match self.data.tcp_src_handle_map.lock().entry(ipe) {
+                match self.data.tcp_src_handle_map.entry(ipe) {
                     Entry::Occupied(occupied_entry) => {
                         self.data.new_read_handle = NewReadType::TCP(*occupied_entry.get());
                     }
@@ -370,20 +379,14 @@ impl SmoltcpDevice {
                         new_tcp_socket.set_ack_delay(None);
 
                         let socket_handle = self.tcp_sockets.add(new_tcp_socket);
-                        self.data.tcp_handle_set.lock().insert(socket_handle);
+                        self.data.tcp_handle_set.insert(socket_handle);
                         e.insert(socket_handle);
 
-                        self.data.new_read_handle = NewReadType::TCP(socket_handle);
-
-                        self.data
-                            .tcp_handle_src_map
-                            .lock()
-                            .insert(socket_handle, ipe);
+                        self.data.tcp_handle_src_map.insert(socket_handle, ipe);
 
                         let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
                         self.data
                             .tcp_read_data_tx_map
-                            .lock()
                             .insert(socket_handle, read_tx);
                         let tcp_stream = super::tcp::TcpStream::new(
                             read_rx,
@@ -417,7 +420,7 @@ impl SmoltcpDevice {
                 //let dst_ipe: IpEndpoint = dst_addr.into();
                 let src_ipe = src_addr.into();
 
-                match self.data.udp_src_handle_map.lock().entry(src_ipe) {
+                match self.data.udp_src_handle_map.entry(src_ipe) {
                     Entry::Occupied(occupied_entry) => {
                         self.data.new_read_handle = NewReadType::UDP(*occupied_entry.get());
                     }
@@ -441,16 +444,13 @@ impl SmoltcpDevice {
 
                         socket.bind(dst_addr).unwrap();
                         let sh = self.udp_sockets.add(socket);
-                        self.data.udp_handle_set.lock().insert(sh);
+                        self.data.udp_handle_set.insert(sh);
                         e.insert(sh);
                         self.data.new_read_handle = NewReadType::UDP(sh);
-                        self.data.udp_handle_src_map.lock().insert(sh, src_ipe);
+                        self.data.udp_handle_src_map.insert(sh, src_ipe);
 
                         let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
-                        self.data
-                            .udp_read_data_tx_map
-                            .lock()
-                            .insert(src_ipe, read_tx);
+                        self.data.udp_read_data_tx_map.insert(src_ipe, read_tx);
 
                         let sa = Addr {
                             addr: NetAddr::Socket(src_addr),
@@ -487,13 +487,14 @@ impl SmoltcpDevice {
         let mut udp_src_to_remove = Vec::new();
 
         {
-            let m = self.data.udp_read_data_tx_map.lock();
+            let m = &self.data.udp_read_data_tx_map;
 
-            for (src, sender) in m.iter() {
+            for ref_multi in m.iter() {
+                let sender = ref_multi.value();
                 // debug!("checking udp for {:?}", src);
                 if sender.is_closed() {
                     //debug!("udp_health_check got a closed");
-                    udp_src_to_remove.push(src.to_owned());
+                    udp_src_to_remove.push(ref_multi.key().to_owned());
                 }
             }
         }
@@ -510,9 +511,7 @@ impl SmoltcpDevice {
                 let mut tcp_handles_to_remove = Vec::new();
                 let mut tcp_src_to_remove = Vec::new();
 
-                if !self.data.tcp_handle_set.lock().contains(&h) {
-                    // 有可能是在 close、把 handle 删掉后，又调用了一次 tcpstream的 shutdown，此时就是没有 handle 的情况,
-                    // 应直接返回
+                if !self.data.tcp_handle_set.contains(&h) {
                     return;
                 }
 
@@ -540,19 +539,13 @@ impl SmoltcpDevice {
                     }
                 };
 
-                {
-                    let m = self.data.tcp_read_data_tx_map.lock();
-                    let tcp_stream_read_data_sender = m.get(&h).unwrap();
-
+                if let Some(tcp_stream_read_data_sender) = self.data.tcp_read_data_tx_map.get(&h) {
                     if tcp_stream_read_data_sender.is_closed() {
-                        // debug!("{h}, will delete tcp because sender closed");
                         tcp_handles_to_remove.push(h);
-                        tcp_src_to_remove.push(src);
+                        if let Some(src) = self.data.tcp_handle_src_map.get(&h) {
+                            tcp_src_to_remove.push(*src.value());
+                        }
                     } else {
-                        // if !so.can_recv() {
-                        //     debug!("{h}, has src but cant recv, {}", so.state());
-                        // }
-
                         while so.can_recv() && tcp_stream_read_data_sender.capacity() > 0 {
                             let mut buffer = BytesMut::with_capacity(so.recv_queue());
                             unsafe {
@@ -581,10 +574,6 @@ impl SmoltcpDevice {
                             }
                         }
                         if so.state() == State::CloseWait && so.send_queue() == 0 {
-                            // debug!(
-                            //     "{h}, so.state() == State::CloseWait
-                            //             && so.send_queue() == 0"
-                            // );
                             let _ =
                                 tcp_stream_read_data_sender.try_send(BytesMut::with_capacity(0));
                             //这里将令 TcpStream 的 read端 收到一个 0字节，表示EOF
@@ -628,7 +617,7 @@ impl SmoltcpDevice {
                                 buffer.set_len(n);
                             }
 
-                            let m = self.data.udp_read_data_tx_map.lock();
+                            let m = &self.data.udp_read_data_tx_map;
                             let udp_read_data_sender = match m.get(&src.endpoint) {
                                 Some(s) => s,
                                 None => {
@@ -673,7 +662,7 @@ impl SmoltcpDevice {
     pub fn send_tcp(&mut self, sh: SocketHandle, mut data: BytesMut) {
         // debug!("process_egress tcp for {sh}, {}", data.len());
 
-        if !self.data.tcp_handle_set.lock().contains(&sh) {
+        if !self.data.tcp_handle_set.contains(&sh) {
             // 有可能是在 close、把 handle 删掉后，又调用了一次 tcpstream的 shutdown，此时就是没有 handle 的情况,
             // 应直接返回
             return;
@@ -738,88 +727,50 @@ impl SmoltcpDevice {
     }
 
     fn remove_tcp_list(&mut self, sh_list: &Vec<SocketHandle>, mut src_list: Vec<IpEndpoint>) {
-        //tracing::debug!("remove udp {}", src);
-
-        let is_removing = !sh_list.is_empty() || !src_list.is_empty();
-
-        // if is_removing {
-        //     tracing::debug!("remove tcp {:?}", sh_list);
-        // }
-
-        let mut tcp_src_handle_map_lock = self.data.tcp_src_handle_map.lock();
-        let mut tcp_read_data_tx_map_lock = self.data.tcp_read_data_tx_map.lock();
-
-        let mut tcp_handle_src_map_lock = self.data.tcp_handle_src_map.lock();
+        // let is_removing = !sh_list.is_empty() || !src_list.is_empty();
 
         if !sh_list.is_empty() && src_list.is_empty() {
             for h in sh_list {
-                if let Some(src) = tcp_handle_src_map_lock.get(h) {
-                    src_list.push(*src);
+                if let Some(src) = self.data.tcp_handle_src_map.get(h) {
+                    src_list.push(*src.value());
                 }
             }
         }
 
         if !src_list.is_empty() {
             for src in src_list {
-                if tcp_src_handle_map_lock.get(&src).is_some() {
-                    tcp_src_handle_map_lock.remove(&src);
-                }
+                self.data.tcp_src_handle_map.remove(&src);
             }
         }
 
         for h in sh_list {
-            tcp_read_data_tx_map_lock.remove(h);
-            tcp_handle_src_map_lock.remove(h);
-
+            self.data.tcp_read_data_tx_map.remove(h);
+            self.data.tcp_handle_src_map.remove(h);
             self.tcp_sockets.remove(*h);
-            self.data.tcp_handle_set.lock().remove(h);
-        }
-
-        if is_removing {
-            tcp_src_handle_map_lock.shrink_to_fit();
-            tcp_read_data_tx_map_lock.shrink_to_fit();
-            tcp_handle_src_map_lock.shrink_to_fit();
+            self.data.tcp_handle_set.remove(h);
         }
     }
 
     fn remove_udp_list(&mut self, sh_list: &Vec<SocketHandle>, mut src_list: Vec<IpEndpoint>) {
-        let is_removing = !src_list.is_empty();
-        // if is_removing {
-        //     tracing::debug!("remove udp {:?}", src_list);
-        // }
-
-        let mut udp_src_handle_map_lock = self.data.udp_src_handle_map.lock();
-        let mut udp_read_data_tx_map_lock = self.data.udp_read_data_tx_map.lock();
-
-        let mut udp_handle_src_map_lock = self.data.udp_handle_src_map.lock();
-
         if !sh_list.is_empty() && src_list.is_empty() {
             for h in sh_list {
-                if let Some(src) = udp_handle_src_map_lock.get(h) {
-                    src_list.push(*src);
+                if let Some(src) = self.data.udp_handle_src_map.get(h) {
+                    src_list.push(*src.value());
                 }
             }
         }
 
         if !src_list.is_empty() {
             for src in src_list {
-                if udp_src_handle_map_lock.get(&src).is_some() {
-                    udp_src_handle_map_lock.remove(&src);
-                }
-                udp_read_data_tx_map_lock.remove(&src);
+                self.data.udp_src_handle_map.remove(&src);
+                self.data.udp_read_data_tx_map.remove(&src);
             }
         }
 
         for handle in sh_list {
             self.udp_sockets.remove(*handle);
-            self.data.udp_handle_set.lock().remove(handle);
-            udp_handle_src_map_lock.remove(handle);
-        }
-
-        if is_removing {
-            udp_read_data_tx_map_lock.shrink_to_fit();
-            udp_src_handle_map_lock.shrink_to_fit();
-            udp_handle_src_map_lock.shrink_to_fit();
+            self.data.udp_handle_set.remove(handle);
+            self.data.udp_handle_src_map.remove(handle);
         }
     }
 }

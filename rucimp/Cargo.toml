@@ -86,7 +86,7 @@ smoltcp = { version = "0.12", optional = true, default-features = false, feature
 
 netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d", optional = true }
 
-
+dashmap = "6.1.0"
 array-init = "2.1.0"
 
 rustyline = { version = "14.0.0", optional = true }
