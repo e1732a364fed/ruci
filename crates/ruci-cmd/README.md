@@ -44,7 +44,7 @@ make BUILD_VERSION=my_version BUILD_TRIPLET=aarch64-apple-darwin
 
 # features
 
-features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn, tun
+features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn, tun, smoltcp
 default enables none.
 
 api_server, trace 这两个feature都会少许降低 performance. 

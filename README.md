@@ -198,9 +198,9 @@ o2node-.->collector
 - [x] native-tls
 - [x] http_filter, websocket(including early data)
 - [x] h2, grpc
-- [x] quic
+- [x] quic (quinn/s2n-quic)
 - [ ] vpn_test1 （目前只有 单ip转发）
-- [x] tcp/ip stack (smoltcp) (测试阶段，暂不稳定)
+- [x] tcp/ip stack (smoltcp/lwip)
 - [ ] ss
 - [ ] vmess
 - [x] Steganography Protocol Example1
