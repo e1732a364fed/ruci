@@ -258,7 +258,7 @@ async fn listen_tcp(
                         Box::new(tcpstream),
                         ins.whole_name(),
                         outc.whole_name(),
-                        &raddr.to_string(),
+                        raddr.to_string(),
                         "tcp",
                         ins.get_mappers_vec().iter(),
                         outc.get_mappers_vec().iter(),

@@ -24,7 +24,7 @@ pub async fn handle_conn<'a>(
     in_conn: net::Conn,
     ins_name: &str,
     outc_name: &str,
-    in_raddr: &str,
+    in_raddr: String,
     network_str: &'static str,
 
     ins_iterator: impl Iterator<Item = &'a MapperBox>,
@@ -34,7 +34,7 @@ pub async fn handle_conn<'a>(
 ) -> io::Result<()> {
     let mut state = State::new(network_str);
     state.ins_name = ins_name.to_string();
-    state.cached_in_raddr = in_raddr.to_string();
+    state.cached_in_raddr = in_raddr;
 
     let cid = state.cid;
 
