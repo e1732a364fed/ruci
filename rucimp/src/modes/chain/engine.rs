@@ -1,3 +1,4 @@
+use super::config::StaticConfig;
 use anyhow;
 use futures::Future;
 use log::{debug, info, warn};
@@ -17,8 +18,7 @@ use tokio::sync::{
     mpsc::{self, Receiver},
     oneshot::{self, Sender},
 };
-
-use super::config::StaticConfig;
+use tokio::task::JoinSet;
 
 #[derive(Default)]
 pub struct Engine {
@@ -120,28 +120,26 @@ impl Engine {
     }
 
     /// non-blocking
-    pub async fn run(&self) -> anyhow::Result<()> {
+    pub async fn run(&self) -> anyhow::Result<JoinSet<anyhow::Result<()>>> {
+        let mut set = JoinSet::new();
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
-                tokio::spawn(task.0);
-                tokio::spawn(task.1);
+                set.spawn(task.0);
+                set.spawn(task.1);
             }
-        })
+        })?;
+        Ok(set)
     }
 
     /// blocking
-    pub async fn block_run(
-        &self,
-    ) -> anyhow::Result<Vec<Result<anyhow::Result<()>, tokio::task::JoinError>>> {
+    pub async fn block_run(&self) -> anyhow::Result<Vec<anyhow::Result<()>>> {
+        let mut set = self.run().await?;
         let mut hv = Vec::new();
-        self.start_with_tasks().await.map(|tasks| {
-            for task in tasks {
-                hv.push(tokio::spawn(task.0));
-                hv.push(tokio::spawn(task.1));
-            }
-        })?;
-        let r = futures::future::join_all(hv).await;
-        Ok(r)
+        while let Some(res) = set.join_next().await {
+            let r = res.unwrap();
+            hv.push(r)
+        }
+        Ok(hv)
     }
 
     pub async fn start_with_tasks(
