@@ -1,5 +1,5 @@
 /*!
-Provides facilities to filter and parse http1.1 request header.
+Provides facilities to filter and parse http1.1 request and response header.
 
 See <https://datatracker.ietf.org/doc/html/rfc2616>
 
@@ -36,6 +36,25 @@ pub struct Header {
     pub value: String,
 }
 
+impl Header {
+    // init from strings like "h:v" or "h: v"
+    pub fn from_str(s: &str) -> Option<Self> {
+        let r = s.split_once(":");
+
+        match r {
+            Some((head, mut value)) => {
+                value = value.trim_start();
+
+                Some(Header {
+                    head: head.to_string(),
+                    value: value.to_string(),
+                })
+            }
+            None => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ParsedHttpRequest {
     pub version: String,
@@ -52,9 +71,32 @@ impl Default for ParsedHttpRequest {
             version: Default::default(),
             method: Default::default(),
             path: Default::default(),
-            headers: Default::default(),
+            headers: vec![],
             parse_result: Ok(()),
             last_checked_index: Default::default(),
+            body_start_index: 0,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ParsedHttpResponse {
+    pub version: H1Ver,
+    pub code: u16,
+    pub reason: String,
+    pub headers: Vec<Header>,
+    pub parse_result: Result<(), ParseError>,
+    pub body_start_index: usize,
+}
+
+impl Default for ParsedHttpResponse {
+    fn default() -> Self {
+        Self {
+            version: Default::default(),
+            code: Default::default(),
+            reason: Default::default(),
+            headers: vec![],
+            parse_result: Ok(()),
             body_start_index: 0,
         }
     }
@@ -74,6 +116,9 @@ impl ParsedHttpRequest {
 #[derive(PartialEq, Debug)]
 pub enum ParseError {
     TooShort,
+    NotH1,        //for response
+    ParseCodeErr, //for response
+    NoReasonText, //for response
     NotForH2c,
     MethodLenWrong,
     UnexpectedProxy,
@@ -86,6 +131,14 @@ pub enum ParseError {
     NoEndMark,
     NoEndMark2,
     HeaderNoColonOrColonNotFollowedBySpace,
+}
+
+#[derive(Default, Debug)]
+pub enum H1Ver {
+    V09,
+    V10,
+    #[default]
+    V11,
 }
 
 pub const FAIL_NO_END_MARK: i32 = -12;
@@ -273,8 +326,121 @@ pub fn parse_h1_request(bs: &[u8], is_proxy: bool) -> ParsedHttpRequest {
     request
 }
 
+pub fn parse_h1_response(bs: &[u8]) -> ParsedHttpResponse {
+    let mut resp = ParsedHttpResponse::default();
+
+    if bs.len() < 16 {
+        resp.parse_result = Err(ParseError::TooShort);
+        return resp;
+    }
+    const SHOULD_SPACE_INDEX: usize = 8;
+    const REASON_INDEX: usize = 13;
+
+    match &bs[0..SHOULD_SPACE_INDEX] {
+        s if s == "HTTP/1.1".as_bytes() => resp.version = H1Ver::V11,
+        s if s == "HTTP/1.0".as_bytes() => resp.version = H1Ver::V10,
+        s if s == "HTTP/0.9".as_bytes() => resp.version = H1Ver::V09,
+        _ => {
+            resp.parse_result = Err(ParseError::NotH1);
+            return resp;
+        }
+    }
+
+    if bs[SHOULD_SPACE_INDEX] != b' ' {
+        resp.parse_result = Err(ParseError::SpaceIndexWrong);
+        return resp;
+    }
+
+    let code_r: Result<u16, _> =
+        String::from_utf8_lossy(&bs[SHOULD_SPACE_INDEX + 1..REASON_INDEX - 1]).parse();
+    match code_r {
+        Ok(code) => resp.code = code,
+        Err(_) => {
+            resp.parse_result = Err(ParseError::ParseCodeErr);
+            return resp;
+        }
+    }
+
+    if bs[REASON_INDEX - 1] != b' ' {
+        resp.parse_result = Err(ParseError::SpaceIndexWrong);
+        return resp;
+    }
+
+    let left_string = String::from_utf8_lossy(&bs[REASON_INDEX..]);
+
+    match left_string.find("\r\n\r\n") {
+        Some(header_end_pos) => {
+            resp.body_start_index = REASON_INDEX + header_end_pos;
+
+            let header_with_reason_string =
+                String::from_utf8_lossy(&bs[REASON_INDEX..resp.body_start_index]);
+
+            let x: Vec<&str> = header_with_reason_string.split("\r\n").collect();
+            if x.is_empty() {
+                resp.parse_result = Err(ParseError::NoReasonText);
+                return resp;
+            }
+
+            resp.reason = x.first().unwrap().to_string();
+            if resp.reason.is_empty() {
+                resp.parse_result = Err(ParseError::NoReasonText);
+                return resp;
+            }
+
+            for i in 1..x.len() {
+                match Header::from_str(x[i]) {
+                    Some(h) => resp.headers.push(h),
+                    None => {
+                        resp.parse_result = Err(ParseError::HeaderNoColonOrColonNotFollowedBySpace);
+                        return resp;
+                    }
+                }
+            }
+        }
+        None => {
+            resp.parse_result = Err(ParseError::NoEndMark2);
+        }
+    }
+
+    resp
+}
+
 #[cfg(test)]
-mod tests {
+mod response_tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_response() {
+        let resp = parse_h1_response(b"HTTP/1.1 200 OK\r\nHost: x\r\n\r\nOK");
+        println!("{resp:?}");
+        assert_eq!(resp.parse_result, Ok(()));
+
+        let resp = parse_h1_response(b"HTTP/1.1 200 x\r\nHost:x\r\n\r\n");
+        assert_eq!(resp.parse_result, Ok(()));
+    }
+
+    #[test]
+    fn test_invalid_response() {
+        let resp = parse_h1_response(b"Hasdf 200 OK\r\nHost:x\r\n\r\nOK");
+        println!("{resp:?}");
+        assert_ne!(resp.parse_result, Ok(()));
+
+        let resp = parse_h1_response(b"HTTP/1.1 200OK\r\nHost:x\r\n\r\nOK");
+        println!("{resp:?}");
+        assert_ne!(resp.parse_result, Ok(()));
+
+        let resp = parse_h1_response(b"HTTP/1.1200 OK\r\nHost:x\r\n\r\nOK");
+        println!("{resp:?}");
+        assert_ne!(resp.parse_result, Ok(()));
+
+        let resp = parse_h1_response(b"HTTP/1.1 200 \r\nHost:x\r\n\r\nOK");
+        println!("{resp:?}");
+        assert_ne!(resp.parse_result, Ok(()));
+    }
+}
+
+#[cfg(test)]
+mod request_tests {
     use super::*;
 
     #[test]
