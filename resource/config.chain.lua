@@ -13,7 +13,7 @@ config = {
     dial = {
         { 
             tag="dial1", chain = {
-                { Dialer = { TcpDialer = "0.0.0.0:1080" }  }
+                "Direct"
             } 
         }
     }

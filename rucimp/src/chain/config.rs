@@ -82,6 +82,7 @@ pub enum InMapperConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapperConfig {
+    Direct,
     Dialer(Dialer),
     Adder(i8),
     Counter,
@@ -184,6 +185,7 @@ impl ToMapper for InMapperConfig {
 impl ToMapper for OutMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
+            OutMapperConfig::Direct => Box::new(ruci::map::network::Direct),
             OutMapperConfig::Dialer(d) => match d {
                 Dialer::TcpDialer(td_str) => {
                     let a = net::Addr::from_ip_addr_str("tcp", td_str.to_string()).unwrap();

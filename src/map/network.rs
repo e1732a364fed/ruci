@@ -11,6 +11,21 @@ use self::net::TransmissionInfo;
 use super::*;
 
 #[derive(Clone, Debug)]
+pub struct Direct;
+impl Name for Direct {
+    fn name(&self) -> &'static str {
+        "direct"
+    }
+}
+
+#[async_trait]
+impl Mapper for Direct {
+    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, _params: MapParams) -> MapResult {
+        unimplemented!()
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct TcpDialer {
     pub addr: Option<net::Addr>,
 }
