@@ -1,9 +1,13 @@
 use ruci::map::MapperBox;
 
+#[derive(Debug)]
 pub struct DynamicConfig {}
 
-impl Iterator for DynamicConfig {
-    type Item = MapperBox;
+#[derive(Debug)]
+pub struct DynamicIter {}
+
+impl Iterator for DynamicIter {
+    type Item = &'static MapperBox;
 
     fn next(&mut self) -> Option<Self::Item> {
         todo!()

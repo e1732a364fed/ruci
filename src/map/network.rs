@@ -9,6 +9,27 @@ use tokio::{
 use super::*;
 use crate::map;
 use crate::Name;
+
+#[derive(DefaultMapperExt, Debug, Default, Clone)]
+pub struct BlackHole {}
+
+impl Name for BlackHole {
+    fn name(&self) -> &str {
+        "blackhole"
+    }
+}
+
+#[async_trait]
+impl Mapper for BlackHole {
+    /// always consume the stream, ignore all params.
+    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        if params.c.is_some() {
+            info!("{cid} consumed by blackhole");
+        }
+        return MapResult::default();
+    }
+}
+
 /// only use CommonMapperExt's is_tail_of_chain. won't use configured_target_addr;
 /// if you want to set configured_target_addr, maybe you should use TcpDialer
 #[common_mapper_field]
@@ -278,22 +299,5 @@ impl Mapper for TcpStreamGenerator {
             Ok(rx) => MapResult::gs(rx, CID::default()),
             Err(e) => MapResult::from_err(e),
         }
-    }
-}
-
-#[derive(DefaultMapperExt, Debug, Default, Clone)]
-pub struct BlackHole {}
-
-impl Name for BlackHole {
-    fn name(&self) -> &str {
-        "blackhole"
-    }
-}
-
-#[async_trait]
-impl Mapper for BlackHole {
-    /// always consume the stream, ignore all params.
-    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, _params: MapParams) -> MapResult {
-        return MapResult::default();
     }
 }

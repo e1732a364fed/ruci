@@ -514,7 +514,7 @@ impl Stream {
     pub fn is_none(&self) -> bool {
         matches!(self, Stream::None)
     }
-    pub fn is_not_none(&self) -> bool {
+    pub fn is_some(&self) -> bool {
         !matches!(self, Stream::None)
     }
     pub async fn try_shutdown(self) -> io::Result<()> {

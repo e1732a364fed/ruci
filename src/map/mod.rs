@@ -372,8 +372,13 @@ pub trait ToMapper {
 pub trait MapperExt: Mapper {
     fn set_configured_target_addr(&mut self, _a: Option<net::Addr>);
     fn set_is_tail_of_chain(&mut self, _is: bool);
+
     fn configured_target_addr(&self) -> Option<net::Addr>;
     fn is_tail_of_chain(&self) -> bool;
+
+    fn set_chain_tag(&mut self, tag: &str);
+
+    fn get_chain_tag(&self) -> &str;
 }
 
 //令 Mapper 实现 Send + Sync, 否则异步/多线程报错
@@ -399,6 +404,7 @@ pub struct AccumulateResult {
     /// 代表 迭代完成后，最终的 cid
     pub id: Option<CID>,
 
+    pub chain_tag: String,
     /// 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
     pub left_mappers_iter: MIterBox,
 }
@@ -412,6 +418,7 @@ impl Debug for AccumulateResult {
             .field("d", &self.d)
             .field("e", &self.e)
             .field("id", &self.id)
+            .field("tag", &self.chain_tag)
             //.field("left_mappers_iter count", &self.left_mappers_iter.)
             .finish()
     }
@@ -450,6 +457,8 @@ pub async fn accumulate(
 
     let mut calculated_output_vec = Vec::new();
 
+    let mut tag: String = String::new();
+
     for adder in mappers.by_ref() {
         let input_data = InputData {
             calculated_data: calculated_output_vec
@@ -485,6 +494,14 @@ pub async fn accumulate(
             )
             .await;
 
+        if tag == "" {
+            let ct = adder.get_chain_tag();
+
+            if ct != "" {
+                tag = ct.to_string();
+            }
+        }
+
         calculated_output_vec.push(last_r.d);
 
         if let Stream::None = last_r.c {
@@ -510,6 +527,7 @@ pub async fn accumulate(
             Some(cid)
         },
         left_mappers_iter: mappers,
+        chain_tag: tag,
     }
 }
 

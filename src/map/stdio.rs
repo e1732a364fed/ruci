@@ -87,7 +87,7 @@ impl Stdio {
 #[async_trait]
 impl Mapper for Stdio {
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        if params.c.is_not_none() {
+        if params.c.is_some() {
             return MapResult::err_str("stdio can't generate stream when there's already one");
         };
 

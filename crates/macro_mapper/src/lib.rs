@@ -21,6 +21,13 @@ pub fn common_mapper_field(_args: TokenStream, input: TokenStream) -> TokenStrea
                             .parse2(quote! { pub fixed_target_addr: Option<net::Addr> })
                             .unwrap(),
                     );
+
+                    fields.named.push(
+                        // 存一个可选的addr, 可作为指定的连接目标。 这样该mapper的decode行为就像一个 socks5一样
+                        syn::Field::parse_named
+                            .parse2(quote! { pub chain_tag: String })
+                            .unwrap(),
+                    );
                 }
                 _ => (),
             }
@@ -63,6 +70,10 @@ fn impl_common_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
                 self.is_tail_of_chain = is
             }
 
+            fn set_chain_tag(&mut self, tag: &str){self.chain_tag = tag.to_string()}
+
+            fn get_chain_tag(&self) -> &str{ &self.chain_tag}
+
         }
     };
     gen.into()
@@ -90,6 +101,9 @@ fn impl_mapperext_macro(ast: &syn::DeriveInput) -> TokenStream {
                 false
             }
 
+            fn set_chain_tag(&mut self, tag: &str){}
+
+            fn get_chain_tag(&self) -> &str{""}
         }
     };
     gen.into()

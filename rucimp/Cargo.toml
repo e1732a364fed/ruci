@@ -13,6 +13,7 @@ async-trait = "0.1.77"
 futures = "0.3"
 futures-lite = "2"
 parking_lot = "0.12.1"
+dyn-clone = "1"
 
 toml = "0.8.1"
 serde = { version = "1", features = ["derive"] }

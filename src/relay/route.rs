@@ -2,7 +2,7 @@ use crate::map::{AnyData, MIterBox};
 
 /// Send + Sync to use in async
 pub trait OutSelector: Send + Sync {
-    fn select(&self, params: Vec<Option<AnyData>>) -> MIterBox;
+    fn select(&self, in_chain_tag: &str, params: Vec<Option<AnyData>>) -> MIterBox;
 }
 
 pub struct FixedOutSelector {
@@ -10,7 +10,7 @@ pub struct FixedOutSelector {
 }
 
 impl OutSelector for FixedOutSelector {
-    fn select(&self, _params: Vec<Option<AnyData>>) -> MIterBox {
+    fn select(&self, _in_chain_tag: &str, _params: Vec<Option<AnyData>>) -> MIterBox {
         self.mappers.clone()
     }
 }
