@@ -124,7 +124,6 @@ impl Mapper for Stdio {
                 buf = None;
             }
         }
-
         MapResult::newc(Box::new(c)).b(buf).a(a).build()
     }
 }

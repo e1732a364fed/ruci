@@ -180,6 +180,48 @@ mod test {
     }
 
     #[test]
+    fn testout3() -> Result<()> {
+        let lua = Lua::new();
+        let globals = lua.globals();
+
+        let text = r#"
+
+        isac2 = { { Stdio={ fixed_target_addr= "udp://127.0.0.1:20800", pre_defined_early_data = "abc" } } , { Adder = 1 } } 
+
+        out_socks5_c = {{ Socks5 = {} }}
+
+        config = {
+            inbounds = { 
+                {chain = isac2, tag = "in_stdio_adder_chain"} , 
+            } ,
+            outbounds = { 
+                { tag="d1", chain = out_socks5_c } , 
+            },
+        
+        }
+        "#;
+
+        let c: StaticConfig = load(text)?;
+
+        println!("{:#?}", c);
+        let dial = c.outbounds;
+        let first_listen_group = dial.first().unwrap();
+        let last_m = first_listen_group.chain.last().unwrap();
+        // assert!(matches!(InMapperConfig::Counter, last_m));
+
+        // let first_m = first_listen_group.chain.first().unwrap();
+        // let str = "0.0.0.0:1080".to_string();
+        // assert!(matches!(first_m, OutMapperConfig::Dialer(str)));
+        // let str2 = "0.0.0.0:1".to_string();
+        // assert!(matches!(
+        //     first_m,
+        //     OutMapperConfig::Dialer(str2) //won't match inner fields
+        // ));
+        // assert!(!matches!(first_m, OutMapperConfig::Counter));
+        Ok(())
+    }
+
+    #[test]
     fn test_route() -> Result<()> {
         let lua = Lua::new();
         let globals = lua.globals();

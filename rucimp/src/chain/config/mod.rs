@@ -11,6 +11,7 @@ pub mod dynamic;
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use bytes::BytesMut;
+use log::warn;
 use ruci::{
     map::{acc::MIterBox, *},
     net,
@@ -43,10 +44,12 @@ impl StaticConfig {
                     })
                     .collect::<Vec<_>>();
 
-                chain
-                    .last_mut()
-                    .expect("has a inbound")
-                    .set_is_tail_of_chain(true);
+                if let Some(last_m) = chain.last_mut() {
+                    last_m.set_is_tail_of_chain(true);
+                } else {
+                    warn!("the chain has no mappers");
+                }
+
                 chain
             })
             .collect();
@@ -69,10 +72,12 @@ impl StaticConfig {
                     })
                     .collect::<Vec<_>>();
 
-                chain
-                    .last_mut()
-                    .expect("has an outbound")
-                    .set_is_tail_of_chain(true);
+                if let Some(last_m) = chain.last_mut() {
+                    last_m.set_is_tail_of_chain(true);
+                } else {
+                    warn!("the chain has no mappers");
+                }
+
                 chain
             })
             .collect::<Vec<_>>()
@@ -90,7 +95,7 @@ impl StaticConfig {
                 let tag = outbound
                     .iter()
                     .next()
-                    .expect("outbound has one mapper at least")
+                    .expect("outbound should has at least one mapper ")
                     .get_chain_tag();
 
                 let ts = tag.to_string();
@@ -196,7 +201,7 @@ pub struct UserPassField {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Socks5Out {
-    userpass: String,
+    userpass: Option<String>,
     early_data: Option<bool>,
 
     ext: Option<Ext>,
@@ -308,7 +313,7 @@ impl ToMapper for OutMapperConfig {
                 Box::new(a)
             }
             OutMapperConfig::Socks5(c) => {
-                let u = c.userpass.clone();
+                let u = c.userpass.clone().unwrap_or_default();
                 let mut a = socks5::client::Client {
                     up: if u.is_empty() {
                         None

@@ -27,11 +27,16 @@ stdio_socks5_chain = { { Stdio={ fixed_target_addr= "fake.com:80" } } , { Socks5
 in_stdio_adder_chain = { { Stdio={ fixed_target_addr= "fake.com:80", pre_defined_early_data = "abc" } } , { Adder = 1 } } 
 --这里 用fake.com 的目的是, 保证我们的输入有一个目标. 这是代理所要求的.
 
+
+isac2 = { { Stdio={ fixed_target_addr= "udp://127.0.0.1:20800", pre_defined_early_data = "abc" } } , { Adder = 1 } } 
+
+out_socks5_c = { dial, { Socks5 = {} } }
+
 out_stdio_chain = { { Stdio={} } }
 
 direct_out_chain = { "Direct" }
 
----[=[
+--[=[
 
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
@@ -151,3 +156,24 @@ config = {
 
 --]=]
 
+
+
+---[=[
+
+config = {
+    inbounds = { 
+        {chain = isac2, tag = "in_stdio_adder_chain"} , 
+    } ,
+    outbounds = { 
+        { tag="d1", chain = out_socks5_c } , 
+    },
+
+--[[
+这个 config 块是演示 试图用 socks5 客户端向 一个 本地 udp 监听发起请求.
+
+该配置对应的 remote.lua 的 配置应该是 socks5 监听 -> direct
+--]]
+
+}
+
+--]=]

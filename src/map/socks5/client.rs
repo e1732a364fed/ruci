@@ -189,7 +189,10 @@ impl map::Mapper for Client {
                 let r = self.handshake(cid, c, target_addr, params.b).await;
                 MapResult::from_result(r)
             }
-            _ => MapResult::err_str("socks5 client only support tcplike stream"),
+            _ => MapResult::err_str(&format!(
+                "socks5 client only support tcplike stream, got {}",
+                params.c
+            )),
         }
     }
 }
