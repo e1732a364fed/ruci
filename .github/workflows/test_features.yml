@@ -5,14 +5,7 @@ on:
   push:
     branches: ["tokio"]
     tags:
-      - "*"
-    paths-ignore:
-      - "doc/**"
-      - "resource/**"
-      - "**.md"
-      - ".github/workflows/*.yml"
-      - "**/Makefile"
-      - "**/Cross.toml"
+      - "v*"
 
   pull_request:
     branches: ["tokio"]
