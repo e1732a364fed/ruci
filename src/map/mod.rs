@@ -37,7 +37,7 @@ use crate::net::{self, addr_conn::AddrConn, Stream, CID};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
-use log::info;
+use log::warn;
 use tokio::{
     net::TcpStream,
     sync::{oneshot, Mutex},
@@ -547,14 +547,65 @@ where
     };
 }
 
+/// 先调用第一个 mapper 生成 流，然后调用 in_iter_accumulate
+pub async fn accumulate_from_start<IterMapperBoxRef, IterOptData>(
+    tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
+    shutdown_rx: oneshot::Receiver<()>,
+
+    mut inmappers: IterMapperBoxRef,
+    _hyperparameter_vec: Option<IterOptData>,
+) where
+    IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
+    IterOptData: Iterator<Item = OptData> + Clone + Send + 'static,
+{
+    let first = inmappers.next().unwrap();
+    let r = first
+        .maps(
+            CID::default(),
+            ProxyBehavior::DECODE,
+            MapParams {
+                c: Stream::None,
+                a: None,
+                b: None,
+                d: None,
+                shutdown_rx: Some(shutdown_rx),
+            },
+        )
+        .await;
+
+    if r.e.is_some() {
+        warn!("accumulate_from_start, returned by e");
+        return;
+    }
+    if let Stream::Generator(rx) = r.c {
+        in_iter_accumulate_forever::<IterMapperBoxRef, IterOptData>(
+            CID::default(),
+            rx,
+            tx,
+            inmappers,
+            None,
+        )
+        .await;
+    } else {
+        warn!("accumulate_from_start, not a stream generator");
+
+        return;
+    }
+}
+
 /// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
 ///
 /// 因为要spawn, 所以对 Iter 的类型提了比 accumulate更高的要求, 加了
 /// Clone + Send + 'static
 ///
-/// 将每一条子连接的accumulate 结果 用 tx 发送出去
+/// 将每一条子连接的accumulate 结果 用 tx 发送出去;
 ///
+/// 如果子连接又是一个 Stream::Generator, 则会继续调用 in_iter_accumulate_forever
+///
+/// block until shutdown_rx or rx got closed
+///
+/*
 pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
     cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
@@ -571,7 +622,9 @@ pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
         _r = async move{
             loop {
                 let opt_stream = rx.recv().await;
-                if opt_stream.is_none() {}
+                if opt_stream.is_none() {
+                    break;
+                }
                 let stream = opt_stream.unwrap();
 
                 let mc = inmappers.clone();
@@ -621,7 +674,17 @@ pub async fn in_iter_accumulate<IterMapperBoxRef, IterOptData>(
         }
     }
 }
+*/
 
+/// 用于 已知一个初始点为 Stream::Generator (rx), 向其所有子连接进行accumulate,
+/// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
+///
+/// 因为要spawn, 所以对 Iter 的类型提了比 accumulate更高的要求, 加了
+/// Clone + Send + 'static
+///
+/// 将每一条子连接的accumulate 结果 用 tx 发送出去;
+/// block until rx got closed.
+/// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
 pub async fn in_iter_accumulate_forever<IterMapperBoxRef, IterOptData>(
     cid: CID,
     mut rx: tokio::sync::mpsc::Receiver<Stream>, //Stream::Generator
@@ -634,7 +697,9 @@ pub async fn in_iter_accumulate_forever<IterMapperBoxRef, IterOptData>(
 {
     loop {
         let opt_stream = rx.recv().await;
-        if opt_stream.is_none() {}
+        if opt_stream.is_none() {
+            break;
+        }
         let stream = opt_stream.unwrap();
 
         let mc = inmappers.clone();
