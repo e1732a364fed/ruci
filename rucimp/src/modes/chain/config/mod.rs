@@ -250,7 +250,10 @@ pub enum OutMapperConfig {
     Counter,
     TLS(TlsOut),
 
+    #[cfg(all(feature = "sockopt", target_os = "linux"))]
     OptDirect(crate::net::so2::SockOpt),
+
+    #[cfg(all(feature = "sockopt", target_os = "linux"))]
     OptDialer(crate::net::so2::SockOpt),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
@@ -583,6 +586,7 @@ impl ToMapperBox for OutMapperConfig {
                 sopt: sopt.clone(),
                 ext_fields: Some(MapperExtFields::default()),
             }),
+            #[cfg(all(feature = "sockopt", target_os = "linux"))]
             OutMapperConfig::OptDialer(sopt) => Box::new(crate::map::opt_net::OptDialer {
                 sopt: sopt.clone(),
                 ext_fields: Some(MapperExtFields::default()),
