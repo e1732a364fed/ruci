@@ -58,63 +58,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         files: rucimp/dist/*.tar.xz
-        tag_name: ${{ inputs.tag || github.ref_name }}
-
-  build_aarch64_cross_ubuntu:
-    name: Cross-compile to aarch64-unknown-linux-gnu
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          target: aarch64-unknown-linux-gnu
-      - name: Install ARM compiler toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross
-        shell: bash
-      - name: Build
-        run: |
-          cd rucimp
-          make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=aarch64-unknown-linux-gnu
-      - name: Upload Github Assets
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: rucimp/dist/*.tar.xz
-          tag_name: ${{ inputs.tag || github.ref_name }}
-
-  build_armv7_cross_ubuntu:
-    name: Cross-compile to  armv7-unknown-linux-gnueabihf
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          target: armv7-unknown-linux-gnueabihf
-      - name: Install ARM compiler toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf libc-dev-armhf-cross
-
-        shell: bash
-      - name: Build
-        run: |
-          cd rucimp
-          make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=armv7-unknown-linux-gnueabihf
-      - name: Upload Github Assets
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: rucimp/dist/*.tar.xz
-          tag_name: ${{ inputs.tag || github.ref_name }}
-        
-        
-
+        tag_name: ${{ inputs.tag || github.ref_name }}      
 
   build-unix:
     permissions: write-all
