@@ -254,10 +254,12 @@ async fn listen_tcp(
                         debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
                     }
 
-                    let _ = relay::tcp::handle_tcp(
-                        tcpstream,
+                    let _ = relay::tcp::handle_conn(
+                        Box::new(tcpstream),
                         ins.whole_name(),
                         outc.whole_name(),
+                        &raddr.to_string(),
+                        "tcp",
                         ins.get_mappers_vec().iter(),
                         outc.get_mappers_vec().iter(),
                         outc.addr(),

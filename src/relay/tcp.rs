@@ -4,7 +4,6 @@ use std::io;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
-use tokio::net::TcpStream;
 
 use crate::map::*;
 use crate::net;
@@ -21,27 +20,28 @@ use crate::net;
 /// 握手后，不会阻塞，拷贝会在新的异步任务中完成
 ///
 ///
-pub async fn handle_tcp<'a>(
-    in_tcp: TcpStream,
+pub async fn handle_conn<'a>(
+    in_conn: net::Conn,
     ins_name: &str,
     outc_name: &str,
+    in_raddr: &str,
+    network_str: &'static str,
 
     ins_iterator: impl Iterator<Item = &'a MapperBox>,
     outc_iterator: impl Iterator<Item = &'a MapperBox>,
     outc_addr: Option<net::Addr>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) -> io::Result<()> {
-    let mut state = State::new("tcp");
+    let mut state = State::new(network_str);
     state.ins_name = ins_name.to_string();
-    state.cached_in_raddr = in_tcp.peer_addr().unwrap().to_string();
+    state.cached_in_raddr = in_raddr.to_string();
 
     let cid = state.cid;
 
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             type DummyType = std::vec::IntoIter<OptData>;
-            TcpInAccumulator::accumulate::<_, DummyType>(cid, Box::new(in_tcp), ins_iterator, None)
-                .await
+            TcpInAccumulator::accumulate::<_, DummyType>(cid, in_conn, ins_iterator, None).await
         })
         .await;
 
@@ -52,7 +52,7 @@ pub async fn handle_tcp<'a>(
                 "{}, handshake in server failed with io::Error, {}",
                 state, e
             );
-            //let _ = in_tcp.shutdown();
+            //let _ = in_conn.shutdown();
 
             return Err(e.into());
         }
@@ -169,14 +169,14 @@ pub async fn handle_tcp<'a>(
 
         if let Err(e) = dial_result {
             warn!("{}, dial out client timeout, {}", state, e);
-            //let _ = in_tcp.shutdown();
+            //let _ = in_conn.shutdown();
             //let _ = out_tcp.shutdown();
             return Err(e.into());
         }
         let dial_result = dial_result.unwrap();
         if let Err(e) = dial_result {
             warn!("{}, dial out client failed, {}", state, e);
-            //let _ = in_tcp.shutdown();
+            //let _ = in_conn.shutdown();
             //let _ = out_tcp.shutdown();
             return Err(e);
         }
