@@ -216,7 +216,7 @@ impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> AsyncWrite for RWWrapper<R, W>
     }
 }
 
-/// wrap base connection with an early data buffer, read from
+/// wrap base connection with an early data buffer, READ from
 /// the buffer first.
 pub struct EarlyDataWrapper {
     ed: Option<BytesMut>,
@@ -244,8 +244,8 @@ impl AsyncRead for EarlyDataWrapper {
             Some(ed) => {
                 let el = ed.len();
                 if el > 0 {
+                    // debug!("EarlyDataWrapper read from ed, {}", el);
                     let m = min(el, buf.initialized().len());
-                    //buf.set_filled(m);
                     buf.put(&ed[..m]);
                     ed.advance(m);
                     if ed.is_empty() {
@@ -268,6 +268,77 @@ impl AsyncWrite for EarlyDataWrapper {
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         self.base.as_mut().poll_write(cx, buf)
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<io::Result<()>> {
+        self.base.as_mut().poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<io::Result<()>> {
+        self.base.as_mut().poll_shutdown(cx)
+    }
+}
+
+pub struct EarlyWriteDataWrapper {
+    ed: Option<BytesMut>,
+    base: Pin<Conn>,
+}
+
+impl EarlyWriteDataWrapper {
+    pub fn from(bs: BytesMut, conn: Conn) -> Self {
+        EarlyWriteDataWrapper {
+            ed: if bs.is_empty() { None } else { Some(bs) },
+            base: Box::pin(conn),
+        }
+    }
+}
+
+impl AsyncRead for EarlyWriteDataWrapper {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        self.base.as_mut().poll_read(cx, buf)
+    }
+}
+
+impl AsyncWrite for EarlyWriteDataWrapper {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        loop {
+            match self.ed.take() {
+                None => return self.base.as_mut().poll_write(cx, buf),
+
+                Some(ed) => {
+                    let edl = ed.len();
+                    let r = self.base.as_mut().poll_write(cx, &ed);
+                    self.ed = Some(ed);
+                    match ready!(r) {
+                        Ok(n) => {
+                            if n == edl {
+                                self.ed = None;
+                            } else {
+                                let mut ed = self.ed.take().unwrap();
+                                ed.advance(n);
+                                self.ed = Some(ed);
+                            }
+                            continue;
+                        }
+                        Err(e) => return Poll::Ready(Err(e)),
+                    }
+                }
+            }
+        }
     }
 
     fn poll_flush(

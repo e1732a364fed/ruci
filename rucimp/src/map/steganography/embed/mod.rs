@@ -521,6 +521,7 @@ impl AsyncWrite for EmbedConn {
 
             match self.write_state.take() {
                 None => {
+                    debug!("write buf when write_state is None");
                     let r = self.write_buf(cur_info, cx, buf, false);
                     match ready!(r) {
                         WriteBufResult::Continue => {

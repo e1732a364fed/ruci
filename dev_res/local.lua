@@ -1005,7 +1005,7 @@ local config_26_chain_mitm_embedder = {
                 }
             },
             { Embedder = { file_name = "record_dir1/1-2_mitm_ruci_info.json" } },
-            { Trojan = { password = "mypassword", do_not_use_early_data = true } }
+            { Trojan = { password = "mypassword", do_not_use_early_data = false } }
         }
     } }
 }

@@ -7,7 +7,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::debug;
 
 use crate::{
-    map::{self, helpers::EarlyDataWrapper, Map, MapExt, MapResult, CID},
+    map::{self, Map, MapExt, MapResult, CID},
     net::{self, helpers, Network},
     utils::ob_to_buf,
 };
@@ -74,23 +74,22 @@ impl Client {
         if self.do_not_use_early_data {
             debug!(
                 "trojan client writing buf(not with early data) {}",
-                &buf[..50.min(buf.len())].escape_ascii()
+                buf.len()
             );
+
             base.write_all(&buf).await?;
             base.flush().await?;
-            debug!("trojan client write done");
 
             if is_udp {
                 let u = udp::from(base);
                 Ok(MapResult::new_u(u).b(first_payload).a(Some(ta)).build())
             } else {
                 let b = ob_to_buf(first_payload);
-                if b.is_empty() || !self.is_tail_of_chain() {
+
+                if b.is_empty() {
                     Ok(MapResult::new_c(base).build())
                 } else {
-                    debug!("trojan client using EarlyDataWrapper, {}", b.len());
-                    let ec = EarlyDataWrapper::from(b, base);
-                    Ok(MapResult::new_c(Box::new(ec)).build())
+                    Ok(MapResult::new_c(base).b(Some(b)).build())
                 }
             }
         } else {
@@ -105,13 +104,13 @@ impl Client {
                 }
             }
 
-            debug!(
-                "trojan client writing buf {}",
-                &buf[..50.min(buf.len())].escape_ascii()
-            );
+            // debug!(
+            //     "trojan client writing buf {}",
+            //     &buf[..50.min(buf.len())].escape_ascii()
+            // );
             base.write_all(&buf).await?;
             base.flush().await?;
-            debug!("trojan client write done");
+            // debug!("trojan client write done");
 
             if is_udp {
                 let u = udp::from(base);
