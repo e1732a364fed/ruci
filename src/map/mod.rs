@@ -11,22 +11,24 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 流映射函数 的提供者 在本包中被命名为 "Mapper", 映射的行为叫 "maps"
 
-在本包中， 映射 不常使用，而经常使用 “加法” 来指代 映射。以“累加”来指代迭代映射。
+在本包中， 有时使用 “加法” 来指代 映射。以“累加”来指代迭代映射。
 即有时本包会以 "adder" 指代 Mapper
 
 按顺序执行若干映射函数 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
 
 之所以叫加法，是因为代理的映射只会增加信息（熵），不会减少信息
 
-按代理的方向, 逻辑上分 InAdder 和 OutAdder 两种, 以 maps 方法的 behavior 参数加以区分.
+按代理的方向, 逻辑上分 Encode 和 Decode 两种, 以 maps 方法的 behavior 参数加以区分.
 
 
-一个完整的代理配置 是 【若干 映射函数 的集合】其在 rucimp 子项目中有定义。
+一个完整的代理链 是由 【生成 映射函数 的迭代器】生成的, 其在 acc 和 acc2 模块中有定义
 
 
 */
 
 pub mod acc;
+pub mod acc2;
+
 pub mod counter;
 pub mod fileio;
 pub mod http;
@@ -57,10 +59,15 @@ use std::{fmt::Debug, sync::Arc};
 
 use self::addr_conn::AddrConn;
 
+/// 一种用于表示 Mapper 的生成的数据的类型
 #[derive(Debug)]
 pub enum AnyData {
     A(AnyArc),
     B(AnyBox),
+    Bool(bool),
+    U64(u64),
+    I64(i64),
+    F64(f64),
     Addr(net::Addr),                //store raddr
     RLAddr((net::Addr, net::Addr)), //store raddr and laddr
     User(Box<dyn user::User>),      //store authed user

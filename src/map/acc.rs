@@ -1,7 +1,9 @@
 /*!
-* provide facilities for accumulating
+* provide facilities for accumulating static chain
 
-struct AccumulateResult
+trait: MIter
+
+struct AccumulateResult, AccumulateParams
 
 * function accumulate , accumulate_from_start
 */
@@ -9,6 +11,7 @@ use log::debug;
 
 use super::*;
 
+/// static iterator for MapperBox
 pub trait MIter: Iterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug {}
 impl<T: Iterator<Item = Arc<MapperBox>> + DynClone + Send + Sync + Debug> MIter for T {}
 dyn_clone::clone_trait_object!(MIter);

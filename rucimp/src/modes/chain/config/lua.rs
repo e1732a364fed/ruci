@@ -330,6 +330,27 @@ mod test {
 
         Ok(())
     }
+
+    #[test]
+    fn test_dyn() -> Result<()> {
+        let lua = Lua::new();
+
+        use mlua::chunk;
+        use mlua::Function;
+
+        let handler_fn = lua
+            .load(chunk! {
+                function(current_index)
+
+
+
+                end
+            })
+            .eval::<Function>()
+            .expect("cannot create Lua handler");
+
+        Ok(())
+    }
 }
 
 /*
