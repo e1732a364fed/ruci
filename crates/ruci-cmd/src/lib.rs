@@ -297,10 +297,9 @@ fn deserialize_config() {
         Ok(args) => args,
         Err(e) => panic!("{}", e),
     };
-    println!(
-        "file_server_tar_zip_data_source_base64 is {:?}",
-        args.file_server_tar_zip_data_source_base64
-    )
+
+    #[cfg(feature = "file_server")]
+    assert_eq!(args.file_server_tar_zip_data_source_base64.unwrap(), "sss")
 }
 
 #[cfg(target_os = "android")]
