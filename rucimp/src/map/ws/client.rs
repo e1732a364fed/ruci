@@ -73,7 +73,7 @@ impl Client {
             ));
         }
         Ok(MapResult::newc(Box::new(WsStreamToConnWrapper {
-            ws: c,
+            ws: Box::pin(c),
             r_buf: None,
             w_buf: b,
         }))

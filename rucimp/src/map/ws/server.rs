@@ -88,7 +88,7 @@ impl Server {
         let c = accept_hdr_async(conn, func).await?;
 
         Ok(MapResult::newc(Box::new(WsStreamToConnWrapper {
-            ws: c,
+            ws: Box::pin(c),
             r_buf: None,
             w_buf: None,
         }))

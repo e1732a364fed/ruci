@@ -13,7 +13,7 @@ use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 use ruci::utils::{io_error, io_error2};
 
 pub struct WsStreamToConnWrapper<T: ConnTrait> {
-    ws: WebSocketStream<T>,
+    ws: Pin<Box<WebSocketStream<T>>>,
     r_buf: Option<Bytes>,
     w_buf: Option<BytesMut>,
 }
@@ -42,7 +42,7 @@ impl<T: ConnTrait> AsyncRead for WsStreamToConnWrapper<T> {
                 }
                 return Poll::Ready(Ok(()));
             }
-            let message = ready!(Pin::new(&mut self.ws).poll_next(cx));
+            let message = ready!(self.ws.as_mut().poll_next(cx));
             if message.is_none() {
                 return Poll::Ready(Err(io_error("ws stream got none message")));
             }
@@ -77,19 +77,17 @@ impl<T: ConnTrait> AsyncWrite for WsStreamToConnWrapper<T> {
         cx: &mut core::task::Context,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
+        ready!(self.ws.as_mut().poll_ready(cx)).map_err(io_error)?;
+
         let message = if let Some(ref mut b) = self.w_buf.take() {
             b.extend_from_slice(buf);
 
-            ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(io_error)?;
             Message::Binary((&**b).into())
         } else {
-            ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(io_error)?;
             Message::Binary(buf.into())
         };
 
-        Pin::new(&mut self.ws)
-            .start_send(message)
-            .map_err(io_error)?;
+        self.ws.as_mut().start_send(message).map_err(io_error)?;
         Poll::Ready(Ok(buf.len()))
     }
 
@@ -97,19 +95,18 @@ impl<T: ConnTrait> AsyncWrite for WsStreamToConnWrapper<T> {
         mut self: Pin<&mut Self>,
         cx: &mut core::task::Context,
     ) -> Poll<Result<(), io::Error>> {
-        let inner = Pin::new(&mut self.ws);
-        inner.poll_flush(cx).map_err(io_error)
+        self.ws.as_mut().poll_flush(cx).map_err(io_error)
     }
 
     fn poll_shutdown(
         mut self: Pin<&mut Self>,
         cx: &mut core::task::Context,
     ) -> Poll<Result<(), io::Error>> {
-        ready!(Pin::new(&mut self.ws).poll_ready(cx)).map_err(io_error)?;
+        ready!(self.ws.as_mut().poll_ready(cx)).map_err(io_error)?;
         let message = Message::Close(None);
-        let _ = Pin::new(&mut self.ws).start_send(message);
+        let _ = self.ws.as_mut().start_send(message);
 
-        let inner = Pin::new(&mut self.ws);
+        let inner = self.ws.as_mut();
         inner
             .poll_close(cx)
             .map_err(|e| io_error2("ws close got err:", e))
