@@ -56,7 +56,7 @@ impl Client {
             base.write_all(&buf).await?;
             base.flush().await?;
 
-            Ok(MapResult::obc(first_payload, base))
+            Ok(MapResult::newc(base).b(first_payload).build())
         }
     }
 }

@@ -29,6 +29,7 @@ scopeguard = "1.2.0"
 parking_lot = "0.12.1"
 dyn-clone = "1"
 anyhow = "1"
+typed-builder = "0.18.1"
 
 url = "2"
 base64 = "0.21.7"

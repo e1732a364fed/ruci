@@ -41,7 +41,7 @@ pub mod acc;
 mod test;
 
 use crate::{
-    net::{self, addr_conn::AddrConn, *},
+    net::{self, *},
     *,
 };
 use anyhow::anyhow;
@@ -50,8 +50,11 @@ use bytes::BytesMut;
 use dyn_clone::DynClone;
 use log::{info, log_enabled, warn};
 use tokio::{net::TcpStream, sync::oneshot};
+use typed_builder::TypedBuilder;
 
 use std::{fmt::Debug, io, sync::Arc};
+
+use self::addr_conn::AddrConn;
 
 /// 如果新连接不是udp, 则内含新连接
 pub enum NewConnection {
@@ -121,168 +124,59 @@ impl MapParams {
 }
 
 /// add 方法的返回值
-#[derive(Default)]
+#[derive(TypedBuilder, Default)]
 pub struct MapResult {
+    #[builder(default)]
     pub a: Option<net::Addr>, //target_addr
-    pub b: Option<BytesMut>,  //pre read buf
+    #[builder(default)]
+    pub b: Option<BytesMut>, //pre read buf
+
+    #[builder(default)]
     pub c: Stream,
 
     ///extra data, 如果d为 AnyData::B, 则只能被外部调用;, 如果
     /// d为 AnyData::A, 可其可以作为 下一层的 InputData
-    pub d: OptData,
+    #[builder(default, setter(strip_option))]
+    pub d: Option<AnyData>,
+
+    #[builder(default, setter(strip_option))]
     pub e: Option<anyhow::Error>,
 
     /// 有值代表产生了与之前不同的 cid
+    #[builder(default, setter(strip_option))]
     pub new_id: Option<CID>,
 }
 
 //some helper initializers
 impl MapResult {
-    pub fn ac(a: net::Addr, c: net::Conn) -> Self {
-        MapResult {
-            a: Some(a),
-            b: None,
-            c: Stream::TCP(c),
-            d: None,
-            e: None,
-            new_id: None,
-        }
-    }
-    pub fn oac(a: Option<net::Addr>, c: net::Conn) -> Self {
-        MapResult {
-            a,
-            b: None,
-            c: Stream::TCP(c),
-            d: None,
-            e: None,
-            new_id: None,
-        }
-    }
-
-    /// will set b to None if b.len() == 0
-    pub fn abc(a: net::Addr, b: BytesMut, c: net::Conn) -> Self {
-        MapResult {
-            a: Some(a),
-            b: if b.is_empty() { None } else { Some(b) },
-            c: Stream::TCP(c),
-            d: None,
-            e: None,
-            new_id: None,
-        }
-    }
-
-    pub fn abcod(a: net::Addr, b: BytesMut, c: net::Conn, d: Option<AnyData>) -> Self {
-        MapResult {
-            a: Some(a),
-            b: if b.is_empty() { None } else { Some(b) },
-            c: Stream::TCP(c),
-            d,
-            e: None,
-            new_id: None,
-        }
-    }
-
-    pub fn oabc(a: Option<net::Addr>, b: Option<BytesMut>, c: net::Conn) -> Self {
-        MapResult {
-            a,
-            b,
-            c: Stream::TCP(c),
-            d: None,
-            e: None,
-            new_id: None,
-        }
-    }
-
-    pub fn obc(b: Option<BytesMut>, c: net::Conn) -> Self {
-        MapResult {
-            a: None,
-            b,
-            c: Stream::TCP(c),
-            d: None,
-            e: None,
-            new_id: None,
-        }
-    }
-
-    pub fn udp_abc(a: net::Addr, b: BytesMut, c: AddrConn) -> Self {
-        MapResult {
-            a: Some(a),
-            b: if b.is_empty() { None } else { Some(b) },
-            c: Stream::UDP(c),
-            d: None,
-            e: None,
-            new_id: None,
-        }
-    }
-
     pub fn c(c: net::Conn) -> Self {
-        MapResult {
-            a: None,
-            b: None,
-            c: Stream::TCP(c),
-            d: None,
-            e: None,
-            new_id: None,
-        }
-    }
-    pub fn cd(c: net::Conn, d: AnyData) -> Self {
-        MapResult {
-            a: None,
-            b: None,
-            c: Stream::TCP(c),
-            d: Some(d),
-            e: None,
-            new_id: None,
-        }
+        MapResult::newc(c).build()
     }
 
-    pub fn s(s: net::Stream) -> Self {
-        MapResult {
-            a: None,
-            b: None,
-            c: s,
-            d: None,
-            e: None,
-            new_id: None,
-        }
+    pub fn newc(conn: Conn) -> MapResultBuilder<((), (), (net::Stream,), (), (), ())> {
+        MapResult::builder().c(Stream::TCP(conn))
     }
 
-    //Generator
-    pub fn gs(gs: tokio::sync::mpsc::Receiver<MapResult>, cid: CID) -> Self {
-        MapResult {
-            a: None,
-            b: None,
-            c: Stream::Generator(gs),
-            d: None,
-            e: None,
-            new_id: Some(cid),
-        }
+    pub fn newudp(ac: AddrConn) -> MapResultBuilder<((), (), (net::Stream,), (), (), ())> {
+        MapResult::builder().c(Stream::UDP(ac))
     }
 
-    pub fn from_e(e: anyhow::Error) -> Self {
-        MapResult {
-            a: None,
-            b: None,
-            c: Stream::None,
-            d: None,
-            e: Some(e),
-            new_id: None,
-        }
-    }
-
-    pub fn from_err(e: io::Error) -> Self {
-        MapResult {
-            a: None,
-            b: None,
-            c: Stream::None,
-            d: None,
-            e: Some(e.into()),
-            new_id: None,
-        }
+    pub fn newgs(
+        gs: tokio::sync::mpsc::Receiver<MapResult>,
+    ) -> MapResultBuilder<((), (), (net::Stream,), (), (), ())> {
+        MapResult::builder().c(Stream::Generator(gs))
     }
 
     pub fn err_str(estr: &str) -> Self {
-        MapResult::from_e(anyhow!("{}", estr))
+        MapResult::builder().e(anyhow!("{}", estr)).build()
+    }
+
+    pub fn from_err(e: io::Error) -> Self {
+        MapResult::builder().e(e.into()).build()
+    }
+
+    pub fn from_e(e: anyhow::Error) -> Self {
+        MapResult::builder().e(e).build()
     }
 
     pub fn from_result(e: anyhow::Result<MapResult>) -> Self {
@@ -292,49 +186,52 @@ impl MapResult {
         }
     }
 
-    pub fn ebc(e: anyhow::Error, buf: BytesMut, c: net::Conn) -> Self {
-        MapResult {
-            a: None,
-            b: Some(buf),
-            c: Stream::TCP(c),
-            d: None,
-            e: Some(e),
-            new_id: None,
-        }
+    pub fn ebc(e: anyhow::Error, b: BytesMut, c: net::Conn) -> Self {
+        MapResult::newc(c).e(e).b(buf_to_ob(b)).build()
     }
-    pub fn buf_err(buf: BytesMut, e: anyhow::Error) -> Self {
-        MapResult {
-            a: None,
-            b: Some(buf),
-            c: Stream::None,
-            d: None,
-            e: Some(e),
-            new_id: None,
-        }
+
+    pub fn buf_err(b: BytesMut, e: anyhow::Error) -> Self {
+        MapResult::builder().e(e).b(buf_to_ob(b)).build()
     }
     pub fn buf_err_str(buf: BytesMut, estr: &str) -> Self {
         MapResult::buf_err(buf, anyhow!("{}", estr))
     }
+
+    pub fn abcod(a: net::Addr, b: BytesMut, c: net::Conn, d: Option<AnyData>) -> Self {
+        let builder = MapResult::newc(c).a(Some(a)).b(Some(b));
+        match d {
+            Some(d) => builder.d(d).build(),
+            None => builder.build(),
+        }
+    }
 }
 
-/// 指示某 Mapping 行为的含义
+fn buf_to_ob(b: BytesMut) -> Option<BytesMut> {
+    if b.is_empty() {
+        None
+    } else {
+        Some(b)
+    }
+}
+
+/// indicate the meaning of what the Mapper is really doing
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProxyBehavior {
     #[default]
     UNSPECIFIED,
 
-    /// out client 的行为
+    /// outbound's general behabior
     ENCODE,
 
-    ///in server 的行为
+    /// inbound's general behabior
     DECODE,
 }
 
-/// Mapper 流映射函数, 在一个Conn 的基础上添加新read/write层, 形成一个新Conn
+/// Mapper: Stream Mapping Function,
 ///
+/// Generally maps just do a handshake in the old Stream, then forms a new Stream
 ///
-/// 一般来说 maps 方法就是执行一个新层中的握手, 之后得到一个新Conn;
-/// 在 新Conn中 对数据进行加/解密后, pass to next layer Conn
+/// After encode/decode data in the new Stream,it will be passed to next Mapper
 ///
 #[async_trait]
 pub trait Mapper: crate::Name + Debug {
@@ -388,16 +285,17 @@ pub trait ToMapper {
     fn to_mapper(&self) -> MapperBox;
 }
 
-/// 一些辅助方法. See crates/macro_mapper.
+/// Some helper method. See crates/macro_mapper.
 ///
 /// ```plaintext
 /// use macro_mapper::*;
 /// #[common_mapper_field]
 /// #[derive(CommonMapperExt)]
 ///
-/// 或 #[derive(DefaultMapperExt)]
+/// or #[derive(DefaultMapperExt)]
 /// ```
-/// 来自动添加实现
+/// to auto impl MapperExt
+///
 pub trait MapperExt: Mapper {
     fn set_configured_target_addr(&mut self, _a: Option<net::Addr>);
     fn set_is_tail_of_chain(&mut self, _is: bool);
@@ -414,4 +312,4 @@ pub trait MapperExt: Mapper {
 pub trait MapperSync: MapperExt + Send + Sync {}
 impl<T: MapperExt + Send + Sync> MapperSync for T {}
 
-pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
+pub type MapperBox = Box<dyn MapperSync>;

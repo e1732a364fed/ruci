@@ -108,14 +108,13 @@ impl Server {
                 );
 
                 return Ok(MapResult::ebc(e1, buf, base));
-            } else {
-                let e1 = anyhow::anyhow!(
-                    "{cid}, http proxy: get method/path failed: {:?}",
-                    r.fail_reason
-                );
-
-                return Ok(MapResult::ebc(e1, buf, base));
             }
+            let e1 = anyhow::anyhow!(
+                "{cid}, http proxy: get method/path failed: {:?}",
+                r.fail_reason
+            );
+
+            return Ok(MapResult::ebc(e1, buf, base));
         }
         let mut authed_user: Option<PlainText> = None;
 

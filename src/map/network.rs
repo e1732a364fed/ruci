@@ -75,7 +75,7 @@ impl Mapper for Direct {
                             }
                             return MapResult::c(Box::new(c));
                         }
-                        return MapResult::obc(params.b, Box::new(c));
+                        return MapResult::newc(Box::new(c)).b(params.b).build();
                     }
                     Err(e) => return MapResult::from_err(e),
                 }
@@ -107,7 +107,7 @@ impl TcpDialer {
         let r = TcpStream::connect(dial_a.get_socket_addr().expect("dial_a has socket addr")).await;
 
         match r {
-            Ok(c) => MapResult::oabc(pass_a, pass_b, Box::new(c)),
+            Ok(c) => MapResult::newc(Box::new(c)).a(pass_a).b(pass_b).build(),
             Err(e) => MapResult::from_err(e),
         }
     }
@@ -230,7 +230,10 @@ impl TcpStreamGenerator {
                                 let pa = Addr{ addr:net::NetAddr::Socket(raddr), network: net::Network::TCP };
 
                                 let r = tx.send(
-                                    MapResult::cd(Box::new(tcpstream),AnyData::Addr(pa))
+                                    MapResult::newc(Box::new(tcpstream))
+                                    .d(AnyData::Addr(pa))
+                                    .build(),
+
                                 ).await;
                                 if let Err(e) = r {
                                     let e = anyhow!("listen tcp ended by tx e: {}",e);
@@ -286,14 +289,11 @@ impl TcpStreamGenerator {
                         };
 
                         let r = tx
-                            .send(MapResult {
-                                a: None,
-                                b: None,
-                                c: Stream::TCP(Box::new(tcpstream)),
-                                d: Some(AnyData::Addr(pa)),
-                                e: None,
-                                new_id: None,
-                            })
+                            .send(
+                                MapResult::newc(Box::new(tcpstream))
+                                    .d(AnyData::Addr(pa))
+                                    .build(),
+                            )
                             .await;
 
                         if let Err(e) = r {
@@ -330,8 +330,8 @@ impl Mapper for TcpStreamGenerator {
         };
 
         match r {
-            Ok(rx) => MapResult::gs(rx, CID::default()),
-            Err(e) => MapResult::from_err(e),
+            Ok(rx) => MapResult::newgs(rx).build(),
+            Err(e) => MapResult::builder().e(e.into()).build(), //MapResult::from_err(e),
         }
     }
 }
