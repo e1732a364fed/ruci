@@ -73,7 +73,7 @@ impl Map for Stack {
 
                                         //poll->socket_ingress->device.receive->rx_token.consume->process_ip->process_ipv4->process_tcp
 
-                                        match device.new_read_handle{
+                                        match device.data.new_read_handle{
                                             device::NewReadType::None => {
                                                 let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 

@@ -167,9 +167,10 @@ async fn run_engine(e: &mut Engine, close_rx: Option<mpsc::Receiver<()>>) -> any
     }
 
     std::thread::spawn(|| {
-        std::thread::sleep(Duration::from_secs(4));
-        tracing::warn!("Force shutdown after 4 secs!");
-        println!("Force shutdown after 4 secs!");
+        const WAIT_SEC: u64 = 10;
+        std::thread::sleep(Duration::from_secs(WAIT_SEC));
+        tracing::warn!("Force shutdown after {WAIT_SEC} secs!");
+        println!("Force shutdown after {WAIT_SEC} secs!");
         std::process::exit(1);
     });
 

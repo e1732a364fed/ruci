@@ -666,7 +666,7 @@ local config_17_tcp_ip_stack = {
                         tun_dev_name = "utun321",
                         tun_gateway = "10.0.0.1",
                         router_ip = "192.168.0.1",
-                        original_dev_name = "en0",
+                        original_dev_name = "以太网", -- "以太网"
                         dns_list = { "114.114.114.114" }
                     }
                 }
@@ -684,9 +684,9 @@ local config_17_tcp_ip_stack = {
         tag = "dial1",
         chain = { {
             OptDialer = {
-                dial_addr = "tcp://192.168.0.10:10801",
+                dial_addr = "tcp://192.168.0.214:10801",
                 sockopt = {
-                    bind_to_device = "en0"
+                    bind_to_device = "以太网" -- "以太网"
                 }
             }
         }, tlsout, trojan_out }
@@ -883,7 +883,7 @@ local config_23_tcp_ip_stack_lwip = {
 --]]
 
 
-Config = config_22_lua_example2
+Config = config_17_tcp_ip_stack
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)

@@ -167,7 +167,6 @@ Listener 在 监听 udp, 且 有 udp 的 fixed_target_addr 时, 会对每一个 
 
 ### 报错示例: socks5 client only support tcplike stream, got NoStream
 
-
 注意几乎所有的 outbound 都要先有一个 "流发生器", 如 BindDialer, 如果直接是 socks5/trojan 的话, 
 没有流发生器, 是无法建立任何连接的。也就是说, 要有一个拨号环节。
 
@@ -256,7 +255,7 @@ ruci中有三种 route 实现 fixed, tag, info; 而 rucimp 有一种完整的 ro
 
 rucimp 中有很多feature :
 
-lua, lua54, route,geoip, tun, sockopt, use-native-tls, native-tls-vendored, quinn, quic
+lua, lua54, route,geoip, tun, sockopt, use-native-tls, native-tls-vendored, quinn, quic,smoltcp, lwip
 
 
 
@@ -411,7 +410,7 @@ windows上运行 gnu 版会报 应用程序无法正常启动, 0xc00007b
 ### 3
 linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 
-1. 更新系统的glibc或 
+1. 更新系统的glibc
 2. 使用 musl 版
 3. 自己编译
 
@@ -501,25 +500,30 @@ ip route add {v} dev {original_dev_name} metric 100
 
 ### 名词
 
+suit模式为ruci对verysimple的模式的称呼。suit模式不是链式，而是一整套固定的模式。
 在 suit 模式中, 使用 server, client 这样的形式, 而在 chain 模式中, 使用 inbound 和 
-outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不同, 因此叫法不同
+outbound 的形式. 这两者是一样的功能, 只是由于抽象的程度不同, 因此叫法不同。
 
 在 suit 模式中, server 的行为是 listen, client 的行为是 dial; 而在 chain 模式中, inbound
 和 outbound 行为都叫做 map (映射) 
 
 
-## 其它rust代理项目
+## 其它rust/lua代理项目
 
 https://github.com/shadowsocks/shadowsocks-rust
+
+https://github.com/eycorsican/leaf
 
 https://github.com/YtFlow/YtFlowApp
 https://github.com/YtFlow/YtFlowCore
 
 https://github.com/Watfaq/clash-rs
 
-https://github.com/zephyrchien/midori
+https://github.com/Qv2ray/v2ray-rust
 
 https://github.com/lazytiger/trojan-rs
+
+https://github.com/zephyrchien/midori
 
 https://github.com/cfal/shoes
 
@@ -528,3 +532,20 @@ https://github.com/ylxdzsw/v2socks/tree/master
 https://github.com/erebe/turbine_lb
 
 https://github.com/tickbh/wmproxy
+
+https://github.com/Shadowrocket/lua-backend/tree/master
+
+### 项目对比,参考与评估
+
+链式代理的想法来自 v2ray-rust, 但是 ruci中 的 Infinity 完全动态链 与 Dyn_Selectors 部分动态链 的实现是新的想法。
+
+lua自定义协议 先例是 小火箭的 lua-backend, （ruci并未参考其代码） 但是对比而言 ruci 中的lua协议写起来更复杂，因为使用了异步代码。
+
+ruci 中的基本结构 Map 的先例是 YtFlowCore中的 Plugin，（ruci并未参考其代码）。不过它使用的是json配置，没有 lua配置灵活。
+
+http2代码实现 参考了 midori，so_opts 代码参考了 trojan-rs 和 shadowsocks-rust . smoltcp 代码参考了 trojan-rs.
+所有参考项目均使用 MIT 协议。
+
+ruci 项目架构与运行逻辑 参考了 ruci 的前身项目 verysimple。（ruci 乃 rucimple 缩写）
+
+

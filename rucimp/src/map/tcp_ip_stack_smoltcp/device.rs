@@ -30,7 +30,7 @@ const BUF_SIZE: usize = 65535;
 //todo: 解决内存泄漏 问题 和 卡顿 问题
 
 /// 通过 SmoltcpDevice 创建一个 smoltcp::iface::Interface, 其在 smoltcp 中是关键
-pub fn create_interface(device: &mut SmoltcpDevice) -> smoltcp::iface::Interface {
+pub(crate) fn create_interface(device: &mut SmoltcpDevice) -> smoltcp::iface::Interface {
     use smoltcp::wire;
 
     let mut config = smoltcp::iface::Config::new(wire::HardwareAddress::Ip);
@@ -58,34 +58,8 @@ pub fn create_interface(device: &mut SmoltcpDevice) -> smoltcp::iface::Interface
     interface
 }
 
-/*
-
-/// record data upload and download traffic.
-pub struct Traffic {
-    //rx_bytes: usize,
-    tx_bytes: usize,
-    //begin_traffic: std::time::Instant,
-}
-
-impl Default for Traffic {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Traffic {
-    pub fn new() -> Traffic {
-        Self {
-            //rx_bytes: 0,
-            tx_bytes: 0,
-            //begin_traffic: std::time::Instant::now(),
-        }
-    }
-}
- */
-
 /// to record a received message，created by Device's receive method.
-pub struct MyRxToken<'a> {
+pub(crate) struct MyRxToken<'a> {
     data: &'a mut [u8],
 }
 impl<'a> RxToken for MyRxToken<'a> {
@@ -98,9 +72,8 @@ impl<'a> RxToken for MyRxToken<'a> {
 }
 
 /// send msg，created by Device's transmit (and receive) method.
-pub struct MyTxToken {
+pub(crate) struct MyTxToken {
     tx: Sender<BytesMut>,
-    //traffic: &'a mut Traffic,
 }
 impl TxToken for MyTxToken {
     fn consume<R, F>(self, len: usize, f: F) -> R
@@ -116,9 +89,11 @@ impl TxToken for MyTxToken {
     }
 }
 
+#[derive(Default)]
 pub enum NewReadType {
     TCP(SocketHandle),
     UDP(SocketHandle),
+    #[default]
     None,
 }
 
@@ -129,8 +104,8 @@ pub type AMap<K, V> = Arc<Mutex<HashMap<K, V>>>;
 /// Device trait 的 receive 方法会在 smoltcp 的 iface.poll 被调用 后自动触发.
 ///
 /// 主要 存放的是 sockets, 以及对应的几个 channel 以与 每个 TcpStream 收发信息
-pub struct SmoltcpDevice {
-    cid: CID,
+pub(crate) struct SmoltcpDevice {
+    pub data: DeviceData,
 
     r: tokio::io::ReadHalf<Conn>,
 
@@ -143,6 +118,12 @@ pub struct SmoltcpDevice {
     /// 生成新 Stream 后由此发出.
     new_stream_tx: tokio::sync::mpsc::Sender<MapResult>,
 
+    /// only here to be cloned for new TcpStream
+    tcp_write_data_tx: Sender<(SocketHandle, SocketAddr, BytesMut)>,
+
+    /// only here to be cloned for new UdpStream
+    udp_write_data_tx: Sender<(SocketHandle, IpEndpoint, BytesMut)>,
+
     /// SocketSet 是 smoltcp 提供的socket 的容器, 用 socket 对应的
     /// handle 来提取 某个 socket
     ///
@@ -153,6 +134,15 @@ pub struct SmoltcpDevice {
     /// 这个 SocketSet 比较坑，没有check 方法: 一旦get/remove 时 不存在, 就会 panic
     pub tcp_sockets: smoltcp::iface::SocketSet<'static>,
     pub udp_sockets: smoltcp::iface::SocketSet<'static>,
+    // 用于流量记录
+    //traffic: Traffic,
+}
+
+#[derive(Default)]
+pub struct DeviceData {
+    cid: CID,
+
+    pub new_read_handle: NewReadType,
 
     tcp_handle_set: Arc<Mutex<HashSet<SocketHandle>>>,
     udp_handle_set: Arc<Mutex<HashSet<SocketHandle>>>,
@@ -167,16 +157,6 @@ pub struct SmoltcpDevice {
     tcp_read_data_tx_map: AMap<SocketHandle, Sender<BytesMut>>,
 
     udp_read_data_tx_map: AMap<IpEndpoint, Sender<(IpEndpoint, BytesMut)>>,
-
-    /// only here to be cloned for new TcpStream
-    tcp_write_data_tx: Sender<(SocketHandle, SocketAddr, BytesMut)>,
-
-    /// only here to be cloned for new UdpStream
-    udp_write_data_tx: Sender<(SocketHandle, IpEndpoint, BytesMut)>,
-
-    pub new_read_handle: NewReadType,
-    // 用于流量记录
-    //traffic: Traffic,
 }
 
 impl Device for SmoltcpDevice {
@@ -204,7 +184,6 @@ impl Device for SmoltcpDevice {
                 let rx = MyRxToken { data };
                 let tx = MyTxToken {
                     tx: self.device_write_tx.clone(),
-                    //traffic: &mut self.traffic,
                 };
                 self.r_state = Poll::Pending;
                 Some((rx, tx))
@@ -215,7 +194,6 @@ impl Device for SmoltcpDevice {
     fn transmit(&mut self, _timestamp: smoltcp::time::Instant) -> Option<Self::TxToken<'_>> {
         Some(MyTxToken {
             tx: self.device_write_tx.clone(),
-            //traffic: &mut self.traffic,
         })
     }
 
@@ -228,7 +206,7 @@ impl Device for SmoltcpDevice {
 }
 
 /// returned by SmoltcpDevice::create
-pub struct DeviceAndReceivers {
+pub(crate) struct DeviceAndReceivers {
     pub iface: smoltcp::iface::Interface,
     pub device: SmoltcpDevice,
     pub tcp_rx: Receiver<(SocketHandle, SocketAddr, BytesMut)>,
@@ -238,12 +216,12 @@ pub struct DeviceAndReceivers {
 /// 返回 SmoltcpDevice，和 接收 tcp 写新信息 的 Receiver 和 接收 udp 写新信息 的 Receiver
 ///
 ///  接受的 net_stream_tx 将被用于向外发送 从 base_conn 新解析出的 tcp/udp stream.
-pub fn create(
+pub(crate) fn create(
     cid: CID,
     base_conn: ruci::net::Conn,
     new_stream_tx: tokio::sync::mpsc::Sender<MapResult>,
 ) -> DeviceAndReceivers {
-    let (device_write_tx, mut device_write_rx) = mpsc::channel(10000);
+    let (device_write_tx, mut device_write_rx) = mpsc::channel(100);
 
     let (tcp_write_data_tx, tcp_write_data_rx) = mpsc::channel(100);
     let (udp_write_data_tx, udp_write_data_rx) = mpsc::channel(100);
@@ -252,8 +230,6 @@ pub fn create(
 
     let mut device = SmoltcpDevice {
         r,
-        cid,
-        //traffic: Traffic::new(),
         device_write_tx,
 
         rbuf: Box::new([0; u16::MAX as usize]),
@@ -264,36 +240,23 @@ pub fn create(
         tcp_sockets: smoltcp::iface::SocketSet::new([]),
         udp_sockets: smoltcp::iface::SocketSet::new([]),
 
-        tcp_handle_set: Arc::new(Mutex::new(HashSet::new())),
-        udp_handle_set: Arc::new(Mutex::new(HashSet::new())),
-
-        tcp_read_data_tx_map: Arc::new(Mutex::new(HashMap::new())),
-        udp_read_data_tx_map: Arc::new(Mutex::new(HashMap::new())),
-
-        tcp_src_handle_map: Arc::new(Mutex::new(HashMap::new())),
-        tcp_handle_src_map: Arc::new(Mutex::new(HashMap::new())),
-
-        udp_src_handle_map: Arc::new(Mutex::new(HashMap::new())),
-        udp_handle_src_map: Arc::new(Mutex::new(HashMap::new())),
+        data: Default::default(),
 
         tcp_write_data_tx,
         udp_write_data_tx,
-
-        new_read_handle: NewReadType::None,
     };
-    let iface = create_interface(&mut device);
+    device.data.cid = cid;
 
     tokio::spawn(async move {
         loop {
             let ob = device_write_rx.recv().await;
             match ob {
-                Some(b) => match w.write(&b).await {
-                    Ok(_) => {}
-                    Err(e) => {
+                Some(b) => {
+                    if let Err(e) = w.write_all(&b).await {
                         debug!("smoltcp write got e {e}, will break.");
                         break;
                     }
-                },
+                }
                 None => {
                     debug!("smoltcp write got None, will break.");
                     break;
@@ -301,6 +264,7 @@ pub fn create(
             }
         }
     });
+    let iface = create_interface(&mut device);
 
     DeviceAndReceivers {
         iface,
@@ -330,6 +294,7 @@ impl SmoltcpDevice {
 
     /// 被 Device trait 的 receive 方法调用, 检查 self.buf,
     /// 判断是否有新 tcp 产生，如有, 建立新 TcpStream 并 送入 new_stream_tx, 并创建新的 sockethandle 放入 sockets，
+    /// 如果是旧的tcp ，将该tcp 的 sockethandle 记录，以便后面调用的 process_ingress 使用它。
     /// udp 同理
     fn check_read_buf_for_new_conn(&mut self, n: usize) {
         //debug!("check_read_buf_for_new_conn {n}");
@@ -339,7 +304,7 @@ impl SmoltcpDevice {
         let ip_packet = match packet {
             Ok(p) => p,
             Err(e) => {
-                warn!(cid = %self.cid, "smoltcp check_read_buf_for_new_conn got err: {e}");
+                warn!(cid = %self.data.cid, "smoltcp check_read_buf_for_new_conn got err: {e}");
                 return;
             }
         };
@@ -349,21 +314,21 @@ impl SmoltcpDevice {
         match ip_packet.protocol() {
             IpProtocol::Icmp | IpProtocol::Icmpv6 => {
                 //debug!("is icmp, {n} {}",ip_packet.payload().len())
-                self.new_read_handle = NewReadType::None;
+                self.data.new_read_handle = NewReadType::None;
             }
             IpProtocol::Tcp => {
                 //debug!("is tcp, {n} {}",ip_packet.payload().len());
                 let tcp_packet = match TcpPacket::new_checked(ip_packet.payload()) {
                     Ok(p) => p,
                     Err(err) => {
-                        warn!(cid = %self.cid,
+                        warn!(cid = %self.data.cid,
                             "smoltcp check_read_buf_for_new_conn got invalid TCP packet err: {}, src_ip: {}, dst_ip: {}, payload: {}",
                             err,
                             src_ip_addr,
                             dst_ip_addr,
                             ruci::utils::HexSlice(ip_packet.payload())
                         );
-                        self.new_read_handle = NewReadType::None;
+                        self.data.new_read_handle = NewReadType::None;
                         return;
                     }
                 };
@@ -386,9 +351,9 @@ impl SmoltcpDevice {
 
                 let ipe = src_addr.into();
 
-                match self.tcp_src_handle_map.lock().entry(ipe) {
+                match self.data.tcp_src_handle_map.lock().entry(ipe) {
                     Entry::Occupied(occupied_entry) => {
-                        self.new_read_handle = NewReadType::TCP(*occupied_entry.get());
+                        self.data.new_read_handle = NewReadType::TCP(*occupied_entry.get());
                     }
                     Entry::Vacant(e) => {
                         let mut new_tcp_socket = tcp::Socket::new(
@@ -405,15 +370,19 @@ impl SmoltcpDevice {
                         new_tcp_socket.set_ack_delay(None);
 
                         let socket_handle = self.tcp_sockets.add(new_tcp_socket);
-                        self.tcp_handle_set.lock().insert(socket_handle);
+                        self.data.tcp_handle_set.lock().insert(socket_handle);
                         e.insert(socket_handle);
 
-                        self.new_read_handle = NewReadType::TCP(socket_handle);
+                        self.data.new_read_handle = NewReadType::TCP(socket_handle);
 
-                        self.tcp_handle_src_map.lock().insert(socket_handle, ipe);
+                        self.data
+                            .tcp_handle_src_map
+                            .lock()
+                            .insert(socket_handle, ipe);
 
                         let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
-                        self.tcp_read_data_tx_map
+                        self.data
+                            .tcp_read_data_tx_map
                             .lock()
                             .insert(socket_handle, read_tx);
                         let tcp_stream = super::tcp::TcpStream::new(
@@ -448,9 +417,9 @@ impl SmoltcpDevice {
                 //let dst_ipe: IpEndpoint = dst_addr.into();
                 let src_ipe = src_addr.into();
 
-                match self.udp_src_handle_map.lock().entry(src_ipe) {
+                match self.data.udp_src_handle_map.lock().entry(src_ipe) {
                     Entry::Occupied(occupied_entry) => {
-                        self.new_read_handle = NewReadType::UDP(*occupied_entry.get());
+                        self.data.new_read_handle = NewReadType::UDP(*occupied_entry.get());
                     }
                     Entry::Vacant(e) => {
                         use smoltcp::socket::udp::PacketBuffer;
@@ -472,13 +441,16 @@ impl SmoltcpDevice {
 
                         socket.bind(dst_addr).unwrap();
                         let sh = self.udp_sockets.add(socket);
-                        self.udp_handle_set.lock().insert(sh);
+                        self.data.udp_handle_set.lock().insert(sh);
                         e.insert(sh);
-                        self.new_read_handle = NewReadType::UDP(sh);
-                        self.udp_handle_src_map.lock().insert(sh, src_ipe);
+                        self.data.new_read_handle = NewReadType::UDP(sh);
+                        self.data.udp_handle_src_map.lock().insert(sh, src_ipe);
 
                         let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
-                        self.udp_read_data_tx_map.lock().insert(src_ipe, read_tx);
+                        self.data
+                            .udp_read_data_tx_map
+                            .lock()
+                            .insert(src_ipe, read_tx);
 
                         let sa = Addr {
                             addr: NetAddr::Socket(src_addr),
@@ -504,7 +476,7 @@ impl SmoltcpDevice {
 
             _ => {
                 debug!("got unhandled protocol {}", ip_packet.protocol());
-                self.new_read_handle = NewReadType::None;
+                self.data.new_read_handle = NewReadType::None;
             }
         }
     }
@@ -515,7 +487,7 @@ impl SmoltcpDevice {
         let mut udp_src_to_remove = Vec::new();
 
         {
-            let m = self.udp_read_data_tx_map.lock();
+            let m = self.data.udp_read_data_tx_map.lock();
 
             for (src, sender) in m.iter() {
                 // debug!("checking udp for {:?}", src);
@@ -529,16 +501,16 @@ impl SmoltcpDevice {
         self.remove_udp_list(&vec![], udp_src_to_remove);
     }
 
-    /// 名称跟随 smoltcp 的规范.  从smoltcp的 base_conn(tun) 对每个 socket 用 recv_slice 读取数据, 并解析、发送到到实际 TcpStream/UDP的AddrConn 中
+    /// 名称跟随 smoltcp 的规范.  对当前 socket 用 recv_slice 读取数据, 并解析、发送到到实际 TcpStream/UDP的AddrConn 中
     pub fn process_ingress(&mut self) {
         //debug!("process_ingress...");
 
-        match self.new_read_handle {
+        match self.data.new_read_handle {
             NewReadType::TCP(h) => {
                 let mut tcp_handles_to_remove = Vec::new();
                 let mut tcp_src_to_remove = Vec::new();
 
-                if !self.tcp_handle_set.lock().contains(&h) {
+                if !self.data.tcp_handle_set.lock().contains(&h) {
                     // 有可能是在 close、把 handle 删掉后，又调用了一次 tcpstream的 shutdown，此时就是没有 handle 的情况,
                     // 应直接返回
                     return;
@@ -569,7 +541,7 @@ impl SmoltcpDevice {
                 };
 
                 {
-                    let m = self.tcp_read_data_tx_map.lock();
+                    let m = self.data.tcp_read_data_tx_map.lock();
                     let tcp_stream_read_data_sender = m.get(&h).unwrap();
 
                     if tcp_stream_read_data_sender.is_closed() {
@@ -644,14 +616,19 @@ impl SmoltcpDevice {
                     unsafe {
                         buffer.set_len(MTU);
                     }
-                    let r1 = so.recv_slice(buffer.as_mut());
-                    match r1 {
+                    match so.recv_slice(buffer.as_mut()) {
+                        Err(e) => {
+                            debug!("udp e1 {e}");
+
+                            udp_handles_to_remove.push(h);
+                            break;
+                        }
                         Ok((n, src)) => {
                             unsafe {
                                 buffer.set_len(n);
                             }
 
-                            let m = self.udp_read_data_tx_map.lock();
+                            let m = self.data.udp_read_data_tx_map.lock();
                             let udp_read_data_sender = match m.get(&src.endpoint) {
                                 Some(s) => s,
                                 None => {
@@ -674,15 +651,10 @@ impl SmoltcpDevice {
                                 break;
                             }
                         }
-                        Err(e) => {
-                            debug!("udp e1 {e}");
-
-                            udp_handles_to_remove.push(h);
-                            break;
-                        }
                     }
                 }
                 if !so.is_open() {
+                    //这里 smoltcp 中的代码只是检测 endpoint.port 不为0，因此实际在本代码实现中不会被触发
                     debug!("udp not open");
                     udp_handles_to_remove.push(h);
                 }
@@ -701,7 +673,7 @@ impl SmoltcpDevice {
     pub fn send_tcp(&mut self, sh: SocketHandle, mut data: BytesMut) {
         // debug!("process_egress tcp for {sh}, {}", data.len());
 
-        if !self.tcp_handle_set.lock().contains(&sh) {
+        if !self.data.tcp_handle_set.lock().contains(&sh) {
             // 有可能是在 close、把 handle 删掉后，又调用了一次 tcpstream的 shutdown，此时就是没有 handle 的情况,
             // 应直接返回
             return;
@@ -717,7 +689,7 @@ impl SmoltcpDevice {
 
         // let mut count = 0;
         while left_data > 0 {
-            // debug!("while left_data>0, {left_data}, {count}");
+            // debug!("while left_data>0, {left_data}, {count}"); //一般只会发送一次
             // count += 1;
 
             let r = socket.send_slice(&data);
@@ -757,17 +729,12 @@ impl SmoltcpDevice {
             return;
         }
 
-        let r = socket.send_slice(&data, src);
-
-        match r {
-            Ok(_) => {}
-            Err(e) => {
-                debug!(
-                    "smoltcp send udp failed, dst:{src}, l:{}, e:{e}",
-                    data.len()
-                );
-                socket.close()
-            }
+        if let Err(e) = socket.send_slice(&data, src) {
+            debug!(
+                "smoltcp send udp failed, dst:{src}, l:{}, e:{e}",
+                data.len()
+            );
+            socket.close()
         }
     }
 
@@ -780,10 +747,10 @@ impl SmoltcpDevice {
         //     tracing::debug!("remove tcp {:?}", sh_list);
         // }
 
-        let mut tcp_src_handle_map_lock = self.tcp_src_handle_map.lock();
-        let mut tcp_read_data_tx_map_lock = self.tcp_read_data_tx_map.lock();
+        let mut tcp_src_handle_map_lock = self.data.tcp_src_handle_map.lock();
+        let mut tcp_read_data_tx_map_lock = self.data.tcp_read_data_tx_map.lock();
 
-        let mut tcp_handle_src_map_lock = self.tcp_handle_src_map.lock();
+        let mut tcp_handle_src_map_lock = self.data.tcp_handle_src_map.lock();
 
         if !sh_list.is_empty() && src_list.is_empty() {
             for h in sh_list {
@@ -806,7 +773,7 @@ impl SmoltcpDevice {
             tcp_handle_src_map_lock.remove(h);
 
             self.tcp_sockets.remove(*h);
-            self.tcp_handle_set.lock().remove(h);
+            self.data.tcp_handle_set.lock().remove(h);
         }
 
         if is_removing {
@@ -822,10 +789,10 @@ impl SmoltcpDevice {
         //     tracing::debug!("remove udp {:?}", src_list);
         // }
 
-        let mut udp_src_handle_map_lock = self.udp_src_handle_map.lock();
-        let mut udp_read_data_tx_map_lock = self.udp_read_data_tx_map.lock();
+        let mut udp_src_handle_map_lock = self.data.udp_src_handle_map.lock();
+        let mut udp_read_data_tx_map_lock = self.data.udp_read_data_tx_map.lock();
 
-        let mut udp_handle_src_map_lock = self.udp_handle_src_map.lock();
+        let mut udp_handle_src_map_lock = self.data.udp_handle_src_map.lock();
 
         if !sh_list.is_empty() && src_list.is_empty() {
             for h in sh_list {
@@ -846,7 +813,7 @@ impl SmoltcpDevice {
 
         for handle in sh_list {
             self.udp_sockets.remove(*handle);
-            self.udp_handle_set.lock().remove(handle);
+            self.data.udp_handle_set.lock().remove(handle);
             udp_handle_src_map_lock.remove(handle);
         }
 
