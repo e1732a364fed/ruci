@@ -1,5 +1,3 @@
-mod folder_serve;
-
 use std::{
     collections::BTreeMap,
     sync::{atomic::Ordering, Arc},
@@ -26,9 +24,6 @@ use super::*;
 pub enum Command {
     /// start api server
     Run,
-
-    /// serve files in folder "static"
-    FileServer,
 }
 
 pub async fn deal_args(
@@ -37,9 +32,7 @@ pub async fn deal_args(
 ) -> Option<(Server, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>)> {
     match cmd {
         Command::Run => return Some(Server::new(args.api_addr.clone()).await),
-        Command::FileServer => folder_serve::serve_static(args.file_server_addr.clone()).await,
     }
-    None
 }
 
 type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, (DateTime<Utc>, NewConnInfo)>>>;

@@ -50,6 +50,7 @@ quinn = ["rucimp/quinn"]
 
 api_server = ["chrono", "axum", "tower", "tower-http"]
 api_client = ["reqwest"]
+file_server = ["axum", "tower-http"]
 
 utils = ["reqwest", "rcgen"]
 trace = ["rucimp/trace", "TinyUFO"]

@@ -91,11 +91,6 @@ struct Args {
     #[arg(long)]
     api_addr: Option<String>,
 
-    /// default is "0.0.0.0:18143"
-    #[cfg(feature = "api_server")]
-    #[arg(long)]
-    file_server_addr: Option<String>,
-
     #[command(subcommand)]
     sub_cmds: Option<SubCommands>,
 }
@@ -245,6 +240,9 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     #[allow(unused_mut)]
     let mut features_list: Vec<&str> = Vec::new();
+
+    #[cfg(feature = "file_server")]
+    features_list.push("file_server");
 
     #[cfg(feature = "api_server")]
     features_list.push("api_server");

@@ -6,6 +6,9 @@ use ruci::net;
 use tokio::sync::mpsc;
 use tracing::info;
 
+#[cfg(feature = "file_server")]
+pub mod folder_serve;
+
 pub const WINTUN_DOWNLOAD_LINK: &str = "https://www.wintun.net/builds/wintun-0.14.1.zip";
 
 pub const MMDB_DOWNLOAD_LINK: &str =
@@ -36,7 +39,12 @@ pub enum Commands {
     ///
     /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
     PackZ { folder: String },
-    // Test,
+
+    /// serve folder "static".
+    ///
+    /// default listen is "0.0.0.0:18143"
+    #[cfg(feature = "file_server")]
+    ServeFolder { addr: Option<String> }, // Test,
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -93,6 +101,13 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             file.write_all(&data)?;
 
             info!("saved ok");
+        }
+
+        #[cfg(feature = "file_server")]
+        Commands::ServeFolder { addr } => {
+            folder_serve::serve_static(addr).await;
+
+            let _ = rucimp::utils::wait_close_sig().await;
         } // Commands::Test => {}
     };
     Ok(())
