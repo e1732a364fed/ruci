@@ -51,7 +51,6 @@ async fn no_gtr_no_ed(cid: CID, mut in_conn: net::Conn, mut out_conn: net::Conn)
         &mut in_conn,
         &mut out_conn,
         &cid,
-        None,
         #[cfg(feature = "trace")]
         None,
     )
@@ -76,15 +75,18 @@ async fn gtr_no_ed(
         debug!(cid = %cid, "relay end", );
     }
 
-    let _ = net::copy(
+    let r = net::copy(
         &mut in_conn,
         &mut out_conn,
         &cid,
-        Some(gtr.clone()),
         #[cfg(feature = "trace")]
         updater,
     )
     .await;
+    if let Ok((u, d)) = r {
+        gtr.ub.fetch_add(u, Ordering::Relaxed);
+        gtr.db.fetch_add(d, Ordering::Relaxed);
+    }
 }
 
 async fn no_gtr_ed(
@@ -130,7 +132,6 @@ async fn no_gtr_ed(
         &mut in_conn,
         &mut out_conn,
         &cid,
-        None,
         #[cfg(feature = "trace")]
         None,
     )
@@ -180,13 +181,17 @@ async fn gtr_ed(
         debug!(cid = %cid, "relay end");
     }
 
-    let _ = net::copy(
+    let r = net::copy(
         &mut in_conn,
         &mut out_conn,
         &cid,
-        Some(gtr.clone()),
         #[cfg(feature = "trace")]
         updater,
     )
     .await;
+
+    if let Ok((u, d)) = r {
+        gtr.ub.fetch_add(u, Ordering::Relaxed);
+        gtr.db.fetch_add(d, Ordering::Relaxed);
+    }
 }

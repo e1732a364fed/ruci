@@ -22,58 +22,30 @@ pub type OptUpdater = Option<Updater>;
 ///
 /// will add to gtr.db for bytes copied from remote_c to local_c.
 #[allow(unused)]
-pub async fn copy<C1: NamedConn, C2: NamedConn>(
+pub async fn copy<C1: AsyncConn, C2: AsyncConn>(
     local_c: &mut C1,
     remote_c: &mut C2,
     cid: &CID,
-    gtr: Option<Arc<GlobalTrafficRecorder>>,
 
     #[cfg(feature = "trace")] updater: OptUpdater,
 ) -> Result<(u64, u64), Error> {
-    let r = {
-        #[cfg(feature = "trace")]
-        {
-            cp_with_updater(local_c, remote_c, cid, updater).await
-        }
-
-        #[cfg(not(feature = "trace"))]
-        cp(local_c, remote_c).await
-    };
-    if let Ok((u, d)) = r {
-        if let Some(gtr) = gtr {
-            gtr.ub.fetch_add(u, Ordering::Relaxed);
-            gtr.db.fetch_add(d, Ordering::Relaxed);
-        }
+    #[cfg(feature = "trace")]
+    {
+        cp_with_updater(local_c, remote_c, cid, updater).await
     }
 
-    r
-}
-
-/// pure copy without any side effect
-pub async fn cp<C1: AsyncConn, C2: AsyncConn>(
-    c1: &mut C1,
-    c2: &mut C2,
-) -> Result<(u64, u64), Error> {
-    tokio::io::copy_bidirectional(c1, c2).await
+    #[cfg(not(feature = "trace"))]
+    tokio::io::copy_bidirectional(local_c, remote_c).await
 }
 
 #[cfg(feature = "trace")]
-pub async fn cp_with_updater<C1: NamedConn, C2: NamedConn>(
+pub async fn cp_with_updater<C1: AsyncConn, C2: AsyncConn>(
     c1: &mut C1,
     c2: &mut C2,
     cid: &CID,
 
     updater: OptUpdater,
 ) -> Result<(u64, u64), Error> {
-    if tracing::enabled!(tracing::Level::DEBUG) {
-        debug!(
-            cid = %cid,
-            c1 = c1.name(),
-            c2 = c2.name(),
-            "cp start",
-        );
-    }
-
     match updater {
         Some(updater) => {
             let (mut c1_read, mut c1_write) = tokio::io::split(c1);

@@ -417,7 +417,7 @@ pub struct GlobalTrafficRecorder {
     pub ub: AtomicU64,
 }
 
-/// ConnTrait 将 可异步读写的功能抽象出来。
+/// AsyncConn 将 可异步读写的功能抽象出来。
 ///
 /// [`TcpStream`] 也实现了 AsyncConn
 ///
