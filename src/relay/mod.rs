@@ -44,7 +44,7 @@ pub struct HandleInStreamOptions {
 pub async fn handle_in_stream(
     in_conn: Stream,
     ins_iterator: DMIterBox,
-    out_selector: Arc<Box<dyn OutSelector>>,
+    out_selector: Arc<dyn OutSelector>,
 
     mut options: HandleInStreamOptions,
     // gtr: Option<Arc<net::GlobalTrafficRecorder>>,
@@ -119,7 +119,7 @@ pub async fn handle_in_fold_result(
     mut listen_result: fold::FoldResult,
     global_data: Option<GlobalData>,
 
-    out_selector: Arc<Box<dyn OutSelector>>,
+    out_selector: Arc<dyn OutSelector>,
 
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
 

@@ -323,7 +323,7 @@ impl Engine {
         global_data: GlobalData,
 
         mut rx: Receiver<fold::FoldResult>,
-        out_selector: Arc<Box<dyn OutSelector>>,
+        out_selector: Arc<dyn OutSelector>,
         gtr: Arc<GlobalTrafficRecorder>,
         conn_info_recorder: OptNewInfoSender,
         #[cfg(feature = "trace")] conn_info_updater: net::OptUpdater,
@@ -347,7 +347,7 @@ impl Engine {
         Ok(())
     }
 
-    fn get_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
+    fn get_out_selector(&self) -> Arc<dyn OutSelector> {
         #[cfg(feature = "route")]
         {
             if self.rule_sets.is_some() {
@@ -373,17 +373,17 @@ impl Engine {
     }
 
     #[cfg(feature = "route")]
-    fn get_rule_sets_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
+    fn get_rule_sets_out_selector(&self) -> Arc<dyn OutSelector> {
         let s = RuleSetOutSelector {
             outbounds_rules_vec: self.rule_sets.clone().expect("has rule_sets"),
             outbounds_map: self.outbounds.clone(),
             default: self.default_outbound.clone().expect("has default_outbound"),
         };
 
-        Arc::new(Box::new(s))
+        Arc::new(s)
     }
 
-    fn get_tag_route_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
+    fn get_tag_route_out_selector(&self) -> Arc<dyn OutSelector> {
         let s = TagOutSelector {
             outbounds_tag_route_map: self.tag_routes.clone(),
             fallback_tag_route_map: self.fallback_routes.clone(),
@@ -392,14 +392,14 @@ impl Engine {
             ..Default::default()
         };
 
-        Arc::new(Box::new(s))
+        Arc::new(s)
     }
 
-    fn get_fixed_out_selector(&self) -> Arc<Box<dyn OutSelector>> {
+    fn get_fixed_out_selector(&self) -> Arc<dyn OutSelector> {
         let ib = self.default_outbound.clone().expect("has default_outbound");
         let s = FixedOutSelector { default: ib };
 
-        Arc::new(Box::new(s))
+        Arc::new(s)
     }
 
     /// 停止所有的 server, 但并不清空配置. 意味着可以stop后接着调用 run/block_run
