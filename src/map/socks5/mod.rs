@@ -22,7 +22,7 @@ use crate::{
     net::{self},
     user::PlainText,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use bytes::{Buf, BufMut, BytesMut};
 
 // socks5 version number.
@@ -46,6 +46,8 @@ pub const USERPASS_SUBNEGOTIATION_VERSION: u8 = 1;
 
 use lazy_static::lazy_static;
 
+use super::Network;
+
 lazy_static! {
     pub static ref COMMMON_TCP_HANDSHAKE_REPLY: [u8; 10] = {
         [
@@ -65,7 +67,10 @@ pub fn decode_udp_diagram(buf: &mut BytesMut) -> anyhow::Result<net::Addr> {
     }
     let _frag = buf.get_u8();
 
-    net::helpers::socks5_bytes_to_addr(buf)
+    let mut ad = net::helpers::socks5_bytes_to_addr(buf).context("decode_udp_diagram failed")?;
+
+    ad.network = Network::UDP;
+    Ok(ad)
 }
 
 //todo: 支持 fragment
