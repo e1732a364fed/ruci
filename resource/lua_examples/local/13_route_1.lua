@@ -43,10 +43,14 @@ local inbound_tls = {
 Config = {
   outbounds = { d1 = outbound_direct, d2 = outbound_trojan, fallback_d = outbound_fallback },
   inbounds = { l1 = inbound_socks_http, l2 = inbound_dns_proxy, l3 = inbound_tls },
-  tag_route = {
-    { "l1", "d1" },
-    { "l2", "d2" },
-    { "l3", "d2" }
-  },
-  fallback_route = { { "l1", "fallback_d" } }
+
+  routes = {
+    tag_route = {
+      { "l1", "d1" },
+      { "l2", "d2" },
+      { "l3", "d2" }
+    },
+    fallback_route = { { "l1", "fallback_d" } }
+  }
+
 }

@@ -34,7 +34,10 @@ Config = {
     },
     outbounds = { d1 = { "Blackhole" } },
 
-    tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  },
+    routes = {
+        tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  },
+
+    }
 }
 ```
 

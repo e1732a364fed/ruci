@@ -252,6 +252,8 @@ Config = {
     -- outbounds = { dial1 = out_stdio_chain }, --以命令行为出口
     --outbounds = { dial1 = out_stdio_show_bytes_chain },
 
-    fallback_route = { { "listen1", "fallback_d" } }
+    routes = {
+        fallback_route = { { "listen1", "fallback_d" } }
+    }
 
 }

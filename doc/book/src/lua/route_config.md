@@ -3,7 +3,7 @@
 
 ```lua
 
-Config = {
+routes = {
     tag_route = {},
     fallback_route = {},
 }
@@ -46,21 +46,6 @@ outbound 上，此时就用到了 fallback_route. 这整个行为就叫 fallback
 
 fallback_route 是一个 字符串对 的列表。上面示例就是表示 inbound chain "listen1" 里失败的地方将被转发到 
 outbound chain "fallback_dial1" 中。listen1 和 fallback_dial1 是它们的 tag.
-
-
-下面是一个复杂的情况，有多个规则
-
-```lua
-Config = {
-    inbounds = {
-        listen1 = chain1
-    },
-    outbounds = { d1 = { "Blackhole" } },
-
-    tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  },
-}
-```
-
 
 
 # 接下来

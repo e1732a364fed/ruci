@@ -16,6 +16,6 @@ local tun_config = {
 
 
 Config = {
-  outbounds = { dial1 = outbound_stdio },
+  outbounds = { dial1 = { outbound_stdio } },
   inbounds = { listen1 = { tun_config } }
 }

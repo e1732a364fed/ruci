@@ -288,7 +288,10 @@ fn test_tag_route() -> anyhow::Result<()> {
                         {type = "Direct"}
                     }
             },
-            tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  }
+            routes = {
+                tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  }
+
+            }
         }
         "#;
 
@@ -339,8 +342,8 @@ fn test_config1() -> anyhow::Result<()> {
     outbounds.insert("c2".to_string(), c2);
 
     let c = StaticConfig {
-        inbounds: inbounds,
-        outbounds: outbounds,
+        inbounds,
+        outbounds,
         ..Default::default()
     };
 

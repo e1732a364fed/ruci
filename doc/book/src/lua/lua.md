@@ -19,15 +19,18 @@ Config = {
 
 
 
-中级用法中，Config 中还有 fallback_route, tag_route, rule_route 这几项：
+中级用法中，Config 中还有 fallback_route, tag_route, rule_route 这几项, 包在 routes 中：
 
 ```lua
 
 Config = {
     inbounds = {},
     outbounds = {},
-    fallback_route = {},
-    tag_route = {},
+    routes = {
+        fallback_route = {},
+        tag_route = {},
+    }
+    
 }
 ```
 

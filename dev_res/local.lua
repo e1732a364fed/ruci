@@ -268,7 +268,9 @@ local config_2_tproxy1 = {
     outbounds = {
         direct = opt_direct_chain
     },
-    tag_route = { { "listen1", "direct" }, { "listen_udp1", "direct" } },
+    routes = {
+        tag_route = { { "listen1", "direct" }, { "listen_udp1", "direct" } },
+    }
 
     --[[
 演示 inbound 是 tproxy, outbound 是 direct 的情况
@@ -284,7 +286,9 @@ local config_3_tproxy2 = {
         out = optdial_trojans_chain
     },
 
-    tag_route = { { "listen1", "out" }, { "listen_udp1", "out" } },
+    routes = {
+        tag_route = { { "listen1", "out" }, { "listen_udp1", "out" } },
+    }
 
     --[[
 演示 inbound 是 tproxy, outbound 是  trojan out 的情况
@@ -453,31 +457,34 @@ local config_13_route = {
         } }
     },
 
-    --[==[
-    tag_route = { { "l1", "d1" }, { "l2", "d2" }, { "l3", "d2" } },
+    routes = {
+        --[==[
+        tag_route = { { "l1", "d1" }, { "l2", "d2" }, { "l3", "d2" } },
 
-    fallback_route = { { "l1", "fallback_d" } }
+        fallback_route = { { "l1", "fallback_d" } }
 
-    -- ]==]
+        -- ]==]
 
-    ---[==[
+        ---[==[
 
-    rule_route = { {
-        mode = "WhiteList",
-        out_tag = "d1",
-        in_tags = { "l1" }
-    }, {
-        mode = "WhiteList",
-        out_tag = "d2",
-        in_tags = { "l3", "l2" }
-    }, {
-        mode = "WhiteList",
-        out_tag = "fallback_d",
-        in_tags = { "l1" },
-        is_fallback = true
-    } }
+        rule_route = { {
+            mode = "WhiteList",
+            out_tag = "d1",
+            in_tags = { "l1" }
+        }, {
+            mode = "WhiteList",
+            out_tag = "d2",
+            in_tags = { "l3", "l2" }
+        }, {
+            mode = "WhiteList",
+            out_tag = "fallback_d",
+            in_tags = { "l1" },
+            is_fallback = true
+        } }
 
-    -- ]==]
+        -- ]==]
+    }
+
 
     --[[
 演示 多in多out的情况, 只要outbounds有多个, 您就应该考虑使用路由配置

@@ -61,8 +61,12 @@ local inbound_trojan = {
 Config = {
   outbounds = { dial_direct = outbound_direct, dial_trojans = outbound_trojan },
   inbounds = { listen_socks5 = inbound_socks5, listen_trojans = inbound_trojan },
-  tag_route = {
-    { "listen_socks5",  "dial_trojans" },
-    { "listen_trojans", "dial_direct" }
+
+  routes = {
+    tag_route = {
+      { "listen_socks5",  "dial_trojans" },
+      { "listen_trojans", "dial_direct" }
+    }
   }
+
 }

@@ -22,5 +22,8 @@ local inbound_tls_trojan = {
 Config = {
   outbounds = { dial1 = outbound_direct, fallback_d = outbound_fallback },
   inbounds = { listen1 = inbound_tls_trojan },
-  fallback_route = { { "listen1", "fallback_d" } }
+  routes = {
+    fallback_route = { { "listen1", "fallback_d" } }
+
+  }
 }

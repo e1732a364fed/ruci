@@ -62,6 +62,12 @@ use crate::map::tproxy::{self, TcpResolver};
 pub struct StaticConfig {
     pub inbounds: BTreeMap<String, Vec<InMapConfig>>,
     pub outbounds: BTreeMap<String, Vec<OutMapConfig>>,
+
+    pub routes: Option<Routes>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct Routes {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tag_route: Option<Vec<(String, String)>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -190,17 +196,23 @@ impl StaticConfig {
 
     /// panic if the given tag isn't presented in outbounds
     pub fn get_tag_route(&self) -> Option<HashMap<String, String>> {
-        self.tag_route.as_ref().map(|tr| {
-            let route_tag_pairs = tr.clone();
-            route_tag_pairs.into_iter().collect::<HashMap<_, _>>()
-        })
+        match &self.routes {
+            Some(r) => r.tag_route.as_ref().map(|tr| {
+                let route_tag_pairs = tr.clone();
+                route_tag_pairs.into_iter().collect::<HashMap<_, _>>()
+            }),
+            None => None,
+        }
     }
 
     pub fn get_fallback_route(&self) -> Option<HashMap<String, String>> {
-        self.fallback_route.as_ref().map(|tr| {
-            let route_tag_pairs = tr.clone();
-            route_tag_pairs.into_iter().collect::<HashMap<_, _>>()
-        })
+        match &self.routes {
+            Some(r) => r.fallback_route.as_ref().map(|tr| {
+                let route_tag_pairs = tr.clone();
+                route_tag_pairs.into_iter().collect::<HashMap<_, _>>()
+            }),
+            None => None,
+        }
     }
 
     /// clash route 会把 geosite 的数据也加进去
@@ -208,7 +220,8 @@ impl StaticConfig {
         &self,
         data_source: Arc<DataSource>,
     ) -> Option<Arc<clash_rules::ClashRuleMatcher>> {
-        self.clash_rules
+        let r = self.routes.as_ref()?;
+        r.clash_rules
             .clone()
             .and_then(|file_name| {
                 let (d, _) = data_source.get_file_content(Path::new(&file_name)).ok()?;
@@ -216,7 +229,7 @@ impl StaticConfig {
                 let mut method_rules_map =
                     clash_rules::parse_rules(&clash_rules::load_rules_from_str(cs.as_ref()).ok()?);
 
-                if let Some(f) = &self.geosite {
+                if let Some(f) = &r.geosite {
                     let (d, _) = data_source.get_file_content(Path::new(f)).ok()?;
                     let l = geosite_rs::decode_geosite(&d).ok()?;
                     let gtm =
@@ -232,7 +245,7 @@ impl StaticConfig {
                 r.ok().map(Arc::new)
             })
             .or_else(|| {
-                self.geosite.as_ref().and_then(|f| {
+                r.geosite.as_ref().and_then(|f| {
                     let (d, _) = data_source.get_file_content(Path::new(f)).ok()?;
                     let l = geosite_rs::decode_geosite(&d).ok()?;
                     let m = geosite_rs::geosite_to_hashmap(&l, HashMap::new());
