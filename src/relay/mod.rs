@@ -3,12 +3,12 @@ relay 包定义了一种转发逻辑, 但是它不是强制性的, 可用于参�
 具体实现 中可以有不同的转发逻辑
 
 */
-mod cp_ac_conn;
+mod cp_ac;
 mod cp_conn;
 pub mod record;
 pub mod route;
 
-pub use cp_ac_conn::*;
+pub use cp_ac::*;
 pub use cp_conn::*;
 pub use record::*;
 
@@ -17,7 +17,6 @@ use std::sync::Arc;
 use bytes::BytesMut;
 use tracing::{debug, info, warn};
 
-use crate::net::addr_conn::{AddrConn, AsyncWriteAddrExt};
 use crate::net::{self, Addr, Stream, CID};
 
 use self::fold::{DMIterBox, FoldParams};
@@ -339,37 +338,33 @@ pub async fn cp_stream(args: CpStreamArgs) {
             args.updater,
         ),
         (Stream::Conn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_ac_conn::cp_addr_conn_and_conn(
-                cp_ac_conn::CpAddrConnAndConnArgs {
-                    cid,
-                    ac: o,
-                    c: i,
-                    ed_from_ac: false,
-                    ed,
-                    first_target,
-                    gtr: tr,
-                    no_timeout,
-                    shutdown_ac_rx: shutdown_out_rx,
-                },
-            ));
+            tokio::spawn(cp_ac::cp_ac_and_c(cp_ac::CpAddrConnAndConnArgs {
+                cid,
+                ac: o,
+                c: i,
+                ed_from_ac: false,
+                ed,
+                first_target,
+                gtr: tr,
+                no_timeout,
+                shutdown_ac_rx: shutdown_out_rx,
+            }));
         }
         (Stream::AddrConn(i), Stream::Conn(o)) => {
-            tokio::spawn(cp_ac_conn::cp_addr_conn_and_conn(
-                cp_ac_conn::CpAddrConnAndConnArgs {
-                    cid,
-                    ac: i,
-                    c: o,
-                    ed_from_ac: true,
-                    ed,
-                    first_target,
-                    gtr: tr,
-                    no_timeout,
-                    shutdown_ac_rx: shutdown_in_rx,
-                },
-            ));
+            tokio::spawn(cp_ac::cp_ac_and_c(cp_ac::CpAddrConnAndConnArgs {
+                cid,
+                ac: i,
+                c: o,
+                ed_from_ac: true,
+                ed,
+                first_target,
+                gtr: tr,
+                no_timeout,
+                shutdown_ac_rx: shutdown_in_rx,
+            }));
         }
         (Stream::AddrConn(i), Stream::AddrConn(o)) => {
-            cp_addr_conn(CpAddrConnArgs {
+            cp_ac(CpAddrConnArgs {
                 cid,
                 in_conn: i,
                 out_conn: o,
@@ -386,68 +381,4 @@ pub async fn cp_stream(args: CpStreamArgs) {
             warn!( in_s = %in_s, out_s = %out_s,"can't cp stream when one of them is not (Conn or AddrConn)");
         }
     }
-}
-
-pub struct CpAddrConnArgs {
-    cid: CID,
-    in_conn: AddrConn,
-    out_conn: AddrConn,
-    ed: Option<BytesMut>,
-    first_target: Option<net::Addr>,
-    tr: Option<Arc<net::GlobalTrafficRecorder>>,
-    no_timeout: bool,
-    shutdown_in_rx: Option<tokio::sync::oneshot::Receiver<()>>,
-    shutdown_out_rx: Option<tokio::sync::oneshot::Receiver<()>>,
-}
-
-/// copy between two [`AddrConn`]
-///
-/// non-blocking
-///
-pub async fn cp_addr_conn(args: CpAddrConnArgs) {
-    use crate::Name;
-
-    let cid = args.cid;
-    let in_conn = args.in_conn;
-    let mut out_conn = args.out_conn;
-    let ed = args.ed;
-    let first_target = args.first_target;
-    let tr = args.tr;
-    let no_timeout = args.no_timeout;
-    let shutdown_in_rx = args.shutdown_in_rx;
-    let shutdown_out_rx = args.shutdown_out_rx;
-
-    if let Some(real_ed) = ed {
-        if let Some(real_first_target) = first_target {
-            debug!(cid = %cid, "cp_addr_conn: writing ed {:?}", real_ed.len());
-            let r = out_conn.w.write(&real_ed, &real_first_target).await;
-            if let Err(e) = r {
-                warn!("cp_addr_conn: writing ed failed: {e}");
-                let _ = out_conn.w.shutdown().await;
-                return;
-            }
-        } else {
-            debug!(cid = %cid,
-                "cp_addr_conn: writing ed without real_first_target {:?}",
-                real_ed.len()
-            );
-            let r = out_conn.w.write(&real_ed, &Addr::default()).await;
-            if let Err(e) = r {
-                warn!(cid = %cid, "cp_addr_conn: writing ed failed: {e}");
-                let _ = out_conn.w.shutdown().await;
-                return;
-            }
-        }
-    }
-    debug!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
-
-    tokio::spawn(net::addr_conn::cp(
-        cid.clone(),
-        in_conn,
-        out_conn,
-        tr,
-        no_timeout,
-        shutdown_in_rx,
-        shutdown_out_rx,
-    ));
 }

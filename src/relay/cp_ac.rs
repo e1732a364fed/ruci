@@ -4,8 +4,10 @@ copy between [`AddrConn`] and [`net::Conn`]
 
 use crate::net;
 use crate::net::addr_conn::*;
+use crate::net::Addr;
+use crate::net::Conn;
 use crate::net::CID;
-use crate::utils::io_error;
+use anyhow::bail;
 use bytes::BytesMut;
 use std::io;
 use std::ops::DerefMut;
@@ -18,23 +20,92 @@ use tokio::io::AsyncWriteExt;
 use tokio::io::ReadBuf;
 use tracing::debug;
 use tracing::info;
+use tracing::warn;
 
 //todo: improve code
 
+pub struct CpAddrConnArgs {
+    pub cid: CID,
+    pub in_conn: AddrConn,
+    pub out_conn: AddrConn,
+    pub ed: Option<BytesMut>,
+    pub first_target: Option<Addr>,
+    pub tr: Option<Arc<net::GlobalTrafficRecorder>>,
+    pub no_timeout: bool,
+    pub shutdown_in_rx: Option<tokio::sync::oneshot::Receiver<()>>,
+    pub shutdown_out_rx: Option<tokio::sync::oneshot::Receiver<()>>,
+}
+
+/// copy between two [`AddrConn`]
+///
+/// non-blocking
+///
+pub async fn cp_ac(args: CpAddrConnArgs) {
+    use crate::Name;
+
+    let cid = args.cid;
+    let in_conn = args.in_conn;
+    let mut out_conn = args.out_conn;
+    let ed = args.ed;
+    let first_target = args.first_target;
+    let tr = args.tr;
+    let no_timeout = args.no_timeout;
+    let shutdown_in_rx = args.shutdown_in_rx;
+    let shutdown_out_rx = args.shutdown_out_rx;
+
+    if let Some(real_ed) = ed {
+        if let Some(real_first_target) = first_target {
+            debug!(cid = %cid, "cp_addr_conn: writing ed {:?}", real_ed.len());
+            let r = out_conn.w.write(&real_ed, &real_first_target).await;
+            if let Err(e) = r {
+                warn!("cp_addr_conn: writing ed failed: {e}");
+                let _ = out_conn.w.shutdown().await;
+                return;
+            }
+        } else {
+            debug!(cid = %cid,
+                "cp_addr_conn: writing ed without real_first_target {:?}",
+                real_ed.len()
+            );
+            let r = out_conn.w.write(&real_ed, &Addr::default()).await;
+            if let Err(e) = r {
+                warn!(cid = %cid, "cp_addr_conn: writing ed failed: {e}");
+                let _ = out_conn.w.shutdown().await;
+                return;
+            }
+        }
+    }
+    debug!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
+
+    tokio::spawn(net::addr_conn::cp(
+        cid.clone(),
+        in_conn,
+        out_conn,
+        tr,
+        no_timeout,
+        shutdown_in_rx,
+        shutdown_out_rx,
+    ));
+}
+
 pub struct CpAddrConnAndConnArgs {
     pub cid: CID,
-    pub ac: net::addr_conn::AddrConn,
-    pub c: net::Conn,
+    pub ac: AddrConn,
+    pub c: Conn,
     pub ed_from_ac: bool,
     pub ed: Option<BytesMut>,
-    pub first_target: Option<net::Addr>,
+    pub first_target: Option<Addr>,
     pub gtr: Option<Arc<net::GlobalTrafficRecorder>>,
     pub no_timeout: bool,
     pub shutdown_ac_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
-/// blocking. discard udp addr part when copy from AddrConn to Conn
-pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u64> {
+/// copy between [`AddrConn`] and [`Conn`] by calling both cp_c_to_ac and cp_ac_to_c.
+///
+/// blocking.
+///
+/// Discard udp addr part when copy from [`AddrConn`] to [`Conn`]
+pub async fn cp_ac_and_c(args: CpAddrConnAndConnArgs) -> anyhow::Result<u64> {
     let cid = args.cid;
     let mut ac = args.ac;
     let mut c = args.c;
@@ -76,31 +147,26 @@ pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u6
                 std::future::pending().await
             }
         }=>{
-            Err(io_error("got shutdown"))
+            bail!("cp_addr_conn_and_conn got shutdown")
         }
-        r1 = cp_conn_to_addr_conn(&mut r, ac.w) => {
-            r1
+        r1 = cp_c_to_ac(&mut r, ac.w) => {
+            Ok(r1?)
         }
-        r2 = async{
-            if args.no_timeout{
-                cp_addr_conn_to_conn(ac.r, &mut w).await
-            }else{
-                cp_addr_conn_to_conn_timeout(ac.r, &mut w).await
-            }
-        } => {
-            r2
+        r2 = cp_ac_to_c(ac.r, &mut w,args.no_timeout) => {
+            Ok(r2?)
         }
     }
 }
 
-pub async fn cp_conn_to_addr_conn<R>(r: &mut R, mut w: impl AddrWriteTrait) -> io::Result<u64>
+/// copy from [`Conn`] to [`AddrConn`], with empty addr. blocking.
+pub async fn cp_c_to_ac<R>(r: &mut R, mut w: impl AddrWriteTrait) -> io::Result<u64>
 where
     R: AsyncRead + Unpin + ?Sized,
 {
     let mut whole: u64 = 0;
     let mut buf = Box::new([0u8; MTU]);
 
-    let a = net::Addr::default();
+    let a = Addr::default();
     loop {
         let r = r.read(buf.deref_mut()).await;
         match r {
@@ -120,9 +186,11 @@ where
     Ok(whole)
 }
 
-pub async fn cp_addr_conn_to_conn_timeout<W>(
+/// copy from [`AddrConn`] to [`Conn`], discard addr part. blocking.
+pub async fn cp_ac_to_c<W>(
     mut r: impl AddrReadTrait,
     w: &mut W,
+    no_timeout: bool,
 ) -> io::Result<u64>
 where
     W: AsyncWrite + Unpin + ?Sized,
@@ -131,21 +199,22 @@ where
     let mut buf = Box::new([0u8; MTU]);
 
     loop {
-        let r_ref = &mut r;
-        let buf_ref = buf.deref_mut();
-
-        let read_f = async move {
-            let mut buf = ReadBuf::new(buf_ref);
-            r_ref.read(buf.initialized_mut()).await
-        };
-
         tokio::select! {
-            _ = tokio::time::sleep(CP_UDP_TIMEOUT) =>{
+            _ = async{
+                if no_timeout{
+                    std::future::pending().await
+                }else{
+                    tokio::time::sleep(CP_UDP_TIMEOUT).await
+                }
+            } =>{
                 debug!("cp_addr_conn_to_conn timeout");
 
                 break;
             }
-            r = read_f =>{
+            r =  async {
+                let mut buf = ReadBuf::new(buf.deref_mut());
+                r.read(buf.initialized_mut()).await
+            } =>{
 
                 match r {
                     Err(e) => {
@@ -175,54 +244,9 @@ where
                             }
                         }
                     }
-                }
-            }
+                }//match
+            }//read
         } //select
-    } //loop
-
-    Ok(whole_write as u64)
-}
-
-pub async fn cp_addr_conn_to_conn<W>(mut r: impl AddrReadTrait, w: &mut W) -> io::Result<u64>
-where
-    W: AsyncWrite + Unpin + ?Sized,
-{
-    let mut whole_write = 0;
-
-    loop {
-        let rr = &mut r;
-
-        let mut buf0 = Box::new([0u8; MTU]);
-        let mut buf = ReadBuf::new(buf0.deref_mut());
-        let r = rr.read(buf.initialized_mut()).await;
-
-        match r {
-            Err(e) => {
-                debug!("cp_addr_to_conn, read not ok {e}");
-
-                break;
-            }
-            Ok((m, _ad)) => {
-                if m > 0 {
-                    //debug!("cp_addr_to_conn, read got {m}");
-                    let r = w.write(&buf0[..m]).await;
-                    if let Ok(n) = r {
-                        //debug!("cp_addr_to_conn, write ok {n}");
-
-                        whole_write += n;
-
-                        let r = w.flush().await;
-                        if r.is_err() {
-                            debug!("cp_addr_to_conn, write  flush not ok {r:?}");
-                            break;
-                        }
-                    } else {
-                        debug!("cp_addr_to_conn, write not ok {r:?}");
-                        break;
-                    }
-                }
-            }
-        }
     } //loop
 
     Ok(whole_write as u64)

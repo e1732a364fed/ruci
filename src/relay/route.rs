@@ -4,9 +4,12 @@
 它被一些代理称为 ACL (Access Control List), 但这个名称并不准确, "路由规则"更加准确. 因为
 不仅可以用于 "防火墙", 还可以用于分流
 
-因为本模块属于 ruci 包, 所以这里只实现一些简易通用的 OutSelector, 复杂的需要外部依赖包的实现 需要在其它包中实现.
-
+因为本模块属于 ruci 包, 所以这里只实现一些简易通用的 OutSelector, 复杂的需要外部包的实现,
 也因为, 复杂的规则往往有自定义的配置格式, 而ruci包是 配置无关的.
+
+
+如 rucimp 包有rule_route的实现.
+
 */
 
 use std::{
@@ -25,8 +28,7 @@ use crate::{
 
 use super::Data;
 
-///
-/// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 [`DMIterBox`]
+/// OutSelector 接受 [从一次链累加行为中 得到的数据] 来试图 选择出一个 [`DMIterBox`]
 ///
 /// 选择出的 [`DMIterBox`] 一般是用于 outbound,
 ///
