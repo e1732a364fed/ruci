@@ -71,7 +71,8 @@ impl Engine {
         self.tag_routes = sc.get_tag_route();
     }
 
-    pub fn init_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
+    #[cfg(feature = "lua")]
+    pub fn init_lua_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
         let (sc, ibs, default_o, ods) = lua::load_bounded_dynamic_leak(config_string)?;
         self.inbounds = ibs;
         self.default_outbound = Some(default_o);

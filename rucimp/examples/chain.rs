@@ -1,6 +1,6 @@
 /*!
 * 在 working dir 或 working dir /resource 或 ../resource/ 文件夹查找 local.lua 或
- 用户提供的参数作为配置文件 读取它并以 chain 模式运行。
+ 用户提供的参数作为配置文件 读取它并以 chain 模式运行。新连接写入 newconn.log 文件
 */
 
 use std::env;
@@ -8,10 +8,7 @@ use std::env;
 use chrono::{DateTime, Utc};
 use log::warn;
 use ruci::relay::*;
-use rucimp::{
-    cmd_common::*,
-    modes::chain::{config::lua, engine::Engine},
-};
+use rucimp::{cmd_common::*, modes::chain::engine::Engine};
 use tokio::{
     fs::{File, OpenOptions},
     io::AsyncWriteExt,
@@ -34,9 +31,11 @@ async fn main() -> anyhow::Result<()> {
     let contents = try_get_filecontent(&default_fn, arg_f)?;
 
     let mut se = Engine::default();
-    let sc = lua::load_static(&contents).expect("has valid lua codes in the file content");
+    // let sc = lua::load_static(&contents).expect("has valid lua codes in the file content");
 
-    se.init_static(sc);
+    // se.init_static(sc);
+
+    se.init_lua_dynamic(contents)?;
 
     let conn_info_record_file = OpenOptions::new()
         .append(true)

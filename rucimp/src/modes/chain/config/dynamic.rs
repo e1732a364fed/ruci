@@ -109,18 +109,20 @@ pub struct Bounded {
 
     pub selector: Box<dyn NextSelector>,
 
-    pub current_index: usize,
+    pub current_index: i64,
 
     pub history: Vec<usize>,
 }
 
 #[async_trait]
 pub trait NextSelector: Debug + DynClone + Send + Sync {
+    /// 初始index 传入 -1. 如果 返回值为 None, 或 返回值<0 或 返回值 大于最大索引值,
+    /// 则意味着链终止
     async fn next_index(
         &self,
-        this_index: usize,
+        this_index: i64,
         data: Option<Vec<ruci::map::OptVecData>>,
-    ) -> Option<usize>;
+    ) -> Option<i64>;
 }
 dyn_clone::clone_trait_object!(NextSelector);
 
@@ -133,9 +135,16 @@ impl DynIterator for Bounded {
         let oi = self.selector.next_index(self.current_index, data).await;
         match oi {
             Some(i) => {
+                if i < 0 {
+                    return None;
+                }
+                let iu: usize = i as usize;
+                if iu >= self.mb_vec.len() {
+                    return None;
+                }
                 self.current_index = i;
-                self.history.push(i);
-                self.mb_vec.get(i).cloned()
+                self.history.push(iu);
+                self.mb_vec.get(iu).cloned()
             }
             None => None,
         }

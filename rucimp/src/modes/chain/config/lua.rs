@@ -22,9 +22,6 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
 
 //todo: 写得太乱了，improve code
 
-// const BOUNDED_DYNAMIC_INBOUND_SELECTOR_NAME: &str = "dyn_inbound_next_selector";
-// const BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME: &str = "dyn_outbound_next_selector";
-
 const GET_DYN_SELECTOR_FOR: &str = "get_dyn_selector_for";
 
 /// test if the lua text is ok for bounded dynamic
@@ -35,12 +32,11 @@ pub fn try_load_bounded_dynamic(lua_text: &str) -> Result<()> {
     let lg = lua.globals();
 
     let _s1: LuaFunction = lg.get(GET_DYN_SELECTOR_FOR)?;
-    // let _s2: LuaFunction = lg.get(BOUNDED_DYNAMIC_OUTBOUND_SELECTOR_NAME)?;
 
     Ok(())
 }
 
-pub struct SelectorHelper<'a> {
+struct SelectorHelper<'a> {
     pub inbounds_selector: HashMap<String, LuaNextSelector2<'a>>,
     pub outbounds_selector: HashMap<String, LuaNextSelector2<'a>>,
 }
@@ -61,7 +57,7 @@ pub fn load_bounded_dynamic_leak(
     Ok((sc, a, b, c))
 }
 
-pub fn load_bounded_dynamic_helper<'a>(
+fn load_bounded_dynamic_helper<'a>(
     lua: &'a Lua,
     lua_text: String,
 ) -> Result<(StaticConfig, SelectorHelper<'a>)> {
@@ -69,9 +65,11 @@ pub fn load_bounded_dynamic_helper<'a>(
 
     let lg = lua.globals();
 
-    let clt: LuaTable = lg.get("config")?;
+    let clt: LuaTable = lg.get("config").context("lua has no config field")?;
 
-    let getter: LuaFunction = lg.get(GET_DYN_SELECTOR_FOR)?;
+    let getter: LuaFunction = lg
+        .get(GET_DYN_SELECTOR_FOR)
+        .context(format!("lua has no {}", GET_DYN_SELECTOR_FOR))?;
 
     let c: StaticConfig = lua.from_value(Value::Table(clt))?;
     let x: HashMap<String, LuaNextSelector2> = c
@@ -86,7 +84,10 @@ pub fn load_bounded_dynamic_helper<'a>(
                     panic!("get dyn_bounded_selector for {tag} err: {}", err);
                 }
             };
-            (tag.to_string(), LuaNextSelector2(x))
+            (
+                tag.to_string(),
+                LuaNextSelector2(Arc::new(parking_lot::Mutex::new(x))),
+            )
         })
         .collect();
 
@@ -102,7 +103,10 @@ pub fn load_bounded_dynamic_helper<'a>(
                     panic!("get dyn_bounded_selector for {tag} err: {}", err);
                 }
             };
-            (tag.to_string(), LuaNextSelector2(x))
+            (
+                tag.to_string(),
+                LuaNextSelector2(Arc::new(parking_lot::Mutex::new(x))),
+            )
         })
         .collect();
 
@@ -115,7 +119,7 @@ pub fn load_bounded_dynamic_helper<'a>(
 }
 
 /// returns inbounds, first_outbound, outbound_map
-pub fn get_dmiter_from_static_config_and_helper(
+fn get_dmiter_from_static_config_and_helper(
     c: StaticConfig,
     mut sh: SelectorHelper<'static>,
 ) -> (Vec<DMIterBox>, DMIterBox, Arc<HashMap<String, DMIterBox>>) {
@@ -130,7 +134,7 @@ pub fn get_dmiter_from_static_config_and_helper(
 
             let x: DMIterBox = Box::new(Bounded {
                 mb_vec: inbound,
-                current_index: 0,
+                current_index: -1,
                 history: Vec::new(),
                 selector,
             });
@@ -158,7 +162,7 @@ pub fn get_dmiter_from_static_config_and_helper(
 
             let outbound_iter: DMIterBox = Box::new(Bounded {
                 mb_vec: outbound,
-                current_index: 0,
+                current_index: -1,
                 history: Vec::new(),
                 selector,
             });
@@ -177,7 +181,7 @@ pub fn get_dmiter_from_static_config_and_helper(
 /// 弊端：使用 global中的名，慢
 #[derive(Debug, Clone)]
 pub struct LuaNextSelector {
-    lua: Arc<tokio::sync::Mutex<Lua>>,
+    lua: Arc<parking_lot::Mutex<Lua>>,
     func_name: String,
 }
 
@@ -185,11 +189,11 @@ pub struct LuaNextSelector {
 impl NextSelector for LuaNextSelector {
     async fn next_index(
         &self,
-        this_index: usize,
+        this_index: i64,
         data: Option<Vec<ruci::map::OptVecData>>,
-    ) -> Option<usize> {
+    ) -> Option<i64> {
         let w = OptVecOptVecDataLuaWrapper(data);
-        let lua = self.lua.lock().await;
+        let lua = self.lua.lock();
 
         let f: LuaFunction = match lua.globals().get(self.func_name.as_str()) {
             Ok(s) => s,
@@ -199,7 +203,7 @@ impl NextSelector for LuaNextSelector {
             }
         };
 
-        match f.call::<_, usize>((this_index, w)) {
+        match f.call::<_, i64>((this_index, w)) {
             Ok(rst) => Some(rst),
             Err(err) => {
                 warn!("{}", err);
@@ -211,7 +215,7 @@ impl NextSelector for LuaNextSelector {
 
 /// 弊端：有生命周期
 #[derive(Debug, Clone)]
-pub struct LuaNextSelector2<'a>(LuaFunction<'a>);
+pub struct LuaNextSelector2<'a>(Arc<parking_lot::Mutex<LuaFunction<'a>>>);
 
 unsafe impl<'a> Send for LuaNextSelector2<'a> {}
 unsafe impl<'a> Sync for LuaNextSelector2<'a> {}
@@ -220,12 +224,12 @@ unsafe impl<'a> Sync for LuaNextSelector2<'a> {}
 impl<'a> NextSelector for LuaNextSelector2<'a> {
     async fn next_index(
         &self,
-        this_index: usize,
+        this_index: i64,
         data: Option<Vec<ruci::map::OptVecData>>,
-    ) -> Option<usize> {
+    ) -> Option<i64> {
         let w = OptVecOptVecDataLuaWrapper(data);
 
-        match self.0.call::<_, usize>((this_index, w)) {
+        match self.0.lock().call::<_, i64>((this_index, w)) {
             Ok(rst) => Some(rst),
             Err(err) => {
                 warn!("{}", err);
