@@ -1,54 +1,63 @@
+use std::{fmt, fs::File, io::Read};
+
+use async_trait::async_trait;
+use bytes::BytesMut;
+use ruci::{
+    map::{self, MapResult, ProxyBehavior},
+    net::{self, helpers::EarlyDataWrapper, NamedConn, CID},
+    Name,
+};
+
 use macro_mapper::*;
+use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsStream};
+use tracing::debug;
 
-use crate::map::{MapperBox, ToMapperBox};
+pub fn load(cert_path: &str, key_path: &str) -> anyhow::Result<Identity> {
+    let mut cert_file = File::open(cert_path)?;
+    let mut certs = vec![];
+    cert_file.read_to_end(&mut certs)?;
 
-use self::map::{MapperExtFields, CID};
+    let mut key_file = File::open(key_path)?;
+    let mut key = vec![];
+    key_file.read_to_end(&mut key)?;
+    let pkcs8 = Identity::from_pkcs8(&certs, &key)?;
 
-use super::*;
+    Ok(pkcs8)
+}
 
 #[derive(Debug, Clone)]
 pub struct ServerOptions {
-    pub addr: String,
-    pub cert: PathBuf,
-    pub key: PathBuf,
+    pub cert_f_path: String,
+    pub key_f_path: String,
 }
 
-impl ToMapperBox for ServerOptions {
-    fn to_mapper_box(&self) -> MapperBox {
-        let a = Server::new(self.clone());
-        Box::new(a)
-    }
-}
-
-// todo: 添加 alpn 和 tls_min_v
 #[mapper_ext_fields]
 #[derive(Clone, MapperExt)]
 pub struct Server {
-    pub option_cache: ServerOptions,
     ta: TlsAcceptor,
 }
 
 impl fmt::Debug for Server {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ruci::tls::Server, {:?}", self.option_cache)
+        write!(f, "rucimp::native_tls::Server,")
     }
 }
-impl<IO> crate::Name for tokio_rustls::server::TlsStream<IO> {
+
+impl Name for Server {
+    fn name(&self) -> &'static str {
+        "native_tls_server"
+    }
+}
+
+pub struct TlsStreamWrapper(TlsStream<Box<dyn NamedConn>>);
+
+impl ruci::Name for TlsStreamWrapper {
     fn name(&self) -> &str {
-        "tokio_rustls_server_stream"
+        "tokio_native_tls_stream"
     }
 }
 
 impl Server {
-    pub fn new(c: ServerOptions) -> Self {
-        let config = load::load_ser_config(&c).expect("tls server config valid");
-        Server {
-            ta: TlsAcceptor::from(Arc::new(config)),
-            option_cache: c.clone(),
-            ext_fields: Some(MapperExtFields::default()),
-        }
-    }
-
     async fn handshake(
         &self,
         _cid: CID,
@@ -66,17 +75,11 @@ impl Server {
         let c = self.ta.accept(conn).await?;
 
         // todo add SeverTLSConnDescriber as data
-        Ok(MapResult::new_c(Box::new(c)).a(a).build())
+        // Ok(MapResult::new_c(Box::new(TlsStreamWrapper(c))).a(a).build())
+        unimplemented!()
     }
 }
 
-pub struct SeverTLSConnDescriber {}
-
-impl Name for Server {
-    fn name(&self) -> &'static str {
-        "tls_server"
-    }
-}
 #[async_trait]
 impl map::Mapper for Server {
     async fn maps(
@@ -86,7 +89,7 @@ impl map::Mapper for Server {
         params: map::MapParams,
     ) -> map::MapResult {
         let conn = params.c;
-        if let crate::net::Stream::Conn(conn) = conn {
+        if let ruci::net::Stream::Conn(conn) = conn {
             let r = self.handshake(cid, conn, params.b, params.a).await;
             match r {
                 anyhow::Result::Ok(r) => r,

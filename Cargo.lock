@@ -1881,6 +1881,7 @@ dependencies = [
  "serde_json",
  "socket2",
  "tokio",
+ "tokio-native-tls",
  "tokio-tungstenite",
  "toml",
  "tracing",
