@@ -14,12 +14,15 @@ tlsout = { TLS = { host = "www.1234.com", insecure = true } }
 
 tlsin = { TLS = {  cert = "test.crt", key = "test.key" } }
 
+trojan_in = { Trojan = { password = "mypassword" } }
 
-listen_trojan = { listen, { Trojan = { password = "mypassword" } }, }
+listen_trojan = { listen, trojan_in, }
 
 dial = { Dialer =  "tcp://0.0.0.0:10801" }
 
-dial_trojan_chain = { dial,tlsout,  { Trojan = "mypassword"} }
+trojan_out =  { Trojan = "mypassword"}
+
+dial_trojan_chain = { dial,tlsout, trojan_out }
 
 stdio_socks5_chain = { { Stdio={ fixed_target_addr= "fake.com:80" } } , { Socks5 = {} } }
 
@@ -68,6 +71,30 @@ config = {
 }
 
 --]=]
+
+
+
+---[=[
+
+config = {
+    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
+    outbounds = { 
+        { 
+            tag="dial1", 
+            chain = { { Dialer =  "unix://file1" }, tlsout, trojan_out } 
+        } 
+    }
+
+--[[
+这个 config 块 与上面的 示例类似, 但是它 的 dial 是用的 unix domain socket 
+与此对应的 remote.lua 中 也应该是 unix 的监听
+
+--]]
+
+}
+
+--]=]
+
 
 
 
@@ -154,7 +181,7 @@ config = {
 
 
 
----[=[
+--[=[
 
 config = {
     inbounds = { 

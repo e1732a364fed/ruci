@@ -385,13 +385,14 @@ impl Addr {
         }
     }
 
-    //127.0.0.1:80 or www.b.com:80
+    /// 127.0.0.1:80 or www.b.com:80. if unix, then like path/to/file, without the port and colon.
     pub fn from_addr_str(network: &str, s: &str) -> Result<Self> {
         let ns: Vec<_> = s.split(':').collect();
-        if ns.len() != 2 {
-            return Err(anyhow!("Addr::from_addr_str, split colon got len!=2",));
-        }
-        let port = ns[1].parse::<u16>().map_err(|e| anyhow!("{}", e))?;
+        let port = if ns.len() != 2 {
+            0
+        } else {
+            ns[1].parse::<u16>().map_err(|e| anyhow!("{}", e))?
+        };
 
         let x = ns[0].parse::<IpAddr>();
         match x {

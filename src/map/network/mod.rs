@@ -237,7 +237,7 @@ impl Mapper for StreamGenerator {
         };
 
         if log_enabled!(log::Level::Debug) {
-            debug!("{}, start listen tcp {}", cid, a)
+            debug!("{}, start listen {}", cid, a)
         }
 
         let r = match params.shutdown_rx {

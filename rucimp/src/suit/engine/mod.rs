@@ -236,7 +236,7 @@ async fn listen_tcp2(
 ) -> io::Result<()> {
     let laddr = ins.addr_str().to_string();
     let wn = ins.whole_name().to_string();
-    info!("start listen tcp {}, {}", laddr, wn);
+    info!("start listen {}, {}", laddr, wn);
 
     let listener = TcpListener::bind(laddr.clone()).await?;
 
