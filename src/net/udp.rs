@@ -199,14 +199,12 @@ mod test {
                 network: Network::TCP,
             };
             let mut i = 0;
-            loop {
+            while i != 5 {
                 let n = w.write(&mut buf, &ta).await?;
                 println!("w write to,{} {:?}", &ta, &buf[..n]);
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
-                if i == 5 {
-                    break;
-                }
+
                 i += 1;
             }
             println!("w2 end");
@@ -254,15 +252,12 @@ mod test {
                 network: Network::TCP,
             };
             let mut i = 0;
-            loop {
+            while i != 5 {
                 i += 1;
 
                 let n = w.write(&mut buf_to_write, &ta).await?;
                 println!("w write to,{} {:?}", &ta, &buf_to_write[..n]);
 
-                if i == 5 {
-                    break;
-                }
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
             println!("w2 end");
@@ -275,7 +270,6 @@ mod test {
         let nv = buf_to_write.repeat(5);
 
         print!("test: cp addr end");
-        //print!("test: ms w, {:?}", writevc.lock().await);
 
         assert_eq!(&nv, writevc.lock().await.deref());
         Ok(())

@@ -269,7 +269,7 @@ pub trait Mapper: crate::Name {
     ///
     /// 可选地返回 解析出的“目标地址”。一般只在InAdder最后一级产生。
     ///
-    /// 返回值的 AddResult.d: OptData 用于 获取关于该层连接的额外信息, 一般情况为None即可
+    /// 返回值的 MapResult.d: OptData 用于 获取关于该层连接的额外信息, 一般情况为None即可
     ///
     /// 约定：如果一个代理在代理时切换了内部底层连接，其返回的 extra_data 需为一个
     /// NewConnectionOptData ， 这样 ruci::relay 包才能对其进行识别并处理
@@ -308,7 +308,7 @@ pub trait Mapper: crate::Name {
 pub trait MapperSync: Mapper + Send + Sync + Debug {}
 impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
 
-pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能是 Arc
+pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
 
 /// 一种 Mapper 的容器
 pub trait MappersVec {
