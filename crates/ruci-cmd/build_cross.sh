@@ -24,7 +24,6 @@ done
 TARGET_FEATURES="${features[@]}"
 
 echo "* Building ${target} package ${version} with features \"${features[@]}\" ..."
-export RUSTFLAGS="-Ctarget-feature=+crt-static"
 cross build --target ${target} --features "${TARGET_FEATURES}" --release 
 
 mkdir -p dist

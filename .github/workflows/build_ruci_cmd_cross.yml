@@ -16,7 +16,7 @@ jobs:
 
   build-cross:
     permissions: write-all
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       RUST_BACKTRACE: full
 
@@ -50,8 +50,6 @@ jobs:
         run: cargo install cross --git https://github.com/cross-rs/cross
       
       - name: Build ${{ matrix.target }}
-        env:
-          RUSTFLAGS: -Ctarget-feature=+crt-static
         run: |
 
           compile_features="-f file_server -f api_server -f api_client -f utils -f tun -f quinn -f native-tls-vendored -f lua54 -f smoltcp -f steganography"

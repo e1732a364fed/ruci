@@ -385,8 +385,6 @@ linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 
 更新系统的 glibc 是比较危险的做法, 此时推荐使用 musl
 
-此问题已在 ruci-cmd v0.0.7-alpha.3 及以后的版本解决，是使用  RUSTFLAGS=-Ctarget-feature=+crt-static 解决的
-
 ## tproxy: Too many open files
 
 每打开一个网页后, ruci 进程新增 200-300个文件(socket)是很常见的现象, 主要都是 dns 

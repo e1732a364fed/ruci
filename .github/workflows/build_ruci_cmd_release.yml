@@ -23,7 +23,7 @@ jobs:
 
   build-ubuntu:
     permissions: write-all
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       RUST_BACKTRACE: full
     strategy:
@@ -39,11 +39,7 @@ jobs:
         rustup override set stable
         rustup target add --toolchain stable x86_64-unknown-linux-gnu
 
-# when building with -Ctarget-feature=+crt-static, it must follows --target. Can not use default target.
-# https://github.com/rust-lang/rust/issues/78210
     - name: Build x86_64-unknown-linux-gnu
-      env:
-        RUSTFLAGS: -Ctarget-feature=+crt-static
       run: |
         cd crates/ruci-cmd
         make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=x86_64-unknown-linux-gnu
