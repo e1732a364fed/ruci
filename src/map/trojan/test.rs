@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bytes::{BufMut, BytesMut};
 use parking_lot::Mutex;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpSocket, TcpStream};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
 use crate::map::{MapParams, Mapper, ProxyBehavior, CID};
@@ -129,8 +129,8 @@ async fn auth_tcp_in_mem_earlydata() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test1() -> anyhow::Result<()> {
-    //写两遍，一遍错一遍对，然后在 另一端写一遍
+async fn udp() -> anyhow::Result<()> {
+    //写两遍，一遍错一遍对，然后在 另一端写一遍. same as test for socks5 udp
 
     let u = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let ula = u.local_addr()?;
@@ -202,12 +202,6 @@ async fn test1() -> anyhow::Result<()> {
     println!("rok, {n}");
 
     println!("rok, {:?}.  ", buf);
-
-    // ac.w.write(
-    //     b"abc",
-    //     &Addr::from_ip_addr_str("udp", "127.0.0.1:12349").unwrap(),
-    // )
-    // .await?;
 
     Ok(())
 }

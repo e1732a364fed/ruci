@@ -229,12 +229,6 @@ mod test {
         assert!(ra.is_ok());
         println!("rok, {:?}. {:?}", ra, buf);
 
-        // ac.w.write(
-        //     b"abc",
-        //     &Addr::from_ip_addr_str("udp", "127.0.0.1:12349").unwrap(),
-        // )
-        // .await?;
-
         Ok(())
     }
 }

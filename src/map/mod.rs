@@ -74,6 +74,7 @@ pub enum AnyData {
     A(AnyArc),
     B(AnyBox),
     Addr(net::Addr),
+    User(Box<dyn user::User>),
 }
 
 pub type OptData = Option<AnyData>;
@@ -122,9 +123,6 @@ impl MapParams {
 }
 
 /// Mapper::maps  return type
-///
-/// c, u, g are 3 possible fields for the result Stream.
-/// only one of them can be Some.
 ///
 #[derive(TypedBuilder, Default)]
 pub struct MapResult {

@@ -150,6 +150,12 @@ impl Mapper for TcpDialer {
                                     }
                                 }
                             }
+
+                            _ => {
+                                return MapResult::err_str(&format!(
+                                    "{cid} tcp dialer can't dial without an address-",
+                                ));
+                            }
                         }
                     }
                 }
