@@ -299,7 +299,10 @@ impl  SmoltcpDevice {
 
                 let ipe = src_addr.into();
 
-                if is_tcp_client_hello(&tcp_packet) && !self.tcp_src_handle_map.lock().contains_key(&ipe){
+                let is_hello = is_tcp_client_hello(&tcp_packet);
+                let contains = self.tcp_src_handle_map.lock().contains_key(&ipe);
+
+                if is_hello && !contains{
                     
                     let rx_buffer = tcp::SocketBuffer::new(vec![0; BUF_SIZE]);
                     let tx_buffer = tcp::SocketBuffer::new(vec![0; BUF_SIZE]);
@@ -309,6 +312,12 @@ impl  SmoltcpDevice {
                         warn!("listen error: {:?}", err);
                         return;
                     }
+                    // new_tcp_socket
+                    // .connect(iface.context(), dst_addr, src_addr)
+                    // .unwrap();
+
+                    new_tcp_socket.set_nagle_enabled(false);
+                    new_tcp_socket.set_ack_delay(None);
 
                     let socket_handle = self.sockets.add(new_tcp_socket);
                     self.tcp_src_handle_map.lock().insert(ipe, socket_handle);
@@ -331,6 +340,9 @@ impl  SmoltcpDevice {
 
 
                     let _ = self.new_stream_tx.try_send(MapResult::new_c(Box::new(tcp_stream)).a(Some(ta)).build());
+
+                }else{
+                    debug!("smoltcp got other tcp {is_hello} {contains}");
 
                 }
             }
@@ -374,6 +386,8 @@ impl  SmoltcpDevice {
     pub fn process_ingress(&mut self) {
         let mut handles_to_remove = Vec::new();
         let mut tcp_src_to_remove = Vec::new();
+
+        debug!("process_ingress...");
         
 
         self.sockets.iter_mut().for_each(|(h,so)|{
@@ -381,7 +395,11 @@ impl  SmoltcpDevice {
                 smoltcp::socket::Socket::Icmp(_) => {},
                 smoltcp::socket::Socket::Udp(_) => {},
                 smoltcp::socket::Socket::Tcp(so) => {
+                    debug!("process_ingress1...");
+
                     if !so.can_recv() {
+                        debug!("process_ingress...1");
+
                         return;
                     }
                     let src = match so.remote_endpoint(){
@@ -393,12 +411,18 @@ impl  SmoltcpDevice {
                     };
                     let m = self.tcp_read_data_tx_map.lock();
                     let tcp_read_data_sender = m.get(&src).unwrap();
+
+                    debug!("process_ingress...2");
+
                     while so.can_recv() && tcp_read_data_sender.capacity() > 0 {
                         let mut buffer = BytesMut::with_capacity(so.recv_queue());
                         unsafe {
                             buffer.set_len(so.recv_queue());
                         }
                         if let Ok(n) = so.recv_slice(buffer.as_mut()) {
+
+                            debug!("process_ingress...3");
+
                             if n != buffer.len() {
                                 tracing::warn!("so.recv_slice n != buffer.len(), {n} {}",buffer.len());
                                 unsafe {
@@ -412,6 +436,9 @@ impl  SmoltcpDevice {
                                 break;
                             }
                         } else {
+
+                            debug!("process_ingress...4");
+
                             tracing::debug!("tcp_read_data_tx so.recv_slice failed");
                             so.close();
                             break;
@@ -442,6 +469,9 @@ impl  SmoltcpDevice {
     /// 名称跟随 smoltcp 的规范. 从tcp/udp 的我们自建的缓存中 对每个socket 读取要写的数据，并用 send_slice 写入 smoltcp
     pub fn process_egress(&mut self) {
         while let Ok((sh, _source, mut data)) = self.tcp_write_data_rx.try_recv() {
+
+            debug!("process_egress...");
+
             let socket: &mut smoltcp::socket::tcp::Socket = self.sockets.get_mut(sh);
 
              if data.is_empty() {

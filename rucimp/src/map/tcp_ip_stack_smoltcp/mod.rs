@@ -52,6 +52,7 @@ impl Map for Stack {
                     let mut iface = device::create_interface(&mut device);
 
                     loop {
+                        debug!("loop...");
                         tokio::select! {
                             _ = &mut shutdown_rx =>{
                                 debug!("smoltcp got shutdown signal");
