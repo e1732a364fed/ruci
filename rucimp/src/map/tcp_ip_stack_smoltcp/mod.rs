@@ -72,10 +72,7 @@ impl Map for Stack {
                                     },
                                 }
                             }
-                            _ = &mut shutdown_rx =>{
-                                debug!("smoltcp got shutdown signal");
-                                break;
-                            }
+
                             r = device.read() =>{
                                 match r {
                                     Err(e) => {
@@ -134,7 +131,10 @@ impl Map for Stack {
                                     },
                                 }
                             }
-
+                            _ = &mut shutdown_rx =>{
+                                debug!("smoltcp got shutdown signal");
+                                break;
+                            }
                         } //select!
                     } //loop
                 });
