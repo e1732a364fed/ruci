@@ -24,16 +24,23 @@ jobs:
         cd rucimp
         cargo build --release --example chain --example suit  --example suit2 --verbose
     - name: Copy Files 
+      if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
       run: |
         mkdir dist
-        cp target/release/examples/chain dist/  2>/dev/null
-        cp target/release/examples/chain.exe dist/  2>/dev/null
-        cp target/release/examples/suit dist/  2>/dev/null
-        cp target/release/examples/suit.exe dist/  2>/dev/null
-        cp target/release/examples/suit2 dist/  2>/dev/null
-        cp target/release/examples/suit2.exe dist/  2>/dev/null
+        cp target/release/examples/chain dist/
+        cp target/release/examples/suit dist/ 
+        cp target/release/examples/suit2 dist/
         cp -r resource dist/
 
+    - name: Copy Windows Files 
+      if: ${{ runner.os == 'Windows' }}
+      run: |
+        mkdir dist
+        cp target/release/examples/chain.exe dist/  
+        cp target/release/examples/suit.exe dist/ 
+        cp target/release/examples/suit2.exe dist/ 
+        cp -r resource dist/
+  
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4
       with:
