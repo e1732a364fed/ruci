@@ -47,6 +47,7 @@ pub async fn handle_conn<'a>(
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             Accumulator::accumulate::<_, T>(
                 cid,
+                ProxyBehavior::DECODE,
                 MapResult {
                     a: None,
                     b: None,
@@ -129,6 +130,7 @@ pub async fn handle_conn<'a>(
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
                 Accumulator::accumulate::<_, T>(
                     cid,
+                    ProxyBehavior::ENCODE,
                     MapResult {
                         a: Some(target_addr),
                         b: listen_result.b.take(),

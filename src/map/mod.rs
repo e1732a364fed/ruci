@@ -350,10 +350,11 @@ pub struct AccumulateResult {
 
 impl<'a> Accumulator<'a> {
     ///  accumulate 是一个作用很强的函数
-    /// extra_data_vec 若不为空，其须与 inadders提供同数量的元素, 否则
+    /// extra_data_vec 若不为空，其须与 mappers 提供同数量的元素, 否则
     /// 将panic
     pub async fn accumulate<IterMapperBoxRef, IterOptData>(
         cid: u32,
+        behavior: ProxyBehavior,
         initial_state: MapResult,
         mut mappers: IterMapperBoxRef,
         mut hyperparameter_vec: Option<IterOptData>,
@@ -399,7 +400,7 @@ impl<'a> Accumulator<'a> {
                     last_r = adder
                         .maps(
                             cid,
-                            ProxyBehavior::DECODE,
+                            behavior,
                             MapParams {
                                 c: last_r.c.unwrap(),
                                 a: last_r.a,
