@@ -337,7 +337,11 @@ pub fn parse_h1_response(bs: &[u8]) -> ParsedHttpResponse {
     const SHOULD_SPACE_INDEX: usize = 8;
     const REASON_INDEX: usize = 13;
 
-    match &bs[0..SHOULD_SPACE_INDEX] {
+    let s = String::from_utf8_lossy(&bs[0..SHOULD_SPACE_INDEX])
+        .to_uppercase()
+        .to_string();
+
+    match s.as_bytes() {
         s if s == "HTTP/1.1".as_bytes() => resp.version = H1Ver::V11,
         s if s == "HTTP/1.0".as_bytes() => resp.version = H1Ver::V10,
         s if s == "HTTP/0.9".as_bytes() => resp.version = H1Ver::V09,
