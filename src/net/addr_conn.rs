@@ -236,30 +236,89 @@ pub async fn cp_addr_between<
     w1: W1,
     r2: R2,
     w2: W2,
-    _opt: Option<Arc<TransmissionInfo>>,
+    opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     let (c1_to_c2, c2_to_c1) = (cp_addr(r1, w2).fuse(), cp_addr(r2, w1).fuse());
     pin_mut!(c1_to_c2, c2_to_c1);
 
-    //todo: use opt
     select! {
         rst1 = c1_to_c2 =>{
 
-            debug!("cid: {}, cp_addr_end, r1",cid);
+            if log_enabled!(log::Level::Debug) {
+                debug!("cp_addr end, u, cid: {}",cid);
+            }
 
-            let _r2 = c2_to_c1.await;
+            if let Some(ti) = opt.as_ref(){
+                match &rst1{
+                    Ok(n) => {
+                        let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
+                        debug!("cid: {}, cp_addr_end, u, ub, {}",cid,tt);
+                    },
+                    Err(e) => {
+                        debug!("cid: {}, cp_addr_end with err, u, {}",cid,e);
 
-            debug!("cid: {}, cp_addr wait_end, r1",cid);
+                    },
+                }
+
+            }
+
+
+            let rst2 = c2_to_c1.await;
+
+            if log_enabled!(log::Level::Debug) {
+                debug!("cp_addr end, d, cid: {}",cid);
+            }
+
+            if let Some(ti) = opt{
+                match &rst2{
+                    Ok(n) => {
+                        let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
+                        debug!("cid: {}, cp_addr_end, u ,db, {}",cid,tt);
+                    },
+                    Err(e) => {
+                        debug!("cid: {}, cp_addr_end with err, u, d, {}",cid,e);
+
+                    },
+                }
+            }
 
             rst1
         }
         rst2 = c2_to_c1 =>{
-            debug!("cid: {}, cp_addr_end, r2",cid);
+            if log_enabled!(log::Level::Debug) {
+                debug!("cp_addr end, d, cid: {}",cid);
+            }
+            if let Some(ti) = opt.as_ref(){
+                match &rst2{
+                    Ok(n) => {
+                        let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
+                        debug!("cid: {}, cp_addr_end, d, db, {}",cid,tt);
+                    },
+                    Err(e) => {
+                        debug!("cid: {}, cp_addr_end with err, d, d, {}",cid,e);
 
-            let _r2 = c1_to_c2.await;
+                    },
+                }
 
-            debug!("cid: {}, cp_addr wait_end, r2",cid);
+            }
 
+            let rst1 = c1_to_c2.await;
+            if log_enabled!(log::Level::Debug) {
+                debug!("cp_addr end, u, cid: {}",cid);
+            }
+            if let Some(ti) = opt{
+
+                match &rst1{
+                    Ok(n) => {
+                        let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
+                        debug!("cid: {}, cp_addr_end, d, ub, {}",cid,tt);
+                    },
+                    Err(e) => {
+                        debug!("cid: {}, cp_addr_end with err, d, u, {}",cid,e);
+
+                    },
+                }
+            }
             rst2
         }
     }

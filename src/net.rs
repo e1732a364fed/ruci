@@ -62,6 +62,7 @@ pub enum NetAddr {
 }
 
 impl Default for NetAddr {
+    /// ipv4 0.0.0.0:0
     fn default() -> Self {
         NetAddr::Socket(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0))
     }
