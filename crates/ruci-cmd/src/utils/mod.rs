@@ -232,8 +232,13 @@ fn write_file(v: Vec<u8>, name: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn calcu_trojan_hash(plain_text: &str) {
+fn calcu_trojan_hash_fn(plain_text: &str) -> String {
     let h = ruci::map::trojan::sha224_hex_string_lower_case(plain_text);
+    h
+}
+
+fn calcu_trojan_hash(plain_text: &str) {
+    let h = calcu_trojan_hash_fn(plain_text);
     info!("trojan hash for {plain_text} is : {h}")
 }
 
@@ -326,16 +331,21 @@ async fn download_wintun() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn print_qrcode_of(str: &str) {
+fn qrcode_of(str: &str) -> String {
     use qrcode::render::unicode;
     use qrcode::QrCode;
     let code = QrCode::new(str).unwrap();
-    let image = code
+    let image_str = code
         .render::<unicode::Dense1x2>()
         .dark_color(unicode::Dense1x2::Light)
         .light_color(unicode::Dense1x2::Dark)
         .build();
-    println!("{image}");
+    image_str
+}
+
+fn print_qrcode_of(str: &str) {
+    let image_str = qrcode_of(str);
+    println!("{image_str}");
 }
 
 /// ruci模式下 在不同配置格式之间转换
@@ -425,4 +435,60 @@ pub fn convert_static_config(
         // "toml" => Ok(toml::to_string(&value)?).context("serialize toml failed"),
         _ => anyhow::bail!("unsupported output format: {}", output_format),
     }
+}
+
+#[cfg(feature = "api_server")]
+pub fn register_command_apis(
+    api_extensions: &mut rucimp::api::ApiExtensionMap,
+) -> anyhow::Result<()> {
+    use axum::routing::get;
+
+    let mut extensions = api_extensions.write();
+
+    // Mmdb
+    extensions.insert(
+        "/api/utils/mmdb".to_string(),
+        get(|| async {
+            let r = download_wintun().await;
+            format!("{r:?}")
+        })
+        .into(),
+    );
+
+    // Wintun
+    extensions.insert(
+        "/api/utils/wintun".to_string(),
+        get(|| async {
+            let r = download_mmdb().await;
+            format!("{r:?}")
+        })
+        .into(),
+    );
+
+    // CalcuTrojanHash
+    extensions.insert(
+        "/api/utils/trojan_hash/{password}".to_string(),
+        get(
+            |axum::extract::Path(password): axum::extract::Path<String>| async move {
+                let h = calcu_trojan_hash_fn(&password);
+                h
+            },
+        )
+        .into(),
+    );
+
+    // QR
+    extensions.insert(
+        "/api/utils/qr/{text}".to_string(),
+        get(
+            |axum::extract::Path(text): axum::extract::Path<String>| async move {
+                format!("{}", qrcode_of(&text))
+            },
+        )
+        .into(),
+    );
+
+    info!("Registered {} command APIs", extensions.len());
+
+    Ok(())
 }

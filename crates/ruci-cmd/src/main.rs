@@ -18,9 +18,10 @@ mod mode;
 use std::env::{self, set_var};
 
 use clap::{Parser, Subcommand, ValueEnum};
+use parking_lot::RwLock;
 use rucimp::{modes::CoreArgs, DEFAULT_LUA_CONFIG_FILE_NAME};
 use tokio::sync::Mutex;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
@@ -160,9 +161,25 @@ async fn main() -> anyhow::Result<()> {
 
                 let epots = std::sync::Arc::new(Mutex::new(None));
 
+                // 创建API扩展映射
+                let api_extensions =
+                    std::sync::Arc::new(RwLock::new(std::collections::HashMap::new()));
+
+                // 注册Command API
+                #[cfg(feature = "utils")]
+                {
+                    if let Err(e) = utils::register_command_apis(&mut api_extensions.clone()) {
+                        warn!("Failed to register command APIs: {}", e);
+                    }
+                }
+
                 if args.api_server {
-                    let mut opts =
-                        rucimp::api::Server::new(args.api_addr.clone(), epots.clone()).await;
+                    let mut opts = rucimp::api::Server::new(
+                        args.api_addr.clone(),
+                        epots.clone(),
+                        Some(api_extensions),
+                    )
+                    .await;
                     api_server_started = true;
 
                     if args.config == DEFAULT_LUA_CONFIG_FILE_NAME {
@@ -378,5 +395,6 @@ pub async fn start_engine(
             .await?;
         }
     }
+
     Ok(())
 }

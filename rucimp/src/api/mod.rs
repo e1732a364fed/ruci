@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
@@ -48,13 +48,18 @@ pub struct Server {
 
     #[cfg(feature = "trace")]
     pub flux_trace: TracePart,
+
+    pub api_extensions: ApiExtensionMap,
 }
+
+pub type ApiExtensionMap = Arc<RwLock<HashMap<String, axum::routing::MethodRouter>>>;
 
 impl Server {
     /// non-blocking, init the server and run it
     pub async fn new(
         listen_addr: Option<String>,
         start_core_opts: Opts,
+        api_extensions: Option<ApiExtensionMap>,
     ) -> (Self, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>) {
         let (tx, rx) = mpsc::channel(10);
 
@@ -71,6 +76,8 @@ impl Server {
                 u_cache: new_cache(),
                 d_cache: new_cache(),
             },
+
+            api_extensions: api_extensions.unwrap_or_else(|| Arc::new(RwLock::new(HashMap::new()))),
         };
         serve(&server, global_traffic.clone(), start_core_opts).await;
         (server, rx, global_traffic)
@@ -465,6 +472,13 @@ pub async fn serve(
             "/api/connections/{cid}",
             get(get_conn_info).with_state(s.new_conn_info_map.clone()),
         );
+
+    // 添加扩展API
+    let extensions = s.api_extensions.read();
+    for (path, handler) in extensions.iter() {
+        app = app.route(path, handler.clone());
+        info!("Added extension API: {}", path);
+    }
 
     #[cfg(feature = "trace")]
     {
