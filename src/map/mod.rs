@@ -550,7 +550,7 @@ pub async fn accumulate_from_start(
     mut inmappers: MIterBox,
     oti: Option<Arc<TransmissionInfo>>,
 ) {
-    let first = inmappers.next().unwrap();
+    let first = inmappers.next().expect("first inmapper");
     let r = first
         .maps(
             CID::default(),
@@ -564,11 +564,11 @@ pub async fn accumulate_from_start(
             },
         )
         .await;
-
-    if r.e.is_some() {
-        warn!("accumulate_from_start, returned by e, {}", r.e.unwrap());
+    if let Some(e) = r.e {
+        warn!("accumulate_from_start, returned by e, {}", e);
         return;
     }
+
     if let Stream::Generator(rx) = r.c {
         in_iter_accumulate_forever(CID::default(), rx, tx, inmappers, oti).await;
     } else {

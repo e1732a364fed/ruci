@@ -159,16 +159,13 @@ impl Server {
                         String::from_utf8_lossy(&bs[colon_index + 1..n]).to_string(),
                     );
 
-                    if let Some(u) = self
-                        .um
-                        .as_ref()
-                        .unwrap()
-                        .auth_user_by_authstr(u.auth_strs())
-                        .await
-                    {
-                        ok = true;
-                        authed_user = Some(u);
-                    };
+                    if let Some(um) = &self.um {
+                        if let Some(u) = um.auth_user_by_authstr(u.auth_strs()).await {
+                            ok = true;
+                            authed_user = Some(u);
+                        };
+                    }
+
                     break;
                 }
             } //for header

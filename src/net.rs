@@ -60,7 +60,11 @@ impl Display for CIDChain {
                 write!(f, "[ empty ]")
             }
             1 => {
-                write!(f, "[ cid: {} ]", self.id_list.first().unwrap())
+                write!(
+                    f,
+                    "[ cid: {} ]",
+                    self.id_list.first().expect("get first element of cid")
+                )
             }
             _ => {
                 let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
@@ -350,7 +354,7 @@ impl Addr {
         }
     }
 
-    /// 只由 SocketAddr 转, 无视 name
+    /// 只由 SocketAddr 转, 无视 name. 如果只有 Name, 则返回 None
     pub fn get_socket_addr(&self) -> Option<SocketAddr> {
         if let NetAddr::Socket(s) = &self.addr {
             Some(*s)

@@ -48,7 +48,10 @@ impl Client {
         if adopted_method == AUTH_PASSWORD {
             buf.clear();
             buf.put_u8(1);
-            let upr = self.up.as_ref().unwrap();
+            let upr = self
+                .up
+                .as_ref()
+                .expect("self up is some when sever returns adopted_method == AUTH_PASSWORD");
             buf.put_u8(upr.user.len() as u8);
             buf.put(upr.user.as_bytes());
             buf.put_u8(upr.pass.len() as u8);
@@ -105,16 +108,19 @@ impl crate::Name for Client {
 #[async_trait::async_trait]
 impl map::Mapper for Client {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        if params.a.is_none() {
-            return MapResult::err_str(&format!(
-                "{}, socks5 outadder called without target_addr",
-                cid
-            ));
-        }
+        let target_addr = match params.a {
+            Some(ta) => ta,
+            None => {
+                return MapResult::err_str(&format!(
+                    "{}, socks5 outadder called without target_addr",
+                    cid
+                ));
+            }
+        };
 
         match params.c {
             map::Stream::TCP(c) => {
-                let r = self.handshake(cid, c, params.a.unwrap(), params.b).await;
+                let r = self.handshake(cid, c, target_addr, params.b).await;
                 MapResult::from_result(r)
             }
             _ => MapResult::err_str("socks5 only support tcplike stream"),

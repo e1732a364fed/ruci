@@ -277,26 +277,24 @@ impl Server {
                     A STATUS field of X'00' indicates success. If the server returns a
                     `failure' (STATUS value other than X'00') status, it MUST close the connection.
                     */
+                    if let Some(um) = &self.um {
+                        if um.auth_user_by_authstr(thisup.auth_strs()).await.is_some() {
+                            authed = true;
+                            opt_e = None;
 
-                    if self
-                        .um
-                        .as_ref()
-                        .unwrap()
-                        .auth_user_by_authstr(thisup.auth_strs())
-                        .await
-                        .is_some()
-                    {
-                        authed = true;
-                        opt_e = None;
+                            base.write_all(&[USERPASS_SUBNEGOTIATION_VERSION, SUCCESS])
+                                .await?;
 
-                        base.write_all(&[USERPASS_SUBNEGOTIATION_VERSION, SUCCESS])
-                            .await?;
+                            the_user = Some(thisup);
 
-                        the_user = Some(thisup);
-
-                        break;
+                            break;
+                        }
                     }
-                    let _ = base.write(&[USERPASS_SUBNEGOTIATION_VERSION, 1]).await;
+
+                    const FAILURE_1: u8 = 1;
+                    let _ = base
+                        .write(&[USERPASS_SUBNEGOTIATION_VERSION, FAILURE_1])
+                        .await;
 
                     buf.truncate(n);
                     let e = Error::new(
@@ -387,14 +385,18 @@ impl Server {
             ATYP_IP4 => {
                 const IPV4L: usize = 4;
                 l += IPV4L;
-                let bs: [u8; IPV4L] = buf[off..off + IPV4L].try_into().unwrap();
+                let bs: [u8; IPV4L] = buf[off..off + IPV4L]
+                    .try_into()
+                    .expect("buf slice to array");
                 ip = Some(std::net::IpAddr::V4(Ipv4Addr::from(bs)));
             }
             ATYP_IP6 => {
                 const IPV6L: usize = 16;
                 l += IPV6L;
 
-                let bs: [u8; IPV6L] = buf[off..off + IPV6L].try_into().unwrap();
+                let bs: [u8; IPV6L] = buf[off..off + IPV6L]
+                    .try_into()
+                    .expect("buf slice to array");
                 ip = Some(std::net::IpAddr::V6(Ipv6Addr::from(bs)));
             }
             ATYP_DOMAIN => {
@@ -440,9 +442,9 @@ impl Server {
 
         //如果name中实际是 123.123.123.123 这种值(或ipv6的样式)，这种情况很常见，
         //要尝试将其转成ip
-        if is_name {
+        if let Some(name) = &name {
             use std::str::FromStr;
-            if let Ok(tip) = IpAddr::from_str(name.as_ref().unwrap()) {
+            if let Ok(tip) = IpAddr::from_str(name) {
                 ip = Some(tip)
             }
         }

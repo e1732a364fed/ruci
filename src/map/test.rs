@@ -119,7 +119,7 @@ async fn test_counter1() -> std::io::Result<()> {
         return Err(e);
     }
 
-    let d = r.d.unwrap();
+    let d = r.d.expect("counter returns an extra data");
 
     match d {
         crate::map::AnyData::B(mut d) => {

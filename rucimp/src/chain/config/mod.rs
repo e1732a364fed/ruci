@@ -185,7 +185,9 @@ pub struct TrojanIn {
 impl ToMapper for InMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            InMapperConfig::Stdio(s) => ruci::map::stdio::Stdio::from(s),
+            InMapperConfig::Stdio(s) => {
+                ruci::map::stdio::Stdio::from(s).expect("s is a  network addr str")
+            }
             InMapperConfig::Listener(lis) => match lis {
                 Listener::TcpListener(tcp_l_str) => {
                     let a = net::Addr::from_ip_addr_str("tcp", tcp_l_str).unwrap();
@@ -257,7 +259,9 @@ impl ToMapper for InMapperConfig {
 impl ToMapper for OutMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            OutMapperConfig::Stdio(s) => ruci::map::stdio::Stdio::from(s),
+            OutMapperConfig::Stdio(s) => {
+                ruci::map::stdio::Stdio::from(s).expect("s is a network addr str")
+            }
             OutMapperConfig::Blackhole => Box::new(ruci::map::network::BlackHole::default()),
 
             OutMapperConfig::Direct => Box::new(ruci::map::network::Direct::default()),

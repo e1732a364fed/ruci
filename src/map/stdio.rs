@@ -71,15 +71,15 @@ impl Name for Stdio {
 }
 
 impl Stdio {
-    pub fn from(s: &str) -> MapperBox {
-        if s.is_empty() {
-            Box::<Stdio>::default()
+    pub fn from(network_addr_str: &str) -> io::Result<MapperBox> {
+        if network_addr_str.is_empty() {
+            Ok(Box::<Stdio>::default())
         } else {
-            let a = net::Addr::from_network_addr_str(s).unwrap();
-            Box::new(Stdio {
+            let a = net::Addr::from_network_addr_str(network_addr_str)?;
+            Ok(Box::new(Stdio {
                 fixed_target_addr: Some(a),
                 ..Default::default()
-            })
+            }))
         }
     }
 }

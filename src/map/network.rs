@@ -67,7 +67,9 @@ impl Mapper for Direct {
                 match r {
                     Ok(mut c) => {
                         if self.is_tail_of_chain() && params.b.is_some() {
-                            let rw = c.write_all(params.b.as_ref().unwrap()).await;
+                            let rw = c
+                                .write_all(params.b.as_ref().expect("param.b is some"))
+                                .await;
                             if let Err(re) = rw {
                                 return MapResult::from_err(re);
                             }
@@ -102,7 +104,7 @@ impl TcpDialer {
     ) -> MapResult {
         //todo: DNS 功能
 
-        let r = TcpStream::connect(dial_a.get_socket_addr().unwrap()).await;
+        let r = TcpStream::connect(dial_a.get_socket_addr().expect("dial_a has socket addr")).await;
 
         match r {
             Ok(c) => MapResult::oabc(pass_a, pass_b, Box::new(c)),
@@ -200,7 +202,7 @@ impl TcpStreamGenerator {
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
     ) -> io::Result<Receiver<MapResult>> {
-        let r = TcpListener::bind(a.clone().get_socket_addr().unwrap()).await;
+        let r = TcpListener::bind(a.clone().get_socket_addr().expect("a has socket addr")).await;
 
         match r {
             Ok(listener) => {
@@ -214,13 +216,15 @@ impl TcpStreamGenerator {
                                 let r = listener.accept().await;
 
 
-                                if let Err(e) = r {
-                                    info!("loop tcp ended,listen e: {}", e);
-                                    lastr = Err(e);
-                                    break;
-                                }
+                                let (tcpstream, raddr) =match r{
+                                    Ok(x) => x,
+                                    Err(e) => {
+                                        info!("loop tcp ended,listen e: {}", e);
+                                        lastr = Err(e);
+                                        break;
+                                    },
+                                };
 
-                                let (tcpstream, raddr) = r.unwrap();
                                 debug!("new accepted tcp, raddr: {}", raddr);
 
                                 let pa = Addr{ addr:net::NetAddr::Socket(raddr), network: net::Network::TCP };
@@ -252,7 +256,7 @@ impl TcpStreamGenerator {
     }
 
     pub async fn listen_addr_forever(a: &net::Addr) -> io::Result<Receiver<MapResult>> {
-        let r = TcpListener::bind(a.clone().get_socket_addr().unwrap()).await;
+        let r = TcpListener::bind(a.clone().get_socket_addr().expect("a has socket addr")).await;
 
         match r {
             Ok(listener) => {
@@ -262,12 +266,14 @@ impl TcpStreamGenerator {
                     loop {
                         let r = listener.accept().await;
 
-                        if let Err(e) = r {
-                            info!("loop tcp ended,listen e: {}", e);
-                            break;
-                        }
+                        let (tcpstream, raddr) = match r {
+                            Ok(x) => x,
+                            Err(e) => {
+                                info!("loop tcp ended,listen e: {}", e);
+                                break;
+                            }
+                        };
 
-                        let (tcpstream, raddr) = r.unwrap();
                         info!("new accepted tcp, raddr: {}", raddr);
 
                         let pa = Addr {
@@ -304,7 +310,10 @@ impl Mapper for TcpStreamGenerator {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         let a = match params.a.as_ref() {
             Some(a) => a,
-            None => self.fixed_target_addr.as_ref().unwrap(),
+            None => self
+                .fixed_target_addr
+                .as_ref()
+                .expect("self has fixed_target_addr"),
         };
 
         if log_enabled!(log::Level::Debug) {

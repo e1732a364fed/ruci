@@ -90,8 +90,8 @@ impl Server {
             .handshake(cid.clone(), base, pre_read_data)
             .await?;
 
-        if r.e.is_some() {
-            debug!("{cid} debug socks5http e, {}", r.e.as_ref().unwrap());
+        if let Some(e) = &r.e {
+            debug!("{cid} debug socks5http e, {}", e);
 
             if r.b.is_some() {
                 let c = match r.c {
