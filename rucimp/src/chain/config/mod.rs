@@ -18,6 +18,8 @@ use ruci::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::route::config::RuleSetConfig;
+
 /// 静态配置中有初始化后即确定的listen/dial数量和行为
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
@@ -25,6 +27,8 @@ pub struct StaticConfig {
     pub outbounds: Vec<OutMapperConfigChain>,
 
     pub tag_route: Option<Vec<(String, String)>>,
+
+    pub rule_route: Option<Vec<RuleSetConfig>>,
 }
 
 impl StaticConfig {
@@ -153,10 +157,10 @@ pub enum InMapperConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapperConfig {
-    Blackhole,
-    Direct,
-    Stdio(Ext),
-    Dialer(String),
+    Blackhole,      //单流消耗器
+    Direct,         //单流发生器
+    Stdio(Ext),     //单流发生器
+    Dialer(String), //单流发生器
     Adder(i8),
     Counter,
     TLS(TlsOut),
@@ -368,6 +372,7 @@ mod test {
                 chain: vec![OutMapperConfig::Direct],
             }],
             tag_route: None,
+            rule_route: None,
         };
         let toml = toml::to_string(&sc).expect("valid toml");
         println!("{:#}", toml);

@@ -258,7 +258,9 @@ impl Network {
         matches!(self, Network::TCP) || matches!(self, Network::UDP)
     }
     pub fn from_string(s: &str) -> Result<Self> {
-        match s {
+        let s = String::from(s).to_lowercase();
+
+        match s.as_str() {
             "ip" => Ok(Network::IP),
             "tcp" => Ok(Network::TCP),
             "udp" => Ok(Network::UDP),

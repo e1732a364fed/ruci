@@ -1111,6 +1111,7 @@ dependencies = [
  "futures-lite",
  "ipnet",
  "iprange",
+ "itertools 0.12.1",
  "log",
  "maxminddb",
  "mlua",
