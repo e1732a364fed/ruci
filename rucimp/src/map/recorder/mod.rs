@@ -69,7 +69,6 @@ impl Map for RecorderMap {
             data: data::Record {
                 cid: cid.to_string(),
                 behavior,
-                // global_data: params.g.clone(),
                 global_data: sgd.clone(),
                 full_record: self.config.full_record,
                 piece_truncate: self.config.piece_truncate,

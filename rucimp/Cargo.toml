@@ -93,7 +93,6 @@ smoltcp = { version = "0.12", optional = true, default-features = false, feature
     "socket-tcp",
 ] }
 
-netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d", optional = true }
 
 dashmap = "6.1"
 array-init = "2.1"
@@ -106,6 +105,19 @@ zip = "2.2"
 
 reqwest = { version = "0.11", features = ["json"] }
 
+
+[target.'cfg(not(all(target_os = "windows", target_env = "msvc")))'.dependencies]
+netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d", optional = true }
+
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis",
+    "Win32_Networking_WinSock",
+    "Win32_System_IO",
+] }
 
 [dev-dependencies]
 
@@ -139,18 +151,8 @@ use-native-tls = ["native-tls", "tokio-native-tls"]
 
 native-tls-vendored = ["native-tls/vendored", "tokio-native-tls/vendored"]
 
-[target.'cfg(not(all(target_os = "windows", target_env = "msvc")))'.features]
+
 lwip = ["netstack-lwip"]
-
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.52", features = [
-    "Win32_Foundation",
-    "Win32_NetworkManagement_IpHelper",
-    "Win32_NetworkManagement_Ndis",
-    "Win32_Networking_WinSock",
-    "Win32_System_IO",
-] }
 
 
 [[example]]
