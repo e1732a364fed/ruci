@@ -5,9 +5,9 @@
 
 # dev note
 
-## feature tag
+## feature  
 
-rucimp 中有很多feature tag:
+rucimp 中有很多feature :
 
 "lua", "route","geoip"
 
@@ -37,3 +37,24 @@ CommonMapperExt 要 配合 common_mapper_field 宏一起使用
 
 目前用起来tokio 和 async_std 的最大的区别是, tokio 的TcpStream 不支持 clone;
 async_std的 UdpSocket 少了 poll 方法 (until 24.2.18)
+
+
+## 移除 static 借用的办法
+
+最初开发时, 采用了在 golang 上相同的思路, 但后来发现会越来越多地用到 static 和
+Box::leak, 进而进行手动管理内存, 这一定是有问题的. 
+
+从 commit  58cb71013036c2eab3e4a6898f6b43a5ac822fa4 一直到
+ba02e41a4f81e3cea9626a93f8cefd16a539e341
+
+都是在做重构代码的工作.
+
+具体移除的思路是, 
+
+1. 让 MIter trait 使用 Arc<Box dyn>, 而不是 &'static dyn
+2. 让 Engine 保有数据的所有权, 而不是使用借用.
+3. 不该由Engine 长期持有的数据就不持有, 而是通过init方法参数进行一次性使用
+4. Engine run的时候, 使用 Engine 数据的拷贝 而不是直接使用 Engine 数据本身; 如果是拷贝比较重, 就使用 Arc
+
+这样, 就保证了每一不同生命周期的部分都有自己数据的所有权, 就不再需要 static
+

@@ -152,13 +152,17 @@ pub async fn accumulate(
 
 /// blocking.
 /// 先调用第一个 mapper 生成 流, 然后调用 in_iter_accumulate_forever
+///
+/// 但如果 第一个 mapper 生成的不是流, 则会调用 普通的 accumulate, 累加结束后就会返回,
+/// 不会永远阻塞.
+///
 pub async fn accumulate_from_start(
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
     mut inmappers: MIterBox,
     oti: Option<Arc<TransmissionInfo>>,
-) {
+) -> io::Result<()> {
     let first = inmappers.next().expect("first inmapper");
     let r = first
         .maps(
@@ -175,7 +179,7 @@ pub async fn accumulate_from_start(
         .await;
     if let Some(e) = r.e {
         warn!("accumulate_from_start, returned by e, {}", e);
-        return;
+        return Err(e);
     }
 
     if let Stream::Generator(rx) = r.c {
@@ -203,7 +207,8 @@ pub async fn accumulate_from_start(
             .await;
             let _ = tx.send(r).await;
         });
-    }
+    };
+    Ok(())
 }
 
 /// blocking.block until rx got closed.

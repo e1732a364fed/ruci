@@ -1,5 +1,5 @@
 use futures::Future;
-use log::{debug, info};
+use log::{debug, info, warn};
 use parking_lot::Mutex;
 use ruci::{
     map::{acc2::MIterBox, *},
@@ -17,9 +17,8 @@ use tokio::sync::{
 
 use super::config::StaticConfig;
 
-/// 静态引擎中 使用 StaticConfig 作为配置
 #[derive(Default)]
-pub struct StaticEngine {
+pub struct Engine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁，若有值说明 is running
     pub ti: Arc<TransmissionInfo>,
 
@@ -29,7 +28,23 @@ pub struct StaticEngine {
     tag_routes: Option<HashMap<String, String>>,
 }
 
-impl StaticEngine {
+impl Engine {
+    /// 清空配置。reset 后 可以 接着调用 init
+    pub async fn reset(&mut self) {
+        let running = self.running.lock();
+
+        if running.is_none() {
+            self.inbounds.clear();
+            self.outbounds = Arc::<HashMap<String, MIterBox>>::default();
+            self.default_outbound = None;
+            self.tag_routes = None;
+            self.ti = Arc::<TransmissionInfo>::default();
+            info!("Engine is reset successful");
+        } else {
+            warn!("Engine is running, can't be reset");
+        }
+    }
+
     pub fn init(&mut self, sc: StaticConfig) {
         let inbounds = sc.get_inbounds();
         self.inbounds = inbounds
@@ -48,11 +63,11 @@ impl StaticEngine {
         self.tag_routes = sc.get_tag_route();
     }
 
-    pub fn server_count(&self) -> usize {
+    pub fn inbounds_count(&self) -> usize {
         self.inbounds.len()
     }
 
-    pub fn client_count(&self) -> usize {
+    pub fn outbounds_count(&self) -> usize {
         self.outbounds.len()
     }
 
@@ -95,11 +110,11 @@ impl StaticEngine {
         } else {
             return Err(io::Error::other("already started!"));
         }
-        if self.server_count() == 0 {
-            return Err(io::Error::other("no server"));
+        if self.inbounds_count() == 0 {
+            return Err(io::Error::other("no inbound"));
         }
-        if self.client_count() == 0 {
-            return Err(io::Error::other("no client"));
+        if self.outbounds_count() == 0 {
+            return Err(io::Error::other("no outbound"));
         }
 
         let mut tasks = Vec::new();
@@ -107,18 +122,14 @@ impl StaticEngine {
 
         let out_selector = self.get_out_selector();
 
-        self.inbounds.clone().into_iter().for_each(|inmappers| {
+        self.inbounds.clone().into_iter().for_each(|miter| {
             let (tx, rx) = oneshot::channel();
 
             let (atx, arx) = mpsc::channel(100); //todo: change this
 
-            let oti = self.ti.clone();
-            let t1 = async move {
-                acc2::accumulate_from_start(atx, rx, inmappers.clone(), Some(oti)).await;
-                Ok(())
-            };
+            let t1 = acc2::accumulate_from_start(atx, rx, miter.clone(), Some(self.ti.clone()));
 
-            let t2 = StaticEngine::loop_a(arx, out_selector.clone(), self.ti.clone());
+            let t2 = Engine::loop_a(arx, out_selector.clone(), self.ti.clone());
 
             tasks.push((t1, t2));
             shutdown_tx_vec.push(tx);
@@ -173,9 +184,6 @@ impl StaticEngine {
         Arc::new(Box::new(fixed_selector))
     }
 
-    /// 清空配置。reset 后 可以 接着调用 init
-    pub async fn reset(&self) {}
-
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
     pub async fn stop(&self) {
         info!("stop called");
@@ -185,7 +193,7 @@ impl StaticEngine {
         if let Some(v) = opt {
             let mut i = 0;
             v.into_iter().for_each(|shutdown_tx| {
-                debug!("sending close signal to listener {}", i);
+                debug!("sending close signal to inbound {}", i);
                 let _ = shutdown_tx.send(());
                 i += 1;
             });

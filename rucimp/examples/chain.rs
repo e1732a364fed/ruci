@@ -11,7 +11,7 @@ use std::{
 };
 
 use log::{debug, info, log_enabled, warn, Level};
-use rucimp::chain::{config::lua, engine::StaticEngine};
+use rucimp::chain::{config::lua, engine::Engine};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let contents = r_contents.expect(&("no ".to_owned() + &filename));
 
-    let mut se = StaticEngine::default();
+    let mut se = Engine::default();
     let sc = lua::load(&contents).expect("has valid lua codes in the file content");
 
     //println!("{:?}", sc);
