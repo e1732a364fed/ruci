@@ -6,5 +6,6 @@
 
 pub mod conn;
 pub mod cp_tcp;
+pub mod cp_udp;
 
 pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间。 //todo: 修改这里

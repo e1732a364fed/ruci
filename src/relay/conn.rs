@@ -1,5 +1,6 @@
 use super::*;
 use bytes::BytesMut;
+
 use log::{info, log_enabled, warn};
 use std::io;
 use std::sync::Arc;
@@ -7,6 +8,7 @@ use std::time::Duration;
 
 use crate::map::*;
 use crate::net;
+
 use crate::net::Stream;
 
 /// 初级监听为 net::Conn 的 链式转发.
@@ -169,11 +171,38 @@ pub async fn cp_stream(
 ) {
     match (s1, s2) {
         (Stream::TCP(i), Stream::TCP(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti).await,
-        (Stream::TCP(_), Stream::UDP(_)) => todo!(),
-        (Stream::UDP(_), Stream::TCP(_)) => todo!(),
-        (Stream::UDP(_), Stream::UDP(_)) => todo!(),
+        (Stream::TCP(i), Stream::UDP(o)) => {
+            let _ = cp_udp::cp_udp_tcp(cid, o, i, false, ed, ti).await;
+        }
+        (Stream::UDP(i), Stream::TCP(o)) => {
+            let _ = cp_udp::cp_udp_tcp(cid, i, o, true, ed, ti).await;
+        }
+        (Stream::UDP(i), Stream::UDP(o)) => cp_udp(cid, i, o, ti).await,
         _ => {
             warn!("can't cp stream when either of them is None");
         }
     }
+}
+
+pub async fn cp_udp(
+    cid: u32,
+    in_conn: net::addr_conn::AddrConn,
+    out_conn: net::addr_conn::AddrConn,
+    ti: Option<Arc<net::TransmissionInfo>>,
+) {
+    info!("cid: {}, relay udp start", cid);
+
+    //discard early data, as we don't know it's target addr
+
+    let tic = ti.clone();
+    scopeguard::defer! {
+
+        if let Some(ti) = tic {
+            ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+
+        }
+        info!("cid: {},udp relay end", cid);
+    }
+
+    let _ = net::addr_conn::cp(cid, in_conn, out_conn, ti).await;
 }

@@ -243,7 +243,8 @@ impl<T: AsyncWriteAddr + Unpin + ?Sized> futures::Future for WriteFuture<'_, T> 
 ////////////////////////////////////////////////////////////////////
 */
 
-const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(10);
+pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(10); //todo: change this
+pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 
 /// 循环读写直到read错误发生. 不会认为 read错误为错误. 每一次read都会以
 /// READ_UDP_TIMEOUT 为 最长等待时间，一旦读不到，就会退出函数
@@ -253,7 +254,6 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut r1: R1,
     mut w1: W1,
 ) -> Result<u64, Error> {
-    const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
     let mut whole_write = 0;
 
     loop {
@@ -311,16 +311,16 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     Ok(whole_write as u64)
 }
 
-pub async fn cp_addrconn(
+pub async fn cp(
     cid: u32,
     c1: AddrConn,
     c2: AddrConn,
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
-    cp_addr_between(cid, c1.0, c1.1, c2.0, c2.1, opt).await
+    cp_between(cid, c1.0, c1.1, c2.0, c2.1, opt).await
 }
 
-pub async fn cp_addr_between<
+pub async fn cp_between<
     R1: AddrReadTrait,
     R2: AddrReadTrait,
     W1: AddrWriteTrait,
@@ -347,7 +347,7 @@ pub async fn cp_addr_between<
                 match &rst1{
                     Ok(n) => {
                         let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
-                        debug!("cid: {}, cp_addr_end, u, ub, {}",cid,tt);
+                        debug!("cid: {}, cp_addr_end, u, ub, {},{}",cid,n,tt+n);
                     },
                     Err(e) => {
                         debug!("cid: {}, cp_addr_end with err, u, {}",cid,e);
@@ -368,7 +368,7 @@ pub async fn cp_addr_between<
                 match &rst2{
                     Ok(n) => {
                         let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
-                        debug!("cid: {}, cp_addr_end, u ,db, {}",cid,tt);
+                        debug!("cid: {}, cp_addr_end, u ,db, {},{}",cid,n,tt+n);
                     },
                     Err(e) => {
                         debug!("cid: {}, cp_addr_end with err, u, d, {}",cid,e);
@@ -387,7 +387,7 @@ pub async fn cp_addr_between<
                 match &rst2{
                     Ok(n) => {
                         let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
-                        debug!("cid: {}, cp_addr_end, d, db, {}",cid,tt);
+                        debug!("cid: {}, cp_addr_end, d, db, {},{}",cid,n,tt+n);
                     },
                     Err(e) => {
                         debug!("cid: {}, cp_addr_end with err, d, d, {}",cid,e);
@@ -406,7 +406,7 @@ pub async fn cp_addr_between<
                 match &rst1{
                     Ok(n) => {
                         let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
-                        debug!("cid: {}, cp_addr_end, d, ub, {}",cid,tt);
+                        debug!("cid: {}, cp_addr_end, d, ub, {},{}",cid,n,tt+n);
                     },
                     Err(e) => {
                         debug!("cid: {}, cp_addr_end with err, d, u, {}",cid,e);
