@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release Tag'
+        description: "Release Tag"
         required: true
         type: string
       without_cross:
         required: false
-        default: 'false'
+        default: "false"
         description: "by default it will build with cross. Set it to true to build without cross"
 
 env:
@@ -23,34 +23,34 @@ jobs:
 
   build-ubuntu:
     permissions: write-all
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       RUST_BACKTRACE: full
     strategy:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Install Rust
-      run: |
-        rustup set profile minimal
-        rustup toolchain install stable
-        rustup default stable
-        rustup override set stable
-        rustup target add --toolchain stable x86_64-unknown-linux-gnu
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable
+          rustup default stable
+          rustup override set stable
+          rustup target add --toolchain stable x86_64-unknown-linux-gnu
 
-    - name: Build x86_64-unknown-linux-gnu
-      run: |
-        cd crates/ruci-cmd
-        make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=x86_64-unknown-linux-gnu
+      - name: Build x86_64-unknown-linux-gnu
+        run: |
+          cd crates/ruci-cmd
+          make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=x86_64-unknown-linux-gnu
 
-    - name: Upload Github Assets
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        files: crates/ruci-cmd/dist/*.tar.xz
-        tag_name: ${{ inputs.tag || github.ref_name }}      
+      - name: Upload Github Assets
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: crates/ruci-cmd/dist/*.tar.xz
+          tag_name: ${{ inputs.tag || github.ref_name }}
 
   build-unix:
     permissions: write-all
@@ -70,7 +70,7 @@ jobs:
         run: |
           brew install gnu-tar
           echo "/usr/local/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
-  
+
       - name: Install Rust
         run: |
           rustup set profile minimal
@@ -83,7 +83,7 @@ jobs:
         run: |
           cd crates/ruci-cmd
           make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }}
-  
+
       - name: Upload Github Assets
         uses: softprops/action-gh-release@v1
         env:
@@ -91,8 +91,6 @@ jobs:
         with:
           files: crates/ruci-cmd/dist/*.tar.xz
           tag_name: ${{ inputs.tag || github.ref_name }}
-
-
 
   build-windows:
     permissions: write-all
@@ -117,7 +115,7 @@ jobs:
         run: |
           cd crates/ruci-cmd
           make exe BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=x86_64-pc-windows-msvc
-  
+
       - name: Upload Github Assets
         uses: softprops/action-gh-release@v1
         env:
@@ -135,7 +133,7 @@ jobs:
     strategy:
       fail-fast: false
 
-#https://github.com/egor-tensin/setup-mingw/pull/16
+    #https://github.com/egor-tensin/setup-mingw/pull/16
     steps:
       - uses: actions/checkout@v4
       - name: Set up MinGW
@@ -153,7 +151,7 @@ jobs:
         run: |
           cd crates/ruci-cmd
           make win_default_target BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=x86_64-pc-windows-gnu
-  
+
       - name: Upload Github Assets
         uses: softprops/action-gh-release@v1
         env:
