@@ -92,9 +92,8 @@ impl<'a> TxToken for MyTxToken<'a> {
         F: FnOnce(&mut [u8]) -> R,
     {
         self.traffic.tx_bytes += len;
-        let r = f(&mut self.buf);
-        let _ = self.conn.write_all(&self.buf[..len]);
-
+        let r = f(&mut self.buf[..len]);
+        let _ = futures::executor::block_on( self.conn.write_all(&self.buf[..len]));
         r
     }
 }
