@@ -8,7 +8,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use log::warn;
-use ruci::relay::{ConnInfo, InfoRecorder};
+use ruci::relay::record::*;
 use rucimp::{
     example_common::*,
     modes::chain::{config::lua, engine::Engine},
@@ -60,8 +60,8 @@ struct FileRecorder {
 }
 
 #[async_trait]
-impl InfoRecorder for FileRecorder {
-    async fn record(&mut self, state: ConnInfo) {
+impl NewInfoRecorder for FileRecorder {
+    async fn record(&mut self, state: NewConnInfo) {
         if self.failed {
             return;
         }

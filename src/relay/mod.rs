@@ -5,6 +5,7 @@
 */
 pub mod cp_tcp;
 pub mod cp_udp;
+pub mod record;
 pub mod route;
 
 use std::sync::Arc;
@@ -27,43 +28,6 @@ use crate::map::*;
 
 pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间。 //todo: 修改这里
 
-#[derive(Clone, Debug)]
-pub struct ConnInfo {
-    pub cid: CID,
-    pub in_tag: String,
-    pub out_tag: String,
-    pub target_addr: net::Addr,
-
-    #[cfg(feature = "trace")]
-    pub in_trace: Vec<String>,
-
-    #[cfg(feature = "trace")]
-    pub out_trace: Vec<String>,
-}
-
-impl std::fmt::Display for ConnInfo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}, {} -> {}, ta: {}\n",
-            self.cid, self.in_tag, self.out_tag, self.target_addr
-        )?;
-        #[cfg(feature = "trace")]
-        {
-            write!(
-                f,
-                "in_trace: {:?}\n , out_trace: {:?}\n",
-                self.in_trace, self.out_trace
-            )
-        }
-    }
-}
-
-#[async_trait]
-pub trait InfoRecorder: Send + Sync {
-    async fn record(&mut self, state: ConnInfo);
-}
-
 /// block until in and out handshake is over.
 /// utilize handle_in_accumulate_result and  route::OutSelector
 pub async fn handle_in_stream(
@@ -72,7 +36,7 @@ pub async fn handle_in_stream(
     out_selector: Arc<Box<dyn OutSelector>>,
     ti: Option<Arc<net::GlobalTrafficRecorder>>,
 
-    recorder: Option<Arc<Mutex<Box<dyn InfoRecorder>>>>,
+    recorder: Option<Arc<Mutex<Box<dyn record::NewInfoRecorder>>>>,
 ) -> anyhow::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
@@ -115,7 +79,7 @@ pub async fn handle_in_accumulate_result(
 
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
 
-    recorder: Option<Arc<Mutex<Box<dyn InfoRecorder>>>>,
+    recorder: Option<Arc<Mutex<Box<dyn record::NewInfoRecorder>>>>,
 ) -> anyhow::Result<()> {
     let cid = listen_result.id;
     let target_addr = match listen_result.a.take() {
@@ -221,7 +185,7 @@ pub async fn handle_in_accumulate_result(
         tokio::spawn(async move {
             r.lock()
                 .await
-                .record(ConnInfo {
+                .record(record::NewConnInfo {
                     cid,
                     in_tag: listen_result.chain_tag,
                     out_tag: dial_result.chain_tag,
