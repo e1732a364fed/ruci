@@ -1,8 +1,10 @@
 define compile
+	export RUSTFLAGS="-Ctarget-feature=+crt-static"
 	cargo build --target ${BUILD_TRIPLET} -F steganography -F lua -F file_server -F api_server -F api_client -F utils -F quinn -F use-native-tls -F tun -F smoltcp ${EXTRA} --release
 endef
 
 define compile_cross
+	export RUSTFLAGS="-Ctarget-feature=+crt-static"
 	cargo build --target ${BUILD_TRIPLET} -F steganography -F lua54 -F file_server -F api_server -F api_client -F utils -F quinn -F native-tls-vendored -F tun -F smoltcp ${EXTRA} --release
 endef
 
