@@ -133,12 +133,17 @@ pub struct RecordData {
     pub cid: String,
     pub behavior: ProxyBehavior,
 
+    /// customized by user (as a marker)
+    pub label: Option<String>,
+
     #[serde(skip)]
     pub file_prefix: Option<String>,
 
     #[serde(skip)]
     pub serialize_format: Option<String>,
 
+    /// 如果 full_record 没启用，序列化时将直接使用 SimplifiedRecordData 且使用
+    /// piece_truncate 和 session_truncate
     #[serde(skip)]
     pub full_record: Option<bool>,
 
@@ -146,12 +151,8 @@ pub struct RecordData {
 
     pub session_truncate: Option<usize>,
 
-    // #[serde(skip)]
-    // pub global_data: Option<GlobalData>,
     pub global_data: Option<SerializableGlobalData>,
 
-    /// customized by user (as a marker)
-    pub label: Option<String>,
     pub upload_data: Vec<DataPiece>,
     pub download_data: Vec<DataPiece>,
 }

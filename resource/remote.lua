@@ -23,9 +23,10 @@ local opt_direct_chain = { {
     }
 } }
 
-local socks5_chain = { tcp, {
+local socks5 = {
     Socks5 = {}
-} }
+}
+local socks5_chain = { tcp, socks5 }
 local http_chain = { tcp, {
     Http = {}
 } }
@@ -91,6 +92,17 @@ local in_h2_trojans_chain = { tcp, tls, {
     }
 }, trojan_in }
 
+local in_h2_socks5s_chain = { tcp, tls, {
+    H2 = {
+        is_grpc = true,
+        http_config = {
+            authority = "myhost",
+            path = "/service1/Tun"
+        }
+    }
+}, socks5 }
+
+
 local quic_in = {
     Quic = {
         key_path = "test2.key",
@@ -122,13 +134,13 @@ local out_stdio_show_bytes_chain = { {
     }
 } }
 
-local direct_out_chain = { { Direct = {} } }
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
         -- { chain = trojans_chain, tag = "listen1" },
         -- { chain = ws_trojans_chain,  tag = "listen1"  }
-        { chain = in_h2_trojans_chain, tag = "listen1" }
+        -- { chain = in_h2_trojans_chain, tag = "listen1" }
+        { chain = in_h2_socks5s_chain, tag = "listen1" }
         -- { chain = in_quic_chain, tag = "listen1" }
         -- { chain = socks5http_chain, tag = "listen1"} ,
         -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
@@ -151,7 +163,7 @@ Config = {
 
     outbounds = { {
         tag = "dial1",
-        chain = direct_out_chain
+        chain = { { Direct = {} } }
     }, {
         tag = "fallback_d",
         chain = { {

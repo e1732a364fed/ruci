@@ -351,6 +351,7 @@ Socks5Http = { -- Socks5, Http
 
 ## Trojan
 
+in:
 ```lua
 Trojan = {
     password: "password1",
@@ -360,6 +361,15 @@ Trojan = {
 
 同上。password 以明文书写。
 
+out:
+
+```lua
+{
+    Trojan = "mypassword"
+}
+```
+
+Trojan 的 in 和 out 格式 略有区别, 要注意
 
 ## TLS
 in/out

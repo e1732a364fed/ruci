@@ -81,6 +81,7 @@ Infinite = {
                     Recorder = Create_out_map({
                         Recorder = {
                             label = "h2_trojans",
+                            -- label = "h2_socks5s",
                             serialize_format = "cbor",
                             session_truncate = 2000,
                         }
@@ -106,6 +107,14 @@ Infinite = {
                 end
 
                 return 4, Trojan_out:clone()
+                -- if Socks5_out == nil then
+                --     Socks5_out = Create_out_map({
+                --         Socks5 = {
+                --         }
+                --     })
+                -- end
+
+                -- return 4, Socks5_out:clone()
             else
                 return -1, {}
             end
