@@ -15,6 +15,7 @@ use ruci::net::*;
 use ruci::Name;
 
 use macro_map::*;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
 use tracing::debug;
 
@@ -50,6 +51,7 @@ impl Map for Stack {
                 tokio::spawn(async move {
                     let device::DeviceAndReceivers {
                         mut device,
+                        mut w,
                         mut tcp_rx,
                         mut udp_rx,
                         mut device_write_rx,
@@ -59,27 +61,29 @@ impl Map for Stack {
 
                     let mut interval = tokio::time::interval(Duration::from_secs(30));
 
+                    tokio::spawn(async move {
+                        loop {
+                            let ob = device_write_rx.recv().await;
+                            match ob {
+                                Some(b) => match w.write(&b).await {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        debug!("smoltcp write got e {e}, will break.");
+                                        break;
+                                    }
+                                },
+                                None => {
+                                    debug!("smoltcp write got None, will break.");
+                                    break;
+                                }
+                            }
+                        }
+                    });
+
                     loop {
                         tokio::select! {
                             _ = interval.tick() =>{
                                 device.udp_health_check();
-                            }
-                            ob = device_write_rx.recv() =>{
-                                match ob {
-                                    Some(b) => {
-                                        match device.write(b).await {
-                                            Ok(_) => {},
-                                            Err(e) => {
-                                                debug!("smoltcp write got e {e}, will break.");
-                                                break;
-                                            },
-                                        }
-                                    },
-                                    None => {
-                                        debug!("smoltcp write got None, will break.");
-                                        break;
-                                    },
-                                }
                             }
 
                             r = device.read() =>{
