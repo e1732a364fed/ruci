@@ -21,7 +21,7 @@
  * 都要初始化一遍配置（如加载tls证书等），这将是非常低效的
  *
  */
-use std::{cmp::Ordering, collections::HashMap, fmt::Debug, sync::Arc};
+use std::{cmp::Ordering, fmt::Debug, sync::Arc};
 
 use dyn_clone::DynClone;
 use ruci::{
@@ -31,8 +31,6 @@ use ruci::{
     },
     net::CID,
 };
-
-use uuid::Uuid;
 
 /// Complete Dynamic Chain using index
 #[derive(Clone, Debug)]
@@ -117,22 +115,22 @@ impl DynIterator for IndexInfinite {
 }
 
 /// Complete Dynamic Chain using uuid
-pub struct UuidInfinite {
-    pub generator: Box<dyn UuidInfiniteNextInMapperGenerator>,
+// pub struct UuidInfinite {
+//     pub generator: Box<dyn UuidInfiniteNextInMapperGenerator>,
 
-    /// 生成的 新 MapperBox 会存储在 cache 中
-    pub cache: HashMap<Uuid, Arc<MapperBox>>,
+//     /// 生成的 新 MapperBox 会存储在 cache 中
+//     pub cache: HashMap<Uuid, Arc<MapperBox>>,
 
-    pub history: Vec<Uuid>,
+//     pub history: Vec<Uuid>,
 
-    pub current_id: Uuid,
-}
+//     pub current_id: Uuid,
+// }
 
-pub type UUIDMapperBox = (Uuid, Arc<MapperBox>); //MapperBox 和它的 uuid
+// pub type UUIDMapperBox = (Uuid, Arc<MapperBox>); //MapperBox 和它的 uuid
 
-pub trait UuidInfiniteNextInMapperGenerator {
-    fn next_mapper(&self, this_index: Uuid, data: OVOD) -> Option<UUIDMapperBox>;
-}
+// pub trait UuidInfiniteNextInMapperGenerator {
+//     fn next_mapper(&self, this_index: Uuid, data: OVOD) -> Option<UUIDMapperBox>;
+// }
 
 /// 有界部分动态链, 即米利型有限状态机, Mealy machine
 #[derive(Debug, Clone)]

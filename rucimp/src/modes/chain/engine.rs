@@ -127,7 +127,7 @@ impl Engine {
 
     /// load infinite dynamic chain
     #[cfg(feature = "lua")]
-    pub fn init_lua_infinite(&mut self, config_string: String) -> anyhow::Result<()> {
+    pub fn init_lua_infinite_dynamic(&mut self, config_string: String) -> anyhow::Result<()> {
         use crate::modes::chain::config::{dynamic::IndexInfinite, lua};
 
         let gmaps = lua::load_infinite_io(&config_string)?;

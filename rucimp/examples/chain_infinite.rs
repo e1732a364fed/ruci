@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut se = Engine::default();
 
-    se.init_lua_infinite(contents)?;
+    se.init_lua_infinite_dynamic(contents)?;
 
     let se = Box::new(se);
 
