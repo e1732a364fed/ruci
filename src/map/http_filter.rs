@@ -54,15 +54,15 @@ impl Mapper for Server {
             }
 
             if let Some(c) = &self.config {
-                if !c.host.is_empty() {
+                if !c.authority.is_empty() {
                     let given_host = result.get_first_header_by("Host");
 
-                    if c.host != given_host {
+                    if c.authority != given_host {
                         let e = anyhow!(
                             "http_filter got wrong host, cid={}, given={}, expected={}",
                             cid,
                             given_host,
-                            c.host
+                            c.authority
                         );
                         return MapResult::ebc(e, buf, conn);
                     }

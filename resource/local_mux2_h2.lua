@@ -22,7 +22,7 @@ h2_out_config = {
     H2Mux = {
         is_grpc = true,
         http_config = {
-            host = "myhost",
+            authority = "myhost",
             path = "/service1/Tun"
         }
     }
@@ -32,7 +32,7 @@ h2_single_out_config = {
     H2Single = {
         is_grpc = true,
         http_config = {
-            host = "myhost",
+            authority = "myhost",
             path = "/service1/Tun"
         }
     }

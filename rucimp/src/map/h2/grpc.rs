@@ -20,13 +20,13 @@ pub fn build_grpc_request_from(c: &CommonConfig) -> Request<()> {
         .header("user-agent", USER_AGENT)
         .header("Te", "trailers");
 
-    if c.host.is_empty() {
+    if c.authority.is_empty() {
         request = request.uri(&c.path)
     } else {
-        request = request.header("Host", c.host.as_str()).uri(
+        request = request.header("Host", c.authority.as_str()).uri(
             Uri::builder()
                 .scheme(c.scheme.as_deref().unwrap_or("https"))
-                .authority(c.host.as_str())
+                .authority(c.authority.as_str())
                 .path_and_query(&c.path)
                 .build()
                 .expect("uri ok"),

@@ -56,9 +56,13 @@ trojan_out = {
     Trojan = "mypassword"
 }
 
+-- http 请求 (ws,h2 有用到)中的 authority 会被填到 
+-- 实际 http/1.1 请求 中的 Host header中 和 h2 请求中的  Request Pseudo-Header Fields 中的 authority 中,
+-- 之所以不叫它 host 是因为它是可以包含端口号的
+
 websocket_out = {
     WebSocket = {
-        host = "myhost",
+        authority = "myhost",
         path = "/path1",
         use_early_data = true
     }
@@ -71,7 +75,7 @@ h2_single_out = {
     H2Single = {
         is_grpc = true,
         http_config = {
-            host = "myhost",
+            authority = "myhost",
             path = "/service1/Tun"
         }
     }

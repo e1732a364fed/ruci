@@ -16,8 +16,8 @@ lazy_static! {
 pub fn build_request_from(c: &CommonConfig, protocol: &str) -> Request<()> {
     let mut request = Request::builder()
         .method(c.method.as_deref().unwrap_or("GET"))
-        .header("Host", c.host.as_str())
-        .uri(protocol.to_string() + c.host.as_str() + &c.path);
+        .header("Host", c.authority.as_str())
+        .uri(protocol.to_string() + c.authority.as_str() + &c.path);
 
     if let Some(h) = &c.headers {
         for (k, v) in h.iter() {
@@ -54,9 +54,9 @@ pub fn match_request_http_header<'a, T: 'a>(
     let a = r.uri().authority();
     let given_host = if let Some(a) = a { a.as_str() } else { "" };
 
-    if c.host != given_host {
+    if c.authority != given_host {
         return Err(HttpMatchError::InvalidHost {
-            expected: &c.host,
+            expected: &c.authority,
             found: given_host,
         });
     }

@@ -39,7 +39,7 @@ trojan_chain = {tcp, tls, trojan_in}
 
 http_filter = {
     HttpFilter = {
-        host = "myhost",
+        authority = "myhost",
         path = "/path1"
     }
 }
@@ -51,7 +51,7 @@ basic_ws = {
 ws = {
     WebSocket = {
         http_config = {
-            host = "myhost",
+            authority = "myhost",
             path = "/path1"
         }
     }
@@ -70,7 +70,7 @@ in_h2_trojans_chain = {tcp, tls, {
     H2 = {
         is_grpc = true,
         http_config = {
-            host = "myhost",
+            authority = "myhost",
             path = "/service1/Tun"
         }
     }

@@ -31,14 +31,14 @@ impl Client {
     pub fn new(c: CommonConfig) -> Self {
         let url = Uri::builder()
             .scheme(c.scheme.as_deref().unwrap_or("ws"))
-            .authority(c.host.as_str())
+            .authority(c.authority.as_str())
             .path_and_query(&c.path)
             .build()
             .expect("uri ok");
 
         let mut request = Request::builder()
             .method("GET")
-            .header("Host", c.host.as_str())
+            .header("Host", c.authority.as_str())
             .header("Connection", "Upgrade")
             .header("Upgrade", "websocket")
             .header("Sec-WebSocket-Version", "13")
