@@ -457,6 +457,22 @@ ip route add {v} dev {original_dev_name} metric 100
 
 显然，每一个链都加一个 该链专属的 dns配置项，就可以达到最大的灵活性
 
+## Stream+Sink
+
+在 ruci::net::Stream 中，有 
+
+RW (AsyncRead,AsyncWrite), 
+Conn (AsyncRead+AsyncWrite), 
+AddrConn, Generator, None 这几种选择，
+
+不过，在rust + async 的 使用中，还有一种 Stream+Sink 的使用方式。
+这种方法也是较为通用的
+https://docs.rs/futures/latest/futures/index.html
+
+但是 ruci 中没有使用它们，因为它们使用了泛型，使得框架编写更加困难
+
+
+注：一个 `Framed` 结构可以 用 `futures::StreamExt::split` 分裂 为一个 `SplitSink<Framed>>` 和   `SplitStream<Framed>>`
 
 ## 其它
 

@@ -283,12 +283,6 @@ pub enum Stream {
 
     RW(RW),
 
-    // Frame(
-    //     (
-    //         SplitSink<Framed<AsyncDevice, TunPacketCodec>, Vec<u8>>,
-    //         SplitStream<Framed<AsyncDevice, TunPacketCodec>>,
-    //     ),
-    // ),
     /// 一般为 udp
     ///
     /// 注：如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn. 也是 udp 的情况
@@ -322,12 +316,13 @@ impl Stream {
             Stream::Generator(_) => "SomeStreamGenerator",
             Stream::None => "NoStream",
             Stream::RW(_) => todo!(),
-            // Stream::Frame(_) => todo!(),
         }
     }
     pub fn c(c: Conn) -> Self {
         Stream::Conn(c)
     }
+
+    /// u is shortcut for udp, as AddrConn is mainly used for udp.
     pub fn u(u: AddrConn) -> Self {
         Stream::AddrConn(u)
     }
@@ -357,7 +352,6 @@ impl Stream {
             Stream::Generator(ref mut rx) => rx.close(),
             Stream::None => {}
             Stream::RW(rw) => rw.1.shutdown().await?,
-            // Stream::Frame(f) => f.0.close().await?,
         }
         Ok(())
     }

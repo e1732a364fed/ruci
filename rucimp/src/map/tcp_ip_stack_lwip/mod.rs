@@ -50,7 +50,7 @@ impl Map for Stack {
         //从 tun device 有三种方式可以 异步读取，
         // 1. 先在 device 用 AsyncDevice 它自己的 split
         // 2. 转为 AsyncConn 后 用 tokio 的 split
-        // 3. 转为 Frame 后 分成 sync 和 stream
+        // 3. 转为 Frame 后 分成 sink 和 stream
 
         //24.12.25: 实测第一种情况 会在 向 tun 写入时卡住, 第2、3种情况效果相同。
 

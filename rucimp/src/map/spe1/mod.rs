@@ -58,6 +58,8 @@ use tracing::{trace, warn};
 pub type QA = (String, String);
 pub type Token = [QA; 128]; //每个 Token都有128种可能, 128个问答同时表示同一种信息
 
+/// QaData 为 本隐写示例所使用的相关数据
+///
 /// 选择的方式按 转移方阵中所指定的概率来
 #[derive(Debug)]
 pub struct QaData {
@@ -84,11 +86,6 @@ fn simple_qa(from: usize, plus: usize) -> QA {
     let n = from as u16 + plus as u16;
     (format!("question {n}"), format!("answer {n}"))
 }
-
-// fn simple_token(from: usize) -> Token {
-//     let array: Token = array_init::array_init(|i| simple_qa(from, i));
-//     array
-// }
 
 fn simple_token_vec(count: usize) -> Vec<Token> {
     let mut r = vec![];
