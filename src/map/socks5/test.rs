@@ -8,12 +8,12 @@
 
 use bytes::{BufMut, BytesMut};
 
-use crate::net;
 use crate::map;
 use crate::map::socks5::server::*;
 use crate::map::MapParams;
 use crate::map::Mapper;
 use crate::map::ProxyBehavior;
+use crate::net;
 use crate::user::AsyncUserAuthenticator;
 use crate::user::UserPass;
 use async_std_test::async_test;
@@ -113,7 +113,13 @@ async fn auth_tcp_handshake_in_mem() -> std::io::Result<()> {
         write_target: Some(writev), //5 2 1 0 + ...
     };
 
-    let r = a.maps(1, ProxyBehavior::DECODE, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            1,
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
     match r.e {
         None => {
             let ad = r.a.unwrap();
@@ -205,7 +211,8 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> std::io::Result<()> {
 
     let r = a
         .maps(
-            1, ProxyBehavior::DECODE,
+            1,
+            ProxyBehavior::DECODE,
             MapParams {
                 c: map::Stream::TCP(Box::new(client_tcps)),
                 a: None,
@@ -261,7 +268,9 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
         // let (mut newc, addr, client_data, authed_user) =
         //     a.add(1, Box::new(ss), None, None).await.unwrap();
 
-        let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(ss))).await;
+        let r = a
+            .maps(1, ProxyBehavior::DECODE, MapParams::new(Box::new(ss)))
+            .await;
 
         let ad = r.a.unwrap();
         assert_eq!(ad.get_name().unwrap(), target_name);
@@ -278,12 +287,9 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
                 } else {
                     panic!("failed downcasted to UserPass, ")
                 }
-            },
+            }
             _ => panic!("need AsyncAnyData::B"),
-
         }
-
-       
 
         //接收测试数据
         let mut readbuf = [0u8; 1024];
@@ -301,8 +307,6 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
         let mut readbuf = [0u8; 1024];
 
         cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
-
-        //thread::sleep(time::Duration::from_secs(1));
 
         // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
@@ -323,8 +327,6 @@ async fn auth_tcp_handshake_local() -> std::io::Result<()> {
         ])
         .await
         .unwrap();
-
-        //thread::sleep(time::Duration::from_secs(1));
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
@@ -382,7 +384,9 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
         let (ss, _) = r.unwrap();
         //let (mut newc, addr, client_data, _) = a.add(1, Box::new(ss), None, None).await.unwrap();
 
-        let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(ss))).await;
+        let r = a
+            .maps(1, ProxyBehavior::DECODE, MapParams::new(Box::new(ss)))
+            .await;
 
         let ad = r.a.unwrap();
         assert_eq!(ad.get_ip().unwrap(), target_name.parse::<IpAddr>().unwrap());
@@ -406,8 +410,6 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
 
         cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
 
-        //thread::sleep(time::Duration::from_secs(1));
-
         // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
 
@@ -427,8 +429,6 @@ async fn auth_tcp_handshake_local_with_ip4_request_and_bytes_crate() -> std::io:
         ])
         .await
         .unwrap();
-
-        //thread::sleep(time::Duration::from_secs(1));
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
@@ -481,7 +481,9 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
     let listen_future = async {
         let r = listener.accept().await;
         let (ss, _) = r.unwrap();
-        let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(ss))).await;
+        let r = a
+            .maps(1, ProxyBehavior::DECODE, MapParams::new(Box::new(ss)))
+            .await;
 
         let ad = r.a.unwrap();
         assert_eq!(ad.get_ip().unwrap(), target_name.parse::<IpAddr>().unwrap());
@@ -505,8 +507,6 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
 
         cs.write(&[VERSION5, 1, AUTH_PASSWORD]).await.unwrap();
 
-        //thread::sleep(time::Duration::from_secs(1));
-
         // 如果不read， server会在 add方法中的 写回 auth 成功的reply 时报错：
         // An established connection was aborted by the software in your host machine.
 
@@ -526,8 +526,6 @@ async fn auth_tcp_handshake_local_with_ip6_request_and_bytes_crate() -> std::io:
         ])
         .await
         .unwrap();
-
-        //thread::sleep(time::Duration::from_secs(1));
 
         let n = cs.read(&mut readbuf[..]).await.unwrap();
         println!("client read, {:?}", &readbuf[..n]);
@@ -597,7 +595,13 @@ async fn no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
         write_target: Some(writev),
     };
 
-    let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            1,
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
     match r.e {
         None => {
             assert!(r.a.unwrap().get_name().unwrap() == name);
@@ -662,7 +666,13 @@ async fn no_auth_tcp_handshake_in_mem_stick_hello() -> std::io::Result<()> {
         write_target: Some(writev),
     };
 
-    let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            1,
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
     match r.e {
         None => {
             assert_eq!(r.a.unwrap().get_name().unwrap(), name);
@@ -718,7 +728,13 @@ async fn wrong0_no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
         write_target: None,
     };
 
-    let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            1,
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
     match r.e {
         None => {
             assert!(r.a.unwrap().get_name().unwrap() == name);
@@ -762,7 +778,13 @@ async fn wrong1_no_auth_tcp_handshake_in_mem() -> std::io::Result<()> {
         write_target: None,
     };
 
-    let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            1,
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
     match r.e {
         None => {
             assert!(r.a.unwrap().get_name().unwrap() == name);
@@ -813,7 +835,13 @@ async fn random_bytes_request_no_auth_tcp_handshake_in_mem() -> std::io::Result<
         write_target: None,
     };
 
-    let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            1,
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
     match r.e {
         None => {}
 
@@ -863,7 +891,13 @@ async fn random_bytes_request_auth_userpass_tcp_handshake_in_mem() -> std::io::R
         write_target: None,
     };
 
-    let r = a.maps(1,ProxyBehavior::DECODE, MapParams::new(Box::new(client_tcps))).await;
+    let r = a
+        .maps(
+            1,
+            ProxyBehavior::DECODE,
+            MapParams::new(Box::new(client_tcps)),
+        )
+        .await;
     match r.e {
         None => {}
         Some(e) => {
