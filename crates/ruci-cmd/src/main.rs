@@ -37,6 +37,8 @@ struct Args {
     #[arg(short, long)]
     log_level: Option<tracing::Level>,
 
+    /// specifiy the log file prefix name.
+    ///
     /// if empty string is given, no log file will be generated;
     ///
     /// if the flag is not given, log file will be generated with default name
@@ -187,21 +189,17 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     let mut no_file = false;
     let mut file_name = String::from("ruci-cmd.log");
 
-    match args.log_file {
-        Some(fname) => {
-            if fname.is_empty() {
-                no_file = true;
-                println!("Empty log-file name specified, no log file would be generated.")
-            } else {
-                file_name = fname;
-            }
+    if let Some(fname) = args.log_file {
+        if fname.is_empty() {
+            no_file = true;
+            println!("Empty log-file name specified, no log file would be generated.")
+        } else {
+            file_name = fname;
         }
-        None => {}
     }
 
     let guard = if !no_file {
-        let file_appender =
-            rolling::daily(args.log_dir.unwrap_or(String::from("logs")), &file_name);
+        let file_appender = rolling::daily(args.log_dir.unwrap_or(String::from("logs")), file_name);
         let (non_blocking_appender, guard) = non_blocking(file_appender);
         let file_layer = fmt::layer()
             .json()
