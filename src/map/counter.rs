@@ -45,7 +45,7 @@ impl AsyncRead for CounterConn {
         if let Poll::Ready(Ok(())) = &r {
             let db = self.data.db.fetch_add(n as u64, Ordering::Relaxed);
             if log_enabled!(log::Level::Debug) {
-                debug!("counter: db: {}, cid: {}", db, self.data.cid);
+                debug!("cid: {}, counter: db: {}, ", self.data.cid, db,);
             }
         }
         r
@@ -63,7 +63,7 @@ impl AsyncWrite for CounterConn {
         if let Poll::Ready(Ok(u)) = &r {
             let ub = self.data.ub.fetch_add(*u as u64, Ordering::Relaxed);
             if log_enabled!(log::Level::Debug) {
-                debug!("counter: ub: {}, cid: {}", ub, self.data.cid);
+                debug!("cid: {}, counter: ub: {}, ", self.data.cid, ub,);
             }
         }
         r
