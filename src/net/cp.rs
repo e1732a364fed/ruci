@@ -71,7 +71,7 @@ pub async fn cp_with_gr<C1: ConnTrait, C2: ConnTrait>(
 
     #[cfg(feature = "trace")] updater: OptUpdater,
 ) -> Result<u64, Error> {
-    if log_enabled!(log::Level::Debug) {
+    if tracing::enabled!(tracing::Level::DEBUG) {
         debug!("cp start, {} c1: {}, c2: {}", cid, c1.name(), c2.name());
     }
 
@@ -126,7 +126,7 @@ where
             if let Ok(n) = r1 {
                 let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
 
-                if log_enabled!(log::Level::Debug) {
+                if tracing::enabled!(tracing::Level::DEBUG)  {
                     debug!("cp, {}, u, ub, {}, {}",cid,n,tt+n);
                 }
             }
@@ -140,12 +140,12 @@ where
             if let Ok(n) = r2 {
                 let tt = tr.db.fetch_add(n, Ordering::Relaxed);
 
-                if log_enabled!(log::Level::Debug) {
+                if tracing::enabled!(tracing::Level::DEBUG)  {
                     debug!("cp, {}, u, db, {}, {}",cid, n,tt+n);
                 }
             }
 
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG)  {
                 debug!("cp end u, {} ",cid);
             }
 
@@ -156,7 +156,7 @@ where
             if let Ok(n) = r2 {
                 let tt = tr.db.fetch_add(n, Ordering::Relaxed);
 
-                if log_enabled!(log::Level::Debug) {
+                if tracing::enabled!(tracing::Level::DEBUG)  {
                     debug!("cp, {}, d, db, {}, {}",cid, n,tt+n);
                 }
             }
@@ -166,12 +166,12 @@ where
             if let Ok(n) = r1 {
                 let tt = tr.ub.fetch_add(n, Ordering::Relaxed);
 
-                if log_enabled!(log::Level::Debug) {
+                if tracing::enabled!(tracing::Level::DEBUG)  {
                     debug!("cp, {}, d, ub, {}, {}",cid,n,tt+n);
                 }
             }
 
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG)  {
                 debug!("cp end d, { } ",cid);
             }
 

@@ -3,9 +3,9 @@
  */
 
 use futures::executor::block_on;
-use log::debug;
 use macro_mapper::*;
 use map::Stream;
+use tracing::debug;
 
 use crate::map::{self, MapResult};
 use crate::net::CID;

@@ -1,8 +1,8 @@
-use log::warn;
 use ruci::{
     map::trojan,
     user::{PlainText, UserBox},
 };
+use tracing::warn;
 
 #[test]
 fn test() {

@@ -53,7 +53,6 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use dyn_clone::DynClone;
-use log::{info, log_enabled, warn};
 use serde::{Deserialize, Serialize};
 use tokio::sync::oneshot;
 use typed_builder::TypedBuilder;

@@ -3,11 +3,11 @@ use crate::{
     net::listen::Listener,
 };
 use anyhow::anyhow;
-use log::{debug, info, log_enabled};
 use tokio::sync::{
     mpsc::{self, Receiver, Sender},
     oneshot,
 };
+use tracing::{debug, info};
 
 use super::MapResult;
 
@@ -59,7 +59,7 @@ async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::
                 break;
             }
         };
-        if log_enabled!(log::Level::Debug) {
+        if tracing::enabled!(tracing::Level::DEBUG) {
             debug!(
                 "new accepted {}, raddr: {}, laddr: {}",
                 listener.network(),

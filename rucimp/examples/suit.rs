@@ -4,11 +4,11 @@
 
 use std::env;
 
-use log::warn;
 use rucimp::{
     modes::suit::{config::adapter::*, engine::SuitEngine},
     utils::*,
 };
+use tracing::warn;
 
 mod shared;
 

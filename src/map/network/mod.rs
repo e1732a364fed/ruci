@@ -1,9 +1,10 @@
 pub mod accept;
 pub mod echo;
 
-use log::{debug, info, log_enabled};
 use macro_mapper::{mapper_ext_fields, MapperExt, NoMapperExt};
 use tokio::sync::mpsc::Receiver;
+use tracing::debug;
+use tracing::info;
 
 use super::*;
 use crate::map;
@@ -23,7 +24,7 @@ impl Mapper for BlackHole {
     /// always consume the stream, ignore all params.
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.c.is_some() {
-            info!("{cid} consumed by blackhole");
+            info!(cid = cid.short_str(), " consumed by blackhole");
         }
         return MapResult::default();
     }
@@ -51,11 +52,11 @@ impl Mapper for Direct {
             }
         };
 
-        if log_enabled!(log::Level::Debug) {
+        if tracing::enabled!(tracing::Level::DEBUG) {
             debug!(
-                "direct dial, {} , {}, {:?} {:?}",
+                cid = cid.short_str(),
+                "direct dial,   {}, {:?} {:?}",
                 a,
-                cid,
                 behavior,
                 params.b.as_ref().map(|b| b.len())
             );
@@ -207,7 +208,7 @@ impl Mapper for Listener {
                 .expect("Listener always has a fixed_target_addr"),
         };
 
-        if log_enabled!(log::Level::Debug) {
+        if tracing::enabled!(tracing::Level::DEBUG) {
             debug!("{}, start listen {}", cid, a)
         }
 

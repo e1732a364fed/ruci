@@ -9,7 +9,7 @@ mod mode;
 use std::env::{self, set_var};
 
 use clap::{Parser, Subcommand, ValueEnum};
-use log::{info, log_enabled, Level};
+use tracing::info;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
@@ -35,7 +35,7 @@ struct Args {
     config: String,
 
     #[arg(short, long)]
-    log_level: Option<log::Level>,
+    log_level: Option<tracing::Level>,
 
     /// use infinite dynamic chain that is written in the lua config file (the "infinite"
     /// global variable must exist)
@@ -117,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
             SubCommands::ApiClient { command } => {
                 let r = api::client::deal_cmds(command).await;
                 if r.is_err() {
-                    log::warn!("{:?}", r)
+                    tracing::warn!("{:?}", r)
                 }
             }
 
@@ -131,7 +131,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn env_and_version(ll: Option<Level>) -> tracing_appender::non_blocking::WorkerGuard {
+pub fn env_and_version(ll: Option<tracing::Level>) -> tracing_appender::non_blocking::WorkerGuard {
     println!("ruci-cmd\n");
     let cdir = std::env::current_dir().expect("has current directory");
     println!("working dir: {:?} \n", cdir);
@@ -184,13 +184,11 @@ pub fn env_and_version(ll: Option<Level>) -> tracing_appender::non_blocking::Wor
         std::env::var(RL).map_or_else(|_| String::new(), |v| v)
     );
 
-    if log_enabled!(Level::Info) {
-        info!(
-            "version: ruci-cmd:{}, rucimp_{}",
-            env!("CARGO_PKG_VERSION"),
-            rucimp::VERSION,
-        );
-    }
+    info!(
+        "version: ruci-cmd:{}, rucimp_{}",
+        env!("CARGO_PKG_VERSION"),
+        rucimp::VERSION,
+    );
 
     guard
 }

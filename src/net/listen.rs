@@ -1,8 +1,8 @@
 use std::{fs::remove_file, path::PathBuf};
 
 use anyhow::{bail, Context, Ok};
-use log::warn;
 use tokio::net::TcpListener;
+use tracing::warn;
 
 #[cfg(unix)]
 use tokio::net::UnixListener;

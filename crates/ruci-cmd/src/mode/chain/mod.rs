@@ -1,9 +1,9 @@
-use log::info;
 use rucimp::{
     modes::chain::engine::Engine,
     utils::{wait_close_sig, wait_close_sig_with_closer},
 };
 use tokio::sync::mpsc;
+use tracing::info;
 
 #[cfg(feature = "api_server")]
 use crate::api;

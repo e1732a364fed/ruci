@@ -5,13 +5,13 @@ use crate::{
     net::{self, gen_random_higher_port, helpers::MockTcpStream},
 };
 use futures::{join, FutureExt};
-use log::info;
 use parking_lot::Mutex;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     task,
 };
+use tracing::info;
 
 use super::*;
 

@@ -1,6 +1,5 @@
 use crate::net::CID;
 use futures::FutureExt;
-use log::info;
 use parking_lot::Mutex;
 use ruci::{
     map::{socks5, tls, MapParams, Mapper},
@@ -16,6 +15,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
+use tracing::info;
 
 const TARGET_PORT: u16 = 80;
 const TARGET_NAME: &str = "www.baidu.com";

@@ -13,7 +13,7 @@ pub use record::*;
 use std::sync::Arc;
 
 use bytes::BytesMut;
-use log::{debug, info, log_enabled, warn};
+use tracing::{debug, info, warn};
 
 use crate::net::addr_conn::AsyncWriteAddrExt;
 use crate::net::{self, Addr, Stream, CID};
@@ -122,7 +122,7 @@ pub async fn handle_in_accumulate_result(
             }
         }
     };
-    if log_enabled!(log::Level::Info) {
+    if tracing::enabled!(tracing::Level::INFO) {
         match listen_result.b.as_ref() {
             Some(ed) => {
                 info!(

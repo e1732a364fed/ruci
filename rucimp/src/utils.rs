@@ -1,8 +1,8 @@
 use std::{fs, path::PathBuf};
 
 use anyhow::anyhow;
-use log::{debug, info};
 use tokio::signal;
+use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
 

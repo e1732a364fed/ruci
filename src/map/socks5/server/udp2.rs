@@ -8,8 +8,8 @@ udp2 模块是符合 ruci::net::addr_conn 中的定义的, 更加通用.
 use core::time;
 
 use anyhow::bail;
-use log::info;
 use tokio::net::UdpSocket;
+use tracing::info;
 
 use self::map::addr_conn::MAX_DATAGRAM_SIZE;
 

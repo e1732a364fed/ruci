@@ -18,6 +18,7 @@ use ruci::{
 #[cfg(feature = "trace")]
 use tinyufo::TinyUfo;
 use tokio::sync::mpsc;
+use tracing::info;
 
 use super::*;
 

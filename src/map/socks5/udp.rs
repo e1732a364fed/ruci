@@ -7,8 +7,8 @@ use std::{
     task::{Context, Poll},
 };
 
-use log::info;
 use tokio::{io::ReadBuf, net::UdpSocket};
+use tracing::info;
 
 use self::map::{addr_conn::MAX_DATAGRAM_SIZE, helpers::MAX_LEN_SOCKS5_BYTES};
 
@@ -130,7 +130,7 @@ impl AsyncReadAddr for Conn {
                                 let wlen = min(buf.len(), actual_buf.len());
                                 actual_buf.copy_to_slice(&mut buf[..wlen]);
 
-                                // if log_enabled!(log::Level::Debug) {
+                                // if tracing::enabled!(tracing::Level::DEBUG)  {
                                 //     debug!("socks5 udp got msg,{wlen} {soa}, {:?}", &buf[..wlen])
                                 // }
 

@@ -6,13 +6,13 @@
 use std::env;
 
 use chrono::{DateTime, Utc};
-use log::warn;
 use ruci::relay::*;
 use rucimp::{modes::chain::engine::Engine, utils::*};
 use tokio::{
     fs::{File, OpenOptions},
     io::AsyncWriteExt,
 };
+use tracing::warn;
 mod shared;
 
 #[tokio::main]

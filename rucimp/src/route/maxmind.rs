@@ -18,8 +18,8 @@ https://github.com/Loyalsoldier/geoip
 use std::net::IpAddr;
 
 use anyhow::anyhow;
-use log::{debug, warn};
 use maxminddb::geoip2;
+use tracing::{debug, warn};
 
 /// try read file  in possible_addrs
 pub fn get_ip_iso(ip: IpAddr, filename: &str, possible_addrs: &[&str]) -> String {

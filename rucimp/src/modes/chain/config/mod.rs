@@ -13,7 +13,6 @@ pub mod dynamic;
 use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 
 use bytes::BytesMut;
-use log::warn;
 use ruci::{
     map::{
         acc::{DMIterBox, DynVecIterWrapper},
@@ -24,6 +23,7 @@ use ruci::{
     net,
 };
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};

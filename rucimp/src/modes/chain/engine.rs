@@ -4,7 +4,6 @@ use crate::route::{RuleSet, RuleSetOutSelector};
 use super::config::StaticConfig;
 use anyhow;
 use futures::Future;
-use log::{debug, info, warn};
 use parking_lot::Mutex;
 #[allow(unused)]
 use ruci::net;
@@ -22,6 +21,7 @@ use tokio::sync::{
     oneshot::{self, Sender},
 };
 use tokio::task::JoinSet;
+use tracing::{debug, info, warn};
 
 #[derive(Default)]
 pub struct Engine {

@@ -367,7 +367,7 @@ pub async fn cp_between<
     futures::select! {
         rst1 = c1_to_c2 =>{
 
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG)  {
                 debug!("cp_addr end, u, {}",cid);
             }
 
@@ -388,7 +388,7 @@ pub async fn cp_between<
 
             let rst2 = c2_to_c1.await;
 
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG)  {
                 debug!("cp_addr end, d, {}",cid);
             }
 
@@ -408,7 +408,7 @@ pub async fn cp_between<
             rst1
         }
         rst2 = c2_to_c1 =>{
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG)  {
                 debug!("cp_addr end, d, {}",cid);
             }
             if let Some(ti) = opt.as_ref(){
@@ -426,7 +426,7 @@ pub async fn cp_between<
             }
 
             let rst1 = c1_to_c2.await;
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG)  {
                 debug!("cp_addr end, u, {}",cid);
             }
             if let Some(ti) = opt{

@@ -17,7 +17,8 @@ debug-assertions = false
 #opt-level = 'z' # use this and upx will get the smallest binary
 
 [dependencies]
-log = "0.4.20"
+tracing = "0.1.40"
+
 rand = { version = "0.8.5" , features = ["small_rng" ]}
 bytes = "1"
 futures = "0.3"

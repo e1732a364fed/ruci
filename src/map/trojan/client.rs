@@ -1,9 +1,9 @@
 use anyhow::bail;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
-use log::debug;
 use macro_mapper::{mapper_ext_fields, MapperExt};
 use tokio::io::AsyncWriteExt;
+use tracing::debug;
 
 use crate::{
     map::{self, MapResult, Mapper, MapperExt, CID},

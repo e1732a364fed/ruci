@@ -7,7 +7,6 @@ use std::cmp::min;
 use base64::prelude::*;
 use bytes::BytesMut;
 use futures::executor::block_on;
-use log::log_enabled;
 use macro_mapper::NoMapperExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
@@ -101,7 +100,7 @@ impl Server {
 
         let r = net::http::parse_h1_request(&buf[..n], true);
         if r.fail_reason != FailReason::None {
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG) {
                 let e1 = anyhow::anyhow!(
                     "{cid}, http proxy: get method/path failed: {:?}, buf as str: {}",
                     r.fail_reason,

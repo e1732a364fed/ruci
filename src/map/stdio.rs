@@ -5,9 +5,9 @@
 
 use crate::map;
 use async_trait::async_trait;
-use log::debug;
 use macro_mapper::{mapper_ext_fields, MapperExt};
 use std::{pin::Pin, task::Poll};
+use tracing::debug;
 
 use crate::{net::CID, Name};
 

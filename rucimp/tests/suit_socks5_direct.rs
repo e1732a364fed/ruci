@@ -15,7 +15,6 @@ use std::{env::set_var, sync::Arc, time::Duration};
 use crate::net::CID;
 use bytes::{BufMut, BytesMut};
 use futures::{pin_mut, select, Future, FutureExt};
-use log::{info, warn};
 use parking_lot::Mutex;
 use ruci::map::socks5;
 use ruci::map::socks5::*;
@@ -30,6 +29,7 @@ use rucimp::modes::suit::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot::{self, Sender};
+use tracing::{info, warn};
 
 const WAITSECS: u64 = ruci::relay::READ_HANDSHAKE_TIMEOUT + 2;
 const WAITID: i32 = 10101;

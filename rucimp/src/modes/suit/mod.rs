@@ -15,8 +15,6 @@ mod test;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use log::log_enabled;
-use log::Level::Debug;
 use ruci::map::tls;
 use tokio::io;
 use tokio::net::TcpListener;

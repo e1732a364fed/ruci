@@ -9,7 +9,8 @@ struct DynMIterWrapper, DynVecIterWrapper, AccumulateResult, AccumulateParams
 
 * function accumulate , accumulate_from_start
 */
-use log::debug;
+
+use tracing::{debug, info, warn, Level};
 
 use super::*;
 
@@ -186,8 +187,8 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
             None => break,
         };
 
-        if log_enabled!(log::Level::Debug) {
-            debug!("acc: {cid} , mapper: {}", adder.name())
+        if tracing::enabled!(Level::DEBUG) {
+            debug!(cid = cid.short_str(), mapper = adder.name(), "acc:",)
         }
         last_r = adder
             .maps(
@@ -298,10 +299,16 @@ pub async fn accumulate_from_start(
     } else {
         match &first_r.c {
             Stream::None => {
-                warn!("accumulate_from_start: no input stream, still trying to accumulate")
+                warn!(
+                    cid = in_cid.short_str(),
+                    "accumulate_from_start: no input stream, still trying to accumulate"
+                )
             }
             _ => {
-                debug!("accumulate_from_start: not a stream generator, will accumulate directly.",);
+                debug!(
+                    cid = in_cid.short_str(),
+                    "accumulate_from_start: not a stream generator, will accumulate directly.",
+                );
             }
         }
         let cid = in_cid.clone_push(oti);
@@ -361,8 +368,12 @@ async fn in_iter_accumulate_forever(params: InIterAccumulateForeverParams) {
         };
         let new_cid = cid.clone_push(oti.clone());
 
-        if log_enabled!(log::Level::Info) {
-            info!("{cid}, new accepted stream, newcid: {new_cid}");
+        if tracing::enabled!(Level::DEBUG) {
+            info!(
+                cid = cid.short_str(),
+                newcid = new_cid.short_str(),
+                "new accepted stream"
+            );
         }
 
         spawn_acc_forever(SpawnAccForeverParams {

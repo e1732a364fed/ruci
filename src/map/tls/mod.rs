@@ -14,10 +14,10 @@ pub mod test2;
 
 use async_trait::async_trait;
 use bytes::BytesMut;
-use log::debug;
 use rustls::pki_types::{Der, TrustAnchor};
 use std::{fmt, sync::Arc};
 use tokio_rustls::{TlsAcceptor, TlsConnector};
+use tracing::debug;
 
 use crate::{
     map,

@@ -1,5 +1,6 @@
 use map::addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt, MAX_DATAGRAM_SIZE};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tracing::{debug, warn};
 
 use super::*;
 
@@ -43,19 +44,22 @@ impl Mapper for Echo {
                             Ok(n) => {
                                 let r = c.write_all(&buf[..n]).await;
                                 if let Err(e) = r {
-                                    info!("{cid} echo write stopped by: {e}");
+                                    info!(cid = cid.short_str(), " echo write stopped by: {e}");
 
                                     break;
                                 }
                                 let r = c.flush().await;
                                 if let Err(e) = r {
-                                    info!("{cid} echo write flush stopped by: {e}");
+                                    info!(
+                                        cid = cid.short_str(),
+                                        " echo write flush stopped by: {e}"
+                                    );
 
                                     break;
                                 }
                             }
                             Err(e) => {
-                                info!("{cid} echo read stoped by: {e}");
+                                info!(cid = cid.short_str(), "echo read stoped by: {e}");
                                 break;
                             }
                         }
@@ -65,7 +69,7 @@ impl Mapper for Echo {
             Stream::AddrConn(mut u) => {
                 if let Some(b) = params.b {
                     if let Some(a) = params.a {
-                        debug!("{cid} udp echo, write ed {:?}", b.len());
+                        debug!(cid = cid.short_str(), "udp echo, write ed {:?}", b.len());
 
                         let r = u.w.write(&b, &a).await;
 
@@ -76,7 +80,8 @@ impl Mapper for Echo {
                         }
                     } else {
                         info!(
-                            "{cid} udp echo got earlydata without target_addr, {}",
+                            cid = cid.short_str(),
+                            " udp echo got earlydata without target_addr, {}",
                             b.len()
                         );
                     }
@@ -94,14 +99,14 @@ impl Mapper for Echo {
 
                                 let r = u.w.write(&buf[..n], &a).await;
                                 if let Err(e) = r {
-                                    info!("{cid} echo write stoped by: {e}");
+                                    info!(cid = cid.short_str(), "echo write stoped by: {e}");
 
                                     break;
                                 }
                                 //debug!("echo write n ok,{}", n);
                             }
                             Err(e) => {
-                                info!("{cid} echo read stoped by: {e}");
+                                info!(cid = cid.short_str(), "echo read stoped by: {e}");
                                 break;
                             }
                         }
@@ -109,8 +114,9 @@ impl Mapper for Echo {
                 });
             }
             _ => warn!(
-                "{cid} echo needs a single stream to loop read, got {}",
-                params.c
+                cid = cid.short_str(),
+                stream = params.c.to_str(),
+                "echo needs a single stream to loop read, got: ",
             ),
         }
 

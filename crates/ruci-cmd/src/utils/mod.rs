@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use super::*;
 use anyhow::{Context, Ok};
-use log::info;
 use ruci::net;
 use tokio::sync::mpsc;
+use tracing::info;
 
 pub const WINTUN_DOWNLOAD_LINK: &str = "https://www.wintun.net/builds/wintun-0.14.1.zip";
 

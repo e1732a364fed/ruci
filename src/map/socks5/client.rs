@@ -1,11 +1,11 @@
 use bytes::BufMut;
-use log::debug;
 use macro_mapper::NoMapperExt;
 use map::{helpers, Addr, Network};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::UdpSocket,
 };
+use tracing::debug;
 
 use self::map::{MapParams, ProxyBehavior, CID};
 use super::*;

@@ -39,7 +39,6 @@ use anyhow::bail;
 use anyhow::Result;
 use futures::pin_mut;
 use futures::{io::Error, FutureExt};
-use log::{debug, log_enabled};
 use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
@@ -58,6 +57,7 @@ use tokio::net::TcpStream;
 use tokio::net::UdpSocket;
 #[cfg(unix)]
 use tokio::net::UnixStream;
+use tracing::debug;
 
 // #[derive(Default)]
 // pub enum GenerateCIDBehavior {
@@ -90,6 +90,22 @@ pub fn new_ordered_cid(lastid: &AtomicU32) -> u32 {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CIDChain {
     pub id_list: Vec<u32>, //首项为根id, 末项为末端stream的id
+}
+impl CIDChain {
+    pub fn to_short_str(&self) -> String {
+        match (self.id_list).len() {
+            0 => String::from("_"),
+            1 => self
+                .id_list
+                .first()
+                .expect("get first element of cid")
+                .to_string(),
+            _ => {
+                let v: Vec<_> = self.id_list.iter().map(|id| id.to_string()).collect();
+                v.join("-")
+            }
+        }
+    }
 }
 
 impl Display for CIDChain {
@@ -151,6 +167,13 @@ impl std::str::FromStr for CID {
 }
 
 impl CID {
+    /// without "cid: ", show the number(s) only
+    pub fn short_str(&self) -> String {
+        match self {
+            CID::Unit(u) => u.to_string(),
+            CID::Chain(c) => c.to_short_str(),
+        }
+    }
     pub fn new_random() -> CID {
         CID::Unit(new_rand_cid())
     }
@@ -294,16 +317,19 @@ impl Debug for Stream {
 
 impl Display for Stream {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self {
-            Stream::Conn(c) => write!(f, "{}", c.name()),
-            Stream::AddrConn(ac) => write!(f, "{}", ac.name()),
-            Stream::Generator(_) => write!(f, "SomeStreamGenerator"),
-            Stream::None => write!(f, "NoStream"),
-        }
+        write!(f, "{}", self.to_str())
     }
 }
 
 impl Stream {
+    pub fn to_str(&self) -> &str {
+        match &self {
+            Stream::Conn(c) => c.name(),
+            Stream::AddrConn(ac) => ac.name(),
+            Stream::Generator(_) => "SomeStreamGenerator",
+            Stream::None => "NoStream",
+        }
+    }
     pub fn c(c: Conn) -> Self {
         Stream::Conn(c)
     }

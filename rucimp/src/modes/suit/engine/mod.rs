@@ -3,13 +3,13 @@ use std::{io, sync::Arc};
 use super::*;
 use config::LDConfig;
 use futures::Future;
-use log::{debug, info};
 use parking_lot::Mutex;
 use ruci::{
     map::{acc::DynVecIterWrapper, *},
     net::{GlobalTrafficRecorder, Stream},
     relay::{self, route::*},
 };
+use tracing::{debug, info};
 
 use tokio::{
     sync::oneshot::{self, Sender},
@@ -244,7 +244,7 @@ async fn listen_tcp(
                 let (tcpstream, raddr) = listener.accept().await?;
 
                 let ti = clone_oti();
-                if log_enabled!(Debug) {
+                if tracing::enabled!(tracing::Level::DEBUG)  {
                     debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
                 }
 

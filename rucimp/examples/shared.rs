@@ -1,5 +1,6 @@
-use log::{info, log_enabled, Level};
 use std::env::{self, set_var};
+
+use tracing::info;
 
 pub fn print_env_version(name: &str) {
     println!("rucimp~ {}\n", name);
@@ -21,7 +22,5 @@ pub fn print_env_version(name: &str) {
         std::env::var(RL).map_or_else(|_| String::new(), |v| v)
     );
 
-    if log_enabled!(Level::Info) {
-        info!("version: rucimp_{}", rucimp::VERSION,)
-    }
+    info!("version: rucimp_{}", rucimp::VERSION,)
 }

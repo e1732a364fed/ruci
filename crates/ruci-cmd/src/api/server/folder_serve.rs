@@ -1,6 +1,6 @@
 use axum::{extract::Path, http::StatusCode, response::Html, routing::get, Router};
-use log::info;
 use std::fs;
+use tracing::info;
 
 async fn index(Path(folder): Path<String>) -> Html<String> {
     info!("index called, {folder} ");

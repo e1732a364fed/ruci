@@ -2,7 +2,6 @@
  *
  */
 use async_trait::async_trait;
-use log::{debug, log_enabled};
 use macro_mapper::*;
 use ruci::map::network::accept;
 use ruci::map::{self, *};
@@ -10,6 +9,7 @@ use ruci::net::*;
 use ruci::*;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::oneshot;
+use tracing::debug;
 
 use crate::net::so2::{self, SockOpt};
 
@@ -65,7 +65,7 @@ impl Mapper for TcpOptListener {
                 .expect("Listener always has a fixed_target_addr"),
         };
 
-        if log_enabled!(log::Level::Debug) {
+        if tracing::enabled!(tracing::Level::DEBUG) {
             debug!("{}, start listen {}", cid, a)
         }
 

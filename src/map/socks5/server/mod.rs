@@ -20,7 +20,6 @@ use crate::{
 use anyhow::{Context, Ok};
 use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
-use log::{debug, log_enabled, warn};
 use macro_mapper::NoMapperExt;
 use map::Stream;
 use std::{
@@ -34,6 +33,7 @@ use tokio::{
     net::UdpSocket,
     task,
 };
+use tracing::debug;
 
 #[derive(Default, Clone)]
 pub struct Config {
@@ -133,7 +133,7 @@ impl Server {
 
         let v = buf[0];
         if v != VERSION5 {
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG) {
                 let e2 = anyhow!(
                     "{}, socks5: unsupported version: {}, buf as str: {}",
                     cid,
@@ -421,7 +421,7 @@ impl Server {
         buf.advance(end);
         buf.truncate(remain as usize);
 
-        if log_enabled!(log::Level::Debug) && remain > 0 {
+        if tracing::enabled!(tracing::Level::DEBUG) && remain > 0 {
             debug!("{}, socks5 server got earlydata,{}", cid, remain);
         }
 

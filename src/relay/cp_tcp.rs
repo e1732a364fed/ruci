@@ -6,12 +6,11 @@
 
 use crate::net::CID;
 use crate::net::{self, GlobalTrafficRecorder};
-use log::Level::Debug;
-use log::{debug, log_enabled, warn};
 use scopeguard::defer;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
+use tracing::{debug, warn};
 
 //non-blocking, spawns new task to do actual relay
 pub fn cp_conn(
@@ -95,13 +94,13 @@ async fn no_ti_ed(
     mut out_conn: net::Conn,
     earlydata: bytes::BytesMut,
 ) {
-    if log_enabled!(Debug) {
+    if tracing::enabled!(tracing::Level::DEBUG) {
         debug!("{cid}, relay with earlydata, {}", earlydata.len());
     }
     let r = out_conn.write_all(&earlydata).await;
     match r {
         Ok(_) => {
-            if log_enabled!(Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG) {
                 debug!("{cid}, upload earlydata ok, ");
             }
             let r = out_conn.flush().await;
@@ -143,13 +142,13 @@ async fn ti_ed(
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
-    if log_enabled!(Debug) {
+    if tracing::enabled!(tracing::Level::DEBUG) {
         debug!("{cid}, relay with earlydata, {}", earlydata.len());
     }
     let r = out_conn.write_all(&earlydata).await;
     match r {
         Ok(_) => {
-            if log_enabled!(Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG) {
                 debug!("{cid}, upload earlydata ok ");
             }
 

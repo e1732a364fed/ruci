@@ -5,8 +5,6 @@ use bytes::BytesMut;
 use futures_util::pin_mut;
 use futures_util::select;
 use futures_util::FutureExt;
-use log::debug;
-use log::info;
 use std::io;
 use std::ops::DerefMut;
 use std::sync::Arc;
@@ -15,6 +13,8 @@ use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::io::ReadBuf;
+use tracing::debug;
+use tracing::info;
 
 //todo: improve code
 

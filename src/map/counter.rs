@@ -17,10 +17,10 @@ use std::{
 use crate::map;
 use crate::{net::*, Name};
 use async_trait::async_trait;
-use log::{debug, log_enabled};
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use macro_mapper::{mapper_ext_fields, MapperExt};
+use tracing::debug;
 /// takes ownership of base Conn, for counting
 pub struct CounterConn {
     pub data: CounterData,
@@ -53,7 +53,7 @@ impl AsyncRead for CounterConn {
             let n = buf.filled().len() - previous_len;
 
             let db = self.data.db.fetch_add(n as u64, Ordering::Relaxed);
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG) {
                 debug!(
                     "{}, counter for {}: db: {}, ",
                     self.data.cid,
@@ -76,7 +76,7 @@ impl AsyncWrite for CounterConn {
 
         if let Poll::Ready(Ok(u)) = &r {
             let ub = self.data.ub.fetch_add(*u as u64, Ordering::Relaxed);
-            if log_enabled!(log::Level::Debug) {
+            if tracing::enabled!(tracing::Level::DEBUG) {
                 debug!(
                     "{}, counter for {}: ub: {}, ",
                     self.data.cid,
