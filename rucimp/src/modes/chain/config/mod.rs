@@ -209,12 +209,12 @@ impl ToMapperBox for DialerConfig {
         let opt_bind_a = self
             .bind_addr
             .clone()
-            .map(|a| net::Addr::from_name_network_addr_str(&a).expect("network_ip_addr is valid"));
+            .map(|a| net::Addr::from_name_network_addr_url(&a).expect("network_ip_addr is valid"));
 
         let opt_dial_a = self
             .dial_addr
             .clone()
-            .map(|a| net::Addr::from_name_network_addr_str(&a).expect("network_ip_addr is valid"));
+            .map(|a| net::Addr::from_name_network_addr_url(&a).expect("network_ip_addr is valid"));
         let d = ruci::map::network::Dialer {
             dial_addr: opt_dial_a,
             bind_addr: opt_bind_a,
@@ -323,7 +323,7 @@ impl Ext {
     fn to_ext_fields(&self) -> MapperExtFields {
         let mut ext_f = MapperExtFields::default();
         if let Some(ta) = self.fixed_target_addr.as_ref() {
-            ext_f.fixed_target_addr = net::Addr::from_network_addr_str(ta).ok();
+            ext_f.fixed_target_addr = net::Addr::from_network_addr_url(ta).ok();
         }
         if let Some(s) = self.pre_defined_early_data.as_ref() {
             ext_f.pre_defined_early_data = Some(BytesMut::from(s.as_bytes()));
@@ -401,7 +401,7 @@ impl ToMapperBox for InMapperConfig {
             InMapperConfig::Dialer(dc) => dc.to_mapper_box(),
             InMapperConfig::Listener { listen_addr, ext } => {
                 let a =
-                    net::Addr::from_network_addr_str(listen_addr).expect("network_addr is valid");
+                    net::Addr::from_network_addr_url(listen_addr).expect("network_addr is valid");
                 let g = ruci::map::network::Listener {
                     listen_addr: a,
                     ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
@@ -504,7 +504,7 @@ impl ToMapperBox for InMapperConfig {
                 sockopt,
                 ext,
             } => Box::new(crate::map::opt_net::TcpOptListener {
-                listen_addr: net::Addr::from_network_addr_str(&listen_addr)
+                listen_addr: net::Addr::from_network_addr_url(&listen_addr)
                     .expect("listen_addr ok"),
                 sopt: sockopt.clone(),
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),
@@ -521,7 +521,7 @@ impl ToMapperBox for InMapperConfig {
                 sockopt,
                 ext,
             } => Box::new(crate::map::tproxy::UDPListener {
-                listen_addr: net::Addr::from_network_addr_str(&listen_addr)
+                listen_addr: net::Addr::from_network_addr_url(&listen_addr)
                     .expect("listen_addr ok"),
                 sopt: sockopt.clone(),
                 ext_fields: ext.as_ref().map(|e| e.to_ext_fields()),

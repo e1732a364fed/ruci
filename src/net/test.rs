@@ -75,14 +75,14 @@ fn addr_to_name_ip_netmask() {
     println!("{:?}", r);
     assert!(r.is_ok());
 
-    let a = Addr::from_name_network_addr_str("ip://10.0.0.1:24#utun111").unwrap();
+    let a = Addr::from_name_network_addr_url("ip://10.0.0.1:24#utun111").unwrap();
     println!("{:?}", a);
 
     let r = a.to_name_ip_netmask();
     println!("{:?}", r);
     assert!(r.is_ok());
 
-    let a = Addr::from_name_network_addr_str("ip://10.0.0.1:24").unwrap();
+    let a = Addr::from_name_network_addr_url("ip://10.0.0.1:24").unwrap();
     println!("{:?}", a);
 
     let r = a.to_name_ip_netmask();

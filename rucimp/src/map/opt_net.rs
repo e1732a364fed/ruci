@@ -195,7 +195,7 @@ impl Name for OptDialer {
 impl OptDialer {
     pub fn new(opt: OptDialerOption) -> anyhow::Result<Self> {
         Ok(Self {
-            dial_addr: net::Addr::from_network_addr_str(&opt.dial_addr)?,
+            dial_addr: net::Addr::from_network_addr_url(&opt.dial_addr)?,
             sockopt: opt.sockopt,
             ext_fields: Some(MapperExtFields::default()),
         })

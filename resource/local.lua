@@ -25,7 +25,7 @@ l2 = {
     }
 }
 l3 = {
-    Listener = { listen_addr = "0.0.0.0:30800"}
+    Listener = { listen_addr = "[::1]:30800"}
 }
 
 tproxy_tcp_listen = {

@@ -203,7 +203,7 @@ impl UDPListener {
             Ok(c) => MapResult::builder()
                 .c(c)
                 .a(Some(
-                    Addr::from_network_addr_str("udp://1.1.1.1:53").expect("ok"),
+                    Addr::from_network_addr_url("udp://1.1.1.1:53").expect("ok"),
                 ))
                 .b(Some(fake_b))
                 .shutdown_rx(shutdown_addrconn_rx)

@@ -174,7 +174,7 @@ impl Suit for SuitStruct {
         match self.get_behavior() {
             ProxyBehavior::ENCODE => {
                 if self.protocol_str != "direct" && !self.addr_str.is_empty() {
-                    let a = net::Addr::from_network_addr_str(self.addr_str())
+                    let a = net::Addr::from_network_addr_url(self.addr_str())
                         .expect("self addr str ok");
                     let dialer = network::Dialer {
                         dial_addr: Some(a),

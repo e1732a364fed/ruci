@@ -2,6 +2,12 @@ use std::io;
 
 use bytes::BytesMut;
 
+pub fn rem_first(value: &str) -> &str {
+    let mut chars = value.chars();
+    chars.next();
+    chars.as_str()
+}
+
 pub fn io_error<T: std::fmt::Display>(message: T) -> io::Error {
     io::Error::new(io::ErrorKind::Other, format!("{}", message))
 }

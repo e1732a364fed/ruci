@@ -43,7 +43,7 @@ fn test() {
         cid: CID::new_random(),
         in_tag: "in_tag1".to_string(),
         out_tag: "out_t1".to_string(),
-        target_addr: net::Addr::from_network_addr_str("127.1.2.3:389").unwrap(),
+        target_addr: net::Addr::from_network_addr_url("127.1.2.3:389").unwrap(),
 
         #[cfg(feature = "trace")]
         in_trace: Vec::new(),

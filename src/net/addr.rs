@@ -214,14 +214,16 @@ impl Addr {
     ///
     /// tcp://127.0.0.1:80#www.b.com
     ///
+    /// tcp://[::1]:80#www.b.com
+    ///
     /// if no "#", it will fallback to from_network_addr_str
     ///
-    pub fn from_name_network_addr_str(s: &str) -> Result<Self> {
+    pub fn from_name_network_addr_url(s: &str) -> Result<Self> {
         let ns: Vec<_> = s.splitn(2, '#').collect();
         match ns.len() {
-            1 => Addr::from_network_addr_str(s),
+            1 => Addr::from_network_addr_url(s),
             2 => {
-                let a = Addr::from_network_addr_str(ns[0])?;
+                let a = Addr::from_network_addr_url(ns[0])?;
                 Ok(a.set_name(ns[1]))
             }
             _ => Err(anyhow!(
@@ -230,11 +232,11 @@ impl Addr {
         }
     }
 
-    /// tcp://127.0.0.1:80 or tcp://www.b.com:80.
+    /// tcp://127.0.0.1:80 or tcp://www.b.com:80.  or tcp://[::1]:80
     ///
     /// if :// is not present, use tcp as network, like 1.1.1.1:1 will act like
     /// tcp://1.1.1.1:1
-    pub fn from_network_addr_str(s: &str) -> Result<Self> {
+    pub fn from_network_addr_url(s: &str) -> Result<Self> {
         let ns: Vec<_> = s.splitn(2, "://").collect();
         match ns.len() {
             1 => Addr::from_addr_str("tcp", s),
@@ -245,13 +247,17 @@ impl Addr {
         }
     }
 
-    /// "tcp",127.0.0.1:80 or "tcp",www.b.com:80.
+    /// "tcp",127.0.0.1:80 or "tcp",www.b.com:80. or "tcp", [::1]:80
     ///
     ///  if unix, then like path/to/file, without the port and colon.
     ///
     /// network must be a valid network str
     pub fn from_addr_str(network: &str, s: &str) -> Result<Self> {
-        let ns: Vec<_> = s.split(':').collect();
+        let ns: Vec<_> = if s.starts_with('[') && s.contains("]:") {
+            crate::utils::rem_first(s).split("]:").collect()
+        } else {
+            s.split(':').collect()
+        };
         let port = if ns.len() != 2 {
             0
         } else {
@@ -265,9 +271,14 @@ impl Addr {
         }
     }
 
-    /// 127.0.0.1:80
+    /// like 127.0.0.1:80  or [::1]:80
     pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
-        let ns: Vec<_> = s.split(':').collect();
+        let ns: Vec<_> = if s.starts_with('[') && s.contains("]:") {
+            crate::utils::rem_first(s).split("]:").collect()
+        } else {
+            s.split(':').collect()
+        };
+
         if ns.len() != 2 {
             return Err(anyhow!("Addr::from_ip_addr_str, split colon got len!=2",));
         }

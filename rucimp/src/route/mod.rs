@@ -350,12 +350,12 @@ mod test {
         nets.insert(Network::UDP);
 
         rs.ta_networks = Some(nets);
-        let a = Addr::from_network_addr_str("tcp://104.193.88.123:80")?;
+        let a = Addr::from_network_addr_url("tcp://104.193.88.123:80")?;
 
         let r = rs.is_in_networks(false, &a);
         assert!(!r);
 
-        let a = Addr::from_network_addr_str("udp://1.1.1.1:80")?;
+        let a = Addr::from_network_addr_url("udp://1.1.1.1:80")?;
 
         let r = rs.is_in_networks(false, &a);
         assert!(r);
@@ -378,13 +378,13 @@ mod test {
         rs.ta_ip_countries = Some(ip_countries);
 
         //www.baidu.com's IP
-        let a = Addr::from_network_addr_str("tcp://104.193.88.123:80")?;
+        let a = Addr::from_network_addr_url("tcp://104.193.88.123:80")?;
 
         let r = rs.is_in_ta_ip_countries(false, &a);
         assert!(r);
 
         // www.google.com's IP
-        let a = Addr::from_network_addr_str("tcp://142.251.32.36:80")?;
+        let a = Addr::from_network_addr_url("tcp://142.251.32.36:80")?;
 
         let r = rs.is_in_ta_ip_countries(false, &a);
         assert!(r);
