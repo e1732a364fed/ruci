@@ -375,10 +375,10 @@ pub fn parse_h1_response(bs: &[u8]) -> ParsedHttpResponse {
 
     match left_string.find("\r\n\r\n") {
         Some(header_end_pos) => {
-            resp.body_start_index = REASON_INDEX + header_end_pos;
+            resp.body_start_index = REASON_INDEX + header_end_pos + 4;
 
             let header_with_reason_string =
-                String::from_utf8_lossy(&bs[REASON_INDEX..resp.body_start_index]);
+                String::from_utf8_lossy(&bs[REASON_INDEX..REASON_INDEX + header_end_pos]);
 
             let x: Vec<&str> = header_with_reason_string.split("\r\n").collect();
             if x.is_empty() {
