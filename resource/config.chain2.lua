@@ -21,15 +21,15 @@ stdio_out = { Stdio={}  }
 direct_out_chain = { "Direct" }
 
 -- config = {
---     listen = { {chain = listen_socks5http, tag = "listen1"} },
---     dial = { { tag="dial1", chain = { "Direct" } } }
+--     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
+--     outbounds = { { tag="dial1", chain = { "Direct" } } }
 -- }
 
 config = {
-    listen = { 
+    inbounds = { 
         {chain = trojan_chain, tag = "listen1"} ,
     },
 
-    dial = { { tag="dial1", chain = direct_out_chain  } }
+    outbounds = { { tag="dial1", chain = direct_out_chain  } }
 }
 

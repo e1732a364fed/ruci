@@ -24,7 +24,7 @@ for i=1,5 do
 end
 
 config = {
-    listen = {
+    inbounds = {
         {chain = chain1, tag = "listen1"}
     }
 }

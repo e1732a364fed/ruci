@@ -16,15 +16,15 @@ use serde::{Deserialize, Serialize};
 /// 静态配置中有初始化后即确定的listen/dial数量和行为
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
-    pub listen: Vec<InMapperConfigChain>,
-    pub dial: Option<Vec<OutMapperConfigChain>>,
+    pub inbounds: Vec<InMapperConfigChain>,
+    pub outbounds: Option<Vec<OutMapperConfigChain>>,
 }
 
 impl StaticConfig {
     /// convert config chain to mapper chain
-    pub fn get_listens(&self) -> Vec<Vec<Box<dyn MapperSync>>> {
+    pub fn get_inbounds(&self) -> Vec<Vec<Box<dyn MapperSync>>> {
         let listens: Vec<_> = self
-            .listen
+            .inbounds
             .iter()
             .map(|config_chain| {
                 config_chain
@@ -38,8 +38,8 @@ impl StaticConfig {
     }
 
     /// convert config chain to mapper chain
-    pub fn get_dials(&self) -> Vec<Vec<Box<dyn MapperSync>>> {
-        match &self.dial {
+    pub fn get_outbounds(&self) -> Vec<Vec<Box<dyn MapperSync>>> {
+        match &self.outbounds {
             None => Vec::new(),
 
             Some(dials) => {
@@ -254,7 +254,7 @@ mod test {
     #[test]
     fn serialize_toml() {
         let sc = StaticConfig {
-            listen: vec![InMapperConfigChain {
+            inbounds: vec![InMapperConfigChain {
                 tag: None,
                 chain: vec![
                     InMapperConfig::Listener(Listener::TcpListener("0.0.0.0:1080".to_string())),
@@ -265,7 +265,7 @@ mod test {
                     }),
                 ],
             }],
-            dial: None,
+            outbounds: None,
         };
         let toml = toml::to_string(&sc).unwrap();
         println!("{:#}", toml);

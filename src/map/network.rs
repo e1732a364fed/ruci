@@ -144,6 +144,7 @@ impl Mapper for TcpDialer {
     }
 }
 
+/// 不命名为TcpListener 只是因为不希望有重名
 #[derive(Clone, Debug)]
 pub struct TcpStreamGenerator {
     pub addr: Option<net::Addr>,

@@ -52,7 +52,7 @@ mod test {
         end
 
         config = {
-            listen = {
+            inbounds = {
                 {chain = chain1, tag = "listen1"}
             }
         }
@@ -61,7 +61,7 @@ mod test {
         let c: StaticConfig = load(text)?;
 
         println!("{:#?}", c);
-        let first_listen_group = c.listen.first().unwrap();
+        let first_listen_group = c.inbounds.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
         assert!(matches!(InMapperConfig::Counter, last_m));
 
@@ -108,8 +108,8 @@ mod test {
             end
     
             config = {
-                listen = {},
-                dial = {
+                inbounds = {},
+                outbounds = {
                     {chain = chain1, tag = "dial1"}
                 }
             }
@@ -118,7 +118,7 @@ mod test {
         let c: StaticConfig = load(text)?;
 
         println!("{:#?}", c);
-        let dial = c.dial.unwrap();
+        let dial = c.outbounds.unwrap();
         let first_listen_group = dial.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
         assert!(matches!(InMapperConfig::Counter, last_m));
@@ -151,10 +151,10 @@ mod test {
         }
         
         config = {
-            listen = {
+            inbounds = {
                 {chain = chain1, tag = "listen1"}
             },
-            dial = {
+            outbounds = {
                 { 
                     tag="dial1", chain = {
                         { Dialer = { TcpDialer = "0.0.0.0:1080" }  }
@@ -167,7 +167,7 @@ mod test {
         let c: StaticConfig = load(text)?;
 
         println!("{:#?}", c);
-        let dial = c.dial.unwrap();
+        let dial = c.outbounds.unwrap();
         let first_listen_group = dial.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
         assert!(matches!(InMapperConfig::Counter, last_m));

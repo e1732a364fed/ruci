@@ -20,22 +20,22 @@ pub struct StaticEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<TransmissionInfo>,
 
-    servers: Vec<Vec<Box<dyn MapperSync>>>,
-    clients: Vec<Vec<Box<dyn MapperSync>>>,
+    inbounds: Vec<Vec<Box<dyn MapperSync>>>,  //servers
+    outbounds: Vec<Vec<Box<dyn MapperSync>>>, //clients
 }
 
 impl StaticEngine {
     pub fn init(&mut self, sc: StaticConfig) {
-        self.servers = sc.get_listens();
-        self.clients = sc.get_dials();
+        self.inbounds = sc.get_inbounds();
+        self.outbounds = sc.get_outbounds();
     }
 
     pub fn server_count(&self) -> usize {
-        self.servers.len()
+        self.inbounds.len()
     }
 
     pub fn client_count(&self) -> usize {
-        self.clients.len()
+        self.outbounds.len()
     }
 
     /// non-blocking
@@ -83,10 +83,9 @@ impl StaticEngine {
             return Err(io::Error::other("no client"));
         }
 
-        let defaultc = self.clients.last().unwrap();
+        let defaultc = self.outbounds.last().unwrap();
 
-        //todo: 因为没实现路由功能，所以现在只能用一个 client, 即 default client
-        // 路由后，要传递给 listen_ser 一个路由表
+        //todo: 因为没实现路由功能，所以现在只能用 FixedOutSelector,返回第一个outbound
 
         let mut tasks = Vec::new();
         let mut shutdown_tx_vec = Vec::new();
@@ -94,11 +93,11 @@ impl StaticEngine {
         let it = defaultc.iter();
         let ib = Box::new(it);
 
-        let selector = FixedOutSelector { mappers: ib };
-        let selector = Box::new(selector);
-        let selector: &'static FixedOutSelector = Box::leak(selector);
+        let fixed_selector = FixedOutSelector { mappers: ib };
+        let fixed_selector = Box::new(fixed_selector);
+        let fixed_selector: &'static FixedOutSelector = Box::leak(fixed_selector);
 
-        self.servers.iter().for_each(|inmappers| {
+        self.inbounds.iter().for_each(|inmappers| {
             let (tx, rx) = oneshot::channel();
 
             let (atx, mut arx) = mpsc::channel(100); //todo: change this
@@ -125,7 +124,7 @@ impl StaticEngine {
                     let ar = ar.unwrap();
                     tokio::spawn(handle_in_accumulate_result(
                         ar,
-                        selector,
+                        fixed_selector,
                         Some(self.ti.clone()),
                     ));
                 }
@@ -135,7 +134,7 @@ impl StaticEngine {
             tasks.push((t1, t2));
             shutdown_tx_vec.push(tx);
         });
-        debug!("engine will run with {} listens", tasks.len());
+        debug!("engine will run with {} inbounds", tasks.len());
 
         *running = Some(shutdown_tx_vec);
         return Ok(tasks);

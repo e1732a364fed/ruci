@@ -17,22 +17,47 @@ dial_trojan_chain = { dial,tls, { Trojan = "mypassword"} }
 
 stdio_socks5_chain = { { Stdio="fake.com:80" } , { Socks5 = {} } }
 
-stdin_adder_chain = { { Stdio="fake.com:80" } , { Adder = 1 } }
+-- stdin + 1 , 在命令行输入 a, 会得到b，输入1，得2，依此类推
+in_stdio_adder_chain = { { Stdio="fake.com:80" } , { Adder = 1 } } 
 
-stdout_chain = { { Stdio="" } }
+out_stdio_chain = { { Stdio="" } }
 
 direct_out_chain = { "Direct" }
 
--- config = {
---     listen = { {chain = listen_socks5http, tag = "listen1"} },
---     dial = { { tag="dial1", chain = { "Direct" } } }
--- }
+--[=[
 
 config = {
-    listen = { 
-        {chain = stdin_adder_chain, tag = "listen1"} ,
-    },
+    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
+    outbounds = { { tag="dial1", chain = { "Direct" } } }
 
-    dial = { { tag="dial1", chain = stdout_chain } }
+--[[
+这个 config 块是演示 inbound 是 socks5http, outbound 是 direct 的情况
+
+它是一个基本的本地代理示例. 运行它, 设置您的系统代理为相应端口, 看看能不能正常访问网络吧
+--]]
+
 }
 
+--]=]
+
+
+---[=[
+config = {
+
+    inbounds = { 
+        {chain = in_stdio_adder_chain, tag = "listen1"} ,
+    },
+
+--[[
+这个 config 块是演示 inbound 是 stdio (命令行)+1, outbound 也是stdio的情况, 
+
+此时需要注意, 该配置下 命令行 的输入会既用作 inbound 的输入, 也用作 outbound 的输入;
+
+在实际操作中, 您会看到, 输入被in和out轮流使用, 因此会有 一次+1, 一次不+1的情况轮流出现
+
+--]]
+
+    outbounds = { { tag="dial1", chain = out_stdio_chain } }
+}
+
+--]=]
