@@ -175,7 +175,8 @@ impl Suit for SuitStruct {
             ProxyBehavior::ENCODE => {
                 if self.protocol_str != "direct" && !self.addr_str.is_empty() {
                     let mut a = network::Dialer::default();
-                    a.set_configured_target_addr(self.addr.clone());
+                    a.dial_addr = net::Addr::from_network_addr_str(self.addr_str())
+                        .expect("self addr str ok");
                     self.push_mapper(Arc::new(Box::new(a)));
                 }
                 if self.has_tls() {

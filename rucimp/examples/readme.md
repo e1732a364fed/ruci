@@ -51,7 +51,7 @@ sudo RUST_LOG=debug cargo run --example chain -F tun -F lua
 
 ```lua
 inbounds = { 
-    {chain = { { Dialer="ip://10.0.0.1:24#utun321" } }, tag = "listen1"} ,
+    {chain = { { Dialer={ dial_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
 }
 ```
 

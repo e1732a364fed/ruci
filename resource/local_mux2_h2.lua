@@ -3,7 +3,9 @@
 max_num = 12
 
 dial_config = {
-    Dialer = "tcp://0.0.0.0:10801"
+    Dialer = {
+        dial_addr = "tcp://0.0.0.0:10801"
+    }
 }
 
 tlsout_config = {

@@ -107,7 +107,9 @@ impl Mapper for Direct {
 /// Dialer can dial tcp, udp or unix domain socket
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
-pub struct Dialer {}
+pub struct Dialer {
+    pub dial_addr: net::Addr,
+}
 
 impl Name for Dialer {
     fn name(&self) -> &'static str {
@@ -142,7 +144,7 @@ fn get_addr_from_vd(vd: Vec<Option<Box<dyn Data>>>) -> Option<net::Addr> {
 
 #[async_trait]
 impl Mapper for Dialer {
-    /// try the parameter first, if no addr was given, use configured addr.
+    /// try the parameter first, if no addr was given, use dial_addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
     async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
@@ -155,10 +157,7 @@ impl Mapper for Dialer {
                     }
 
                     None => {
-                        if let Some(configured_dial_a) = &self.configured_target_addr() {
-                            return Dialer::dial_addr(configured_dial_a, params.a, params.b).await;
-                        }
-                        return MapResult::err_str("Dialer can't dial without an address");
+                        return Dialer::dial_addr(&self.dial_addr, params.a, params.b).await;
                     }
                 }
             }

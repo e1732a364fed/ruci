@@ -1,7 +1,9 @@
 -- 演示了 用完全动态链实现 h2 mux outbound 的配置
 -- 关注 outbounds 的 generator 部分, 它实现了单h2连接的多路复用
 dial_config = {
-    Dialer = "tcp://0.0.0.0:10801"
+    Dialer = {
+        dial_addr = "tcp://0.0.0.0:10801"
+    }
 }
 
 tlsout_config = {

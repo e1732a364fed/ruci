@@ -92,7 +92,9 @@ trojan_in = {
 listen_trojan = {listen, trojan_in}
 
 dial = {
-    Dialer = "tcp://0.0.0.0:10801"
+    Dialer = {
+        dial_addr = "tcp://0.0.0.0:10801"
+    }
 }
 
 opt_dial = {
@@ -291,7 +293,7 @@ config = {
     outbounds = { 
         { 
             tag="dial1", 
-            chain = { { Dialer =  "unix://file1" }, tlsout, trojan_out } 
+            chain = { { Dialer =  { dial_addr = "unix://file1"} }, tlsout, trojan_out } 
         } 
     }
 
@@ -447,7 +449,7 @@ config = {
     }, {
         tag = "fallback_d",
         chain = {{
-            Dialer = "tcp://0.0.0.0:80"
+            Dialer = { dial_addr = "tcp://0.0.0.0:80" }
         }}
     }},
 
@@ -532,7 +534,7 @@ config = {
         --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
         -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
-        {chain = { { Dialer="ip://10.0.0.1:24#utun321" } }, tag = "listen1"} ,
+        {chain = { { Dialer= { dial_addr = "ip://10.0.0.1:24#utun321" } } }, tag = "listen1"} ,
     },
 
 --[[

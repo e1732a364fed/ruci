@@ -200,10 +200,13 @@ pub struct OutMapperConfigChain {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum InMapperConfig {
-    Echo,             //单流消耗器
-    Stdio(Ext),       //单流发生器
-    Fileio(File),     //单流发生器
-    Dialer(String),   //单流发生器
+    Echo,         //单流消耗器
+    Stdio(Ext),   //单流发生器
+    Fileio(File), //单流发生器
+    Dialer {
+        dial_addr: String,
+        ext: Option<Ext>,
+    }, //单流发生器
     Listener(String), //多流发生器
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
@@ -248,11 +251,14 @@ pub enum InMapperConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum OutMapperConfig {
-    Blackhole,      //单流消耗器
-    Direct,         //单流发生器
-    Stdio(Ext),     //单流发生器
-    Fileio(File),   //单流发生器
-    Dialer(String), //单流发生器
+    Blackhole,    //单流消耗器
+    Direct,       //单流发生器
+    Stdio(Ext),   //单流发生器
+    Fileio(File), //单流发生器
+    Dialer {
+        dial_addr: String,
+        ext: Option<Ext>,
+    }, //单流发生器
     Adder(i8),
     Counter,
     TLS(TlsOut),
@@ -368,11 +374,12 @@ impl ToMapperBox for InMapperConfig {
                 };
                 Box::new(s)
             }
-            InMapperConfig::Dialer(td_str) => {
-                let a = net::Addr::from_name_network_addr_str(td_str)
+            InMapperConfig::Dialer { dial_addr, ext } => {
+                let a = net::Addr::from_name_network_addr_str(dial_addr)
                     .expect("network_ip_addr is valid");
                 let mut d = ruci::map::network::Dialer::default();
-                d.set_configured_target_addr(Some(a));
+                d.dial_addr = a;
+                d.ext_fields = ext.as_ref().map(|e| e.to_ext_fields());
                 Box::new(d)
             }
             InMapperConfig::Listener(l_str) => {
@@ -524,11 +531,12 @@ impl ToMapperBox for OutMapperConfig {
             OutMapperConfig::Blackhole => Box::<BlackHole>::default(),
 
             OutMapperConfig::Direct => Box::<Direct>::default(),
-            OutMapperConfig::Dialer(td_str) => {
-                let a = net::Addr::from_name_network_addr_str(td_str)
+            OutMapperConfig::Dialer { dial_addr, ext } => {
+                let a = net::Addr::from_name_network_addr_str(dial_addr)
                     .expect("network_ip_addr is valid");
                 let mut d = ruci::map::network::Dialer::default();
-                d.set_configured_target_addr(Some(a));
+                d.dial_addr = a;
+                d.ext_fields = ext.as_ref().map(|e| e.to_ext_fields());
                 Box::new(d)
             }
             OutMapperConfig::Adder(i) => i.to_mapper_box(),
