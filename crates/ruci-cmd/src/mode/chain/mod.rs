@@ -109,6 +109,7 @@ async fn setup_record_newconn_info(e: &mut Engine, api_ser: &mut api::server::Se
 
 /// 记录每条连接的实时流量
 #[cfg(feature = "trace")]
+#[cfg(feature = "api_server")]
 async fn setup_trace_flux(se: &mut Engine, s: &mut api::server::Server) {
     let (ub_tx, ub_rx) = mpsc::channel::<(ruci::net::CID, u64)>(4096);
 

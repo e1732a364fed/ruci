@@ -9,7 +9,7 @@ mod mode;
 use std::env::{self, set_var};
 
 use clap::{Parser, Subcommand, ValueEnum};
-use log::{info, log_enabled, warn, Level};
+use log::{info, log_enabled, Level};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
@@ -106,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
             SubCommands::ApiClient { command } => {
                 let r = api::client::deal_cmds(command).await;
                 if r.is_err() {
-                    warn!("{:?}", r)
+                    log::warn!("{:?}", r)
                 }
             }
 
