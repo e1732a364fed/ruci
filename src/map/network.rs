@@ -58,7 +58,8 @@ impl Mapper for Direct {
         let dial_r = a.try_dial().await;
         match dial_r {
             Ok(mut stream) => {
-                if self.is_tail_of_chain() && params.b.is_some() {
+                if matches!(stream, Stream::TCP(_)) && self.is_tail_of_chain() && params.b.is_some()
+                {
                     let rw = stream
                         .write_all(params.b.as_ref().expect("param.b is some"))
                         .await;

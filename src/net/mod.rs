@@ -456,8 +456,8 @@ impl Addr {
                 let so = self.get_socket_addr_or_resolve()?;
 
                 let u = UdpSocket::bind(so).await?;
-                let mut u = udp::new(u);
-                u.default_write_to = Some(self.clone());
+                let u = udp::new(u);
+                //u.default_write_to = Some(self.clone());
                 Ok(Stream::UDP(u))
             }
             #[cfg(unix)]
@@ -465,7 +465,7 @@ impl Addr {
                 let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
                 Ok(Stream::TCP(Box::new(u)))
             }
-            _ => bail!("try_dail failed, not supported network: {}", self.network),
+            _ => bail!("try_dial failed, not supported network: {}", self.network),
         }
     }
 
@@ -628,11 +628,13 @@ impl Stream {
         match self {
             Stream::TCP(conn) => conn.write(buf).await,
             Stream::UDP(ac) => {
-                let x = ac
-                    .default_write_to
-                    .clone()
-                    .expect("stream write requires AddrConn has default_write_to");
-                ac.w.write(buf, &x).await
+                let x = ac.default_write_to.as_ref();
+                match x {
+                    Some(ta) => ac.w.write(buf, ta).await,
+                    None => Err(std::io::Error::other(
+                        "stream can't write udp directly without a target",
+                    )),
+                }
             }
             _ => Err(std::io::Error::other("stream is not tcp/udp, can't write")),
         }
@@ -642,11 +644,13 @@ impl Stream {
         match self {
             Stream::TCP(conn) => conn.write_all(buf).await,
             Stream::UDP(ac) => {
-                let x = ac
-                    .default_write_to
-                    .clone()
-                    .expect("stream write_all requires AddrConn has default_write_to");
-                ac.w.write(buf, &x).await.map(|_| ())
+                let x = ac.default_write_to.as_ref();
+                match x {
+                    Some(ta) => ac.w.write(buf, ta).await.map(|_| ()),
+                    None => Err(std::io::Error::other(
+                        "stream can't write udp directly without a target",
+                    )),
+                }
             }
             _ => Err(std::io::Error::other("stream is not tcp/udp, can't write")),
         }
