@@ -5,7 +5,7 @@ use std::str::FromStr;
 use bytes::Buf;
 use bytes::BytesMut;
 
-use crate::net::gen_random_higher_port;
+use crate::net::gen_random_higher_port_with_seed;
 
 use super::*;
 
@@ -46,7 +46,7 @@ fn test_cid() {
 
 #[test]
 fn random_port() {
-    let x = gen_random_higher_port();
+    let x = gen_random_higher_port_with_seed(0);
     println!("{:?}", x);
 }
 

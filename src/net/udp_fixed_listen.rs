@@ -308,12 +308,19 @@ mod test {
     use futures_util::join;
     #[tokio::test]
     async fn test1() -> anyhow::Result<()> {
-        let listener_addr = "127.0.0.1:12345";
-        let laddr = Addr::from_network_addr_str("udp", listener_addr).unwrap();
-        let dst = Addr::from_network_addr_str("udp", "127.0.0.1:23456").unwrap();
+        let lp = crate::net::gen_random_higher_port_with_seed(0);
+        let dp = crate::net::gen_random_higher_port_with_seed(1);
+
+        let listener_addr = format!("127.0.0.1:{lp}");
+        let laddr = Addr::from_network_addr_str("udp", &listener_addr).unwrap();
+        let dst = Addr::from_network_addr_str("udp", &format!("127.0.0.1:{dp}")).unwrap();
         let mut listener = FixedTargetAddrUDPListener::new(laddr.clone(), dst).await?;
 
-        let u1 = UdpSocket::bind("127.0.0.1:11211").await?;
+        let u1 = UdpSocket::bind(&format!(
+            "127.0.0.1:{}",
+            crate::net::gen_random_higher_port_with_seed(2)
+        ))
+        .await?;
 
         let mut wbuf = [0u8, 2, 2, 3, 4];
         let mut rbuf = [0u8, 0, 0, 0, 0];

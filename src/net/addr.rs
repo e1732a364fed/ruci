@@ -35,6 +35,13 @@ pub fn gen_random_higher_port() -> u16 {
     rng.random_range(10240..=65535)
 }
 
+///10240..=65535. Note: run multiple times with the same seed will get the same result
+pub fn gen_random_higher_port_with_seed(seed: u64) -> u16 {
+    use rand::SeedableRng;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+    rng.random_range(10240..=65535)
+}
+
 /// This function might work better than using a.eq(b).
 ///
 /// If a and b are all unspecified then `true` will also be returned)
