@@ -13,5 +13,8 @@ pub mod h2;
 pub mod native_tls;
 pub mod ws;
 
-#[cfg(feature = "s2n-quic")]
+#[cfg(feature = "quic")]
 pub mod quic;
+
+#[cfg(feature = "quic")]
+pub mod rustls21;

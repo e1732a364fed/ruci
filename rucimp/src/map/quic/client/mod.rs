@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tracing::debug;
 
+use crate::map::rustls21;
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     pub cert_path: String,
@@ -22,6 +24,7 @@ pub struct Config {
     pub server_addr: String,
     pub server_name: String,
     pub alpn: Option<Vec<String>>,
+    pub is_insecure: Option<bool>,
 }
 
 #[mapper_ext_fields]
@@ -42,14 +45,22 @@ impl Name for Client {
 
 impl Client {
     pub fn new(c: Config) -> anyhow::Result<Self> {
-        let mut tls =
-            s2n_quic_rustls::Client::builder().with_certificate(Path::new(c.cert_path.as_str()))?;
+        let tls = if c.is_insecure.unwrap_or_default() {
+            let cc = rustls21::insecure_cc(rustls21::ClientOptions {
+                is_insecure: true,
+                alpn: c.alpn,
+            });
 
-        if let Some(a) = c.alpn {
-            tls = tls.with_application_protocols(a.into_iter())?;
-        }
+            s2n_quic_rustls::Client::from(cc)
+        } else {
+            let mut tls = s2n_quic_rustls::Client::builder()
+                .with_certificate(Path::new(c.cert_path.as_str()))?;
 
-        let tls = tls.build()?;
+            if let Some(a) = c.alpn {
+                tls = tls.with_application_protocols(a.into_iter())?;
+            }
+            tls.build()?
+        };
 
         let client = s2n_quic::Client::builder()
             .with_tls(tls)?

@@ -2199,6 +2199,7 @@ dependencies = [
  "parking_lot",
  "regex",
  "ruci",
+ "rustls 0.21.10",
  "s2n-quic",
  "s2n-quic-rustls",
  "serde",
