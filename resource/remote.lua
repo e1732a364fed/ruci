@@ -122,11 +122,11 @@ local out_stdio_show_bytes_chain = { {
     }
 } }
 
-local direct_out_chain = { "Direct" }
+local direct_out_chain = { { Direct = {} } }
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
-         { chain = trojans_chain, tag = "listen1" },
+        { chain = trojans_chain, tag = "listen1" },
         -- { chain = ws_trojans_chain,  tag = "listen1"  }
         -- { chain = in_h2_trojans_chain, tag = "listen1" }
         -- { chain = in_quic_chain, tag = "listen1" }
@@ -176,7 +176,7 @@ Config = {
     --]]
 
     --[[
-    -- 对应 local.lua 使用 tun 的 outbound 配置. 
+    -- 对应 local.lua 使用 tun 的 outbound 配置.
     --  注意, 不像 tproxy, tun 示例不能本机自连测试
 
     outbounds = { {
@@ -186,7 +186,7 @@ Config = {
                 BindDialer = {
                     bind_addr = "ip://10.0.0.2:24#utun321",
 
-                    -- out_auto_route 会自动配置路由表使得 utun321 中的流量走 enp0s1. 
+                    -- out_auto_route 会自动配置路由表使得 utun321 中的流量走 enp0s1.
                     -- 注意要确保开启了 ip_forward
 
                     -- out_auto_route 目前只支持 linux
