@@ -864,6 +864,73 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> std::io::Resu
     Ok(())
 }
 
+#[tokio::test]
+async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> std::io::Result<()> {
+    let even = true;
+
+    set_var("RUST_LOG", "debug");
+    let _ = env_logger::try_init();
+
+    info!(
+        "start suit_engine_socks5_direct_and_request_baidu test, {}",
+        even
+    );
+
+    let c: Config = get_nl_config(3);
+    let cc = c.clone();
+
+    let mut se = rucimp::suit::engine2::SuitEngine::new(
+        load_in_mappers_by_str_and_ldconfig,
+        load_out_mappers_by_str_and_ldconfig,
+    );
+    se.load_config(rucimp::suit::engine2::Config { proxy_config: c });
+
+    let listen_future = async {
+        if even {
+            info!("try start listen block run");
+
+            let r = se.block_run().await;
+            //let r = block_on(se.block_run());
+            //let r = join!(se.block_run()) ;
+            //测试表明，只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常。
+
+            info!("r {:?}", r);
+        } else {
+            info!("try start  listen unblock run");
+
+            let r = se.run().await;
+
+            info!("r {:?}", r);
+        }
+    };
+
+    let cl = cc.listen.get(0).unwrap();
+    let listen_host = cl.host.clone().unwrap();
+    let listen_port = cl.port.unwrap();
+
+    let listen_future = listen_future.fuse();
+    let dial_future = f_dial_future(1, &listen_host, listen_port, TARGET_NAME, TARGET_PORT).fuse();
+
+    pin_mut!(listen_future, dial_future);
+
+    select! {
+
+        () = dial_future => {
+            info!("dial finished first, will return , {:?}",se.ti);
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            info!("dial finished first ,print again, {:?}",se.ti);
+
+        },
+        () = listen_future => {
+            panic!("listen finished first");
+        },
+    }
+
+    //tokio::time::sleep(Duration::from_secs(2)).await;
+
+    Ok(())
+}
+
 // 同时发起两个请求的情况
 #[tokio::test]
 async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
