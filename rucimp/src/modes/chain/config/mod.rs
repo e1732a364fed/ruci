@@ -58,16 +58,21 @@ pub struct StaticConfig {
     pub inbounds: Vec<InMapConfigChain>,
     pub outbounds: Vec<OutMapConfigChain>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tag_route: Option<Vec<(String, String)>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fallback_route: Option<Vec<(String, String)>>,
 
     /// clash 规则文件名, yaml 格式
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub clash_rules: Option<String>,
 
     /// geosite 的 dat 文件名
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub geosite: Option<String>,
 
     /// using geosite-gfw
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub smart: Option<crate::route::geosite_gfw::GeositeGfwConfig>,
 }
 
@@ -265,11 +270,14 @@ pub struct BindDialerConfig {
     pub dns_client: Option<dns::ClientConfig>,
 
     #[cfg(feature = "tun")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub in_auto_route: Option<ruci::net::tun::route::InAutoRouteParams>,
 
     #[cfg(feature = "tun")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub out_auto_route: Option<ruci::net::tun::route::OutAutoRouteParams>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ext: Option<Ext>,
 }
 impl TryFrom<Box<BindDialerConfig>> for MapBox {
@@ -315,6 +323,8 @@ impl TryFrom<Box<BindDialerConfig>> for MapBox {
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct StdioConfig {
     pub write_mode: Option<ruci::map::stdio::WriteMode>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ext: Option<Ext>,
 }
 

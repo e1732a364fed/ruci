@@ -30,3 +30,9 @@ macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关
     
 实测3种情况效果相同 但是都卡顿, 且 无论是 netstack-lwip 还是 smoltcp 都有此问题。因此认为是tun 包的问题,与 tcp/ip 栈无关
 
+
+25.2.24
+
+发现 lua 的 Trojan 的 do_not_use_early_data 在没有给出时， load_static 后 反序列化 
+后的 StaticConfig 中 对应的 do_not_use_early_data 变为了 Some(false), 应为 None.
+

@@ -183,15 +183,19 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
                 .next()
                 .context("无法从文件名获取格式")?
                 .to_lowercase();
-
             let output =
-                convert_static_config(&contents, &input_format, &output_format, data_source)?;
+                convert_static_config(&contents, &input_format, &output_format, data_source)
+                    .context("convert_static_config")?;
 
-            let mut output_file = format!(
-                "{}.{}",
-                input_file.rsplit('.').nth(1).unwrap_or(&input_file),
-                output_format
+            let ifp = std::path::Path::new(&input_file);
+
+            let x = ifp.parent().unwrap_or(std::path::Path::new("")).join(
+                ifp.file_stem()
+                    .map(|x| x.to_string_lossy().to_string())
+                    .unwrap_or(input_file.clone()),
             );
+
+            let mut output_file = format!("{}.{}", x.as_path().to_str().unwrap(), output_format);
 
             // 如果文件已存在，则在文件名后添加数字
             let mut counter = 1;
@@ -205,7 +209,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
                 counter += 1;
             }
 
-            fs::write(&output_file, output)?;
+            fs::write(&output_file, &output).context(format!("fs::write {output_file}"))?;
             info!("配置已转换并保存至: {}", output_file);
         }
     };
@@ -359,6 +363,9 @@ pub fn convert_static_config(
                 Arc::new(data_source),
             )
             .context("init_lua_static failed")?;
+
+            info!("{:?}", config);
+
             return match output_format.to_lowercase().as_str() {
                 // "toml" => Ok(toml::to_string(&config)?),
                 "json" => Ok(rucimp::serde_json::to_string_pretty(&config)?),

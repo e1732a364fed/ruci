@@ -17,6 +17,7 @@ use super::*;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     pub password: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub do_not_use_early_data: Option<bool>,
 }
 

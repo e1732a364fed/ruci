@@ -150,7 +150,10 @@ async fn main() -> anyhow::Result<()> {
 
             #[cfg(feature = "utils")]
             SubCommands::Utils { command } => {
-                utils::deal_cmds(command).await?;
+                let r = utils::deal_cmds(command).await;
+                if let Err(r) = r {
+                    tracing::warn!("{:#}", r)
+                }
             } // SubCommands::Route => todo!(),
         },
     }

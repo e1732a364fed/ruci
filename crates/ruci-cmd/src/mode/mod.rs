@@ -29,7 +29,7 @@ pub async fn get_config_file(
             r = data_source.get_file_content(Path::new(DEFAULT_LUA_CONFIG_FILE_NAME));
         }
 
-        Ok(r?)
+        Ok(r.context("get_config_file data_source.get_file_content failed")?)
     };
 
     //获取到文件的 bytes, 或通过下载 或读取文件. 若 in_memory 给出则下载的文件不持久化
