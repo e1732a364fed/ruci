@@ -60,7 +60,7 @@ impl Display for RootState {
         if self.outc_name() == "" {
             write!(
                 f,
-                "[ cid: {}, {}://{}, listener: {}, ]  ",
+                "[ {}, {}://{}, listener: {}, ]  ",
                 self.cid(),
                 self.network(),
                 self.cached_in_raddr(),
@@ -69,7 +69,7 @@ impl Display for RootState {
         } else {
             write!(
                 f,
-                "[ cid: {}, {}://{}, route from: {}, to: {} ]  ",
+                "[ {}, {}://{}, route from: {}, to: {} ]  ",
                 self.cid(),
                 self.network(),
                 self.cached_in_raddr(),

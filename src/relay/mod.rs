@@ -45,7 +45,7 @@ pub async fn cp_udp(
     out_conn: net::addr_conn::AddrConn,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
-    info!("cid: {cid}, relay udp start",);
+    info!("{cid}, relay udp start",);
 
     //discard early data, as we don't know it's target addr
 
@@ -56,7 +56,7 @@ pub async fn cp_udp(
             ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 
         }
-        info!("cid: {cid},udp relay end" );
+        info!("{cid},udp relay end" );
     }
 
     let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, ti).await;

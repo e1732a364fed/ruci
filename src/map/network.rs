@@ -23,10 +23,7 @@ impl Mapper for Direct {
         let a = match params.a {
             Some(a) => a,
             None => {
-                return MapResult::err_str(&format!(
-                    "cid: {}, direct need params.a, got empty",
-                    cid
-                ))
+                return MapResult::err_str(&format!("{}, direct need params.a, got empty", cid))
             }
         };
 
@@ -126,7 +123,7 @@ impl Mapper for TcpDialer {
                         return TcpDialer::dial_addr(a).await;
                     }
                     return MapResult::err_str(&format!(
-                        "cid: {}, tcp dialer can't dial without an address",
+                        "{}, tcp dialer can't dial without an address",
                         cid
                     ));
                 }
@@ -254,7 +251,7 @@ impl Mapper for TcpStreamGenerator {
         };
 
         if log_enabled!(log::Level::Debug) {
-            debug!("cid: {}, start listen {}", cid, a)
+            debug!("{}, start listen {}", cid, a)
         }
 
         let r = match params.shutdown_rx {

@@ -53,7 +53,7 @@ impl AsyncRead for CounterConn {
             let db = self.data.db.fetch_add(n as u64, Ordering::Relaxed);
             if log_enabled!(log::Level::Debug) {
                 debug!(
-                    "cid: {}, counter for {}: db: {}, ",
+                    "{}, counter for {}: db: {}, ",
                     self.data.cid,
                     self.base.name(),
                     db,
@@ -76,7 +76,7 @@ impl AsyncWrite for CounterConn {
             let ub = self.data.ub.fetch_add(*u as u64, Ordering::Relaxed);
             if log_enabled!(log::Level::Debug) {
                 debug!(
-                    "cid: {}, counter for {}: ub: {}, ",
+                    "{}, counter for {}: ub: {}, ",
                     self.data.cid,
                     self.base.name(),
                     ub,

@@ -101,7 +101,7 @@ impl Default for CID {
 impl Display for CID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CID::Unit(u) => std::fmt::Display::fmt(&u, f),
+            CID::Unit(u) => write!(f, "[ cid: {u} ]"),
             CID::Chain(c) => c.fmt(f),
         }
     }
@@ -543,7 +543,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     if log_enabled!(log::Level::Debug) {
-        debug!("cp start, cid: {} ", cid);
+        debug!("cp start, {} ", cid);
     }
 
     let (mut c1_read, mut c1_write) = tokio::io::split(c1);
@@ -565,7 +565,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     let tt = info.ub.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
-                        debug!("cp, cid: {}, u, ub, {}, {}",cid,n,tt+n);
+                        debug!("cp, {}, u, ub, {}, {}",cid,n,tt+n);
                     }
                 }
 
@@ -579,7 +579,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         let tt = info.db.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
-                            debug!("cp, cid: {}, u, db, {}, {}",cid, n,tt+n);
+                            debug!("cp, {}, u, db, {}, {}",cid, n,tt+n);
                         }
                     }
                 }
@@ -587,7 +587,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
 
 
             if log_enabled!(log::Level::Debug) {
-                debug!("cp end u, cid: {} ",cid);
+                debug!("cp end u, {} ",cid);
             }
 
             r1
@@ -598,7 +598,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                     let tt = info.db.fetch_add(n, Ordering::Relaxed);
 
                     if log_enabled!(log::Level::Debug) {
-                        debug!("cp, cid: {}, d, db, {}, {}",cid, n,tt+n);
+                        debug!("cp, {}, d, db, {}, {}",cid, n,tt+n);
                     }
                 }
 
@@ -608,7 +608,7 @@ pub async fn cp<C1: ConnTrait, C2: ConnTrait>(
                         let tt = info.ub.fetch_add(n, Ordering::Relaxed);
 
                         if log_enabled!(log::Level::Debug) {
-                            debug!("cp, cid: {}, d, ub, {}, {}",cid,n,tt+n);
+                            debug!("cp, {}, d, ub, {}, {}",cid,n,tt+n);
                         }
                     }
                 }

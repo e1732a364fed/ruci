@@ -341,17 +341,17 @@ pub async fn cp_between<
         rst1 = c1_to_c2 =>{
 
             if log_enabled!(log::Level::Debug) {
-                debug!("cp_addr end, u, cid: {}",cid);
+                debug!("cp_addr end, u, {}",cid);
             }
 
             if let Some(ti) = opt.as_ref(){
                 match &rst1{
                     Ok(n) => {
                         let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
-                        debug!("cid: {}, cp_addr_end, u, ub, {},{}",cid,n,tt+n);
+                        debug!("{}, cp_addr_end, u, ub, {},{}",cid,n,tt+n);
                     },
                     Err(e) => {
-                        debug!("cid: {}, cp_addr_end with err, u, {}",cid,e);
+                        debug!("{}, cp_addr_end with err, u, {}",cid,e);
 
                     },
                 }
@@ -362,17 +362,17 @@ pub async fn cp_between<
             let rst2 = c2_to_c1.await;
 
             if log_enabled!(log::Level::Debug) {
-                debug!("cp_addr end, d, cid: {}",cid);
+                debug!("cp_addr end, d, {}",cid);
             }
 
             if let Some(ti) = opt{
                 match &rst2{
                     Ok(n) => {
                         let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
-                        debug!("cid: {}, cp_addr_end, u ,db, {},{}",cid,n,tt+n);
+                        debug!("{}, cp_addr_end, u ,db, {},{}",cid,n,tt+n);
                     },
                     Err(e) => {
-                        debug!("cid: {}, cp_addr_end with err, u, d, {}",cid,e);
+                        debug!("{}, cp_addr_end with err, u, d, {}",cid,e);
 
                     },
                 }
@@ -382,16 +382,16 @@ pub async fn cp_between<
         }
         rst2 = c2_to_c1 =>{
             if log_enabled!(log::Level::Debug) {
-                debug!("cp_addr end, d, cid: {}",cid);
+                debug!("cp_addr end, d, {}",cid);
             }
             if let Some(ti) = opt.as_ref(){
                 match &rst2{
                     Ok(n) => {
                         let tt = ti.db.fetch_add(*n, Ordering::Relaxed);
-                        debug!("cid: {}, cp_addr_end, d, db, {},{}",cid,n,tt+n);
+                        debug!("{}, cp_addr_end, d, db, {},{}",cid,n,tt+n);
                     },
                     Err(e) => {
-                        debug!("cid: {}, cp_addr_end with err, d, d, {}",cid,e);
+                        debug!("{}, cp_addr_end with err, d, d, {}",cid,e);
 
                     },
                 }
@@ -400,17 +400,17 @@ pub async fn cp_between<
 
             let rst1 = c1_to_c2.await;
             if log_enabled!(log::Level::Debug) {
-                debug!("cp_addr end, u, cid: {}",cid);
+                debug!("cp_addr end, u, {}",cid);
             }
             if let Some(ti) = opt{
 
                 match &rst1{
                     Ok(n) => {
                         let tt = ti.ub.fetch_add(*n, Ordering::Relaxed);
-                        debug!("cid: {}, cp_addr_end, d, ub, {},{}",cid,n,tt+n);
+                        debug!("{}, cp_addr_end, d, ub, {},{}",cid,n,tt+n);
                     },
                     Err(e) => {
-                        debug!("cid: {}, cp_addr_end with err, d, u, {}",cid,e);
+                        debug!("{}, cp_addr_end with err, d, u, {}",cid,e);
 
                     },
                 }

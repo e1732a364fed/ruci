@@ -13,7 +13,7 @@ pub struct Client {
 }
 
 impl Client {
-    /// 返回的 extra data 为 server 所选定的 adopted method
+    ///返回的 extra data 为 server 所选定的 adopted method
     async fn handshake(
         &self,
         cid: CID,
@@ -39,7 +39,7 @@ impl Client {
 
         if n != 2 || buf[0] != VERSION5 || buf[1] != adopted_method {
             return Err(io::Error::other(format!(
-                "cid: {}, socks5 client handshake,protocol err, {}",
+                "{}, socks5 client handshake,protocol err, {}",
                 cid, buf[1]
             )));
         }
@@ -60,7 +60,7 @@ impl Client {
 
             if n != 2 || buf[0] != 1 || buf[1] != 0 {
                 return Err(io::Error::other(format!(
-                    "cid: {}, socks5 client handshake,auth failed, {}",
+                    "{}, socks5 client handshake,auth failed, {}",
                     cid, buf[1]
                 )));
             }
@@ -75,7 +75,7 @@ impl Client {
 
         if n < 10 || buf[0] != 5 || buf[1] != 0 || buf[2] != 0 {
             return Err(io::Error::other(format!(
-                "cid: {}, socks5 client handshake failed when reading response",
+                "{}, socks5 client handshake failed when reading response",
                 cid
             )));
         }
@@ -106,7 +106,7 @@ impl map::Mapper for Client {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         if params.a.is_none() {
             return MapResult::err_str(&format!(
-                "cid: {}, socks5 outadder called without target_addr",
+                "{}, socks5 outadder called without target_addr",
                 cid
             ));
         }

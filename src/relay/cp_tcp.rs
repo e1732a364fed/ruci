@@ -22,7 +22,7 @@ pub async fn cp_conn(
     pre_read_data: Option<bytes::BytesMut>,
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
-    info!("cid: {}, relay start", cid);
+    info!("{}, relay start", cid);
 
     match (pre_read_data, ti) {
         (None, None) => task::spawn(no_ti_no_ed(cid, in_conn, out_conn)),
@@ -34,7 +34,7 @@ pub async fn cp_conn(
 
 async fn no_ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn) {
     let _ = net::cp(in_conn, out_conn, &cid, None).await;
-    info!("cid: {}, relay end", cid);
+    info!("{}, relay end", cid);
 }
 
 async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<TransmissionInfo>) {
@@ -42,7 +42,7 @@ async fn ti_no_ed(cid: CID, in_conn: net::Conn, out_conn: net::Conn, ti: Arc<Tra
 
     defer! {
         ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-        info!("cid: {}, relay end", cid);
+        info!("{}, relay end", cid);
     }
 
     let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;
@@ -55,17 +55,17 @@ async fn no_ti_ed(
     earlydata: bytes::BytesMut,
 ) {
     if log_enabled!(Debug) {
-        debug!("cid: {}, relay with earlydata, {}", cid, earlydata.len());
+        debug!("{}, relay with earlydata, {}", cid, earlydata.len());
     }
     let r = out_conn.write(&earlydata).await;
     match r {
         Ok(upload_bytes) => {
             if log_enabled!(Debug) {
-                debug!("cid: {}, upload earlydata ok, {}", cid, upload_bytes);
+                debug!("{}, upload earlydata ok, {}", cid, upload_bytes);
             }
         }
         Err(e) => {
-            warn!("cid: {}, upload early_data failed: {}", cid, e);
+            warn!("{}, upload early_data failed: {}", cid, e);
 
             let _ = in_conn.shutdown().await;
             let _ = out_conn.shutdown().await;
@@ -75,7 +75,7 @@ async fn no_ti_ed(
 
     let _ = net::cp(in_conn, out_conn, &cid, None).await;
 
-    info!("cid: {}, relay end", cid);
+    info!("{}, relay end", cid);
 }
 
 async fn ti_ed(
@@ -86,19 +86,19 @@ async fn ti_ed(
     earlydata: bytes::BytesMut,
 ) {
     if log_enabled!(Debug) {
-        debug!("cid: {}, relay with earlydata, {}", cid, earlydata.len());
+        debug!("{}, relay with earlydata, {}", cid, earlydata.len());
     }
     let r = out_conn.write(&earlydata).await;
     match r {
         Ok(upload_bytes) => {
             if log_enabled!(Debug) {
-                debug!("cid: {}, upload earlydata ok, {}", cid, upload_bytes);
+                debug!("{}, upload earlydata ok, {}", cid, upload_bytes);
             }
 
             ti.ub.fetch_add(upload_bytes as u64, Ordering::Relaxed);
         }
         Err(e) => {
-            warn!("cid: {}, upload early_data failed: {}", cid, e);
+            warn!("{}, upload early_data failed: {}", cid, e);
 
             let _ = in_conn.shutdown().await;
             let _ = out_conn.shutdown().await;
@@ -110,7 +110,7 @@ async fn ti_ed(
 
     defer! {
         ti.alive_connection_count.fetch_sub(1, Ordering::Relaxed);
-        info!("cid: {}, relay end", cid);
+        info!("{}, relay end", cid);
     }
 
     let _ = net::cp(in_conn, out_conn, &cid, Some(ti.clone())).await;

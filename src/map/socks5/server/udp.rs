@@ -115,13 +115,13 @@ pub async fn loop_listen_udp_for_certain_client(
 
             result = base.read(&mut buf2).fuse()  =>{
                 if result.is_err(){
-                    debug!("cid: {}, socks5 server, will end loop listen udp because of the read err of the tcp conn, {}", cid, result.unwrap());
+                    debug!("{}, socks5 server, will end loop listen udp because of the read err of the tcp conn, {}", cid, result.unwrap());
 
                     drop(tx);
 
                     break;
                 }
-                warn!("cid: {cid}, socks5 server, tcp conn got read data, but we don't know what to do with it", );
+                warn!("{cid}, socks5 server, tcp conn got read data, but we don't know what to do with it", );
 
             },
             default =>{

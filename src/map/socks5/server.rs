@@ -114,7 +114,7 @@ impl Server {
 
         if n < 3 {
             let e1 = Error::other(format!(
-                "cid: {}, socks5: failed to read hello, too short: {}",
+                "{}, socks5: failed to read hello, too short: {}",
                 cid, n
             ));
 
@@ -123,7 +123,7 @@ impl Server {
 
         let v = buf[0];
         if v != VERSION5 {
-            let e2 = Error::other(format!("cid: {}, socks5: unsupported version: {}", cid, v));
+            let e2 = Error::other(format!("{}, socks5: unsupported version: {}", cid, v));
 
             return Err(e2);
         }
@@ -137,7 +137,7 @@ impl Server {
             base.write(&buf[..2]).await?;
 
             let e3 = Error::other(format!(
-                "cid: {}, socks5: nmethods==0||n < 2+nmethods: {}, n={}",
+                "{}, socks5: nmethods==0||n < 2+nmethods: {}, n={}",
                 cid, nm, n
             ));
 
@@ -178,7 +178,7 @@ impl Server {
 
                     if !server_has_user {
                         opt_e = Some(Error::other(
-                            format!("cid: {}, socks5: configured with no password at all but got auth method AuthPassword",cid)
+                            format!("{}, socks5: configured with no password at all but got auth method AuthPassword",cid)
                         ));
                         continue;
                     }
@@ -217,7 +217,7 @@ impl Server {
                     if auth_bs.len() < 5 || auth_bs[0] != USERPASS_SUBNEGOTIATION_VERSION || ul == 0
                     {
                         opt_e = Some(Error::other(format!(
-                            "cid: {}, socks5: parse auth request failed",
+                            "{}, socks5: parse auth request failed",
                             cid
                         )));
 
@@ -225,7 +225,7 @@ impl Server {
                     }
 
                     if ul + 2 > n {
-                        opt_e = Some(Error::other(format!("cid: {}, socks5: parse auth request failed, ulen too long but data too short, {}", cid ,n)));
+                        opt_e = Some(Error::other(format!("{}, socks5: parse auth request failed, ulen too long but data too short, {}", cid ,n)));
 
                         continue;
                     }
@@ -234,7 +234,7 @@ impl Server {
                     let pl = auth_bs[2 + ul] as usize;
 
                     if ul + 2 + pl > n {
-                        opt_e = Some(Error::other(format!("cid: {}, socks5: parse auth request failed, ulen too long but data too short, {}",cid, n)));
+                        opt_e = Some(Error::other(format!("{}, socks5: parse auth request failed, ulen too long but data too short, {}",cid, n)));
                         continue;
                     }
 
@@ -283,7 +283,7 @@ impl Server {
                     let _ = base.write(&[USERPASS_SUBNEGOTIATION_VERSION, 1]).await;
                     return Err(Error::new(
                         io::ErrorKind::InvalidData,
-                        format!("cid: {}, socks5: auth failed, {}", cid, thisup.auth_strs()),
+                        format!("{}, socks5: auth failed, {}", cid, thisup.auth_strs()),
                     ));
                 }
                 _ => {} //忽视其它的 auth method
@@ -295,7 +295,7 @@ impl Server {
             buf[1] = AUTH_NO_ACCEPTABLE;
             let _ = base.write(&buf[..2]).await;
 
-            let e4 = Error::other(format!("cid: {}, socks5: not authed:  {:?}", cid, opt_e));
+            let e4 = Error::other(format!("{}, socks5: not authed:  {:?}", cid, opt_e));
 
             return Err(e4);
         }
@@ -331,13 +331,13 @@ impl Server {
 
         if n < 7 {
             return Err(Error::other(format!(
-                "cid: {}, socks5: read cmd part failed, msgTooShort: {}",
+                "{}, socks5: read cmd part failed, msgTooShort: {}",
                 cid, n
             )));
         }
         if buf[0] != VERSION5 {
             return Err(Error::other(format!(
-                "cid: {}, socks5: stage2, wrong verson, {}",
+                "{}, socks5: stage2, wrong verson, {}",
                 cid, buf[0]
             )));
         }
@@ -345,14 +345,14 @@ impl Server {
         let cmd = buf[1];
         if cmd == CMD_BIND {
             return Err(Error::other(format!(
-                "cid: {}, socks5: unsuppoted command CMD_BIND",
+                "{}, socks5: unsuppoted command CMD_BIND",
                 cid
             )));
         }
 
         if cmd != CMD_UDPASSOCIATE && cmd != CMD_CONNECT {
             return Err(Error::other(format!(
-                "cid: {}, socks5: unsuppoted command, {}",
+                "{}, socks5: unsuppoted command, {}",
                 cid, cmd
             )));
         }
@@ -381,7 +381,7 @@ impl Server {
             }
             _ => {
                 return Err(Error::other(format!(
-                    "cid: {}, socks5: unknown address type: {}",
+                    "{}, socks5: unknown address type: {}",
                     cid, buf[3]
                 )));
             }
@@ -396,7 +396,7 @@ impl Server {
 
         if remain < 0 {
             return Err(Error::other(format!(
-                "cid: {}, socks5: stage2, short of [port] part {}",
+                "{}, socks5: stage2, short of [port] part {}",
                 cid, n
             )));
         }
@@ -409,7 +409,7 @@ impl Server {
         buf.truncate(remain as usize);
 
         if log_enabled!(log::Level::Debug) && remain > 0 {
-            debug!("cid: {}, socks5, got earlydata,{}", cid, remain);
+            debug!("{}, socks5, got earlydata,{}", cid, remain);
         }
 
         //如果name中实际是 123.123.123.123 这种值(或ipv6的样式)，这种情况很常见，
