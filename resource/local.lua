@@ -653,7 +653,7 @@ local config_16_tun = {
 
 }
 
----[[
+--[[
 local config_17_tcp_ip_stack = {
 
     inbounds = {
@@ -844,7 +844,7 @@ local config_22_lua_example2 = {
 }
 
 
-Config = config_17_tcp_ip_stack
+Config = config_20_spe1
 
 -- local str = Load_file("test.crt") -- load file from the default file provider from ruci ( from either tar or folder)
 -- print("content of crt is:", str)

@@ -55,7 +55,7 @@ impl Map for Stack {
                         mut udp_rx,
                     } = device::create(cid, base_conn, new_stream_tx);
 
-                    let mut interval = tokio::time::interval(Duration::from_secs(2));
+                    let mut interval = tokio::time::interval(Duration::from_secs(20));
 
                     loop {
                         tokio::select! {
