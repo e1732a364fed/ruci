@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
     pub inbounds: Vec<InMapperConfigChain>,
-    pub outbounds: Option<Vec<OutMapperConfigChain>>,
+    pub outbounds: Vec<OutMapperConfigChain>,
 
     pub tag_route: Option<Vec<(String, String)>>,
 }
@@ -49,35 +49,34 @@ impl StaticConfig {
 
     /// convert config chain to mapper chain
     pub fn get_outbounds(&self) -> Vec<Vec<MapperBox>> {
-        match &self.outbounds {
-            None => Vec::new(),
-
-            Some(dials) => {
-                let dials: Vec<_> = dials
+        self.outbounds
+            .iter()
+            .map(|config_chain| {
+                let mut chain = config_chain
+                    .chain
                     .iter()
-                    .map(|config_chain| {
-                        let mut chain = config_chain
-                            .chain
-                            .iter()
-                            .map(|mapper_config| {
-                                let mut mapper = mapper_config.to_mapper();
-                                mapper.set_chain_tag(&config_chain.tag);
-                                mapper
-                            })
-                            .collect::<Vec<_>>();
-
-                        chain.last_mut().unwrap().set_is_tail_of_chain(true);
-                        chain
+                    .map(|mapper_config| {
+                        let mut mapper = mapper_config.to_mapper();
+                        mapper.set_chain_tag(&config_chain.tag);
+                        mapper
                     })
-                    .collect();
-                dials
-            }
-        }
+                    .collect::<Vec<_>>();
+
+                chain.last_mut().unwrap().set_is_tail_of_chain(true);
+                chain
+            })
+            .collect::<Vec<_>>()
     }
 
     /// (out_tag, outbound)
-    pub fn get_outbounds_map(&self) -> HashMap<String, MIterBox> {
-        self.get_outbounds()
+    pub fn get_default_and_outbounds_map(&self) -> (MIterBox, HashMap<String, MIterBox>) {
+        let obs = self.get_outbounds();
+
+        let first_o = obs.first().unwrap().clone();
+        let static_first_o = Box::leak(Box::new(first_o));
+
+        let static_default_oiter = Box::new(static_first_o.iter());
+        let omap = obs
             .into_iter()
             .map(|outbound| {
                 let tag = outbound.iter().next().unwrap().get_chain_tag();
@@ -87,7 +86,8 @@ impl StaticConfig {
 
                 (tag.to_string(), static_outbound_iter)
             })
-            .collect()
+            .collect();
+        (static_default_oiter, omap)
     }
 
     /// panic if the given tag isn't presented in outbounds
@@ -315,7 +315,10 @@ mod test {
                     }),
                 ],
             }],
-            outbounds: None,
+            outbounds: vec![OutMapperConfigChain {
+                tag: String::from("todo!()"),
+                chain: vec![OutMapperConfig::Direct],
+            }],
             tag_route: None,
         };
         let toml = toml::to_string(&sc).unwrap();

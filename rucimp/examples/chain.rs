@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     se.init(sc);
 
     let se = Box::new(se);
-    let se: &'static StaticEngine = Box::leak(se);
+    let se: &'static mut StaticEngine = Box::leak(se);
 
     let r = se.block_run().await;
 

@@ -118,7 +118,7 @@ mod test {
         let c: StaticConfig = load(text)?;
 
         println!("{:#?}", c);
-        let dial = c.outbounds.unwrap();
+        let dial = c.outbounds;
         let first_listen_group = dial.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
         assert!(matches!(InMapperConfig::Counter, last_m));
@@ -167,7 +167,7 @@ mod test {
         let c: StaticConfig = load(text)?;
 
         println!("{:#?}", c);
-        let dial = c.outbounds.unwrap();
+        let dial = c.outbounds;
         let first_listen_group = dial.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
         assert!(matches!(InMapperConfig::Counter, last_m));
@@ -217,14 +217,18 @@ mod test {
                     }
                 }
             },
-            route = { { "listen1", "dial1" }, { "listen2", "dial2" }  }
+            tag_route = { { "listen1", "dial1" }, { "listen2", "dial2" }  }
         }
         "#;
 
         let c: StaticConfig = load(text)?;
 
         println!("{:#?}", c);
+        let tr = c.get_tag_route();
+        assert!(tr.is_some());
         println!("{:#?}", c.get_tag_route());
+
+        println!("{:#?}", c.get_default_and_outbounds_map());
 
         Ok(())
     }

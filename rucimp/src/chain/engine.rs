@@ -4,11 +4,14 @@ use parking_lot::Mutex;
 use ruci::{
     map::*,
     net::TransmissionInfo,
-    relay::{conn::handle_in_accumulate_result, route::FixedOutSelector},
+    relay::{
+        conn::handle_in_accumulate_result,
+        route::{FixedOutSelector, OutSelector},
+    },
 };
-use std::{io, sync::Arc};
+use std::{collections::HashMap, io, sync::Arc};
 use tokio::sync::{
-    mpsc,
+    mpsc::{self, Receiver},
     oneshot::{self, Sender},
 };
 
@@ -17,17 +20,36 @@ use super::config::StaticConfig;
 /// 静态引擎中 使用 StaticConfig 作为配置
 #[derive(Default)]
 pub struct StaticEngine {
-    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
+    pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁，若有值说明 is running
     pub ti: Arc<TransmissionInfo>,
 
-    inbounds: Vec<Vec<Box<dyn MapperSync>>>,  //servers
-    outbounds: Vec<Vec<Box<dyn MapperSync>>>, //clients
+    inbounds: Vec<MIterBox>, //Vec<Vec<Box<dyn MapperSync>>>,   // 不为空
+    outbounds: Arc<HashMap<String, MIterBox>>, //不为空
+    default_outbound: Option<MIterBox>, // init 后一定有值
+    tag_routes: Option<HashMap<String, String>>,
+
+    //cache of static mems, manualy release required
+    fix_outselector_mem: Option<&'static FixedOutSelector>,
 }
 
 impl StaticEngine {
     pub fn init(&mut self, sc: StaticConfig) {
-        self.inbounds = sc.get_inbounds();
-        self.outbounds = sc.get_outbounds();
+        let inbounds = sc.get_inbounds();
+        self.inbounds = inbounds
+            .into_iter()
+            .map(|v| {
+                let v = Box::leak(Box::new(v));
+                let v = v.iter();
+
+                let x: MIterBox = Box::new(v);
+                x
+            })
+            .collect();
+
+        let (d, m) = sc.get_default_and_outbounds_map();
+        self.default_outbound = Some(d);
+        self.outbounds = Arc::new(m);
+        self.tag_routes = sc.get_tag_route();
     }
 
     pub fn server_count(&self) -> usize {
@@ -39,7 +61,7 @@ impl StaticEngine {
     }
 
     /// non-blocking
-    pub async fn run(&'static self) -> io::Result<()> {
+    pub async fn run(&'static mut self) -> io::Result<()> {
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
                 tokio::spawn(task.0);
@@ -50,7 +72,7 @@ impl StaticEngine {
 
     /// blocking
     pub async fn block_run(
-        &'static self,
+        &'static mut self,
     ) -> io::Result<Vec<Result<io::Result<()>, tokio::task::JoinError>>> {
         let mut hv = Vec::new();
         self.start_with_tasks().await.map(|tasks| {
@@ -64,14 +86,15 @@ impl StaticEngine {
     }
 
     pub async fn start_with_tasks(
-        &'static self,
+        &'static mut self,
     ) -> std::io::Result<
         Vec<(
             impl Future<Output = Result<(), std::io::Error>>,
             impl Future<Output = Result<(), std::io::Error>>,
         )>,
     > {
-        let mut running = self.running.lock();
+        let m = self.running.clone();
+        let mut running = m.lock();
         if running.is_none() {
         } else {
             return Err(io::Error::other("already started!"));
@@ -83,53 +106,26 @@ impl StaticEngine {
             return Err(io::Error::other("no client"));
         }
 
-        let defaultc = self.outbounds.last().unwrap();
-
         //todo: 因为没实现路由功能，所以现在只能用 FixedOutSelector,返回第一个outbound
 
         let mut tasks = Vec::new();
         let mut shutdown_tx_vec = Vec::new();
 
-        let it = defaultc.iter();
-        let ib = Box::new(it);
-
-        let fixed_selector = FixedOutSelector { default: ib };
-        let fixed_selector = Box::new(fixed_selector);
-        let fixed_selector: &'static FixedOutSelector = Box::leak(fixed_selector);
+        let out_selector = self.get_out_selector();
+        //todo: 在 stop 后 处理leak
 
         self.inbounds.iter().for_each(|inmappers| {
             let (tx, rx) = oneshot::channel();
 
-            let (atx, mut arx) = mpsc::channel(100); //todo: change this
+            let (atx, arx) = mpsc::channel(100); //todo: change this
 
             let oti = self.ti.clone();
             let t1 = async {
-                let a = (*inmappers).clone();
-                let a = Box::new(a);
-                let a = Box::leak(a);
-
-                let ait = a.iter();
-                let aib = Box::new(ait);
-
-                accumulate_from_start(atx, rx, aib, Some(oti)).await;
+                accumulate_from_start(atx, rx, inmappers.clone(), Some(oti)).await;
                 Ok(())
             };
 
-            let t2 = async move {
-                loop {
-                    let ar = arx.recv().await;
-                    if ar.is_none() {
-                        break;
-                    }
-                    let ar = ar.unwrap();
-                    tokio::spawn(handle_in_accumulate_result(
-                        ar,
-                        fixed_selector,
-                        Some(self.ti.clone()),
-                    ));
-                }
-                Ok(())
-            };
+            let t2 = StaticEngine::loop_a(arx, out_selector, self.ti.clone());
 
             tasks.push((t1, t2));
             shutdown_tx_vec.push(tx);
@@ -138,6 +134,59 @@ impl StaticEngine {
 
         *running = Some(shutdown_tx_vec);
         Ok(tasks)
+    }
+
+    async fn loop_a(
+        mut arx: Receiver<AccumulateResult>,
+        out_selector: &'static dyn OutSelector,
+        ti: Arc<TransmissionInfo>,
+    ) -> io::Result<()> {
+        loop {
+            let ar = arx.recv().await;
+            if ar.is_none() {
+                break;
+            }
+            let ar = ar.unwrap();
+            tokio::spawn(handle_in_accumulate_result(
+                ar,
+                out_selector,
+                Some(ti.clone()),
+            ));
+        }
+        Ok(())
+    }
+
+    fn get_out_selector(&mut self) -> &'static dyn OutSelector {
+        self.get_fixed_out_selector()
+    }
+
+    fn get_fixed_out_selector(&mut self) -> &'static dyn OutSelector {
+        let ib = self.default_outbound.clone().unwrap();
+        let fixed_selector = FixedOutSelector { default: ib };
+        let fixed_selector = Box::new(fixed_selector);
+        let fixed_selector: &'static FixedOutSelector = Box::leak(fixed_selector);
+
+        self.try_drop_fixed_selector();
+        self.fix_outselector_mem = Some(fixed_selector);
+        fixed_selector
+    }
+
+    fn try_drop_fixed_selector(&self) {
+        match self.fix_outselector_mem {
+            Some(exist_mem) => unsafe {
+                let boxed =
+                    Box::from_raw(exist_mem as *const FixedOutSelector as *mut FixedOutSelector);
+
+                std::mem::drop(boxed);
+            },
+            None => {}
+        }
+    }
+
+    /// 清空配置。reset 后 可以 接着调用 init
+    pub async fn reset(&self) {
+        //todo: 处理 leak
+        self.try_drop_fixed_selector();
     }
 
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
@@ -155,10 +204,6 @@ impl StaticEngine {
             });
         }
 
-        // let ss = self.servers.as_slice();
-        // for s in ss {
-        //     s.stop();
-        // }
         info!("stopped");
     }
 }

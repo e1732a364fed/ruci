@@ -395,6 +395,7 @@ dyn_clone::clone_trait_object!(MIter);
 pub type MIterBox = Box<dyn MIter>;
 
 //MIterBox 才是传统意义上的 一条代理链. 一个 MapperBox 只是链中的一环.
+//MIterBox 有静态的生命周期，因此其内存必须由程序手动管理
 
 pub struct AccumulateResult {
     pub a: Option<net::Addr>,
