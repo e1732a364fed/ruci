@@ -1,5 +1,5 @@
 /*!
-provide facilities to filter http1.1
+provide facilities to filter and parse http1.1 request header
 
 See <https://datatracker.ietf.org/doc/html/rfc2616>
 

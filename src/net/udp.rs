@@ -1,5 +1,5 @@
 /*!
- * 为 UdpSocket 实现 net::addr_conn 中的trait
+为 [`tokio::net::UdpSocket`] 实现 [`crate::net::addr_conn`] 中的trait, 实现的结构为 [`Conn`]
 
 */
 use crate::utils::io_error;

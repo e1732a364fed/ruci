@@ -1,8 +1,8 @@
 /*!
- * module net defines some important parts for proxy.
- *
- * important parts: [`CID`], [`Network`], [`Addr`], [`AsyncConn`], [`Conn`], [`Stream`], [`GlobalTrafficRecorder`],
- *  and a cp mod for copying data between [`Conn`]
+module net defines some important parts for proxy.
+
+Important parts: [`CID`], [`AsyncConn`], [`Conn`], [`Stream`], [`GlobalTrafficRecorder`],
+ and several submodules.
 
 
 */
@@ -67,7 +67,7 @@ pub fn new_ordered_cid(last_id: &AtomicU32) -> u32 {
     last_id.fetch_add(1, Ordering::Relaxed) + 1
 }
 
-/// stream id ('c' for conn as convention)
+/// stream id ('c' for conn by convention)
 ///
 /// default is CID::unit(0) which means no connection yet
 ///
@@ -267,8 +267,7 @@ pub enum Stream {
     ///  raw ip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
     Conn(Conn),
 
-    //如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn
-    /// udp 的情况
+    /// 如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn. 也是 udp 的情况
     AddrConn(AddrConn),
 
     /// 比如:  tcp listener.
@@ -403,7 +402,7 @@ impl Stream {
 /// [`mod@crate::net::cp`] 统计真实流量, 只能有一种情况, 那就是 tcp到tcp的直接拷贝,
 /// 不使用累加器.
 ///
-/// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 counter 模块
+/// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 [`crate::map::counter`] 模块
 ///
 #[derive(Debug, Default)]
 pub struct GlobalTrafficRecorder {

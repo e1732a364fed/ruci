@@ -1,5 +1,5 @@
 /*!
-module map defines some important traits for proxy
+module map defines some important traits for proxy, and submodules that implements them
 
 几个关键部分: [`Data`], [`MapParams`], [`MapResult`], [`Map`], 和 [`mod@fold`] 模块
 
