@@ -15,7 +15,7 @@ pub mod utils;
 #[cfg(feature = "route")]
 pub mod route;
 
-pub const VERSION: &str = "0.0.4";
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const COMMON_DIRS: [&str; 5] = [
     "./",

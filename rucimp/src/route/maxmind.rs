@@ -1,6 +1,6 @@
 /*!
  *
-我们直接使用 maxmind 的 数据 作为ip国别判断的数据库
+使用 maxmind 提供 的 免费数据 作为ip国别判断的数据库
 
 https://www.maxmind.com/en/geoip-databases
 

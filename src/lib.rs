@@ -17,7 +17,7 @@ pub mod relay;
 pub mod user;
 pub mod utils;
 
-pub const VERSION: &str = "0.0.4";
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// many types in ruci have a name.
 /// use lower case letters + underline

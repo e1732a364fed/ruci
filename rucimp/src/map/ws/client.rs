@@ -12,7 +12,6 @@ use tokio_tungstenite::{
     client_async,
     tungstenite::http::{Request, StatusCode},
 };
-use tracing::debug;
 
 use super::*;
 
@@ -63,7 +62,7 @@ impl Client {
         conn: net::Conn,
     ) -> anyhow::Result<net::Conn> {
         if let Some(ref b) = b {
-            debug!("ws client will use earlydata {}", b.len());
+            //debug!("ws client will use earlydata {}", b.len());
             use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
             let str = URL_SAFE_NO_PAD.encode(b);

@@ -1,7 +1,4 @@
 /*!
-* cp has 3 situations, pure cp, cp with gr, cp with gr and updater
-
-the more info you want to access, the slower performance you would get
 */
 
 use bytes::BytesMut;
@@ -16,11 +13,6 @@ pub type UpdateSender = tokio::sync::mpsc::Sender<(CID, u64)>;
 pub type Updater = (UpdateSender, UpdateSender);
 pub type OptUpdater = Option<Updater>;
 
-/// may log debug or do other side-effect stuff with id.
-///
-/// will add to gtr.ub for bytes copied from local_c to remote_c.
-///
-/// will add to gtr.db for bytes copied from remote_c to local_c.
 #[allow(unused)]
 pub async fn copy<C1: AsyncConn, C2: AsyncConn>(
     local_c: &mut C1,
@@ -38,6 +30,9 @@ pub async fn copy<C1: AsyncConn, C2: AsyncConn>(
     tokio::io::copy_bidirectional(local_c, remote_c).await
 }
 
+/// cp with updater will send msg when each single read/write ends.
+///
+/// Note: the more info you want to access, the slower performance you would get
 #[cfg(feature = "trace")]
 pub async fn cp_with_updater<C1: AsyncConn, C2: AsyncConn>(
     c1: &mut C1,
