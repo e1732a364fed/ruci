@@ -6,25 +6,23 @@ license = "MIT OR Apache-2.0"
 
 
 [dependencies]
-tracing = "0.1"
-rand = { version = "0.8.5", features = ["small_rng"] }
+tracing = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
 
 ruci = { path = "../.." }
-tokio = { version = "1", features = ["full"] }
 
 rustls-pemfile = "1.0"
-async-trait = "0.1"
-bytes = "1"
-anyhow = "1"
-futures = "0.3"
 
 webpki-roots = "0.22.6"
 tokio-rustls = "0.25.0"
 rustls = { version = "0.22" }
 rcgen = { version = "0.13.1", features = ["pem", "x509-parser"] }
-
-
-serde = { version = "1", features = ["derive"] }
 
 macro_map = { path = "../macro_map" }
 

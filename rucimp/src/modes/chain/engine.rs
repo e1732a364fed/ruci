@@ -65,9 +65,9 @@ impl Engine {
     pub fn new() -> Self {
         use rand::Rng;
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
-        let run_instance_id = rng.gen();
+        let run_instance_id = rng.random();
 
         debug!("new Engine {run_instance_id}");
 

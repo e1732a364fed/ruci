@@ -191,7 +191,7 @@ impl QaData {
 
     // select question randomly
     pub fn bytes_to_questions_text(&self, buf: &[u8]) -> String {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let mut s = String::new();
 
@@ -203,7 +203,7 @@ impl QaData {
                     bit = 1;
                 }
 
-                let number = rng.gen_range(0..128);
+                let number = rng.random_range(0..128);
 
                 let qa = &self.qa_set[bit as usize][number];
                 s.push_str(qa.0.as_str());

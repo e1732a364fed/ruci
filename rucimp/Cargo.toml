@@ -7,15 +7,23 @@ edition = "2021"
 ruci = { path = ".." }
 macro_map = { path = "../crates/macro_map" }
 ruci-tls = { path = "../crates/ruci-tls" }
-user_trait = "0.1.1"
+user_trait = { workspace = true }
+tracing = { workspace = true }
+bytes = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+tokio-util = { workspace = true }
+parking_lot = { workspace = true }
+dyn-clone = { workspace = true }
+futures-lite = { workspace = true }
+pin-project = { workspace = true }
 
-
-bytes = "1"
-tracing = "0.1"
-rand = { version = "0.8", features = ["small_rng"] }
 chrono = { version = "0.4", features = ["serde"] }
 
-serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 serde_cbor = "0.11"
 serde_path_to_error = "0.1"
@@ -24,14 +32,6 @@ strum = "0.26"
 strum_macros = "0.26"
 
 
-tokio = { version = "1", features = ["full"] }
-tokio-util = { version = "0.7", features = [] }
-async-trait = "0.1"
-futures = "0.3"
-futures-lite = "2"
-parking_lot = "0.12"
-dyn-clone = "1"
-anyhow = "1"
 lazy_static = "1"
 base64 = "0.21"
 itertools = "0.12"
@@ -44,10 +44,10 @@ regex = { version = "1.10", optional = true }
 maxminddb = { version = "0.24", optional = true }
 
 mlua = { version = "0.10", features = [
-    "serialize",
-    "async",
-    "macros",
-    'send',
+  "serialize",
+  "async",
+  "macros",
+  'send',
 ], optional = true }
 
 serde-lua-table = { git = "https://github.com/Nerixyz/serde-lua-table.git", tag = "v0.1.2", optional = true }
@@ -67,8 +67,8 @@ h2 = { version = "0.4" }
 hpack = "0.3"
 
 rustls = { version = "0.21", optional = true, features = [
-    "dangerous_configuration",
-    "quic",
+  "dangerous_configuration",
+  "quic",
 ] }
 rustls-pemfile = { version = "1.0", optional = true }
 webpki-roots = { version = "0.22", optional = true }
@@ -83,14 +83,14 @@ quinn = { version = "0.10", optional = true }
 
 
 smoltcp = { version = "0.12", optional = true, default-features = false, features = [
-    "std",
-    "log",
-    "medium-ip",
-    "proto-ipv4",
-    "proto-ipv6",
-    "socket-icmp",
-    "socket-udp",
-    "socket-tcp",
+  "std",
+  "log",
+  "medium-ip",
+  "proto-ipv4",
+  "proto-ipv6",
+  "socket-icmp",
+  "socket-udp",
+  "socket-tcp",
 ] }
 
 
@@ -107,8 +107,6 @@ reqwest = { version = "0.11", features = ["json"] }
 
 har = "0.8.1"
 
-pin-project = "1.1"
-
 
 [target.'cfg(not(all(target_os = "windows", target_env = "msvc")))'.dependencies]
 netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d", optional = true }
@@ -116,11 +114,11 @@ netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52", features = [
-    "Win32_Foundation",
-    "Win32_NetworkManagement_IpHelper",
-    "Win32_NetworkManagement_Ndis",
-    "Win32_Networking_WinSock",
-    "Win32_System_IO",
+  "Win32_Foundation",
+  "Win32_NetworkManagement_IpHelper",
+  "Win32_NetworkManagement_Ndis",
+  "Win32_Networking_WinSock",
+  "Win32_System_IO",
 ] }
 
 [dev-dependencies]

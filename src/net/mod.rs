@@ -59,7 +59,7 @@ pub const MTU: usize = 1500;
 pub fn new_rand_cid() -> u32 {
     const ID_RANGE_START: u32 = 100_000;
 
-    rand::thread_rng().gen_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
+    rand::rng().random_range(ID_RANGE_START..=ID_RANGE_START * 10 - 1)
 }
 
 pub fn new_ordered_cid(last_id: &AtomicU32) -> u32 {
