@@ -42,7 +42,7 @@ use crate::{
     utils::{init_tls_server_pem_option, FileSource},
 };
 
-#[cfg(feature = "lwip")]
+#[cfg(all(feature = "lwip", unix))]
 use crate::map::tcp_ip_stack_lwip;
 
 #[cfg(feature = "steganography")]
@@ -383,7 +383,7 @@ pub enum InMapConfig {
     #[cfg(feature = "smoltcp")]
     Stack,
 
-    #[cfg(feature = "lwip")]
+    #[cfg(all(feature = "lwip", unix))]
     StackLwip,
 
     #[cfg(feature = "steganography")]
@@ -713,7 +713,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
                     file_source,
                 }))
             }
-            #[cfg(feature = "lwip")]
+            #[cfg(all(feature = "lwip", unix))]
             InMapConfig::StackLwip => Ok(Box::new(tcp_ip_stack_lwip::Stack {
                 ext_fields: Some(MapExtFields::default()),
             })),

@@ -19,7 +19,7 @@ ruci pronounced lucy.
 
 ## Intro
 
-A flexible network proxy framework and toolbox written in Rust (Rust 2021 edition 1.75+) using Lua/toml as the configuration format.
+A flexible network proxy framework and toolbox written in Rust (Rust 2021 edition 1.81+) using Lua/toml as the configuration format.
 
 用户 入门 ruci 可阅读 [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
 
