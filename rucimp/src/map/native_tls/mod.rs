@@ -1,26 +1,29 @@
 use std::{fmt, fs::File, io::Read};
 
+use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
 use ruci::{
-    map::{self, MapResult, ProxyBehavior},
-    net::{self, helpers::EarlyDataWrapper, AsyncConn, CID},
+    map::{self, MapResult, MapperExtFields, ProxyBehavior},
+    net::{self, helpers::EarlyDataWrapper, CID},
     Name,
 };
 
 use macro_mapper::*;
-use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsStream};
+use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
 use tracing::debug;
 
 pub fn load(cert_path: &str, key_path: &str) -> anyhow::Result<Identity> {
     let mut cert_file = File::open(cert_path)?;
     let mut certs = vec![];
-    cert_file.read_to_end(&mut certs)?;
+    cert_file
+        .read_to_end(&mut certs)
+        .context("cert_file read failed")?;
 
     let mut key_file = File::open(key_path)?;
     let mut key = vec![];
     key_file.read_to_end(&mut key)?;
-    let pkcs8 = Identity::from_pkcs8(&certs, &key)?;
+    let pkcs8 = Identity::from_pkcs8(&certs, &key).context("Identity::from_pkcs8 failed")?;
 
     Ok(pkcs8)
 }
@@ -29,6 +32,18 @@ pub fn load(cert_path: &str, key_path: &str) -> anyhow::Result<Identity> {
 pub struct ServerOptions {
     pub cert_f_path: String,
     pub key_f_path: String,
+}
+impl ServerOptions {
+    pub fn get_server(&self) -> anyhow::Result<Server> {
+        let id = load(&self.cert_f_path, &self.key_f_path).context("load cert or key failed")?;
+        Ok(Server {
+            ta: TlsAcceptor::from(
+                tokio_native_tls::native_tls::TlsAcceptor::new(id)
+                    .context("TlsAcceptor new failed")?,
+            ),
+            ext_fields: Some(MapperExtFields::default()),
+        })
+    }
 }
 
 #[mapper_ext_fields]
@@ -49,14 +64,6 @@ impl Name for Server {
     }
 }
 
-pub struct TlsStreamWrapper(TlsStream<Box<dyn AsyncConn>>);
-
-impl ruci::Name for TlsStreamWrapper {
-    fn name(&self) -> &str {
-        "tokio_native_tls_stream"
-    }
-}
-
 impl Server {
     async fn handshake(
         &self,
@@ -74,9 +81,7 @@ impl Server {
 
         let c = self.ta.accept(conn).await?;
 
-        // todo add SeverTLSConnDescriber as data
-        // Ok(MapResult::new_c(Box::new(TlsStreamWrapper(c))).a(a).build())
-        unimplemented!()
+        Ok(MapResult::new_c(Box::new(c)).a(a).build())
     }
 }
 
@@ -94,6 +99,42 @@ impl map::Mapper for Server {
             match r {
                 anyhow::Result::Ok(r) => r,
                 Err(e) => MapResult::from_e(e.context("TLS server handshake failed")),
+            }
+        } else {
+            MapResult::err_str("tls only support tcplike stream")
+        }
+    }
+}
+
+#[mapper_ext_fields]
+#[derive(Clone, Debug, MapperExt)]
+pub struct Client {
+    pub domain: String,
+}
+
+impl Name for Client {
+    fn name(&self) -> &'static str {
+        "native_tls_client"
+    }
+}
+
+#[async_trait]
+impl map::Mapper for Client {
+    async fn maps(
+        &self,
+        _cid: CID,
+        _behavior: ProxyBehavior,
+        params: map::MapParams,
+    ) -> map::MapResult {
+        let conn = params.c;
+        if let ruci::net::Stream::Conn(conn) = conn {
+            let connector =
+                TlsConnector::from(tokio_native_tls::native_tls::TlsConnector::new().unwrap());
+
+            let r = connector.connect(&self.domain, conn).await;
+            match r {
+                anyhow::Result::Ok(c) => return MapResult::new_c(Box::new(c)).a(params.a).build(),
+                Err(e) => MapResult::from_e(e),
             }
         } else {
             MapResult::err_str("tls only support tcplike stream")

@@ -194,12 +194,18 @@ pub enum InMapperConfig {
     Adder(i8),
     Counter,
     TLS(TlsIn),
+
+    #[cfg(feature = "tokio-native-tls")]
+    NativeTLS(TlsIn),
+
     Http(PlainTextSet),
     Socks5(PlainTextSet),
     Socks5Http(PlainTextSet),
     Trojan(TrojanPassSet),
     HttpFilter(Option<CommonConfig>),
-    WebSocket { http_config: Option<CommonConfig> },
+    WebSocket {
+        http_config: Option<CommonConfig>,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -212,6 +218,10 @@ pub enum OutMapperConfig {
     Adder(i8),
     Counter,
     TLS(TlsOut),
+
+    #[cfg(feature = "tokio-native-tls")]
+    NativeTLS(TlsOut),
+
     Socks5(Socks5Out),
     Trojan(String),
     WebSocket(CommonConfig),
@@ -321,6 +331,17 @@ impl ToMapperBox for InMapperConfig {
                 key: PathBuf::from(c.key.clone()),
             }
             .to_mapper_box(),
+
+            #[cfg(feature = "tokio-native-tls")]
+            InMapperConfig::NativeTLS(c) => Box::new(
+                crate::map::native_tls::ServerOptions {
+                    cert_f_path: c.cert.clone(),
+                    key_f_path: c.key.clone(),
+                }
+                .get_server()
+                .unwrap(),
+            ),
+
             InMapperConfig::Http(c) => {
                 let so = http_proxy::Config {
                     user_whitespace_pass: c.userpass.clone(),
@@ -414,6 +435,13 @@ impl ToMapperBox for OutMapperConfig {
                 let a = tls::client::Client::new(c.host.as_str(), c.insecure.unwrap_or_default());
                 Box::new(a)
             }
+
+            #[cfg(feature = "tokio-native-tls")]
+            OutMapperConfig::NativeTLS(c) => Box::new(crate::map::native_tls::Client {
+                domain: c.host.clone(),
+                ext_fields: Some(MapperExtFields::default()),
+            }),
+
             OutMapperConfig::Socks5(c) => {
                 let u = c.userpass.clone().unwrap_or_default();
                 let mut a = socks5::client::Client {

@@ -20,6 +20,7 @@ socks5http_chain = {tcp, {
 }}
 
 tls = {
+    --NativeTLS = {
     TLS = {
         cert = "test.crt",
         key = "test.key"

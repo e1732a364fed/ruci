@@ -6,6 +6,7 @@ use rustls::{
     ServerConfig,
 };
 use std::{fs::File, path::PathBuf, sync::Arc};
+use tracing::debug;
 
 use rustls_pemfile::{certs, read_one, Item};
 use std::io::{self, BufReader};
@@ -39,9 +40,18 @@ fn load_certs(path: &PathBuf) -> io::Result<Vec<CertificateDer<'static>>> {
 
 fn load_keys(path: &PathBuf) -> io::Result<PrivateKeyDer<'static>> {
     match read_one(&mut BufReader::new(File::open(path)?)) {
-        Ok(Some(Item::PKCS8Key(data))) => Ok(PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(data))),
-        Ok(Some(Item::RSAKey(data))) => Ok(PrivateKeyDer::Pkcs1(PrivatePkcs1KeyDer::from(data))),
-        Ok(Some(Item::ECKey(data))) => Ok(PrivateKeyDer::Sec1(PrivateSec1KeyDer::from(data))),
+        Ok(Some(Item::PKCS8Key(data))) => {
+            debug!("key type PKCS8Key");
+            Ok(PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(data)))
+        }
+        Ok(Some(Item::RSAKey(data))) => {
+            debug!("key type RSAKey");
+            Ok(PrivateKeyDer::Pkcs1(PrivatePkcs1KeyDer::from(data)))
+        }
+        Ok(Some(Item::ECKey(data))) => {
+            debug!("key type ECKey");
+            Ok(PrivateKeyDer::Sec1(PrivateSec1KeyDer::from(data)))
+        }
         Ok(x) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("invalid key in {:?}, {:?}", &path, x),
