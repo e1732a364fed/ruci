@@ -127,8 +127,13 @@ impl Args {
             data_source: None,
             #[cfg(any(feature = "lua", feature = "lua54"))]
             infinite: self.infinite,
+            #[cfg(not(any(feature = "lua", feature = "lua54")))]
+            infinite: false,
+
             #[cfg(feature = "trace")]
             trace: self.trace,
+            #[cfg(not(feature = "trace"))]
+            trace: false,
         }
     }
 }

@@ -120,6 +120,7 @@ impl FromStr for LevelWrapper {
 #[cfg_attr(feature = "api_server", derive(utoipa::ToSchema))]
 pub struct CoreArgs {
     /// choose the rucimp core mode
+    #[serde(default)]
     pub mode: Mode,
 
     pub config_file_name: Option<String>,
@@ -132,12 +133,10 @@ pub struct CoreArgs {
 
     /// Use infinite dynamic chain that is written in the lua config file (the "Infinite"
     /// global variable must exist)
-    #[cfg(any(feature = "lua", feature = "lua54"))]
     #[serde(default)]
     pub infinite: bool,
 
-    /// Enable flux trace (might slow down performance)
-    #[cfg(feature = "trace")]
+    /// Enable flux trace (might slow down performance) (only availiable with trace feature)
     #[serde(default)]
     pub trace: bool,
 }
