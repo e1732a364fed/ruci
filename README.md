@@ -19,8 +19,8 @@ rucimple 对代理架构 做了比verysimple 中更高级的抽象，因此功�
 文档所限，肯定有东西没有涉及到，可提交issue提问或加入讨论。
 本项目不是一个人能做完的，所以欢迎加入我们。注意低调。
 
-讨论群:     https://t.me/+6yL4ggeyKY0yNjIx
-channel:    https://t.me/+r5hKQKYyeuowMTcx
+开发级讨论群:     https://t.me/+6yL4ggeyKY0yNjIx
+用户级channel:    https://t.me/+r5hKQKYyeuowMTcx
 
 
 #### 为什么要自行实现协议？
