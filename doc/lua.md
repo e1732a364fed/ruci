@@ -1,5 +1,5 @@
 
-config 是 提供给 rucimp 的项，示例如下
+config 是 提供给 rucimp 的项，静态示例如下
 
 ```lua
 tls = { TLS = {  cert = "test.cert", key = "test.key" } }
