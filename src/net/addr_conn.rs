@@ -192,29 +192,23 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
 
         let r = r1.read(buf.initialized_mut()).await;
 
-        {
-            match r {
-                Err(_) => break,
-                Ok((m, ad)) => {
-                    if m > 0 {
-                        //buf.truncate(m);
-                        //let (frist_mb, _) = buf.filled_mut().split_at_mut(m);
-                        //let mut buf = ReadBuf::new(frist_mb);
-
-                        loop {
-                            let r = w1.write(buf.filled(), &ad).await;
-                            if r.is_err() {
-                                break;
-                            }
-                            let n = r.unwrap();
-                            buf.advance(n);
-                            if buf.filled().len() == 0 {
-                                break;
-                            }
+        match r {
+            Err(_) => break,
+            Ok((m, ad)) => {
+                if m > 0 {
+                    loop {
+                        let r = w1.write(buf.filled(), &ad).await;
+                        if r.is_err() {
+                            break;
+                        }
+                        let n = r.unwrap();
+                        buf.advance(n);
+                        if buf.filled().len() == 0 {
+                            break;
                         }
                     }
-                    whole_write += m;
                 }
+                whole_write += m;
             }
         }
     }
@@ -222,18 +216,16 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     Ok(whole_write as u64)
 }
 
-pub async fn cp_addrconn<F: Fn() -> ()>(
+pub async fn cp_addrconn(
     cid: u32,
     c1: AddrConn,
     c2: AddrConn,
-    shutdown_f: F,
     opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
-    cp_addr_between(cid, c1.0, c1.1, c2.0, c2.1, shutdown_f, opt).await
+    cp_addr_between(cid, c1.0, c1.1, c2.0, c2.1, opt).await
 }
 
 pub async fn cp_addr_between<
-    F: Fn() -> (),
     R1: AddrReadTrait,
     R2: AddrReadTrait,
     W1: AddrWriteTrait,
@@ -244,23 +236,31 @@ pub async fn cp_addr_between<
     w1: W1,
     r2: R2,
     w2: W2,
-    shutdown_f: F,
     _opt: Option<Arc<TransmissionInfo>>,
 ) -> Result<u64, Error> {
     let (c1_to_c2, c2_to_c1) = (cp_addr(r1, w2).fuse(), cp_addr(r2, w1).fuse());
     pin_mut!(c1_to_c2, c2_to_c1);
 
+    //todo: use opt
     select! {
-        r1 = c1_to_c2 =>{
+        rst1 = c1_to_c2 =>{
+
             debug!("cid: {}, cp_addr_end, r1",cid);
-            shutdown_f();
-            r1
+
+            let _r2 = c2_to_c1.await;
+
+            debug!("cid: {}, cp_addr wait_end, r1",cid);
+
+            rst1
         }
-        r2 = c2_to_c1 =>{
+        rst2 = c2_to_c1 =>{
             debug!("cid: {}, cp_addr_end, r2",cid);
 
-            shutdown_f();
-            r2
+            let _r2 = c1_to_c2.await;
+
+            debug!("cid: {}, cp_addr wait_end, r2",cid);
+
+            rst2
         }
     }
 }
