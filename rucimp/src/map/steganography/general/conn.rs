@@ -1,3 +1,7 @@
+/*!
+ * Defines a GeneralConn for general steganography
+ */
+
 use super::{GeneralMap, ParsedResult, ReadSequence, WriteSequence};
 use anyhow::Result;
 use bytes::BytesMut;
@@ -89,7 +93,8 @@ impl GeneralConn {
 
     /// 开始一个写序列
     ///
-    /// Will change self.state to ConnState::ProcessingParse
+    /// It creates a future to call self.ai_map.generate_sequence
+    /// and change self.state to ConnState::ProcessingParse
     fn initiate_ai_write_processing(&mut self, data: Vec<u8>) -> Result<()> {
         let ai_map = self.ai_map.clone();
         let is_handshake = self.is_handshake(true);
@@ -370,10 +375,10 @@ impl AsyncRead for GeneralConn {
                             )));
                         }
                     }
-                }
-            }
-        }
-    }
+                } //ConnState::ProcessingDecoding
+            } //match
+        } //loop
+    } //poll_read
 }
 
 impl AsyncWrite for GeneralConn {
@@ -542,10 +547,10 @@ impl AsyncWrite for GeneralConn {
                             panic!("this can't happen");
                         }
                     }
-                }
-            }
-        }
-    }
+                } //ConnState::Writing
+            } //match
+        } //loop
+    } //poll_write
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
         debug!("GeneralConn::poll_flush");

@@ -5,85 +5,19 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-use bytes::BytesMut;
 use reqwest;
-use ruci::{
-    map::*,
-    net::{self,  CID},
-    Name,
-};
+ 
+use ruci::net;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-mod conn;
 
 #[cfg(test)]
 mod test;
-use conn::AIConn;
-use tokio::io::AsyncReadExt;
 use tracing::debug;
 
-/// 写序列状态
-#[derive(Debug)]
-pub(crate) struct WriteStep {
-    pub is_write: bool, // true: 执行 w* 操作, false: 执行 r* 操作
-    pub index: usize,   // 对应 write_packets 或 read_lengths 的索引
-}
-
-#[derive(Debug)]
-pub(crate) struct WriteSequence {
-    pub write_packets: Vec<Vec<u8>>, // 改为 Vec
-    pub read_lengths: Vec<usize>,    // 改为 Vec
-    pub(crate) current_step: WriteStep,
-}
-
-/// 读序列状态
-#[derive(Debug)]
-pub struct ReadStep {
-    pub is_read: bool, // true: 执行 r* 操作, false: 执行 w* 操作
-    pub index: usize,  // 对应 read_packets 或 write_packets 的索引
-}
-
-#[derive(Debug)]
-pub struct ReadSequence {
-    pub write_packets: Vec<Vec<u8>>,
-    pub read_lengths: Vec<usize>,
-    pub read_packets: Vec<Vec<u8>>,
-    pub current_step: ReadStep,
-}
-
-impl ReadSequence {
-    fn advance_to_next_write(&mut self) {
-        self.current_step.is_read = false;
-    }
-
-    fn advance_to_next_read(&mut self) {
-        self.current_step.is_read = true;
-        self.current_step.index += 1;
-    }
-}
-
-impl WriteSequence {
-    fn advance_to_next_read(&mut self) {
-        self.current_step.is_write = false;
-    }
-
-    fn advance_to_next_write(&mut self) {
-        self.current_step.is_write = true;
-        self.current_step.index += 1;
-    }
-}
-
-/// AI处理结果
-#[derive(Debug)]
-pub(crate) enum AIResult {
-    Write(WriteSequence),
-    Read {
-        sequence: ReadSequence,
-        addr: Option<net::Addr>,
-    },
-}
-
+use crate::map::steganography::general::*;
+ 
 fn no_proxy_client() -> reqwest::Client {
     reqwest::ClientBuilder::new().no_proxy().build().unwrap()
 }
@@ -100,22 +34,21 @@ pub struct AIProtocolConfig {
 
 /// AI生成的协议实现
 #[derive(Debug, Clone)]
-pub struct AIGeneratedMap {
+pub struct AIGeneratedProcessor {
     config: AIProtocolConfig,
     client: reqwest::Client,
-    // ext_fields: Option<MapExtFields>,
 }
 
-impl AIGeneratedMap {
+impl AIGeneratedProcessor {
     pub fn new(config: AIProtocolConfig) -> Self {
         Self {
             config,
             client: no_proxy_client(),
-            // ext_fields: None,
         }
     }
 
-    /// 请求AI生成一个新的隐写协议算法
+
+    /// 请求AI生成一个新的隐写协议算法, 并存在 self.config.algorithm_description 中
     pub async fn generate_algorithm(&mut self) -> Result<()> {
         let messages = vec![
             json!({
@@ -182,23 +115,47 @@ impl AIGeneratedMap {
         Ok(())
     }
 
+    pub async fn from_generated_algorithm(
+        api_key: String,
+        model: String,
+        api_base_url: String,
+        is_server: bool,
+    ) -> Result<Self> {
+        // 创建临时实例来生成算法
+        let mut result = Self::new(AIProtocolConfig {
+            api_key: api_key.clone(),
+            model: model.clone(),
+            algorithm_description: String::new(), // 临时空字符串
+            is_server,
+            api_base_url: api_base_url.clone(),
+        });
+
+        // 生成算法描述并修改自身配置
+        result.generate_algorithm().await?;
+
+        // 创建最终实例
+        Ok(result)
+    }
+
+}
+
+#[async_trait]
+impl SteganographyProcessor for AIGeneratedProcessor {
+   
     /// 调用OpenAI API处理数据
     ///
     /// 在客户端，处理目标地址和数据，生成写序列
     /// 在服务端，处理读到的客户端握手的写序列中的第一个包，生成读序列
-    async fn generate_sequence_with_ai(
+    async fn generate_sequence(
         &self,
         data: &[u8],
         target_addr: Option<net::Addr>,
-        // early_data: Option<&[u8]>,
         is_handshake: bool,
         is_read: bool,
-    ) -> Result<AIResult> {
+    ) -> Result<ParsedResult> {
         let data_base64 = BASE64.encode(data);
         let target_addr_str = target_addr.map(|addr| addr.to_string());
-        // let early_data_base64 = early_data.map(|data| BASE64.encode(data));
 
-        // 构建system提示
         let role = if self.config.is_server {
             "server"
         } else {
@@ -290,42 +247,21 @@ impl AIGeneratedMap {
         if is_handshake && self.config.is_server {
             // 握手阶段的服务端需要解析地址信息
             let (sequence, addr) = parse_ai_response_to_read_sequence(content)?;
-            Ok(AIResult::Read { sequence, addr })
+            Ok(ParsedResult::Read { sequence, addr })
         } else if is_read {
             // 普通读取操作
             let (sequence, _) = parse_ai_response_to_read_sequence(content)?;
-            Ok(AIResult::Read {
+            Ok(ParsedResult::Read {
                 sequence,
                 addr: None,
             })
         } else {
             // 普通写入操作
             let sequence = parse_ai_response_to_write_sequence(content)?;
-            Ok(AIResult::Write(sequence))
+            Ok(ParsedResult::Write(sequence))
         }
     }
-    /// 创建一个新的AIGeneratedMap实例，自动生成算法描述
-    pub async fn from_generated_algorithm(
-        api_key: String,
-        model: String,
-        api_base_url: String,
-        is_server: bool,
-    ) -> Result<Self> {
-        // 创建临时实例来生成算法
-        let mut result = Self::new(AIProtocolConfig {
-            api_key: api_key.clone(),
-            model: model.clone(),
-            algorithm_description: String::new(), // 临时空字符串
-            is_server,
-            api_base_url: api_base_url.clone(),
-        });
-
-        // 生成算法描述并修改自身配置
-        result.generate_algorithm().await?;
-
-        // 创建最终实例
-        Ok(result)
-    }
+   
 
     /// 解密从隐写协议中读取的数据
     async fn decrypt_read_sequence(&self, combined_data: Vec<u8>) -> Result<Vec<u8>> {
@@ -517,48 +453,3 @@ fn parse_ai_response_to_write_sequence(content: &str) -> Result<WriteSequence> {
     })
 }
 
-impl Name for AIGeneratedMap {
-    fn name(&self) -> &str {
-        "ai_generated"
-    }
-}
-
-#[async_trait]
-impl Map for AIGeneratedMap {
-    async fn maps(&self, _cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
-        match behavior {
-            ProxyBehavior::ENCODE => {
-                let   conn =
-                    AIConn::new(params.c.try_unwrap_tcp().unwrap(), self.clone(), params.b, params.a);
-                MapResult::new_c(Box::new(conn)).build()
-            }
-            ProxyBehavior::DECODE => {
-                let mut conn =
-                    AIConn::new(params.c.try_unwrap_tcp().unwrap(), self.clone(), params.b, params.a);
-
-                let mut buf = BytesMut::zeroed(2048); //todo: change this
-                let r = conn.read_buf(&mut buf).await;
-                match r {
-                    Ok(n) => {
-                        debug!("ag1: server read handshake success, {n}");
-                        let ta = conn.target_addr.take();
-
-                        MapResult::new_c(Box::new(conn)).b(Some(buf)).a(ta).build()
-                    }
-                    Err(e) => {
-                        MapResult::from_e(anyhow::anyhow!("ag1: server read handshake failed, {e}"))
-                    }
-                }
-
-                // if params.b.is_some() {
-
-                // } else {
-                //     MapResult::builder().c(params.c).build()
-                // }
-            }
-            ProxyBehavior::UNSPECIFIED => {
-                MapResult::from_e(anyhow::anyhow!("Unspecified behavior is not supported"))
-            }
-        }
-    }
-}

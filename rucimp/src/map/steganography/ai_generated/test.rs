@@ -1,4 +1,5 @@
 use super::*;
+use conn::GeneralConn;
 use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::debug;
@@ -295,7 +296,7 @@ async fn test_basic_write_sequence() -> Result<()> {
     let (client_tcp, server_tcp) = tokio::io::duplex(1024);
 
     // 创建使用模拟服务器的 AIGeneratedMap
-    let ai_map = AIGeneratedMap {
+    let ai_map = AIGeneratedProcessor {
         config: AIProtocolConfig {
             api_key: "test".to_string(),
             model: "test".to_string(),
@@ -306,7 +307,15 @@ async fn test_basic_write_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map, None, None);
+    let mut ai_conn = GeneralConn::new(
+        Box::new(client_tcp),
+        GeneralMap {
+            is_server: false,
+            processor: Box::new(ai_map),
+        },
+        None,
+        None,
+    );
 
     // 在另一个任务中处理服务端
     let server_handle = tokio::spawn(async move {
@@ -352,7 +361,7 @@ async fn test_basic_read_sequence() -> Result<()> {
     let (client_tcp, server_tcp) = tokio::io::duplex(1024);
 
     // 创建使用模拟服务器的 AIGeneratedMap
-    let ai_map = AIGeneratedMap {
+    let ai_map = AIGeneratedProcessor {
         config: AIProtocolConfig {
             api_key: "test".to_string(),
             model: "test".to_string(),
@@ -363,7 +372,15 @@ async fn test_basic_read_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map, None, None);
+    let mut ai_conn = GeneralConn::new(
+        Box::new(client_tcp),
+        GeneralMap {
+            is_server: false,
+            processor: Box::new(ai_map),
+        },
+        None,
+        None,
+    );
 
     // 在另一个任务中处理服务端
     let server_handle = tokio::spawn(async move { server_handle_read(server_tcp).await });
@@ -396,7 +413,7 @@ async fn test_multiple_read_write_sequence() -> Result<()> {
     mock_set_post_decrypt_data(&mock_server).await;
 
     let (client_tcp, mut server_tcp) = tokio::io::duplex(1024);
-    let ai_map = AIGeneratedMap {
+    let ai_map = AIGeneratedProcessor {
         config: AIProtocolConfig {
             api_key: "test".to_string(),
             model: "test".to_string(),
@@ -407,7 +424,15 @@ async fn test_multiple_read_write_sequence() -> Result<()> {
         client: no_proxy_client(),
     };
 
-    let mut ai_conn = AIConn::new(Box::new(client_tcp), ai_map, None, None);
+    let mut ai_conn = GeneralConn::new(
+        Box::new(client_tcp),
+        GeneralMap {
+            is_server: false,
+            processor: Box::new(ai_map),
+        },
+        None,
+        None,
+    );
 
     // 在另一个任务中处理服务端
     let server_handle = tokio::spawn(async move {

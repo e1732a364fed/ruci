@@ -12,7 +12,7 @@ use ruci::{
     Name,
 };
 
-mod conn;
+pub mod conn;
 
 use conn::GeneralConn;
 use tokio::io::AsyncReadExt;
@@ -27,8 +27,8 @@ pub struct WriteStep {
 
 #[derive(Debug)]
 pub struct WriteSequence {
-    pub write_packets: Vec<Vec<u8>>, // 改为 Vec
-    pub read_lengths: Vec<usize>,    // 改为 Vec
+    pub write_packets: Vec<Vec<u8>>,
+    pub read_lengths: Vec<usize>,
     pub(crate) current_step: WriteStep,
 }
 
@@ -91,20 +91,19 @@ pub trait SteganographyProcessor: Send + Sync + DynClone {
     /// 解密读取到的数据
     async fn decrypt_read_sequence(&self, data: Vec<u8>) -> Result<Vec<u8>>;
 }
+dyn_clone::clone_trait_object!(SteganographyProcessor);
 
 #[derive(Clone)]
 pub struct GeneralMap {
-    is_server: bool,
+    pub is_server: bool,
 
-    processor: Box<dyn SteganographyProcessor>,
+    pub processor: Box<dyn SteganographyProcessor>,
     // ext_fields: Option<MapExtFields>,
 }
 
-dyn_clone::clone_trait_object!(SteganographyProcessor);
-
 impl std::fmt::Debug for GeneralMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "GeneralMap")
+        write!(f, "GeneralSteganographyMap")
     }
 }
 
@@ -115,7 +114,6 @@ impl GeneralMap {
         &self,
         data: &[u8],
         target_addr: Option<net::Addr>,
-        // early_data: Option<&[u8]>,
         is_handshake: bool,
         is_read: bool,
     ) -> Result<ParsedResult> {
@@ -161,19 +159,19 @@ impl Map for GeneralMap {
                 let r = conn.read_buf(&mut buf).await;
                 match r {
                     Ok(n) => {
-                        debug!("ag1: server read handshake success, {n}");
+                        debug!("general steganography: server read handshake success, {n}");
                         let ta = conn.target_addr.take();
 
                         MapResult::new_c(Box::new(conn)).b(Some(buf)).a(ta).build()
                     }
-                    Err(e) => {
-                        MapResult::from_e(anyhow::anyhow!("ag1: server read handshake failed, {e}"))
-                    }
+                    Err(e) => MapResult::from_e(anyhow::anyhow!(
+                        "general steganography: server read handshake failed, {e}"
+                    )),
                 }
             }
-            ProxyBehavior::UNSPECIFIED => {
-                MapResult::from_e(anyhow::anyhow!("Unspecified behavior is not supported"))
-            }
+            ProxyBehavior::UNSPECIFIED => MapResult::from_e(anyhow::anyhow!(
+                "general steganography: Unspecified behavior is not supported"
+            )),
         }
     }
 }
