@@ -1,3 +1,6 @@
+/*! Provides a basic logic for anti replay-attack.
+ */
+
 use std::hash::Hash;
 use std::time::Duration;
 use std::{
@@ -10,6 +13,7 @@ pub struct Judge<K>
 where
     K: Send + Sync + Hash + Eq,
 {
+    // it has a mutex so that multiple `check` call won't collide.
     map: Arc<Mutex<HashMap<K, tokio::time::Instant>>>,
     shutdown_t: Option<oneshot::Sender<()>>,
 

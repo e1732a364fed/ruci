@@ -2,16 +2,16 @@ name: Deploy book
 on:
   workflow_dispatch:
   push:
-    branches: [ "tokio" ]
+    branches: ["tokio"]
     paths:
-          - doc/book/**
+      - doc/book/**
 
 jobs:
   deploy:
     runs-on: ubuntu-20.04
     permissions:
-      contents: write  # To push a branch
-      pages: write  # To push to a GitHub Pages site
+      contents: write # To push a branch
+      pages: write # To push to a GitHub Pages site
       id-token: write # To update the deployment status
     steps:
       - uses: actions/checkout@v4
@@ -24,11 +24,14 @@ jobs:
       #     mkdir mdbook
       #     curl -sSL $url | tar -xz --directory=./mdbook
       #     echo `pwd`/mdbook >> $GITHUB_PATH
+
+      # Fix https://github.com/rust-lang/mdBook/issues/2060
       - name: Install mdbook(with fix) from git
         uses: baptiste0928/cargo-install@v3
         with:
           crate: mdbook
           git: https://github.com/HU90m/mdBook
+          branch: landing-page-links-fix
       - name: Build Book
         run: |
           cd doc/book
@@ -39,7 +42,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
-          path: 'doc/book/book'
+          path: "doc/book/book"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

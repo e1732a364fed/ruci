@@ -106,4 +106,4 @@ Infinite 要低很多。
 
 # 接下来
 
-[lua自定义协议](lua/user_defined_protocol.md)
+[lua自定义协议](user_defined_protocol.md)

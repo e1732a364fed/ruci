@@ -15,5 +15,5 @@ https://github.com/rust-lang/mdBook/wiki/Automated-Deployment%3A-GitHub-Actions
 https://github.com/rust-lang/mdBook/issues/2060
 
 因此目前使用的 mdbook 是 HU90m 的 补丁版：
-cargo install --git https://github.com/HU90m/mdBook.git mdbook
+cargo install --git https://github.com/HU90m/mdBook.git --branch landing-page-links-fix mdbook
 
