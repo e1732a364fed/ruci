@@ -20,6 +20,8 @@ pub struct Engine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁，若有值说明 is running
     pub ti: Arc<GlobalTrafficRecorder>,
 
+    pub conn_info_recorder: Option<Arc<tokio::sync::Mutex<Box<dyn ruci::relay::InfoRecorder>>>>,
+
     inbounds: Vec<MIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, MIterBox>>, //不为空
     default_outbound: Option<MIterBox>,        // init 后一定有值
@@ -127,7 +129,12 @@ impl Engine {
 
             let t1 = acc::accumulate_from_start(atx, rx, miter.clone(), Some(self.ti.clone()));
 
-            let t2 = Engine::loop_a(arx, out_selector.clone(), self.ti.clone());
+            let t2 = Engine::loop_a(
+                arx,
+                out_selector.clone(),
+                self.ti.clone(),
+                self.conn_info_recorder.clone(),
+            );
 
             tasks.push((t1, t2));
             shutdown_tx_vec.push(tx);
@@ -142,6 +149,7 @@ impl Engine {
         mut arx: Receiver<acc::AccumulateResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
         ti: Arc<GlobalTrafficRecorder>,
+        conn_info_recorder: Option<Arc<tokio::sync::Mutex<Box<dyn ruci::relay::InfoRecorder>>>>,
     ) -> anyhow::Result<()> {
         loop {
             let ar = arx.recv().await;
@@ -150,6 +158,7 @@ impl Engine {
                     ar,
                     out_selector.clone(),
                     Some(ti.clone()),
+                    conn_info_recorder.clone(),
                 ));
             } else {
                 break;

@@ -9,8 +9,10 @@ pub mod route;
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use bytes::BytesMut;
 use log::{debug, info, log_enabled, warn};
+use tokio::sync::Mutex;
 
 use crate::net::addr_conn::AsyncWriteAddrExt;
 use crate::net::{self, Addr, Stream, CID};
@@ -25,6 +27,25 @@ use crate::map::*;
 
 pub const READ_HANDSHAKE_TIMEOUT: u64 = 15; // 15秒的最长握手等待时间。 //todo: 修改这里
 
+#[derive(Clone, Debug)]
+pub struct ConnInfo {
+    pub cid: CID,
+    pub in_tag: String,
+    pub out_tag: String,
+    pub target_addr: net::Addr,
+
+    #[cfg(feature = "trace")]
+    pub in_trace: Vec<String>,
+
+    #[cfg(feature = "trace")]
+    pub out_trace: Vec<String>,
+}
+
+#[async_trait]
+pub trait InfoRecorder: Send + Sync {
+    async fn record(&mut self, state: ConnInfo);
+}
+
 /// block until in and out handshake is over.
 /// utilize handle_in_accumulate_result and  route::OutSelector
 pub async fn handle_in_stream(
@@ -32,6 +53,8 @@ pub async fn handle_in_stream(
     ins_iterator: MIterBox,
     out_selector: Arc<Box<dyn OutSelector>>,
     ti: Option<Arc<net::GlobalTrafficRecorder>>,
+
+    recorder: Option<Arc<Mutex<Box<dyn InfoRecorder>>>>,
 ) -> anyhow::Result<()> {
     let cid = match ti.as_ref() {
         Some(ti) => CID::new_ordered(&ti.alive_connection_count),
@@ -63,7 +86,7 @@ pub async fn handle_in_stream(
         }
     };
 
-    handle_in_accumulate_result(listen_result, out_selector, ti).await
+    handle_in_accumulate_result(listen_result, out_selector, ti, recorder).await
 }
 
 /// block until out handshake is over
@@ -72,7 +95,9 @@ pub async fn handle_in_accumulate_result(
 
     out_selector: Arc<Box<dyn OutSelector>>,
 
-    ti: Option<Arc<net::GlobalTrafficRecorder>>,
+    tr: Option<Arc<net::GlobalTrafficRecorder>>,
+
+    recorder: Option<Arc<Mutex<Box<dyn InfoRecorder>>>>,
 ) -> anyhow::Result<()> {
     let cid = listen_result.id;
     let target_addr = match listen_result.a.take() {
@@ -126,13 +151,14 @@ pub async fn handle_in_accumulate_result(
         .await;
 
     let cidc = cid.clone();
+    let ta_clone = target_addr.clone();
     let dial_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             acc::accumulate(AccumulateParams {
                 cid: cidc,
                 behavior: ProxyBehavior::ENCODE,
                 initial_state: MapResult {
-                    a: Some(target_addr),
+                    a: Some(ta_clone),
                     b: listen_result.b,
                     ..Default::default()
                 },
@@ -171,13 +197,35 @@ pub async fn handle_in_accumulate_result(
             debug!("{cid}, dial out client succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
         }
     }
+
+    if let Some(r) = recorder {
+        let cid = cid.clone();
+        tokio::spawn(async move {
+            r.lock()
+                .await
+                .record(ConnInfo {
+                    cid,
+                    in_tag: listen_result.chain_tag,
+                    out_tag: dial_result.chain_tag,
+                    target_addr,
+
+                    #[cfg(feature = "trace")]
+                    in_trace: listen_result.trace,
+
+                    #[cfg(feature = "trace")]
+                    out_trace: dial_result.trace,
+                })
+                .await;
+        });
+    }
+
     cp_stream(
         cid,
         listen_result.c,
         dial_result.c,
         dial_result.b,
         dial_result.a,
-        ti,
+        tr,
     );
 
     Ok(())
@@ -190,18 +238,18 @@ pub fn cp_stream(
     s2: Stream,
     ed: Option<BytesMut>,            //earlydata
     first_target: Option<net::Addr>, // 用于 udp
-    ti: Option<Arc<net::GlobalTrafficRecorder>>,
+    tr: Option<Arc<net::GlobalTrafficRecorder>>,
 ) {
     match (s1, s2) {
-        (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti),
+        (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(cid, i, o, ed, tr),
         (Stream::Conn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(cid, o, i, false, ed, first_target, ti));
+            tokio::spawn(cp_udp::cp_udp_tcp(cid, o, i, false, ed, first_target, tr));
         }
         (Stream::AddrConn(i), Stream::Conn(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(cid, i, o, true, ed, first_target, ti));
+            tokio::spawn(cp_udp::cp_udp_tcp(cid, i, o, true, ed, first_target, tr));
         }
         (Stream::AddrConn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp(cid, i, o, ed, first_target, ti));
+            tokio::spawn(cp_udp(cid, i, o, ed, first_target, tr));
         }
         _ => {
             warn!("can't cp stream when one of them is not (Conn or AddrConn)");
@@ -215,14 +263,14 @@ pub async fn cp_udp(
     mut out_conn: net::addr_conn::AddrConn,
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
-    ti: Option<Arc<net::GlobalTrafficRecorder>>,
+    tr: Option<Arc<net::GlobalTrafficRecorder>>,
 ) {
     info!("{cid}, relay udp start",);
 
-    let tic = ti.clone();
+    let tc = tr.clone();
     scopeguard::defer! {
 
-        if let Some(ti) = tic {
+        if let Some(ti) = tc {
             ti.alive_connection_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
 
         }
@@ -247,5 +295,5 @@ pub async fn cp_udp(
         }
     }
 
-    let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, ti).await;
+    let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, tr).await;
 }

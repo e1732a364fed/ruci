@@ -5,3 +5,4 @@ ruci_config/
 .DS_Store
 .vscode/
 testfile.txt
+*.log

@@ -3,10 +3,14 @@
  用户提供的参数作为配置文件 读取它并以 chain 模式运行。
 */
 
+use async_trait::async_trait;
+use log::warn;
+use ruci::relay::{ConnInfo, InfoRecorder};
 use rucimp::{
     example_common::*,
     modes::chain::{config::lua, engine::Engine},
 };
+use tokio::{fs::File, io::AsyncWriteExt};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -30,4 +34,26 @@ async fn main() -> anyhow::Result<()> {
     se.stop().await;
 
     Ok(())
+}
+
+struct FileRecorder {
+    f: File,
+    failed: bool,
+}
+
+#[async_trait]
+impl InfoRecorder for FileRecorder {
+    async fn record(&mut self, state: ConnInfo) {
+        if self.failed {
+            return;
+        }
+        let r = self.f.write(format!("{:?}", state).as_bytes()).await;
+        match r {
+            Ok(_) => {}
+            Err(e) => {
+                warn!("conn info write to file failed: {}", e);
+                self.failed = true;
+            }
+        }
+    }
 }
