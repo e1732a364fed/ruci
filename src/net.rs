@@ -32,12 +32,12 @@ use tokio::net::UdpSocket;
 #[cfg(unix)]
 use tokio::net::UnixStream;
 
-#[derive(Default)]
-pub enum GenerateCIDBehavior {
-    #[default]
-    Random,
-    Ordered,
-}
+// #[derive(Default)]
+// pub enum GenerateCIDBehavior {
+//     #[default]
+//     Random,
+//     Ordered,
+// }
 
 pub fn new_rand_cid() -> u32 {
     const ID_RANGE_START: u32 = 100_000;

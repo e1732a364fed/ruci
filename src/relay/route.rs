@@ -11,7 +11,7 @@
 
 trait: OutSelector
 
-impl: FixedOutSelector, TagOutSelector, RuleSetOutSelector
+impl: FixedOutSelector, TagOutSelector, InboundInfoOutSelector
 
 struct: Rule, RuleSet
 
@@ -34,6 +34,15 @@ use crate::{
 };
 
 /// Send + Sync to use in async
+/// OutSelector 给了 从一次链累加行为中 得到的数据 来试图 选择出一个 MIterBox
+///
+/// 选择出的 MIterBox 一般是用于 outbound,
+///
+/// params 是 &Vec<Option<AnyData>>, 这是链累加 得到的 结果, 里面可能有任何值,
+///
+/// 不过对于路由来说最有用的值应该是 验证后的 user, 所以本模块中含一个 get_user_from_anydata_vec
+/// 函数用于这一点.
+///
 #[async_trait]
 pub trait OutSelector: Send + Sync {
     async fn select(
@@ -42,6 +51,38 @@ pub trait OutSelector: Send + Sync {
         in_chain_tag: &str,
         params: &Vec<Option<AnyData>>,
     ) -> MIterBox;
+}
+
+pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<UserVec> {
+    let mut v = UserVec::new();
+
+    for anyd in adv
+        .iter()
+        .filter(|d| d.is_some())
+        .map(|d| d.as_ref().unwrap())
+    {
+        match anyd {
+            AnyData::A(arc) => {
+                let anyv = arc.lock();
+                let oub = get_user_from_anydata(&*anyv);
+                if let Some(ub) = oub {
+                    v.0.push(user::UserBox(ub));
+                }
+            }
+            AnyData::B(b) => {
+                let oub = bget_user_from_anydata(b);
+                if let Some(ub) = oub {
+                    v.0.push(user::UserBox(ub));
+                }
+            }
+            _ => {}
+        }
+    }
+    if v.0.is_empty() {
+        None
+    } else {
+        Some(v)
+    }
 }
 
 #[derive(Debug)]
@@ -90,70 +131,43 @@ impl OutSelector for TagOutSelector {
     }
 }
 
+/// 一种基本的 inbound 部分有用信息的结构, 分别标明:
+///
+/// 1. 是谁进来的:      users
+/// 2. 从哪里进来的:    in_tag
+/// 3. 要到哪里去:      target_addr
+///
 #[derive(Hash, Debug, PartialEq, Eq)]
-pub struct Rule {
-    pub in_tag: String,
-    pub target_addr: net::Addr,
-
+pub struct InboundInfo {
     ///因为链中可能有多个用户验证，所以会有多个 UserBox
     pub users: Option<UserVec>,
+    pub in_tag: String,
+    pub target_addr: net::Addr,
 }
 
 /// (k,v), v 为 out_tag, k 为 所有能对应 v的 rule 值的集合
 #[derive(Debug)]
-pub struct RuleSet(HashSet<Rule>, String);
-impl RuleSet {
-    pub fn matches(&self, r: &Rule) -> Option<String> {
+pub struct InboundInfoOutTagPair(HashSet<InboundInfo>, String);
+impl InboundInfoOutTagPair {
+    pub fn matches(&self, r: &InboundInfo) -> Option<String> {
         self.0.get(r).map(|_| self.1.to_string())
     }
 }
 
-/// 一种使用 Vec<RuleSet> 的 OutSelector 的实现
+/// 一种使用 Vec<InboundInfoOutTagPair> 的 OutSelector 的实现
 ///
-/// 仅用于 RuleSet很少 且每个 RuleSet 中的 HashSet<Rule> 中的 Rule
+/// 仅用于 InboundInfoOutTagPair 很少 且每个 InboundInfoOutTagPair 中的
+/// HashSet<InboundInfo> 中的 InboundInfo
 /// 都很少的情况, 即 适用于精确匹配
 ///
 #[derive(Debug)]
-pub struct RuleSetOutSelector {
-    pub outbounds_ruleset_vec: Vec<RuleSet>, // rule -> out_tag
-    pub outbounds_map: Arc<HashMap<String, MIterBox>>, //out_tag -> outbound
+pub struct InboundInfoOutSelector {
+    pub outbounds_ruleset_vec: Vec<InboundInfoOutTagPair>, // rule -> out_tag
+    pub outbounds_map: Arc<HashMap<String, MIterBox>>,     //out_tag -> outbound
     pub default: MIterBox,
 }
-
-pub async fn get_user_from_anydata_vec(adv: &Vec<Option<AnyData>>) -> Option<UserVec> {
-    let mut v = UserVec::new();
-
-    for anyd in adv
-        .iter()
-        .filter(|d| d.is_some())
-        .map(|d| d.as_ref().unwrap())
-    {
-        match anyd {
-            AnyData::A(arc) => {
-                let anyv = arc.lock();
-                let oub = get_user_from_anydata(&*anyv);
-                if let Some(ub) = oub {
-                    v.0.push(user::UserBox(ub));
-                }
-            }
-            AnyData::B(b) => {
-                let oub = bget_user_from_anydata(b);
-                if let Some(ub) = oub {
-                    v.0.push(user::UserBox(ub));
-                }
-            }
-            _ => {}
-        }
-    }
-    if v.0.is_empty() {
-        None
-    } else {
-        Some(v)
-    }
-}
-
 #[async_trait]
-impl OutSelector for RuleSetOutSelector {
+impl OutSelector for InboundInfoOutSelector {
     async fn select(
         &self,
         addr: &net::Addr,
@@ -161,7 +175,7 @@ impl OutSelector for RuleSetOutSelector {
         params: &Vec<Option<AnyData>>,
     ) -> MIterBox {
         let users = get_user_from_anydata_vec(params).await;
-        let r = Rule {
+        let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),
             target_addr: addr.clone(),
             users,
@@ -249,7 +263,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn ruleset_select() {
+    async fn inbound_info_select() {
         let m: MIterBox = get_miter_ab();
         let m2: MIterBox = get_miter_a();
 
@@ -257,12 +271,12 @@ mod test {
         outbounds_map.insert("d1".to_string(), m);
         let outbounds_map = Arc::new(outbounds_map);
 
-        let r1 = Rule {
+        let r1 = InboundInfo {
             in_tag: String::from("l1"),
             target_addr: Addr::default(),
             users: None,
         };
-        let r2 = Rule {
+        let r2 = InboundInfo {
             in_tag: String::from("l2"),
             target_addr: Addr::default(),
             users: None,
@@ -271,11 +285,11 @@ mod test {
         hs.insert(r1);
         hs.insert(r2);
 
-        let rs = RuleSet(hs, "d1".to_string());
+        let rs = InboundInfoOutTagPair(hs, "d1".to_string());
 
         let rsv = vec![rs];
 
-        let rsos = RuleSetOutSelector {
+        let rsos = InboundInfoOutSelector {
             outbounds_ruleset_vec: rsv,
             outbounds_map,
             default: m2,

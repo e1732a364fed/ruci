@@ -1,7 +1,9 @@
 /*!
  *
 
-route 模块中的定义的是 比 ruci::route中的 RuleSetOutSelector 更实用的 OutSelector
+route 模块中的定义的是 比 ruci::route中的 InboundInfoOutSelector 更实用的 OutSelector
+
+加了很多范围匹配
 
 有 WhiteList 和 BlackList 两种模式
 
@@ -26,13 +28,13 @@ use regex::RegexSet;
 use ruci::{
     map::MIterBox,
     net::{self, *},
-    relay::route::Rule,
+    relay::route::InboundInfo,
     user::*,
 };
 
 #[derive(Debug)]
 pub struct RuleSetOutSelector {
-    pub outbounds_rules_vec: Vec<Rules>, // rule -> out_tag
+    pub outbounds_rules_vec: Vec<RuleSet>, // rule -> out_tag
     pub outbounds_map: Arc<HashMap<String, MIterBox>>, //out_tag -> outbound
     pub default: MIterBox,
 }
@@ -44,7 +46,7 @@ pub enum Mode {
 }
 
 #[derive(Clone, Debug)]
-pub struct Rules {
+pub struct RuleSet {
     pub out_tag: String,
 
     pub mode: Mode,
@@ -63,15 +65,15 @@ pub struct Rules {
     pub rule_set: HashSet<String>,
 }
 
-impl Rules {
-    pub fn matches(&self, r: &Rule) -> bool {
+impl RuleSet {
+    pub fn matches(&self, r: &InboundInfo) -> bool {
         match self.mode {
             Mode::BlackList => self.matches_blacklist(r),
             Mode::WhiteList => self.matches_whitelist(r),
         }
     }
 
-    pub fn matches_whitelist(&self, r: &Rule) -> bool {
+    pub fn matches_whitelist(&self, r: &InboundInfo) -> bool {
         let ip_is_in = self.is_in_ips(&r.target_addr);
         if !ip_is_in {
             return false;
@@ -79,7 +81,7 @@ impl Rules {
         true
     }
 
-    pub fn matches_blacklist(&self, r: &Rule) -> bool {
+    pub fn matches_blacklist(&self, r: &InboundInfo) -> bool {
         let ip_is_in = self.is_in_ips(&r.target_addr);
         if ip_is_in {
             return true;
