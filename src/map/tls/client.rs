@@ -108,7 +108,7 @@ impl Client {
         conn: net::Conn,
         b: Option<BytesMut>,
         a: Option<net::Addr>,
-    ) -> io::Result<MapResult> {
+    ) -> anyhow::Result<MapResult> {
         let connector = TlsConnector::from(self.client_config.clone());
 
         let new_c = connector
@@ -155,10 +155,13 @@ impl map::Mapper for Client {
             let r = self.handshake(conn, params.b, params.a).await;
             match r {
                 Ok(r) => r,
-                Err(e) => MapResult::from_e(e),
+                Err(e) => MapResult::from_e(e.context("TLS client handshake failed")),
             }
         } else {
-            MapResult::err_str("tls only support tcplike stream")
+            MapResult::err_str(&format!(
+                "tls client only support tcplike stream, got {}",
+                &conn
+            ))
         }
     }
 }

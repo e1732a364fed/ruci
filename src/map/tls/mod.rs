@@ -16,7 +16,7 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use log::debug;
 use rustls::pki_types::{Der, TrustAnchor};
-use std::{fmt, io, sync::Arc};
+use std::{fmt, sync::Arc};
 use tokio_rustls::{TlsAcceptor, TlsConnector};
 
 use crate::{

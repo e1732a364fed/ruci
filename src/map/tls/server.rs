@@ -1,4 +1,3 @@
-use anyhow::{Context, Ok};
 use macro_mapper::NoMapperExt;
 
 use crate::map::{MapperBox, ToMapper};
@@ -62,11 +61,7 @@ impl Server {
             conn = Box::new(nc);
         }
 
-        let c = self
-            .ta
-            .accept(conn)
-            .await
-            .context("TLS server handshake failed")?;
+        let c = self.ta.accept(conn).await?;
 
         Ok(MapResult::newc(Box::new(c))
             .a(a)
@@ -95,7 +90,7 @@ impl map::Mapper for Server {
             let r = self.handshake(cid, conn, params.b, params.a).await;
             match r {
                 anyhow::Result::Ok(r) => r,
-                Err(e) => MapResult::from_e(e),
+                Err(e) => MapResult::from_e(e.context("TLS server handshake failed")),
             }
         } else {
             MapResult::err_str("tls only support tcplike stream")
