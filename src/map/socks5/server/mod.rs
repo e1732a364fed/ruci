@@ -158,7 +158,7 @@ impl Server {
             buf[1] = AUTH_NO_ACCEPTABLE;
             base.write_all(&buf[..2]).await?;
 
-            let e3 = anyhow!("socks5: nmethods==0||n < 2+nmethods: {}, n={}", nm, n);
+            let e3 = anyhow!("socks5: n_methods==0||n < 2+n_methods: {}, n={}", nm, n);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e3, buf, base));
@@ -168,7 +168,7 @@ impl Server {
         let server_has_user = self.um.is_some();
         let mut opt_e: Option<io::Error> = None;
 
-        let mut remainn = n - nmp2;
+        let mut remain_n = n - nmp2;
 
         let mut the_user: Option<PlainText> = None;
 
@@ -212,7 +212,7 @@ impl Server {
                         n = base.read(&mut buf).await?;
 
                         auth_bs = &buf[..n];
-                        remainn = n;
+                        remain_n = n;
                     } else {
                         auth_bs = &buf[3..n];
                         //如果 客户端是 把下一个回复连着第一个请求发来的，则
@@ -247,7 +247,7 @@ impl Server {
                         continue;
                     }
 
-                    let ubytes = &auth_bs[2..2 + ul];
+                    let u_bytes = &auth_bs[2..2 + ul];
                     let pl = auth_bs[2 + ul] as usize;
 
                     if ul + 2 + pl > n {
@@ -256,13 +256,13 @@ impl Server {
                     }
 
                     let auth_bs_len = 2 + ul + 1 + pl;
-                    remainn -= auth_bs_len;
+                    remain_n -= auth_bs_len;
 
-                    let pbytes = &auth_bs[2 + ul + 1..auth_bs_len];
+                    let p_bytes = &auth_bs[2 + ul + 1..auth_bs_len];
 
-                    let thisup = PlainText::new(
-                        String::from_utf8_lossy(ubytes).to_string(),
-                        String::from_utf8_lossy(pbytes).to_string(),
+                    let this_up = PlainText::new(
+                        String::from_utf8_lossy(u_bytes).to_string(),
+                        String::from_utf8_lossy(p_bytes).to_string(),
                     );
 
                     /*
@@ -279,14 +279,14 @@ impl Server {
                     `failure' (STATUS value other than X'00') status, it MUST close the connection.
                     */
                     if let Some(um) = &self.um {
-                        if um.auth_user_by_authstr(thisup.auth_str()).await.is_some() {
+                        if um.auth_user_by_authstr(this_up.auth_str()).await.is_some() {
                             authed = true;
                             opt_e = None;
 
                             base.write_all(&[USERPASS_SUBNEGOTIATION_VERSION, SUCCESS])
                                 .await?;
 
-                            the_user = Some(thisup);
+                            the_user = Some(this_up);
 
                             break;
                         }
@@ -298,7 +298,7 @@ impl Server {
                         .await;
 
                     buf.truncate(n);
-                    let e = anyhow!("socks5: auth failed, {}", thisup.auth_str());
+                    let e = anyhow!("socks5: auth failed, {}", this_up.auth_str());
                     return Ok(MapResult::ebc(e, buf, base));
                 }
                 _ => {} //忽视其它的 auth method
@@ -316,13 +316,13 @@ impl Server {
             return Ok(MapResult::ebc(e4, buf, base));
         }
 
-        if remainn > 0 {
+        if remain_n > 0 {
             //客户端把下一条信息和第一条信息合在一起发了过来
 
             //buf 为 BytesMut 时，直接advance
 
-            buf.advance(n - remainn);
-            n = remainn;
+            buf.advance(n - remain_n);
+            n = remain_n;
         } else {
             n = base
                 .read(&mut buf)
@@ -336,7 +336,7 @@ impl Server {
             return Ok(MapResult::ebc(e, buf, base));
         }
         if buf[0] != VERSION5 {
-            let e = anyhow!("socks5: stage2, wrong verson, {}", buf[0]);
+            let e = anyhow!("socks5: stage2, wrong version, {}", buf[0]);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e, buf, base));
@@ -344,14 +344,14 @@ impl Server {
 
         let cmd = buf[1];
         if cmd == CMD_BIND {
-            let e = anyhow!("socks5: unsuppoted command CMD_BIND");
+            let e = anyhow!("socks5: unsupported command CMD_BIND");
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e, buf, base));
         }
 
         if cmd != CMD_UDP_ASSOCIATE && cmd != CMD_CONNECT {
-            let e = anyhow!("socks5: unsuppoted command, {}", cmd);
+            let e = anyhow!("socks5: unsupported command, {}", cmd);
 
             buf.truncate(n);
             return Ok(MapResult::ebc(e, buf, base));

@@ -14,9 +14,7 @@ mod shared;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    //it's the second impl version of suit
-
-    shared::print_env_version("suit2");
+    shared::print_env_version("suit");
 
     let default_fn = "local.suit.toml".to_string();
 

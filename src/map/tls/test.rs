@@ -21,11 +21,11 @@ async fn dial_tls_in_mem() {
     set_var("RUST_LOG", "debug");
     let _ = env_logger::try_init();
 
-    let writev = Arc::new(Mutex::new(Vec::new()));
-    let client_tcps = MockTcpStream {
+    let write_v = Arc::new(Mutex::new(Vec::new()));
+    let client_tcp_s = MockTcpStream {
         read_data: vec![111, 222, 123],
         write_data: Vec::new(),
-        write_target: Some(writev),
+        write_target: Some(write_v),
     };
 
     let a = tls::client::Client::new("www.baidu.com", true);
@@ -38,7 +38,7 @@ async fn dial_tls_in_mem() {
             CID::default(),
             ProxyBehavior::ENCODE,
             MapParams {
-                c: map::Stream::Conn(Box::new(client_tcps)),
+                c: map::Stream::Conn(Box::new(client_tcp_s)),
                 a: Some(ta),
                 b: None,
                 d: Vec::new(),

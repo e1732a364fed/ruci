@@ -27,11 +27,11 @@ fn init_suit() {
     let mut c: Config = toml::from_str(toml_str).unwrap();
     println!("{:#?}", c);
 
-    let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
-    lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
+    let mut l_suit = SuitStruct::from(c.listen.pop().unwrap());
+    l_suit.set_behavior(ruci::map::ProxyBehavior::DECODE);
 
-    println!("{:?}", lsuit);
+    println!("{:?}", l_suit);
 
-    let csuit = SuitStruct::from(c.dial.pop().unwrap());
-    println!("{:?}", csuit);
+    let c_suit = SuitStruct::from(c.dial.pop().unwrap());
+    println!("{:?}", c_suit);
 }

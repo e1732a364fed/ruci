@@ -77,7 +77,7 @@ pub(super) async fn udp_associate(
     let ad = decode_udp_diagram(&mut buf)
         .context("socks5 server udp handshake decode first addr failed")?;
 
-    let clientsoa = if unspecified {
+    let client_soa = if unspecified {
         so
     } else {
         client_future_addr
@@ -85,7 +85,7 @@ pub(super) async fn udp_associate(
             .expect("should have correct socketAddr")
     };
 
-    let inbound_c = new_addr_conn(user_udp_socket, clientsoa);
+    let inbound_c = new_addr_conn(user_udp_socket, client_soa);
     let mr = MapResult::builder()
         .a(Some(ad))
         .b(Some(buf))

@@ -117,7 +117,7 @@ impl AsyncWrite for FileIOConn {
 /// if bytes_per_turn was given, each read will only read the required amount of data.
 ///
 /// ## Write:
-/// append or create the file with name oname
+/// append or create the file with name o_name
 ///
 #[mapper_ext_fields]
 #[derive(Debug, MapperExt)]

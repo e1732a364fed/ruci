@@ -268,7 +268,7 @@ pub async fn serve(s: &Server, global_traffic: Arc<ruci::net::GlobalTrafficRecor
         .route("/gt/u", get(get_gt_u).with_state(global_traffic.clone()))
         .route("/gt/d", get(get_gt_d).with_state(global_traffic.clone()))
         .route(
-            "/allc",
+            "/all_c",
             get(get_conn_infos).with_state(s.new_conn_info_map.clone()),
         )
         .route(

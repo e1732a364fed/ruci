@@ -12,8 +12,8 @@ fn init_log() {
 
 pub fn print_env_version(name: &str) {
     println!("rucimp~ {}\n", name);
-    let cdir = std::env::current_dir().expect("has current directory");
-    println!("working dir: {:?} \n", cdir);
+    let c_dir = std::env::current_dir().expect("has current directory");
+    println!("working dir: {:?} \n", c_dir);
 
     const RL: &str = "RUST_LOG";
     let l = env::var(RL).unwrap_or_else(|_| "info".to_string());

@@ -46,7 +46,7 @@ pub async fn loop_listen_udp_for_certain_client(
     cid: CID,
     mut base: Conn,
     client_future_addr: net::Addr,
-    udpso_created_to_listen_for_thisuser: UdpSocket,
+    udp_so_created_to_listen_for_this_user: UdpSocket,
 ) -> anyhow::Result<()> {
     const CAP: usize = 1500; //todo: change this
 
@@ -61,9 +61,9 @@ pub async fn loop_listen_udp_for_certain_client(
     use tokio::sync::mpsc::channel;
     let (tx, mut rx) = channel::<(Option<SocketAddr>, BytesMut, SocketAddr)>(20);
 
-    let udpso_created_to_listen_for_thisuser = Arc::new(udpso_created_to_listen_for_thisuser);
+    let udp_so_created_to_listen_for_thisuser = Arc::new(udp_so_created_to_listen_for_this_user);
 
-    let udp = udpso_created_to_listen_for_thisuser.clone();
+    let udp = udp_so_created_to_listen_for_thisuser.clone();
 
     //loop write to user or remote
     task::spawn(async move {
@@ -132,7 +132,7 @@ pub async fn loop_listen_udp_for_certain_client(
             default =>{
                 let mut buf = BytesMut::zeroed(CAP);
 
-                let (n, raddr) = udpso_created_to_listen_for_thisuser.recv_from(&mut buf).await?;
+                let (n, raddr) = udp_so_created_to_listen_for_thisuser.recv_from(&mut buf).await?;
                 buf.truncate(n);
 
 

@@ -48,7 +48,7 @@ impl route::OutSelector for RuleSetOutSelector {
         in_chain_tag: &str,
         params: &[Option<Box<dyn Data>>],
     ) -> DMIterBox {
-        let users = get_user_from_optdatas(params).await;
+        let users = get_user_from_opt_data(params).await;
         let r = InboundInfo {
             in_tag: in_chain_tag.to_string(),
             target_addr: addr.clone(),
@@ -102,7 +102,7 @@ pub struct RuleSet {
     pub ta_ipv6: Option<IpRange<Ipv6Net>>,
 
     pub ta_domain_matcher: Option<DomainMatcher>,
-    /// for geoip, checkiing ip_countries
+    /// for geoip, checking ip_countries
     #[cfg(feature = "geoip")]
     pub mmdb_reader: Option<Arc<maxminddb::Reader<Vec<u8>>>>,
 }
@@ -356,11 +356,11 @@ mod test {
         let mr = maxmind::open_mmdb("Country.mmdb", &COMMON_DIRS)?;
         rs.mmdb_reader = Some(Arc::new(mr));
 
-        let mut ipcountries = HashSet::new();
-        ipcountries.insert("CN".to_string());
-        ipcountries.insert("US".to_string());
+        let mut ip_countries = HashSet::new();
+        ip_countries.insert("CN".to_string());
+        ip_countries.insert("US".to_string());
 
-        rs.ta_ip_countries = Some(ipcountries);
+        rs.ta_ip_countries = Some(ip_countries);
 
         //www.baidu.com's IP
         let a = Addr::from_network_addr_str("tcp://104.193.88.123:80")?;
@@ -419,18 +419,18 @@ mod test {
 
         let rsv = vec![rs];
 
-        let rsos = RuleSetOutSelector {
+        let selector = RuleSetOutSelector {
             outbounds_rules_vec: rsv,
             outbounds_map,
             default: m2,
         };
         let a = Addr::default();
         let opts = Vec::new();
-        let x = rsos.select(&a, "listen1", &opts).await;
+        let x = selector.select(&a, "listen1", &opts).await;
 
         println!("{:?}", x);
 
-        let x = rsos.select(&a, "listen2", &opts).await;
+        let x = selector.select(&a, "listen2", &opts).await;
 
         println!("{:?}", x);
 

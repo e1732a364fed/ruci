@@ -294,10 +294,10 @@ pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 /// default is None
 #[derive(Default)]
 pub enum Stream {
-    ///  rawip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
+    ///  raw ip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
     Conn(Conn),
 
-    //如果 从 rawip 解析出了 ip 目标, 那么该ip流就是 AddrConn
+    //如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn
     /// udp 的情况
     AddrConn(AddrConn),
 

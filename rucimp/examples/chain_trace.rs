@@ -1,6 +1,6 @@
 /*!
 * 在 working dir 或 working dir /resource 或 ../resource/ 文件夹查找 local.lua 或
- 用户提供的参数作为配置文件 读取它并以 chain 模式运行。新连接写入 newconn.log 文件
+ 用户提供的参数作为配置文件 读取它并以 chain 模式运行。新连接写入 new_conn.log 文件
 */
 
 use std::env;
@@ -17,7 +17,7 @@ mod shared;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    shared::print_env_version("example: chain_trace_and_record_newconn");
+    shared::print_env_version("example: chain_trace_and_record_new_conn");
 
     let default_fn = "local.lua".to_string();
 
@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     let conn_info_record_file = OpenOptions::new()
         .append(true)
         .create(true)
-        .open("newconn.log")
+        .open("new_conn.log")
         .await?;
 
     let mut fr = FileRecorder {

@@ -67,7 +67,7 @@ pub struct LDConfig {
     pub users: Option<Vec<UserPass>>,
 
     /// dial part
-    pub send_through: Option<String>, //用于发送数据的 IP 地址, 可以是ip:port, 或者 tcp:ip:port\nudp:ip:port
+    pub send_through: Option<String>, //用于发送数据的 IP 地址, 可以是ip:port, 或者 tcp://ip:port udp://ip:port
 }
 
 #[cfg(test)]
