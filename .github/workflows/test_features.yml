@@ -3,7 +3,6 @@ name: Test Features
 on:
   workflow_dispatch:
   push:
-    branches: ["tokio"]
     tags:
       - "v*"
 
