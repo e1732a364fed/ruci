@@ -41,6 +41,7 @@ json 配置和基本的 lua配置都是 静态链配置.
     ./ruci-cmd -c remote.json
 
 macOS 版本要在 系统App：Settings - Privacy & Security 里 allow 一下。
+或者运行 `xattr -c ruci-cmd`
 
 ruci-cmd 会在 下面文件夹中 找 指定的 配置文件
 

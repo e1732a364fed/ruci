@@ -655,6 +655,8 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
         "tun",
         #[cfg(feature = "smoltcp")]
         "smoltcp",
+        #[cfg(feature = "lwip")]
+        "lwip",
         #[cfg(feature = "steganography")]
         "steganography",
     ];
