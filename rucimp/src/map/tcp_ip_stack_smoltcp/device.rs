@@ -118,8 +118,8 @@ impl TxToken for MyTxToken {
 }
 
 pub enum NewReadType {
-    TCP,
-    UDP,
+    TCP(SocketHandle),
+    UDP(SocketHandle),
     None,
 }
 
@@ -176,7 +176,7 @@ pub struct SmoltcpDevice {
     /// only here to be cloned for new UdpStream
     udp_write_data_tx: Sender<(SocketHandle, IpEndpoint, BytesMut)>,
 
-    pub new_read_type: NewReadType,
+    pub new_read_handle: NewReadType,
     // 用于流量记录
     //traffic: Traffic,
 }
@@ -287,7 +287,7 @@ pub fn create(
         tcp_write_data_tx,
         udp_write_data_tx,
 
-        new_read_type: NewReadType::None,
+        new_read_handle: NewReadType::None,
     };
 
     DeviceAndReceivers {
@@ -316,7 +316,9 @@ impl SmoltcpDevice {
         Ok(())
     }
 
-    /// 被 Device trait 的 receive 方法调用, 检查 self.buf, 判断是否有新 tcp 产生，如有, 建立新 TcpStream 并 送入 new_stream_tx, 并创建新的 sockethandle 放入 sockets，
+    /// 被 Device trait 的 receive 方法调用, 检查 self.buf,
+    /// 判断是否有新 tcp 产生，如有, 建立新 TcpStream 并 送入 new_stream_tx, 并创建新的 sockethandle 放入 sockets，
+    /// udp 同理
     fn check_read_buf_for_new_conn(&mut self, n: usize) {
         //debug!("check_read_buf_for_new_conn {n}");
 
@@ -335,11 +337,9 @@ impl SmoltcpDevice {
         match ip_packet.protocol() {
             IpProtocol::Icmp | IpProtocol::Icmpv6 => {
                 //debug!("is icmp, {n} {}",ip_packet.payload().len())
-                self.new_read_type = NewReadType::None;
+                self.new_read_handle = NewReadType::None;
             }
             IpProtocol::Tcp => {
-                self.new_read_type = NewReadType::TCP;
-
                 //debug!("is tcp, {n} {}",ip_packet.payload().len());
                 let tcp_packet = match TcpPacket::new_checked(ip_packet.payload()) {
                     Ok(p) => p,
@@ -355,16 +355,16 @@ impl SmoltcpDevice {
                     }
                 };
 
-                /// 判断一个TcpPacket 是否为一个新的Tcp Stream 的第一条信息
-                #[inline]
-                fn is_tcp_client_hello(tcp_packet: &TcpPacket<&[u8]>) -> bool {
-                    tcp_packet.syn() && !tcp_packet.ack()
-                }
+                // 判断一个TcpPacket 是否为一个新的Tcp Stream 的第一条信息
+                // #[inline]
+                // fn is_tcp_client_hello(tcp_packet: &TcpPacket<&[u8]>) -> bool {
+                //     tcp_packet.syn() && !tcp_packet.ack()
+                // }
 
-                if !is_tcp_client_hello(&tcp_packet) {
-                    return;
-                }
-
+                // let not_tcp_client_hello = !is_tcp_client_hello(&tcp_packet);
+                // if !is_tcp_client_hello(&tcp_packet) {
+                //     return;
+                // }
                 let src_port = tcp_packet.src_port();
                 let dst_port = tcp_packet.dst_port();
 
@@ -373,53 +373,59 @@ impl SmoltcpDevice {
 
                 let ipe = src_addr.into();
 
-                if let Entry::Vacant(e) = self.tcp_src_handle_map.lock().entry(ipe) {
-                    let mut new_tcp_socket = tcp::Socket::new(
-                        tcp::SocketBuffer::new(vec![0; BUF_SIZE]),
-                        tcp::SocketBuffer::new(vec![0; BUF_SIZE]),
-                    );
-                    new_tcp_socket.set_timeout(Some(smoltcp::time::Duration::from_secs(7200)));
-                    if let Err(err) = new_tcp_socket.listen(dst_addr) {
-                        warn!("tcp listen error: {:?}", err);
-                        return;
+                match self.tcp_src_handle_map.lock().entry(ipe) {
+                    Entry::Occupied(occupied_entry) => {
+                        self.new_read_handle = NewReadType::TCP(*occupied_entry.get());
                     }
+                    Entry::Vacant(e) => {
+                        let mut new_tcp_socket = tcp::Socket::new(
+                            tcp::SocketBuffer::new(vec![0; BUF_SIZE]),
+                            tcp::SocketBuffer::new(vec![0; BUF_SIZE]),
+                        );
+                        new_tcp_socket.set_timeout(Some(smoltcp::time::Duration::from_secs(7200)));
+                        if let Err(err) = new_tcp_socket.listen(dst_addr) {
+                            warn!("tcp listen error: {:?}", err);
+                            return;
+                        }
 
-                    new_tcp_socket.set_nagle_enabled(false);
-                    new_tcp_socket.set_ack_delay(None);
+                        new_tcp_socket.set_nagle_enabled(false);
+                        new_tcp_socket.set_ack_delay(None);
 
-                    let socket_handle = self.tcp_sockets.add(new_tcp_socket);
-                    self.tcp_handle_set.lock().insert(socket_handle);
-                    e.insert(socket_handle);
+                        let socket_handle = self.tcp_sockets.add(new_tcp_socket);
+                        self.tcp_handle_set.lock().insert(socket_handle);
+                        e.insert(socket_handle);
 
-                    self.tcp_handle_src_map.lock().insert(socket_handle, ipe);
+                        self.new_read_handle = NewReadType::TCP(socket_handle);
 
-                    let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
-                    self.tcp_read_data_tx_map
-                        .lock()
-                        .insert(socket_handle, read_tx);
-                    let tcp_stream = super::tcp::TcpStream::new(
-                        read_rx,
-                        self.tcp_write_data_tx.clone(),
-                        src_addr,
-                        dst_addr,
-                        socket_handle,
-                    );
+                        self.tcp_handle_src_map.lock().insert(socket_handle, ipe);
 
-                    let ta = Addr {
-                        addr: NetAddr::Socket(dst_addr),
-                        network: Network::TCP,
-                    };
+                        let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
+                        self.tcp_read_data_tx_map
+                            .lock()
+                            .insert(socket_handle, read_tx);
+                        let tcp_stream = super::tcp::TcpStream::new(
+                            read_rx,
+                            self.tcp_write_data_tx.clone(),
+                            src_addr,
+                            dst_addr,
+                            socket_handle,
+                        );
 
-                    //debug!("smoltcp got new tcp connection {ta} {src_addr}");
+                        let ta = Addr {
+                            addr: NetAddr::Socket(dst_addr),
+                            network: Network::TCP,
+                        };
 
-                    let _ = self
-                        .new_stream_tx
-                        .try_send(MapResult::new_c(Box::new(tcp_stream)).a(Some(ta)).build());
+                        //debug!("smoltcp got new tcp connection {ta} {src_addr}");
+
+                        let _ = self
+                            .new_stream_tx
+                            .try_send(MapResult::new_c(Box::new(tcp_stream)).a(Some(ta)).build());
+                    }
                 }
             }
             IpProtocol::Udp => {
                 //debug!("is udp, {n} {}",ip_packet.payload().len());
-                self.new_read_type = NewReadType::UDP;
 
                 let packet = UdpPacket::new_checked(ip_packet.payload()).unwrap();
                 let src_port = packet.src_port();
@@ -429,57 +435,63 @@ impl SmoltcpDevice {
                 //let dst_ipe: IpEndpoint = dst_addr.into();
                 let src_ipe = src_addr.into();
 
-                if let Entry::Vacant(e) = self.udp_src_handle_map.lock().entry(src_ipe) {
-                    use smoltcp::socket::udp::PacketBuffer;
-                    use smoltcp::socket::udp::PacketMetadata;
+                match self.udp_src_handle_map.lock().entry(src_ipe) {
+                    Entry::Occupied(occupied_entry) => {
+                        self.new_read_handle = NewReadType::UDP(*occupied_entry.get());
+                    }
+                    Entry::Vacant(e) => {
+                        use smoltcp::socket::udp::PacketBuffer;
+                        use smoltcp::socket::udp::PacketMetadata;
 
-                    let mut socket = smoltcp::socket::udp::Socket::new(
-                        PacketBuffer::new(
-                            vec![PacketMetadata::EMPTY; BUF_SIZE / 1500],
-                            vec![0; BUF_SIZE],
-                        ),
-                        PacketBuffer::new(
-                            vec![PacketMetadata::EMPTY; BUF_SIZE / 1500],
-                            vec![0; BUF_SIZE],
-                        ),
-                    );
+                        let mut socket = smoltcp::socket::udp::Socket::new(
+                            PacketBuffer::new(
+                                vec![PacketMetadata::EMPTY; BUF_SIZE / 1500],
+                                vec![0; BUF_SIZE],
+                            ),
+                            PacketBuffer::new(
+                                vec![PacketMetadata::EMPTY; BUF_SIZE / 1500],
+                                vec![0; BUF_SIZE],
+                            ),
+                        );
 
-                    let dst_port = packet.dst_port();
-                    let dst_addr = SocketAddr::new(dst_ip_addr, dst_port);
+                        let dst_port = packet.dst_port();
+                        let dst_addr = SocketAddr::new(dst_ip_addr, dst_port);
 
-                    socket.bind(dst_addr).unwrap();
-                    let sh = self.udp_sockets.add(socket);
-                    self.udp_handle_set.lock().insert(sh);
-                    e.insert(sh);
-                    self.udp_handle_src_map.lock().insert(sh, src_ipe);
+                        socket.bind(dst_addr).unwrap();
+                        let sh = self.udp_sockets.add(socket);
+                        self.udp_handle_set.lock().insert(sh);
+                        e.insert(sh);
+                        self.new_read_handle = NewReadType::UDP(sh);
+                        self.udp_handle_src_map.lock().insert(sh, src_ipe);
 
-                    let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
-                    self.udp_read_data_tx_map.lock().insert(src_ipe, read_tx);
+                        let (read_tx, read_rx) = tokio::sync::mpsc::channel(100);
+                        self.udp_read_data_tx_map.lock().insert(src_ipe, read_tx);
 
-                    let sa = Addr {
-                        addr: NetAddr::Socket(src_addr),
-                        network: Network::UDP,
-                    };
-                    let ta = Addr {
-                        addr: NetAddr::Socket(dst_addr),
-                        network: Network::UDP,
-                    };
+                        let sa = Addr {
+                            addr: NetAddr::Socket(src_addr),
+                            network: Network::UDP,
+                        };
+                        let ta = Addr {
+                            addr: NetAddr::Socket(dst_addr),
+                            network: Network::UDP,
+                        };
 
-                    let ac = super::udp2::new(sa, sh, read_rx, self.udp_write_data_tx.clone());
+                        let ac = super::udp2::new(sa, sh, read_rx, self.udp_write_data_tx.clone());
 
-                    //debug!("smoltcp got new udp connection {dst_ipe} {src_ipe}");
+                        //debug!("smoltcp got new udp connection {dst_ipe} {src_ipe}");
 
-                    let early_data = BytesMut::from(packet.payload());
+                        let early_data = BytesMut::from(packet.payload());
 
-                    let _ = self
-                        .new_stream_tx
-                        .try_send(MapResult::new_u(ac).a(Some(ta)).b(Some(early_data)).build());
+                        let _ = self
+                            .new_stream_tx
+                            .try_send(MapResult::new_u(ac).a(Some(ta)).b(Some(early_data)).build());
+                    }
                 }
             }
 
             _ => {
                 debug!("got unhandled protocol {}", ip_packet.protocol());
-                self.new_read_type = NewReadType::None;
+                self.new_read_handle = NewReadType::None;
             }
         }
     }
@@ -508,170 +520,157 @@ impl SmoltcpDevice {
     pub fn process_ingress(&mut self) {
         //debug!("process_ingress...");
 
-        match self.new_read_type {
-            NewReadType::TCP => {
+        match self.new_read_handle {
+            NewReadType::TCP(h) => {
                 let mut tcp_handles_to_remove = Vec::new();
                 let mut tcp_src_to_remove = Vec::new();
 
-                self.tcp_sockets.iter_mut().for_each(|(h, so)| {
-                    match so {
-                        smoltcp::socket::Socket::Tcp(so) => {
+                let so: &mut smoltcp::socket::tcp::Socket = self.tcp_sockets.get_mut(h);
+
+                debug!(
+                    "checking {h}, {:?}, {:?} {}",
+                    so.local_endpoint(),
+                    so.remote_endpoint(),
+                    so.state()
+                );
+                if !so.can_recv() {
+                    debug!("cant recv {h}");
+                }
+
+                if so.state() == State::Closed {
+                    debug!("{h}, closed, push to remove");
+                    tcp_handles_to_remove.push(h);
+                }
+
+                let src = match so.remote_endpoint() {
+                    Some(s) => s,
+                    None => {
+                        return;
+                    }
+                };
+
+                {
+                    let m = self.tcp_read_data_tx_map.lock();
+                    let tcp_stream_read_data_sender = m.get(&h).unwrap();
+
+                    if tcp_stream_read_data_sender.is_closed() {
+                        debug!("{h}, will delete tcp because sender closed");
+                        tcp_handles_to_remove.push(h);
+                        tcp_src_to_remove.push(src);
+                    } else {
+                        if !so.can_recv() {
+                            debug!("{h}, has src but cant recv, {}", so.state());
+                        }
+
+                        while so.can_recv() && tcp_stream_read_data_sender.capacity() > 0 {
+                            let mut buffer = BytesMut::with_capacity(so.recv_queue());
+                            unsafe {
+                                buffer.set_len(so.recv_queue());
+                            }
+                            if let Ok(n) = so.recv_slice(buffer.as_mut()) {
+                                if n != buffer.len() {
+                                    tracing::warn!(
+                                        "so.recv_slice n != buffer.len(), {n} {}",
+                                        buffer.len()
+                                    );
+                                    unsafe {
+                                        buffer.set_len(n);
+                                    }
+                                }
+                                let r = tcp_stream_read_data_sender.try_send(buffer);
+                                if let Err(e) = r {
+                                    tracing::warn!("tcp_read_data_tx send failed, {e}");
+                                    so.close();
+                                    break;
+                                }
+                            } else {
+                                debug!("tcp_read_data_tx so.recv_slice failed");
+                                so.close();
+                                break;
+                            }
+                        }
+                        if so.state() == State::CloseWait && so.send_queue() == 0 {
                             debug!(
-                                "checking {h}, {:?}, {:?} {}",
-                                so.local_endpoint(),
-                                so.remote_endpoint(),
-                                so.state()
+                                "{h}, so.state() == State::CloseWait
+                                        && so.send_queue() == 0"
                             );
-                            if !so.can_recv() {
-                                debug!("cant recv {h}");
+                            let _ =
+                                tcp_stream_read_data_sender.try_send(BytesMut::with_capacity(0));
+                            //这里将令 TcpStream 的 read端 收到一个 0字节，表示EOF
+                            so.close();
+                        }
+                        if !so.is_active() {
+                            debug!("{h}, !so.is_active()");
+                            tcp_handles_to_remove.push(h);
+                            tcp_src_to_remove.push(src);
+                        }
+                    }
+                }
+
+                self.remove_tcp_list(&tcp_handles_to_remove, tcp_src_to_remove);
+            }
+            NewReadType::UDP(h) => {
+                let mut udp_handles_to_remove = Vec::new();
+                let mut udp_src_to_remove = Vec::new();
+
+                let so: &mut smoltcp::socket::udp::Socket = self.udp_sockets.get_mut(h);
+
+                /*
+                smoltcp 中, udp 在 client端 的逻辑是反的，它在建立udp socket 时(bind)，只存储目标的ip+port,
+                对 该 socket 进行 recv_slice 时, 得到的地址是 源的ip+port (本地地址)
+                 */
+
+                while so.can_recv() {
+                    let mut buffer = BytesMut::with_capacity(MTU);
+                    unsafe {
+                        buffer.set_len(MTU);
+                    }
+                    let r1 = so.recv_slice(buffer.as_mut());
+                    match r1 {
+                        Ok((n, src)) => {
+                            unsafe {
+                                buffer.set_len(n);
                             }
 
-                            if so.state() == State::Closed {
-                                debug!("{h}, closed, push to remove");
-                                tcp_handles_to_remove.push(h);
-                            }
-
-                            let src = match so.remote_endpoint() {
+                            let m = self.udp_read_data_tx_map.lock();
+                            let udp_read_data_sender = match m.get(&src.endpoint) {
                                 Some(s) => s,
                                 None => {
+                                    debug!("udp recv from {} but not in map", src.endpoint);
                                     return;
                                 }
                             };
 
-                            let m = self.tcp_read_data_tx_map.lock();
-                            let tcp_stream_read_data_sender = m.get(&h).unwrap();
+                            let dst = so.endpoint();
+                            let dst_ipe: IpEndpoint = IpEndpoint {
+                                addr: dst.addr.unwrap(),
+                                port: dst.port,
+                            };
 
-                            if tcp_stream_read_data_sender.is_closed() {
-                                debug!("{h}, will delete tcp because sender closed");
-                                tcp_handles_to_remove.push(h);
-                                tcp_src_to_remove.push(src);
-                            } else {
-                                if !so.can_recv() {
-                                    debug!("{h}, has src but cant recv, {}", so.state());
-                                }
-
-                                while so.can_recv() && tcp_stream_read_data_sender.capacity() > 0 {
-                                    let mut buffer = BytesMut::with_capacity(so.recv_queue());
-                                    unsafe {
-                                        buffer.set_len(so.recv_queue());
-                                    }
-                                    if let Ok(n) = so.recv_slice(buffer.as_mut()) {
-                                        if n != buffer.len() {
-                                            tracing::warn!(
-                                                "so.recv_slice n != buffer.len(), {n} {}",
-                                                buffer.len()
-                                            );
-                                            unsafe {
-                                                buffer.set_len(n);
-                                            }
-                                        }
-                                        let r = tcp_stream_read_data_sender.try_send(buffer);
-                                        if let Err(e) = r {
-                                            tracing::warn!("tcp_read_data_tx send failed, {e}");
-                                            so.close();
-                                            break;
-                                        }
-                                    } else {
-                                        debug!("tcp_read_data_tx so.recv_slice failed");
-                                        so.close();
-                                        break;
-                                    }
-                                }
-                                if so.state() == State::CloseWait && so.send_queue() == 0 {
-                                    debug!(
-                                        "{h}, so.state() == State::CloseWait
-                                    && so.send_queue() == 0"
-                                    );
-                                    let _ = tcp_stream_read_data_sender
-                                        .try_send(BytesMut::with_capacity(0));
-                                    //这里将令 TcpStream 的 read端 收到一个 0字节，表示EOF
-                                    so.close();
-                                }
-                                if !so.is_active() {
-                                    debug!("{h}, !so.is_active()");
-                                    tcp_handles_to_remove.push(h);
-                                    tcp_src_to_remove.push(src);
-                                }
-                            }
-                        }
-
-                        _ => {}
-                    }
-                });
-                self.remove_tcp_list(&tcp_handles_to_remove, tcp_src_to_remove);
-            }
-            NewReadType::UDP => {
-                let mut udp_handles_to_remove = Vec::new();
-                let mut udp_src_to_remove = Vec::new();
-
-                self.udp_sockets.iter_mut().for_each(|(h, so)| {
-                    match so {
-                        smoltcp::socket::Socket::Udp(so) => {
-                            /*
-                            smoltcp 中, udp 在 client端 的逻辑是反的，它在建立udp socket 时(bind)，只存储目标的ip+port,
-                            对 该 socket 进行 recv_slice 时, 得到的地址是 源的ip+port (本地地址)
-                             */
-
-                            while so.can_recv() {
-                                let mut buffer = BytesMut::with_capacity(MTU);
-                                unsafe {
-                                    buffer.set_len(MTU);
-                                }
-                                let r1 = so.recv_slice(buffer.as_mut());
-                                match r1 {
-                                    Ok((n, src)) => {
-                                        unsafe {
-                                            buffer.set_len(n);
-                                        }
-
-                                        let m = self.udp_read_data_tx_map.lock();
-                                        let udp_read_data_sender = match m.get(&src.endpoint) {
-                                            Some(s) => s,
-                                            None => {
-                                                debug!(
-                                                    "udp recv from {} but not in map",
-                                                    src.endpoint
-                                                );
-                                                return;
-                                            }
-                                        };
-
-                                        let dst = so.endpoint();
-                                        let dst_ipe: IpEndpoint = IpEndpoint {
-                                            addr: dst.addr.unwrap(),
-                                            port: dst.port,
-                                        };
-
-                                        let r2 = udp_read_data_sender.try_send((dst_ipe, buffer));
-                                        if r2.is_err() {
-                                            debug!("udp e2 {:?}", r2);
-                                            udp_src_to_remove.push(src.endpoint);
-                                            udp_handles_to_remove.push(h);
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        debug!("udp e1 {e}");
-
-                                        udp_handles_to_remove.push(h);
-                                        break;
-                                    }
-                                }
-                            }
-                            if !so.is_open() {
-                                debug!("udp not open");
+                            let r2 = udp_read_data_sender.try_send((dst_ipe, buffer));
+                            if r2.is_err() {
+                                debug!("udp e2 {:?}", r2);
+                                udp_src_to_remove.push(src.endpoint);
                                 udp_handles_to_remove.push(h);
+                                break;
                             }
                         }
+                        Err(e) => {
+                            debug!("udp e1 {e}");
 
-                        _ => {}
-                    } //match
-                });
+                            udp_handles_to_remove.push(h);
+                            break;
+                        }
+                    }
+                }
+                if !so.is_open() {
+                    debug!("udp not open");
+                    udp_handles_to_remove.push(h);
+                }
 
                 self.remove_udp_list(&udp_handles_to_remove, udp_src_to_remove);
-
-                //debug!("udp count {udp_count}");
             }
+            //debug!("udp count {udp_count}");
             NewReadType::None => {}
         }
     }

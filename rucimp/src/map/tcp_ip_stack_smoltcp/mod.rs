@@ -105,10 +105,10 @@ impl Map for Stack {
                                             &mut *fake_sockets
                                         });
 
-                                        match device.new_read_type{
+                                        match device.new_read_handle{
                                             device::NewReadType::None => {},
 
-                                            device::NewReadType::TCP =>{
+                                            device::NewReadType::TCP(_) =>{
 
                                                 let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 
@@ -118,7 +118,7 @@ impl Map for Stack {
                                                 device.process_ingress();
 
                                             },
-                                            device::NewReadType::UDP =>{
+                                            device::NewReadType::UDP(_) =>{
                                                 let sockets = &mut device.udp_sockets as *mut smoltcp::iface::SocketSet;
 
                                                 iface.poll(now,&mut device, unsafe {
