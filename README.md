@@ -112,6 +112,16 @@ generator->[s1] -> [s2] -> [ output ]
 # output is the encoded client stream
 ```
 
+```mermaid
+graph LR
+
+p1((p1))-.->s1_node[s1]-.->o1node((o1))
+p2((p2))-.->s2_node[s2]-.->o2node((o2))
+generator-->s1_node-->s2_node-->output
+
+
+```
+
 
 ### Roadmap
 
