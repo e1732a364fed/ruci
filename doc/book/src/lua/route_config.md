@@ -133,4 +133,4 @@ userset 用于判断 在 InChain 中 那些需要 密码 的 Map 中 使用了 �
 # 接下来
 
 学点难的？
-[Infinite](./lua/infinite.md)
+[Infinite](./infinite.md)
