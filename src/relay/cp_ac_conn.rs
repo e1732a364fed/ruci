@@ -5,6 +5,7 @@ copy between [`AddrConn`] and [`net::Conn`]
 use crate::net;
 use crate::net::addr_conn::*;
 use crate::net::CID;
+use crate::utils::io_error;
 use bytes::BytesMut;
 use std::io;
 use std::ops::DerefMut;
@@ -29,6 +30,7 @@ pub struct CpAddrConnAndConnArgs {
     pub first_target: Option<net::Addr>,
     pub gtr: Option<Arc<net::GlobalTrafficRecorder>>,
     pub no_timeout: bool,
+    pub shutdown_ac_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
 /// blocking. discard udp addr part when copy from AddrConn to Conn
@@ -67,6 +69,15 @@ pub async fn cp_addr_conn_and_conn(args: CpAddrConnAndConnArgs) -> io::Result<u6
     let (mut r, mut w) = tokio::io::split(c);
 
     tokio::select! {
+        _ = async{
+            if let Some(shut) = args.shutdown_ac_rx{
+                shut.await
+            }else{
+                std::future::pending().await
+            }
+        }=>{
+            Err(io_error("got shutdown"))
+        }
         r1 = cp_conn_to_addr_conn(&mut r, ac.w) => {
             r1
         }

@@ -275,14 +275,14 @@ pub async fn handle_in_fold_result(
 
     cp_stream(CpStreamArgs {
         cid,
-        s1: listen_result.c,
-        s2: dial_result.c,
+        in_stream: listen_result.c,
+        out_stream: dial_result.c,
         ed: dial_result.b,
         first_target: dial_result.a,
         tr,
         no_timeout: dial_result.no_timeout,
-        shutdown_rx1: listen_result.shutdown_rx,
-        shutdown_rx2: dial_result.shutdown_rx,
+        shutdown_in_rx: listen_result.shutdown_rx,
+        shutdown_out_rx: dial_result.shutdown_rx,
         #[cfg(feature = "trace")]
         updater,
     })
@@ -292,18 +292,18 @@ pub async fn handle_in_fold_result(
 }
 
 pub struct CpStreamArgs {
-    cid: CID,
-    s1: Stream,
-    s2: Stream,
-    ed: Option<BytesMut>,            //earlydata
-    first_target: Option<net::Addr>, // 用于 udp
-    tr: Option<Arc<net::GlobalTrafficRecorder>>,
-    no_timeout: bool,
-    shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
-    shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
+    pub cid: CID,
+    pub in_stream: Stream,
+    pub out_stream: Stream,
+    pub ed: Option<BytesMut>,            //earlydata
+    pub first_target: Option<net::Addr>, // 用于 udp
+    pub tr: Option<Arc<net::GlobalTrafficRecorder>>,
+    pub no_timeout: bool,
+    pub shutdown_in_rx: Option<tokio::sync::oneshot::Receiver<()>>,
+    pub shutdown_out_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 
     #[cfg(feature = "trace")]
-    updater: net::OptUpdater,
+    pub updater: net::OptUpdater,
 }
 
 /// copy between two [`Stream`]
@@ -311,16 +311,17 @@ pub struct CpStreamArgs {
 /// non-blocking,
 pub async fn cp_stream(args: CpStreamArgs) {
     let cid = args.cid;
-    let s1 = args.s1;
-    let s2 = args.s2;
+    let s1 = args.in_stream;
+    let s2 = args.out_stream;
     let ed = args.ed;
     let first_target = args.first_target;
     let tr = args.tr;
-    let shutdown_rx1 = args.shutdown_rx1;
-    let shutdown_rx2 = args.shutdown_rx2;
+    let shutdown_in_rx = args.shutdown_in_rx;
+    let shutdown_out_rx = args.shutdown_out_rx;
     let no_timeout = args.no_timeout;
 
-    //todo: add trace for udp
+    //todo 原计划是 add trace for udp, 但因为 trace 功能用得少, 就先搁置.
+
     match (s1, s2) {
         (Stream::Conn(i), Stream::Conn(o)) => cp_conn::cp_conn(
             cid,
@@ -342,6 +343,7 @@ pub async fn cp_stream(args: CpStreamArgs) {
                     first_target,
                     gtr: tr,
                     no_timeout,
+                    shutdown_ac_rx: shutdown_out_rx,
                 },
             ));
         }
@@ -356,6 +358,7 @@ pub async fn cp_stream(args: CpStreamArgs) {
                     first_target,
                     gtr: tr,
                     no_timeout,
+                    shutdown_ac_rx: shutdown_in_rx,
                 },
             ));
         }
@@ -368,8 +371,8 @@ pub async fn cp_stream(args: CpStreamArgs) {
                 first_target,
                 tr,
                 no_timeout,
-                shutdown_rx1,
-                shutdown_rx2,
+                shutdown_in_rx,
+                shutdown_out_rx,
             })
             .await;
         }
@@ -387,8 +390,8 @@ pub struct CpAddrConnArgs {
     first_target: Option<net::Addr>,
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
     no_timeout: bool,
-    shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
-    shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
+    shutdown_in_rx: Option<tokio::sync::oneshot::Receiver<()>>,
+    shutdown_out_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
 /// copy between two [`AddrConn`]
@@ -405,8 +408,8 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
     let first_target = args.first_target;
     let tr = args.tr;
     let no_timeout = args.no_timeout;
-    let shutdown_rx1 = args.shutdown_rx1;
-    let shutdown_rx2 = args.shutdown_rx2;
+    let shutdown_in_rx = args.shutdown_in_rx;
+    let shutdown_out_rx = args.shutdown_out_rx;
 
     info!(cid = %cid, in_c = in_conn.name(), out_c = out_conn.name(), "cp_addr_conn start",);
 
@@ -439,7 +442,7 @@ pub async fn cp_addr_conn(args: CpAddrConnArgs) {
         out_conn,
         tr,
         no_timeout,
-        shutdown_rx1,
-        shutdown_rx2,
+        shutdown_in_rx,
+        shutdown_out_rx,
     ));
 }

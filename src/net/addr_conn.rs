@@ -426,21 +426,37 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
 #[inline]
 pub async fn cp(
     cid: CID,
-    c1: AddrConn,
-    c2: AddrConn,
+    ac_in: AddrConn,
+    ac_out: AddrConn,
     opt: Option<Arc<GlobalTrafficRecorder>>,
     no_timeout: bool,
-    shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
-    shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
+    shutdown_in_rx: Option<tokio::sync::oneshot::Receiver<()>>,
+    shutdown_out_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<u64, Error> {
-    let n1 = c1.cached_name.clone() + " to " + &c2.cached_name;
-    let n2 = c2.cached_name.clone() + " to " + &c1.cached_name;
+    let n1 = ac_in.cached_name.clone() + " to " + &ac_out.cached_name;
+    let n2 = ac_out.cached_name.clone() + " to " + &ac_in.cached_name;
 
     let (tx1, rx1) = oneshot::channel();
     let (tx2, rx2) = oneshot::channel();
 
-    let cp1 = tokio::spawn(cp_addr(c1.r, c2.w, n1, no_timeout, rx1, false, opt.clone()));
-    let cp2 = tokio::spawn(cp_addr(c2.r, c1.w, n2, no_timeout, rx2, true, opt.clone()));
+    let cp1 = tokio::spawn(cp_addr(
+        ac_in.r,
+        ac_out.w,
+        n1,
+        no_timeout,
+        rx1,
+        false,
+        opt.clone(),
+    ));
+    let cp2 = tokio::spawn(cp_addr(
+        ac_out.r,
+        ac_in.w,
+        n2,
+        no_timeout,
+        rx2,
+        true,
+        opt.clone(),
+    ));
 
     if let Some(gtr) = &opt {
         gtr.alive_connection_count.fetch_add(1, Ordering::Relaxed);
@@ -472,8 +488,8 @@ pub async fn cp(
             }
         }
         _ = async{
-            if let Some(shutdown_rx1) = shutdown_rx1{
-                shutdown_rx1.await
+            if let Some(shutdown_in_rx) = shutdown_in_rx{
+                shutdown_in_rx.await
             }else{
                 std::future::pending().await
             }
@@ -487,8 +503,8 @@ pub async fn cp(
         }
 
         _ = async{
-            if let Some(shutdown_rx2) = shutdown_rx2{
-                shutdown_rx2.await
+            if let Some(shutdown_out_rx) = shutdown_out_rx{
+                shutdown_out_rx.await
             }else{
                 std::future::pending().await
             }
