@@ -1,15 +1,7 @@
 
 产生的日志会的 logs 文件夹中, daily rolling
 
-features: lua, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn
-default enables none.
-
-api_server, trace 这两个feature都会少许降低 performance. 
-
-trace feature 就算启用了, 
-也要在运行ruci-cmd时再加上 --trace 来启用, 因为它一定会影响性能. trace 一般只用于实验/研究/debug
-
-utils feature 可用于下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.dll
+# Run and Compile
 
 用 --infinite 来启用 完全动态链
 
@@ -40,6 +32,36 @@ make BUILD_VERSION=my_version BUILD_TRIPLET=aarch64-apple-darwin
 ```
 
 详见 Makefile, build_cross.sh 和 .github/workflows/ 中的 脚本
+
+# features
+
+features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn
+default enables none.
+
+api_server, trace 这两个feature都会少许降低 performance. 
+
+trace feature 就算启用了, 
+也要在运行ruci-cmd时再加上 --trace 来启用, 因为它一定会影响性能. trace 一般只用于实验/研究/debug
+
+utils feature 可用于下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.dll
+
+## mutually-exclusive-features
+
+use-native-tls, native-tls-vendored
+
+quic, quinn
+
+lua, lua54
+
+### Explained
+
+use-native-tls 在 cross 编译时有问题, 此时只能用 native-tls-vendored
+
+lua 使用的是 luau, 更快，但在 cross 编译时有问题, 此时只能用 lua54
+
+quic feature 使用的是 s2n-quic, 其不能在windows编译, 且与其它代理程序的quic有一定的互操作性问题, 此时只能用 quinn
+
+
 
 # utils
 
