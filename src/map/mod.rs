@@ -41,11 +41,8 @@ pub mod acc;
 mod test;
 
 use crate::{
-    net::{
-        self, addr_conn::AddrConn, new_ordered_cid, new_rand_cid, CIDChain, Stream,
-        TransmissionInfo, CID,
-    },
-    AnyArc, AnyBox,
+    net::{self, addr_conn::AddrConn, *},
+    *,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;

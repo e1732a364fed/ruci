@@ -1,5 +1,5 @@
 /*!
- * cp_tcp 包含4种情况, 对应有无earlydata 和 有无 Arc<TransmissionInfo>
+ * cp_conn 包含4种情况, 对应有无earlydata 和 有无 Arc<TransmissionInfo>
  *
  * （这是将两个条件判断转成状态机的做法）
 */

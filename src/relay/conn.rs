@@ -16,7 +16,7 @@ use crate::net::CID;
 
 /// block until in and out handshake is over.
 /// utilize handle_in_accumulate_result and  route::OutSelector
-pub async fn handle_conn_clonable(
+pub async fn handle_conn(
     in_conn: net::Conn,
     ins_iterator: MIterBox,
     selector: Arc<Box<dyn OutSelector>>,
@@ -80,7 +80,7 @@ pub async fn handle_in_accumulate_result(
         match listen_result.b.as_ref() {
             Some(ed) => {
                 info!(
-                    "{cid}, handshake in server succeed, target_addr: {}, ed {}",
+                    "{cid}, handshake in server succeed with ed, target_addr: {}, ed {}",
                     &target_addr,
                     ed.len()
                 )
@@ -94,7 +94,7 @@ pub async fn handle_in_accumulate_result(
         }
     }
 
-    let outc_iterator = out_selector
+    let outbound = out_selector
         .select(&target_addr, &listen_result.chain_tag, &listen_result.d)
         .await;
 
@@ -112,7 +112,7 @@ pub async fn handle_in_accumulate_result(
                     e: None,
                     new_id: None,
                 },
-                outc_iterator,
+                outbound,
             )
             .await
         })
