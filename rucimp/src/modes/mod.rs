@@ -151,7 +151,12 @@ pub async fn run(
         Arc<ruci::net::GlobalTrafficRecorder>,
     )>,
 ) -> anyhow::Result<()> {
-    let (mut e, r) = init_engine(args, api_server_opts).await?;
+    let (mut e, r) = init_engine(
+        args,
+        #[cfg(feature = "api_server")]
+        api_server_opts,
+    )
+    .await?;
     e.run_with_close_rx(r, true).await
 }
 
