@@ -219,7 +219,7 @@ config = {
 
 
 
----[=[
+--[=[
 
 config = {
     inbounds = {{
@@ -273,7 +273,7 @@ config = {
 
 另外, 如果在 listen tproxy 的同一主机上 监听 trojan ,即同一电脑上运行 remote.lua 中的 对应配置,
 
-对应配置中是不需要再用 "TcpOptListener" 的, 直接正常监听就行, 但其direct 要为 OptDialer 并给出 somark
+对应配置中是不需要再用 "TcpOptListener" 的, 直接正常监听就行, 但其direct 要为 OptDialer 并给出 somark 和 bind_to_device
 
 --]]
 
@@ -344,7 +344,7 @@ config = {
 
 --]=]
 
---[=[
+---[=[
 config = {
     inbounds = {{
         chain = listen_socks5http,

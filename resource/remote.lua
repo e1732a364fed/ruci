@@ -110,13 +110,12 @@ out_stdio_chain = {{
 direct_out_chain = {"Direct"}
 
 config = {
-    inbounds = {{
-        chain = trojan_chain,
-        tag = "listen1"
-    } -- { chain = trojans_chain, tag = "listen1"} ,
-    --  { chain = ws_trojans_chain,  tag = "listen1"  } 
+    inbounds = {
+    --  { chain = trojan_chain,  tag = "listen1"}
+    -- { chain = trojans_chain, tag = "listen1"} ,
+    -- { chain = ws_trojans_chain,  tag = "listen1"  } 
     -- { chain = in_h2_trojans_chain, tag = "listen1" } 
-    -- { chain = in_quic_chain, tag = "listen1" } 
+     { chain = in_quic_chain, tag = "listen1" } 
     -- { chain = socks5http_chain, tag = "listen1"} ,
     -- { chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
     --[[ 
@@ -129,12 +128,10 @@ config = {
             tag = "udp_echo"
         }
         --]] },
-    outbounds = {{
-        tag = "dial1",
-        chain = opt_direct_chain
-    }},
+   
+    ---[[
+        -- 一般情况下 的 outbound 配置
 
-    --[[
         outbounds = {{
             tag = "dial1",
             chain = direct_out_chain
@@ -145,6 +142,15 @@ config = {
             }}
         }},
      --]]
+
+    --[[
+        -- 对应 local.lua 使用 tproxy 的 outbound 配置
+
+        outbounds = {{
+            tag = "dial1",
+            chain = opt_direct_chain
+        }},
+    --]]
 
     -- outbounds = { { tag="dial1", chain = out_stdio_chain  } }, --以命令行为出口
 
