@@ -17,7 +17,7 @@ use std::{
 use crate::{net::*, Name};
 use async_trait::async_trait;
 use log::{debug, log_enabled};
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncWrite};
 
 /// 持有上层Conn的所有权, 用于计数
 pub struct CounterConn {
@@ -115,25 +115,22 @@ impl Name for Counter {
 impl Mapper for Counter {
     /// 生成的 MapResult 中的 d 为  Box<CounterData>
     ///
-    /// 不分 behavior
-    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+    /// 计统量不分 behavior
+    async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
-            Stream::TCP(mut c) => {
-                let mut ub = 0;
-                if let Some(ed) = params.b {
-                    let r = c.write(&ed).await;
-                    match r {
-                        Ok(r) => ub = r as u64,
-                        Err(e) => {
-                            return MapResult::from_err(e);
-                        }
+            Stream::TCP(c) => {
+                let mut db = 0;
+
+                if behavior == ProxyBehavior::DECODE {
+                    if let Some(ed) = params.b.as_ref() {
+                        db = ed.len() as u64;
                     }
-                }
+                };
 
                 let cd = CounterData {
                     cid,
-                    ub: Arc::new(AtomicU64::new(ub)),
-                    db: Arc::new(AtomicU64::new(0)),
+                    ub: Arc::new(AtomicU64::new(0)),
+                    db: Arc::new(AtomicU64::new(db)),
                 };
 
                 let cc = CounterConn {
@@ -143,7 +140,7 @@ impl Mapper for Counter {
 
                 MapResult {
                     a: params.a,
-                    b: None,
+                    b: params.b,
                     c: Stream::TCP(Box::new(cc)),
                     d: Some(AnyData::B(Box::new(cd))),
                     e: None,

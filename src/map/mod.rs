@@ -291,7 +291,7 @@ impl MapResult {
 }
 
 /// 指示某 Mapping 行为的含义
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProxyBehavior {
     #[default]
     UNSPECIFIED,
