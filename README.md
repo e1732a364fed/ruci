@@ -183,9 +183,8 @@ o2node-.->collector
 - [x] 路由 (rule_route)
 - [x] tproxy
 - [x] native-tls
-- [x] http header, websocket
-- [x] h2
-- [ ] grpc
+- [x] http header, websocket(including early data)
+- [x] h2, grpc
 - [ ] tcp/ip netstack (lwip/smoltcp)
 - [ ] quic
 - [ ] ss?, vmess?

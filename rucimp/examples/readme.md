@@ -25,6 +25,9 @@ cargo run --example suit -- local.suit.toml
 cargo run --example suit -- remote.suit.toml
 ```
 
+(h2 的代码实现所使用的 h2包 会在debug 下打印大量日志输出, 影响观察，故使用 RUST_LOG=none,ruci=debug 过滤掉非
+ruci 的 日志)
+
 ## route
 to use rule_route,
 

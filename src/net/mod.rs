@@ -83,7 +83,7 @@ pub fn new_ordered_cid(last_id: &AtomicU32) -> u32 {
 ///
 #[derive(Default, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CID {
-    pub id_list: SmallVec<[u32; 2]>,
+    pub id_list: SmallVec<[u32; 3]>,
 }
 
 impl Display for CID {

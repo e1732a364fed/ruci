@@ -14,10 +14,6 @@ trojan_out = {
     Trojan = "mypassword"
 }
 
-socks5_out = {
-    Socks5 = {}
-}
-
 h2_out = {
     H2Mux = {
         is_grpc = true,
@@ -42,7 +38,9 @@ infinite = {
                     new_thread_fn = function(cid, state_index, data)
 
                         if socks5_in_mapper == nil then
-                            socks5_in_mapper = create_in_mapper(socks5_out)
+                            socks5_in_mapper = create_in_mapper {
+                                Socks5 = {}
+                            }
                         end
 
                         local new_cid, newi, new_data = coroutine.yield(1, socks5_in_mapper:clone())
