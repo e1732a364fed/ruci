@@ -2660,7 +2660,7 @@ dependencies = [
 
 [[package]]
 name = "ruci"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2697,7 +2697,7 @@ dependencies = [
 
 [[package]]
 name = "ruci-cmd"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "TinyUFO",
  "anyhow",
@@ -2722,7 +2722,7 @@ dependencies = [
 
 [[package]]
 name = "rucimp"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "anyhow",
  "array-init",
