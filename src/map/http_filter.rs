@@ -36,9 +36,7 @@ impl Mapper for Server {
     ) -> map::MapResult {
         let conn = params.c;
         if let net::Stream::Conn(mut conn) = conn {
-            //todo: change this
-            const CAP: usize = 5000;
-            let mut buf = BytesMut::zeroed(CAP);
+            let mut buf = BytesMut::zeroed(net::http::MAX_PARSE_URL_LEN);
 
             let r = conn.read(&mut buf).await;
             let u = match r {

@@ -105,18 +105,19 @@ pub async fn handle_in_fold_result(
             let return_e: anyhow::Error;
             match listen_result.e {
                 Some(err) => {
-                    // return_e = anyhow!("fold inbound failed with Error, will fallback: {:#}", err);
+                    if listen_result.c.is_some() {
+                        warn!(cid = %cid, e=%err, "fold inbound failed with Error, will try to fallback: {:#}",err);
 
-                    warn!(cid = %cid, e=%err, "fold inbound failed with Error, will try to fallback");
+                        is_fallback = true;
+                        Addr::default()
+                    } else {
+                        let return_e =
+                            err.context("fold inbound failed with Error and can't fallback");
 
-                    is_fallback = true;
+                        warn!(cid = %cid, "{:#}",return_e);
 
-                    // let r = listen_result.c.try_shutdown().await;
-                    // if let Err(e) = r {
-                    //     warn!(cid = %cid, e=%e, "shutdown stream got error");
-                    // }
-                    // return Err(return_e);
-                    Addr::default()
+                        return Err(return_e);
+                    }
                 }
                 None => match &listen_result.c {
                     Stream::None => {

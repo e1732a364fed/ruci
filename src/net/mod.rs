@@ -323,11 +323,11 @@ impl Stream {
 
     /// try shutdown the underlying stream. If there's no
     /// stream, no behavior.
-    pub async fn try_shutdown(self) -> Result<()> {
+    pub async fn try_shutdown(&mut self) -> Result<()> {
         let r = match self {
-            Stream::Conn(mut t) => t.shutdown().await?,
-            Stream::AddrConn(mut c) => c.w.shutdown().await?,
-            Stream::Generator(mut rx) => rx.close(),
+            Stream::Conn(ref mut t) => t.shutdown().await?,
+            Stream::AddrConn(ref mut c) => c.w.shutdown().await?,
+            Stream::Generator(ref mut rx) => rx.close(),
             Stream::None => {}
         };
         Ok(r)

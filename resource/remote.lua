@@ -36,7 +36,7 @@ trojan_chain = {tcp, tls, trojan_in}
 
 http_filter = {
     HttpFilter = {
-        host = "myhost",
+        host = "127.0.0.1:10801",
         path = "/path1",
     }
 }

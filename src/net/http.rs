@@ -23,7 +23,7 @@ pub struct CommonConfig {
     pub can_fallback: Option<bool>,
 }
 
-const MAX_PARSE_URL_LEN: usize = 3000;
+pub const MAX_PARSE_URL_LEN: usize = 3000;
 const HEADER_ENDING_BYTES: &[u8] = b"\r\n\r\n";
 pub const HEADER_ENDING_STR: &str = "\r\n\r\n";
 const HEADER_SPLIT_STR: &str = "\r\n";
