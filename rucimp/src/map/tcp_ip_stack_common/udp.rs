@@ -35,7 +35,16 @@ const UDP_TIMEOUT_MULTIPLIER: u32 = 2;
 
 #[async_trait::async_trait]
 pub trait Getter: Send {
-    async fn get(&mut self) -> io::Result<(Vec<u8>, SocketAddr, SocketAddr)>;
+    async fn get(&mut self) -> io::Result<DataDstSrc>;
+}
+
+#[async_trait::async_trait]
+pub trait Putter: Send {
+    async fn put(&mut self, data: DataDstSrc) -> io::Result<()>;
+}
+
+pub trait Splitter: Send {
+    fn split(&mut self) -> (Box<dyn Getter>, Box<dyn Putter>);
 }
 
 pub async fn loop_accept_udp(
