@@ -4,8 +4,8 @@
 */
 use super::addr_conn::{AsyncReadAddr, AsyncWriteAddr};
 use super::*;
+use parking_lot::Mutex;
 use std::cmp::min;
-use std::sync::Mutex;
 use std::{
     pin::Pin,
     task::{Context, Poll},
@@ -104,7 +104,7 @@ impl AsyncWriteAddr for MockStream {
         let mut x = Vec::from(buf);
 
         if let Some(swt) = &self.write_target {
-            let mut v = swt.lock().unwrap();
+            let mut v = swt.lock();
             v.append(&mut x);
         } else {
             if self.write_data.len() == 0 {
@@ -284,7 +284,7 @@ mod test {
 
         print!("test: cp addr end");
 
-        assert_eq!(&nv, writevc.lock().unwrap().deref());
+        assert_eq!(&nv, writevc.lock().deref());
         Ok(())
     }
 }
