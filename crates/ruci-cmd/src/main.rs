@@ -194,7 +194,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     use tracing_appender::{non_blocking, rolling};
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    let console_layer = fmt::layer().with_writer(std::io::stderr);
+    let console_layer = fmt::layer().with_line_number(true).with_writer(std::io::stderr);
 
     let logger = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())

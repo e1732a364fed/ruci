@@ -42,9 +42,26 @@ impl AsyncWrite for Conn {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        let r = self.out.as_mut().poll_write(cx, buf);
+        // 不能向windows 的 stdio 输出 非 utf8 信息, or we will get
+        // Windows stdio in console mode does not support writing non-UUTF-8 byte sequence
 
-        r
+        let old_len = buf.len();
+        let str = String::from_utf8_lossy(buf);
+        let sb = str.as_bytes();
+        let r = self.out.as_mut().poll_write(cx, sb);
+        match r {
+            Poll::Ready(r) => match r {
+                Ok(u) => {
+                    if sb.len() == u {
+                        Poll::Ready(Ok(old_len))
+                    } else {
+                        Poll::Ready(Ok(old_len - sb.len() + u))
+                    }
+                }
+                Err(e) => Poll::Ready(Err(e)),
+            },
+            Poll::Pending => Poll::Pending,
+        }
     }
 
     fn poll_flush(

@@ -49,7 +49,7 @@ pub fn cp_conn(
 async fn no_gtr_no_ed(cid: CID, mut in_conn: net::Conn, mut out_conn: net::Conn) {
     debug!(cid = %cid, "relay start");
 
-    let _ = net::copy(
+    let r = net::copy(
         &mut in_conn,
         &mut out_conn,
         &cid,
@@ -57,6 +57,14 @@ async fn no_gtr_no_ed(cid: CID, mut in_conn: net::Conn, mut out_conn: net::Conn)
         None,
     )
     .await;
+
+    match r {
+        Ok(_) =>{
+            
+        },
+        Err(e) => tracing::info!(cid = %cid, err = %e, "relay got error"),
+    }
+
     debug!(cid = %cid, "relay end",);
 }
 
@@ -85,10 +93,15 @@ async fn gtr_no_ed(
         updater,
     )
     .await;
-    if let Ok((u, d)) = r {
-        gtr.ub.fetch_add(u, Ordering::Relaxed);
-        gtr.db.fetch_add(d, Ordering::Relaxed);
+
+    match r {
+        Ok((u, d)) =>{
+            gtr.ub.fetch_add(u, Ordering::Relaxed);
+            gtr.db.fetch_add(d, Ordering::Relaxed);
+        },
+        Err(e) => tracing::info!(cid = %cid, err = %e, "relay got error"),
     }
+    
 }
 
 async fn no_gtr_ed(
@@ -130,7 +143,7 @@ async fn no_gtr_ed(
         }
     }
 
-    let _ = net::copy(
+    let r = net::copy(
         &mut in_conn,
         &mut out_conn,
         &cid,
@@ -138,6 +151,13 @@ async fn no_gtr_ed(
         None,
     )
     .await;
+
+    match r {
+        Ok(_) =>{
+            
+        },
+        Err(e) => tracing::info!(cid = %cid, err = %e, "relay got error"),
+    }
 
     debug!(cid = %cid, "relay end");
 }
@@ -192,8 +212,11 @@ async fn gtr_ed(
     )
     .await;
 
-    if let Ok((u, d)) = r {
-        gtr.ub.fetch_add(u, Ordering::Relaxed);
-        gtr.db.fetch_add(d, Ordering::Relaxed);
+    match r {
+        Ok((u, d)) =>{
+            gtr.ub.fetch_add(u, Ordering::Relaxed);
+            gtr.db.fetch_add(d, Ordering::Relaxed);
+        },
+        Err(e) => tracing::info!(cid = %cid, err = %e, "relay got error"),
     }
 }

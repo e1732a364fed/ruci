@@ -76,7 +76,8 @@ async fn run_engine(e: &Engine, close_rx: Option<mpsc::Receiver<()>>) -> anyhow:
 
     std::thread::spawn(|| {
         std::thread::sleep(Duration::from_secs(3));
-        println!("Force shutdown after 3 secs!"); //only println works at this point.
+        tracing::warn!("Force shutdown after 3 secs!");
+        println!("Force shutdown after 3 secs!");
         std::process::exit(1);
     });
 
