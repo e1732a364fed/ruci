@@ -4,7 +4,7 @@
 可选功能 api_client, api_server, utils
 
 针对 rucimp 核心的 可选功能:
-trace, lua, lua54, use-native-tls, native-tls-vendored
+trace, tproxy, quic, quinn, lua, lua54, use-native-tls, native-tls-vendored
 
  */
 #[cfg(any(feature = "api_client", feature = "api_server"))]
@@ -263,6 +263,9 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     #[cfg(feature = "quic")]
     fl.push("quic");
+
+    #[cfg(feature = "tproxy")]
+    fl.push("tproxy");
 
     info!(
         ruci_cmd = env!("CARGO_PKG_VERSION"),
