@@ -17,6 +17,15 @@ cargo clippy --all-targets --all-features
 "rust-analyzer.check.command": "clippy",
 ```
 
+
+generate json config files:
+
+in crates/ruci-cmd folder:
+
+```sh
+find ../../resource/lua_examples/local -type f -name "*.lua" -exec cargo run --features "lua api_server api_client file_server utils use-native-tls steganography lwip" -- utils convert-format {} json \;
+```
+
 2024.8.28
 尝试使用 serde-pickle 但发现生成的 文件在 python 中读取时显示 EOFError: Ran out of input
 

@@ -19,6 +19,10 @@ Config = {
   outbounds = outbounds,
   inbounds = inbounds,
   routes = {
-    clash_rules = "test_clash_rules.yaml"
+    clash_rules = "test_clash_rules.yaml",
+    geosite_gfw = {
+      api_url = "http://127.0.0.1:5134/check",
+      ok_ban_out_tag = { "Direct", "Reject" }
+    }
   }
 }

@@ -6,6 +6,9 @@
 routes = {
     tag_route = {},
     fallback_route = {},
+    clash_rules = "the_clash_rules.yaml",
+    geosite = "mygeosite_file_name.mmdb",
+    geosite_gfw = {}
 }
 ```
 
@@ -46,6 +49,74 @@ outbound 上，此时就用到了 fallback_route. 这整个行为就叫 fallback
 
 fallback_route 是一个 字符串对 的列表。上面示例就是表示 inbound chain "listen1" 里失败的地方将被转发到 
 outbound chain "fallback_dial1" 中。listen1 和 fallback_dial1 是它们的 tag.
+
+# clash_rules
+
+0.0.8开始，ruci 支持了clash 的分流规则的使用。clash 是一个知名的app, 它的规则被用得很多
+
+
+一般直接写为 clash_rules = "myfile.yaml"
+
+然后在 myfile.yaml 中，按 clash 配置文件中的 rules 项进行书写，如写成：
+
+```yaml
+rules:
+  - DOMAIN-SUFFIX,ip6-localhost,Direct
+  - DOMAIN-SUFFIX,ip6-loopback,Direct
+  - DOMAIN-SUFFIX,lan,Direct
+  - DOMAIN-SUFFIX,local,Direct
+  - DOMAIN-SUFFIX,localhost,Direct
+  - DOMAIN-KEYWORD,baidu,Reject
+```
+就行了
+
+ruci 支持所有 clash 中定义的 规则，而且有算法加速支持，匹配得很快！
+
+您还可以直接把 yaml 的内容传入 clash_rules 项，但是不太建议这么做：
+
+```lua
+clash_rules = "rules:\n  - DOMAIN-SUFFIX,ip6-localhost,Direct"
+```
+
+好处就是可以一个配置文件全搞定
+
+# geosite
+
+配置 geosite 的 mmdb 是用于 clash_rules的。也就是说，配置了 geosite后，clash_rules中的 GEOSITE 规则就生效了
+
+可以运行 ruci-cmd utils 中的 对应命令来下载 geosite 文件
+
+# geosite_gfw
+
+ https://github.com/e1732a364fed/geosite-gfw
+
+```
+geosite_gfw = {
+    api_url = "http://127.0.0.1:5134/check",
+    ok_ban_out_tag = { "Direct", "Reject"}
+}
+```
+
+geosite_gfw 是一个 人工智能 gfw项目，它用过机器学习训练出的模型来判断一个 域名 倒底是会被墙还是 可以直连
+
+目前的运行方式
+
+```sh
+git clone https://github.com/e1732a364fed/geosite-gfw/
+cd geosite-gfw
+pip3 install transformers numpy scikit-learn flask requests
+pip3 install torch
+
+curl -LO "https://huggingface.co/e1732a364fed/geosite-gfw/resolve/main/bert_geosite_by_body.zip?download=true"
+curl -LO "https://huggingface.co/e1732a364fed/geosite-gfw/resolve/main/bert_geosite_by_head.zip?download=true"
+
+tar -xf bert_geosite_by_body.zip
+tar -xf bert_geosite_by_head.zip
+
+python3 classify.py --mode serve_api --port 5134
+```
+
+之后在 ruci 的 routes 中使用 geosite_gfw 就能生效啦。
 
 
 # 接下来

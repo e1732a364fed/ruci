@@ -7,16 +7,21 @@ use ruci::net;
 use ruci::relay::route;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tracing::debug;
 
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct GeositeGfwConfig {
     // "http://127.0.0.1:5000/check";
     pub api_url: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub proxy: Option<String>,
+
+    #[serde(default)]
     pub only_proxy: bool,
     pub ok_ban_out_tag: (String, String),
 }
@@ -39,6 +44,7 @@ impl route::OutSelector for GeositeGfwOutSelector {
         match r {
             Ok(r) => {
                 let r = is_prediction_ok(&r.head_prediction, &r.body_prediction);
+
                 let ot = match r {
                     true => &self.config.ok_ban_out_tag.0,
                     false => &self.config.ok_ban_out_tag.1,
@@ -54,10 +60,12 @@ impl route::OutSelector for GeositeGfwOutSelector {
 }
 
 /// 定义请求体结构
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub struct CheckRequest<'a> {
     pub domain: &'a str,
     pub socks5_proxy: Option<&'a str>,
+
+    #[serde(default)]
     pub only_proxy: bool,
 }
 
@@ -91,6 +99,7 @@ pub async fn check_api(
         .json::<CheckResponse>()
         .await?;
 
+    debug!("geosite_gfw got response: {:?}", response);
     Ok(response)
 }
 

@@ -117,7 +117,7 @@ impl Engine {
         self.fallback_routes = sc.get_fallback_route();
 
         self.clash_rules = sc.get_clash_route(self.data_source.clone());
-        self.geosite_gfw = sc.routes.and_then(|r| r.smart);
+        self.geosite_gfw = sc.routes.and_then(|r| r.geosite_gfw);
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) -> anyhow::Result<()> {
