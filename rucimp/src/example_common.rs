@@ -5,6 +5,7 @@ use std::{
 };
 
 use log::{debug, info, log_enabled, Level};
+use tokio::signal::{self};
 
 pub fn print_env_version(name: &str) {
     println!("rucimp~ {}\n", name);
@@ -31,6 +32,9 @@ pub fn print_env_version(name: &str) {
     }
 }
 
+/// try current folder and ruci_config, resource, ../resource folder
+///
+/// try the default_file given or the first cmd argument
 pub fn try_get_filecontent(default_file: &str) -> String {
     let cdir = std::env::current_dir().expect("has current directory");
     let args: Vec<String> = env::args().collect();
@@ -75,4 +79,44 @@ pub fn try_get_filecontent(default_file: &str) -> String {
         }
     }
     r_contents.expect(&format!("no such file: {}", filename))
+}
+
+pub async fn wait_close_sig() -> anyhow::Result<()> {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(unix)]
+    let terminate2 = async {
+        signal::unix::signal(signal::unix::SignalKind::interrupt())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    #[cfg(not(unix))]
+    let terminate2 = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => info!("got ctrl_c"),
+        _ = terminate => info!("got terminate"),
+        _ = terminate2 => info!("got interrupt"),
+    }
+
+    info!("signal received, starting graceful shutdown...");
+
+    Ok(())
 }

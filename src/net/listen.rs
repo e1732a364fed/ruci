@@ -13,7 +13,7 @@ pub enum Listener {
     TCP(TcpListener),
 
     #[cfg(unix)]
-    UNIX(UnixListener),
+    UNIX((UnixListener, String)),
 }
 
 pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
@@ -27,7 +27,7 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
         #[cfg(unix)]
         net::Network::Unix => {
             let filen = a.get_name().expect("a has a name");
-            let p = PathBuf::from(filen);
+            let p = PathBuf::from(filen.clone());
 
             // is_file returns false for unix domain socket
 
@@ -39,9 +39,16 @@ pub async fn listen(a: &net::Addr) -> anyhow::Result<Listener> {
                 remove_file(p.clone()).context("unix listen try remove previous file failed")?;
             }
             let r = UnixListener::bind(p).context("unix listen failed")?;
-            return Ok(Listener::UNIX(r));
+
+            return Ok(Listener::UNIX((r, filen)));
         }
         _ => bail!("listen not implemented for this network: {}", a.network),
+    }
+}
+
+impl Drop for Listener {
+    fn drop(&mut self) {
+        self.clean_up()
     }
 }
 
@@ -53,6 +60,24 @@ impl Listener {
             Listener::UNIX(_) => net::Network::Unix,
         }
     }
+
+    pub fn clean_up(&self) {
+        match self {
+            #[cfg(unix)]
+            Listener::UNIX((_, filen)) => {
+                let p = PathBuf::from(filen.clone());
+                if p.exists() && !p.is_dir() {
+                    warn!("unix clean up:  will delete {:?}", p);
+                    let r = remove_file(p.clone()).context("unix clean up delete file failed");
+                    if let Err(e) = r {
+                        warn!("{}", e)
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub async fn accept(&self) -> anyhow::Result<(Stream, net::Addr)> {
         match self {
             Listener::TCP(tl) => {
@@ -65,7 +90,7 @@ impl Listener {
                 return Ok((Stream::TCP(Box::new(tcp_stream)), a));
             }
             #[cfg(unix)]
-            Listener::UNIX(ul) => {
+            Listener::UNIX((ul, _)) => {
                 let (unix_stream, unix_soa) = ul.accept().await?;
 
                 debug!("unix got {:?}", unix_soa);

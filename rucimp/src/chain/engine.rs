@@ -132,7 +132,7 @@ impl Engine {
             tasks.push((t1, t2));
             shutdown_tx_vec.push(tx);
         });
-        debug!("engine will run with {} inbounds", tasks.len());
+        debug!("chain engine will run with {} inbounds", tasks.len());
 
         *running = Some(shutdown_tx_vec);
         Ok(tasks)
@@ -184,7 +184,7 @@ impl Engine {
 
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
     pub async fn stop(&self) {
-        info!("stop called");
+        info!("chain engine: stop called");
         let mut running = self.running.lock();
         let opt = running.take();
 
@@ -197,6 +197,6 @@ impl Engine {
             });
         }
 
-        info!("stopped");
+        info!("chain engine stopped");
     }
 }
