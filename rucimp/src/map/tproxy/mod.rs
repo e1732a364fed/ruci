@@ -4,6 +4,8 @@ Defines some tproxy related [`ruci::map::Map`]s. Tproxy is shortcut for transpar
 pub mod route;
 pub mod udp;
 
+use std::fmt::Display;
+
 pub use route::*;
 
 use async_trait::async_trait;
@@ -29,11 +31,11 @@ pub struct TcpResolver {
     opts: Options,
 }
 
-// impl Name for TcpResolver {
-//     fn name(&self) -> &'static str {
-//         "tproxy_tcp_resolver"
-//     }
-// }
+impl Display for TcpResolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tproxy_tcp_resolver")
+    }
+}
 
 impl TcpResolver {
     pub fn new(opts: Options) -> anyhow::Result<Self> {
@@ -125,11 +127,11 @@ pub struct UDPListener {
     pub sopt: SockOpt,
 }
 
-// impl Name for UDPListener {
-//     fn name(&self) -> &'static str {
-//         "tproxy_udp_listener"
-//     }
-// }
+impl Display for UDPListener {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tproxy_udp_listener")
+    }
+}
 
 impl UDPListener {
     pub async fn start_listen(
