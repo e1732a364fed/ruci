@@ -3,12 +3,32 @@
 
 开发相关：因为 代码实现方式不同，有些功能相近的 Map的Config是独立的
 
+# 说明
+
 在 Map说明的 首部标有 in, out 或 in/out 字样，表明可用于 InMapConfig 还是 OutMapConfig
 
 没有任何示例的Map 意为着其写法为 `"Name"`, 不 外加大括号，如 `"Echo"` , `"Blackhole"`
 
 其它的配置均要外加 大括号，如 `Direct = {}` 意味着要 写为 `{Direct = {}}`  才算一个完整的 table 
 
+标有 ` --optional` 的项为可选项。
+
+## `_addr` 的写法
+
+一些项，如 bind_addr，dial_addr, listen_addr, fixed_target_addr 等，其写法都是相同的。如下每一行都是合法的示例
+
+    fake.com:80
+    [::1]:30800
+    unix://file1
+    udp://127.0.0.1:20800
+    tcp://0.0.0.0:80
+    ip://10.0.0.1:24#utun321
+
+`{scheme}://`没给出时，默认使用 tcp. unix 表示 uds(unix domain socket)
+
+方括号括起的表示 ipv6
+
+ip 示例中的 24 表示 子网掩码的CIDR表示， utun321 为指定要创建的 tun网卡 名称
 
 
 # 入口、出口 Map
@@ -103,6 +123,30 @@ BindDialer 中所有项都是可选的，但 bind_addr 或 dial_addr 中至少�
 见[Ext](#ext)
 
 
+in_auto_route 用于 tun
+
+```lua
+ in_auto_route = {
+    tun_dev_name = "utun321",
+    tun_gateway = "10.0.0.1",
+    router_ip = "192.168.0.1",
+    original_dev_name = "enp0s1", -- windows/macos 可不填 original_dev_name, linux 要填 original_dev_name
+    --direct_list = { "192.168.0.204" }, -- 服务端的ip要直连
+    dns_list = { "114.114.114.114" }
+}
+
+```
+
+out_auto_route 只用于 ip转发 (从本地的tun 转发到 服务器上的 tun)
+
+```lua
+out_auto_route = {
+    tun_dev_name = "utun321",
+    original_dev_name = "enp0s1", --wlp3s0
+    router_ip = "192.168.0.1",
+}
+```
+
 ### OptDialer
 in
 
@@ -149,13 +193,13 @@ TcpOptListener = {
 in/out
 
 ```lua
- StdioConfig = {
-    write_mode = "Bytes", --UTF8
+ Stdio = {
+    write_mode = "Bytes", --optional
     ext={},--optional
 }
 ```
 
-默认的 write_mode 为 UTF8, 可以用 Bytes 模式来观察16进制数据
+默认的 write_mode 为 `UTF8`, 可以用 `Bytes` 模式来观察16进制数据
 
 见[Ext](#ext)
 
@@ -173,12 +217,72 @@ in/out
 }
 ```
 
+i 表示 输入文件名，o表示输出文件名。
+
+i为自己预先定义好的文件，o则是一个给出的文件名，其内容只有通讯后才知道。
+
+sleep_interval 和 bytes_per_turn 两项配置用于设置发送信息的速率。
+
+
 见[Ext](#ext)
 
 ## Tproxy 
 in
 
 linux only
+
+tproxy 的配置要复杂一些，要分 tcp 和 udp 两部分配置，自动路由的配置则是在 TproxyTcpResolver 中设置的。
+
+```lua
+local tproxy_tcp_listen = {
+    TcpOptListener = {
+        listen_addr = "0.0.0.0:12345",
+        sockopt = {
+            tproxy = true,
+        }
+    }
+}
+
+local tproxy_listen_tcp_chain = {
+    tproxy_tcp_listen, {
+        TproxyTcpResolver = {
+            port = 12345,
+            --auto_route_tcp = true, -- only set route for tcp
+            auto_route = true,         -- auto_route will set route for both tcp and udp at the appointed port
+
+            route_ipv6 = true,         -- 如果为true, 则  也会 对 ipv6 网段执行 自动路由
+
+            proxy_local_udp_53 = true, -- 如果为true, 则 udp 53 端口不会直连, 而是会流经 tproxy
+
+            -- local_net4 = "192.168.0.0/16" -- 直连 ipv4 局域网段 不给出时, 默认即为 192.168.0.0/16
+        }
+    }
+}
+
+
+local tproxy_udp_listen = {
+    TproxyUdpListener = {
+        listen_addr = "udp://0.0.0.0:12345",
+        sockopt = {
+            tproxy = true,
+        }
+    }
+}
+
+local tproxy_listen_inbounds = { 
+    {
+        chain = tproxy_listen_tcp_chain,
+        tag = "listen_tproxy_tcp"
+    },
+    {
+        chain = { tproxy_udp_listen },
+        tag = "listen_tproxy_udp"
+    }
+}
+
+```
+
+
 
 ### TproxyUdpListener
 
@@ -286,6 +390,8 @@ out:
 ## NativeTLS
 同上
 
+NativeTLS 使用 系统自己的 tls栈，这样就没有 rust 特征了。
+
 ## http2
 
 服务端用 H2, 客户端用 H2Single 或 H2Mux，一般用 H2Mux 以使用 多路复用
@@ -301,8 +407,8 @@ in
 
 ```lua
 H2 ={
-    is_grpc=false,
-    http_config={},
+    is_grpc=false,--optional
+    http_config={},--optional
 }
 ```
 见 [HttpCommonConfig](#httpcommonconfig)
@@ -313,8 +419,8 @@ out
 
 ```lua
 H2Single ={
-    is_grpc=false,
-    http_config={},
+    is_grpc=false,--optional
+    http_config={},--optional
 },
 ```
 
@@ -326,8 +432,8 @@ out
 
 ```lua
 H2Mux ={
-    is_grpc=false,
-    http_config={},
+    is_grpc=false,--optional
+    http_config={},--optional
 },
 ```
 见 [HttpCommonConfig](#httpcommonconfig)
@@ -341,8 +447,8 @@ in:
 ```lua
 WebSocket={
     http_config = {
-        --... optional
-    }
+       --...
+    } --optional
 }
 ```
 见 [HttpCommonConfig](#httpcommonconfig)
@@ -373,7 +479,7 @@ Quic= {
     key_path="",
     cert_path="",
     listen_addr="",
-    alpn = { "h2", "h3"},--optional
+    alpn = { "h2", "h3"},
 }
 ```
 
@@ -382,12 +488,21 @@ out:
 ```lua
 Quic= {
     server_addr="",
-    server_name="",
+    server_name="www.mytest.com",
     cert_path="",--optional
-    alpn = { "h2", "h3"},--optional
+    alpn = { "h2", "h3"}, --要明确指定 alpn
     is_insecure=true,--optional
 }
 ```
+
+须给出 server_name (域名),
+ 且 若 is_insecure 为 false, 须为 证书中所写的 CN 或 Subject Alternative Name;
+ruci 提供的 test2.crt中的 Subject 
+
+
+cert_path：可给出 服务端的 证书, 这样就算 is_insecure = false 也通过验证
+证书须为 真证书, 或真fullchain 证书, 或自签的根证书
+
 
 
 # 辅助 Map
@@ -402,6 +517,8 @@ in/out
 ```lua
 Adder=3
 ```
+
+给 输出 的信息 每字节都加 给定的数值。比如 输入abc, Adder=1, 则输出为 bcd
 
 ## Counter
 
@@ -427,14 +544,28 @@ HttpFilter={
 ```lua
 dns_client = {
     dns_server_list = { { "127.0.0.1:20800", "udp" } }, -- 8.8.8.8:53
-    ip_strategy = "Ipv4Only",
+    ip_strategy = "Ipv4Only", --optional
     static_pairs = {
         ['www.baidu.com'] = "103.235.47.188"
-    }
+    } --optional
 }
 
 ```
 Direct,OptDirect,BindDialer,OptDialer 都可加此块。
+
+
+ip_strategy 的可能的值：
+```rust
+pub enum LookupIpStrategy {
+    Ipv4Only,
+    Ipv6Only,
+    Ipv4AndIpv6,
+    Ipv6thenIpv4,
+    Ipv4thenIpv6,
+}
+```
+不给出时，默认为 Ipv4thenIpv6
+
 
 ## SockOpt
 
@@ -488,10 +619,11 @@ listen 一个 本地的 udp 端口 (a), 指定 ext.fixed_target_addr (b), 其为
 
 ```lua
  {
-    method = "GET",--optional
-    scheme = "https",--optional
     authority = "www.myhost.com",
     path = "/ruci_jiandan",
+
+    method = "GET",--optional
+    scheme = "https",--optional
     headers= { ["header1"] = "value1", ["header2"] = "value2", },--optional
 }
 ```

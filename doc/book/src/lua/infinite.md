@@ -1,3 +1,4 @@
+# 介绍
 
 infinite 模式下，lua配置不使用 Config 变量，而使用 Infinite 变量
 

@@ -6,7 +6,7 @@ src = "src"
 title = "ruci_manual"
 
 [output.html]
-git-repository-url = "https://e1732a364fed.github.io/ruci/"
+git-repository-url = "https://github.com/e1732a364fed/ruci/"
 git-repository-icon = "fa-github"
 additional-css = ["theme/pagetoc.css"]
 additional-js = ["theme/pagetoc.js"]
