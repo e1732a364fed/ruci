@@ -30,7 +30,7 @@ impl std::fmt::Display for NewConnInfo {
         {
             write!(
                 f,
-                "in_trace: {:?},\nout_trace: {:?}\n",
+                "in_trace: {:?}, out_trace: {:?}",
                 self.in_trace, self.out_trace
             )
         }

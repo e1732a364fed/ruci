@@ -8,6 +8,8 @@ use std::{
     },
 };
 
+use chrono::{DateTime, Utc};
+
 use parking_lot::RwLock;
 use ruci::{net::CID, relay::NewConnInfo};
 use tinyufo::TinyUfo;
@@ -32,7 +34,7 @@ pub async fn deal_args(cmd: Command, args: &crate::Args) -> Option<(Server, mpsc
     None
 }
 
-type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, NewConnInfo>>>;
+type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, (DateTime<Utc>, NewConnInfo)>>>;
 
 /// 缓存 某时间点的流量
 type FluxCache = Arc<TinyUfo<CID, Vec<(tokio::time::Instant, u64)>>>;
@@ -56,7 +58,7 @@ pub struct Server {
 
     pub close_tx: mpsc::Sender<()>,
 
-    pub newconn_info: NewConnInfoMap,
+    pub newconn_info_map: NewConnInfoMap,
 
     #[cfg(feature = "trace")]
     pub flux_trace: TracePart,
@@ -69,7 +71,7 @@ impl Server {
         let s = Server {
             listen_addr,
             close_tx: tx,
-            newconn_info: Arc::new(RwLock::new(BTreeMap::new())),
+            newconn_info_map: Arc::new(RwLock::new(BTreeMap::new())),
 
             #[cfg(feature = "trace")]
             flux_trace: TracePart {
@@ -104,7 +106,10 @@ async fn get_conn_infos(State(allconn): State<NewConnInfoMap>) -> String {
     let mut s = String::new();
     let m = allconn.read();
     for i in m.iter() {
-        let x = i.1.to_string();
+        let x = i.1 .0.to_string();
+        s.push_str(&x);
+        s.push_str(" , ");
+        let x = i.1 .1.to_string();
         s.push_str(&x);
         s.push('\n')
     }
@@ -124,7 +129,10 @@ async fn get_conn_infos_range(
     let mut s = String::new();
     let m = allconn.read();
     for i in m.range(cid..) {
-        let x = i.1.to_string();
+        let x = i.1 .0.to_string();
+        s.push_str(&x);
+        s.push_str(" , ");
+        let x = i.1 .1.to_string();
         s.push_str(&x);
         s.push('\n')
     }
@@ -145,11 +153,14 @@ async fn get_conn_info(Path(cid): Path<String>, State(allconn): State<NewConnInf
     };
 
     let x = m.get(&cid);
-    let x = match x {
+    let i = match x {
         Some(x) => x,
         None => return String::from("None"),
     };
-    let x = x.to_string();
+    let x = i.0.to_string();
+    s.push_str(&x);
+    s.push_str(" , ");
+    let x = i.1.to_string();
     s.push_str(&x);
     s
 }
@@ -202,19 +213,19 @@ pub async fn serve(s: &Server) {
     app = app
         .route(
             "/allc",
-            get(get_conn_infos).with_state(s.newconn_info.clone()),
+            get(get_conn_infos).with_state(s.newconn_info_map.clone()),
         )
         .route(
             "/cr/:cid",
-            get(get_conn_infos_range).with_state(s.newconn_info.clone()),
+            get(get_conn_infos_range).with_state(s.newconn_info_map.clone()),
         )
         .route(
             "/cc",
-            get(get_conn_count).with_state(s.newconn_info.clone()),
+            get(get_conn_count).with_state(s.newconn_info_map.clone()),
         )
         .route(
             "/c/:cid",
-            get(get_conn_info).with_state(s.newconn_info.clone()),
+            get(get_conn_info).with_state(s.newconn_info_map.clone()),
         );
 
     #[cfg(feature = "trace")]

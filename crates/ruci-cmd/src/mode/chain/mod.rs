@@ -6,6 +6,8 @@ use rucimp::{
 };
 use tokio::sync::mpsc;
 
+use chrono::{DateTime, Utc};
+
 use crate::api;
 
 ///blocking
@@ -56,12 +58,13 @@ async fn setup_api_server_with_chain_engine(se: &mut Engine, s: &mut api::server
     setup_trace_flux(se, s).await;
 }
 
+/// 记录新连接信息
 async fn setup_record_newconn_info(se: &mut Engine, s: &mut api::server::Server) {
     let (nci_tx, mut nci_rx) = mpsc::channel(100);
 
     se.newconn_recorder = Some(nci_tx);
 
-    let aci = s.newconn_info.clone();
+    let aci = s.newconn_info_map.clone();
 
     tokio::spawn(async move {
         loop {
@@ -70,7 +73,9 @@ async fn setup_record_newconn_info(se: &mut Engine, s: &mut api::server::Server)
                 Some(nc) => {
                     let mut aci = aci.write();
                     let cid = nc.cid.clone();
-                    aci.insert(cid, nc);
+
+                    let now: DateTime<Utc> = Utc::now();
+                    aci.insert(cid, (now, nc));
                 }
                 None => break,
             }
