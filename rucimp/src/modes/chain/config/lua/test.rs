@@ -568,7 +568,7 @@ Infinite = {
         generator = function(this_index, data)
             return -1, {}
         end
-    }}},
+    }},
 
     outbounds = {{
         tag = "dial1",
