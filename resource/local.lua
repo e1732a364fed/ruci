@@ -89,7 +89,7 @@ out_stdio_chain = {{
 
 direct_out_chain = {"Direct"}
 
---[=[
+---[=[
 
 config = {
     inbounds = {{
@@ -112,7 +112,6 @@ config = {
 -- ]=]
 
 --[=[
--- default counterpart for remote.lua
 
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
@@ -163,7 +162,7 @@ config = {
 
 --]=]
 
----[=[
+--[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
     outbounds = { { tag="dial1", chain = dial_h2_trojan_chain } },

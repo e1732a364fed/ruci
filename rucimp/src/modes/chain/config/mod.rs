@@ -409,10 +409,10 @@ impl ToMapperBox for InMapperConfig {
             InMapperConfig::H2 {
                 http_config: config,
                 is_grpc,
-            } => Box::new(crate::map::h2::server::Server {
-                http_config: config.clone(),
-                is_grpc: *is_grpc,
-            }),
+            } => Box::new(crate::map::h2::server::Server::new(
+                is_grpc.clone(),
+                config.clone(),
+            )),
         }
     }
 }

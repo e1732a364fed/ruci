@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 pub struct CommonConfig {
     pub method: Option<String>,
     pub scheme: Option<String>,
+
+    /// uri 中的 authority, 包含端口号
     pub host: String,
     pub path: String,
     pub headers: Option<BTreeMap<String, String>>,

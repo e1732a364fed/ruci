@@ -64,12 +64,12 @@ ws_trojans_chain = {tcp, tls, http_filter, basic_ws, trojan_in}
 
 -- ws_trojans_chain = {tcp, tls, ws, trojan_in}
 
-h2_trojans_chain = {tcp, tls, {
+in_h2_trojans_chain = {tcp, tls, {
     H2 = {
         is_grpc = true,
         http_config = {
             host = "myhost",
-            path = "/path1"
+            path = "/service1/Tun"
         }
     }
 }, trojan_in}
@@ -89,12 +89,11 @@ out_stdio_chain = {{
 direct_out_chain = {"Direct"}
 
 config = {
-    inbounds = { --  {chain = trojan_chain, tag = "listen1"} ,
+    inbounds = { 
+    --  {chain = trojan_chain, tag = "listen1"} ,
     --  {  chain = ws_trojans_chain,  tag = "listen1"  } 
-    {
-        chain = h2_trojans_chain,
-        tag = "listen1"
-    } -- {chain = socks5http_chain, tag = "listen1"} ,
+    { chain = in_h2_trojans_chain, tag = "listen1" } 
+    -- {chain = socks5http_chain, tag = "listen1"} ,
     -- {chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
     -- {chain = { { Dialer =  "udp://127.0.0.1:20800" } , "Echo" }, tag = "udp_echo"} ,
     },

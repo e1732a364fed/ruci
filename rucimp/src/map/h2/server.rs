@@ -1,7 +1,8 @@
 use ::h2::server;
+use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
-use http::{Response, StatusCode};
+use http::{header::CONTENT_TYPE, Response, StatusCode};
 use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
@@ -10,6 +11,8 @@ use ruci::{
 use tokio::sync::mpsc;
 
 use tracing::warn;
+
+use crate::map::h2::grpc::GRPC_CONTENT_TYPE;
 
 use super::*;
 #[derive(Clone, Debug, NoMapperExt, Default)]
@@ -25,6 +28,12 @@ impl ruci::Name for Server {
 }
 
 impl Server {
+    pub fn new(is_grpc: Option<bool>, http_config: Option<CommonConfig>) -> Self {
+        Server {
+            http_config,
+            is_grpc,
+        }
+    }
     async fn handshake(
         &self,
         cid: net::CID,
@@ -37,7 +46,9 @@ impl Server {
                 conn = Box::new(EarlyDataWrapper::from(b, conn));
             }
         }
-        let mut conn = server::handshake(conn).await?;
+        let mut conn = server::handshake(conn)
+            .await
+            .context("h2::server handshake failed")?;
 
         let (tx, rx) = mpsc::channel(100);
 
@@ -53,6 +64,9 @@ impl Server {
                 let r = match r {
                     Some(r) => r,
                     None => {
+                        // 如果客户端发来的请求uri不带正确的 authority, h2
+                        // 会在debug 中报 malformed headers: malformed authority
+                        // 并对 accept 返回 None
                         warn!(cid = %cid, "accept h2 got none");
                         break;
                     }
@@ -67,6 +81,8 @@ impl Server {
                 let (req, mut resp) = r;
 
                 if let Some(c) = &http_config {
+                    //debug!(cid = %cid, "h2 req is {:?}",req);
+
                     if is_grpc {
                         let r = grpc::match_grpc_request_header(&req);
 
@@ -111,7 +127,15 @@ impl Server {
 
                 let send = resp
                     .send_response(
-                        Response::builder().status(StatusCode::OK).body(()).unwrap(),
+                        if is_grpc {
+                            Response::builder()
+                                .header(CONTENT_TYPE, GRPC_CONTENT_TYPE)
+                                .status(StatusCode::OK)
+                                .body(())
+                                .unwrap()
+                        } else {
+                            Response::builder().status(StatusCode::OK).body(()).unwrap()
+                        },
                         false,
                     )
                     .map_err(|e| Error::new(ErrorKind::Interrupted, e));

@@ -51,12 +51,8 @@ pub fn match_request_http_header<'a, T: 'a>(
     c: &'a CommonConfig,
     r: &'a Request<T>,
 ) -> Result<(), HttpMatchError<'a>> {
-    let given_host = r
-        .headers()
-        .get("Host")
-        .unwrap_or(&EMPTY_HV)
-        .to_str()
-        .expect("ok");
+    let a = r.uri().authority();
+    let given_host = if let Some(a) = a { a.as_str() } else { "" };
 
     if c.host != given_host {
         return Err(HttpMatchError::InvalidHost {

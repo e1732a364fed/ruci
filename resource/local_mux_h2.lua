@@ -23,7 +23,7 @@ h2_out = {
         is_grpc = true,
         http_config = {
             host = "myhost",
-            path = "/path1"
+            path = "/service1/Tun"
         }
     }
 }
