@@ -29,7 +29,7 @@ async fn tls_in_mem() {
         write_target: Some(writev),
     };
 
-    let a = tls::Client::new("www.baidu.com", true);
+    let a = tls::client::Client::new("www.baidu.com", true);
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443).unwrap();
     println!("will out, {}", ta);
 
@@ -61,7 +61,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> std::io::Result
         .await
         .unwrap();
 
-    let a = tls::Client::new("test.domain", true);
+    let a = tls::client::Client::new("test.domain", true);
     let ta = net::Addr::from_strs("tcp", "", "1.2.3.4", 443)?; //not used in our test, but required by the method.
 
     info!("client will out, {}", ta);

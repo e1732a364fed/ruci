@@ -165,7 +165,7 @@ impl Suit for SuitStruct {
         match self.get_behavior() {
             ProxyBehavior::ENCODE => {
                 if self.has_tls() {
-                    let a = tls::Client::new(
+                    let a = tls::client::Client::new(
                         c.host.unwrap_or_default().as_str(),
                         c.insecure.unwrap_or(false),
                     );

@@ -56,7 +56,7 @@ async fn f_dial_future_tls_out_adder(
 
     let mut readbuf = [0u8; 1024];
 
-    let a = tls::Client::new("do.main", true);
+    let a = tls::client::Client::new("do.main", true);
 
     let ta = net::Addr::from_strs("tcp", the_target_name, "", the_target_port)?;
     let nc = a
