@@ -24,31 +24,46 @@ pub enum Commands {
     Wintun,
 
     /// calculate trojan hash for a plain text password
-    CalcuTrojanHash { password: String },
+    CalcuTrojanHash {
+        password: String,
+    },
 
     /// generate self signed root certificate and key
-    GenCer { subject_alt_names: Vec<String> },
+    GenCer {
+        subject_alt_names: Vec<String>,
+    },
+    GenCA {
+        subject_alt_names: Vec<String>,
+    },
 
     /// start a interactive lua shell, which is a read–eval–print loop (REPL).
     #[cfg(any(feature = "lua", feature = "lua54"))]
     Repl,
 
     /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name.
-    Pack { folder: String },
+    Pack {
+        folder: String,
+    },
 
     /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name, then compress it into a .zip file.
     ///
     /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
-    PackZ { folder: String },
+    PackZ {
+        folder: String,
+    },
 
     /// serve folder "static" in plain http.
     ///
     /// default listen is "0.0.0.0:18143"
     #[cfg(feature = "file_server")]
-    ServeStatic { addr: Option<String> },
+    ServeStatic {
+        addr: Option<String>,
+    },
 
     /// print the QrCode of a string in the console.
-    QR { str: String },
+    QR {
+        str: String,
+    },
 
     /// 转换配置文件格式，支持在 lua、toml、yaml 之间互相转换。输入格式将根据文件后缀自动识别
     ConvertFormat {
@@ -72,6 +87,34 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
             download_wintun().await?;
         }
         Commands::CalcuTrojanHash { password } => calcu_trojan_hash(&password),
+        Commands::GenCA { subject_alt_names } => {
+            info!("generatiing CA cert and key... with My Company as OrganizationName and My CA Root as CommonName");
+
+            use rcgen::{
+                BasicConstraints, Certificate, CertificateParams, DnType, IsCa, KeyPair,
+                PKCS_ECDSA_P256_SHA256,
+            };
+            use std::fs;
+
+            let mut params = CertificateParams::new(subject_alt_names)?;
+
+            params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+            params
+                .distinguished_name
+                .push(DnType::OrganizationName, "My Company");
+            params
+                .distinguished_name
+                .push(DnType::CommonName, "My CA Root");
+
+            let key_pair = KeyPair::generate()?;
+            let cert = params.self_signed(&key_pair)?;
+
+            fs::write("ca_private_key.pem", key_pair.serialize_pem())?;
+
+            fs::write("ca_cert.pem", cert.pem())?;
+
+            info!("generated ca_private_key as ca_cert.pem");
+        }
         Commands::GenCer {
             subject_alt_names: names,
         } => {
