@@ -1,0 +1,41 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10800"
+      },
+      {
+        "type": "Socks5Http"
+      }
+    ],
+    "listen2": [
+      {
+        "type": "Listener",
+        "listen_addr": "udp://0.0.0.0:20800",
+        "ext": {
+          "fixed_target_addr": "udp://8.8.8.8:53"
+        }
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "Direct",
+        "dns_client": {
+          "dns_server_list": [
+            [
+              "127.0.0.1:20800",
+              "udp"
+            ]
+          ],
+          "ip_strategy": "Ipv4Only",
+          "static_pairs": {
+            "www.baidu.com": "103.235.47.188"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10800"
+      },
+      {
+        "type": "Recorder",
+        "label": "socks5",
+        "output_file_extension": "cbor"
+      },
+      {
+        "type": "Socks5Http"
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "Direct"
+      },
+      {
+        "type": "Recorder",
+        "label": "direct",
+        "output_file_extension": "cbor"
+      }
+    ]
+  }
+}

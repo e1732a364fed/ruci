@@ -1,0 +1,31 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "unix://file1"
+      },
+      {
+        "type": "TLS",
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ],
+        "cert": "test2.crt",
+        "key": "test2.key"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword",
+        "more": null
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "Direct"
+      }
+    ]
+  }
+}

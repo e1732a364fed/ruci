@@ -1,0 +1,42 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "BindDialer",
+        "bind_addr": "ip://10.0.0.1:24#utun321",
+        "in_auto_route": {
+          "tun_dev_name": "utun321",
+          "tun_gateway": "10.0.0.1",
+          "router_ip": "192.168.0.1",
+          "original_dev_name": "enp0s1",
+          "direct_list": null,
+          "dns_list": [
+            "114.114.114.114"
+          ]
+        }
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "OptDialer",
+        "dial_addr": "tcp://192.168.0.204:10801",
+        "sockopt": {
+          "bind_to_device": "en0"
+        }
+      },
+      {
+        "type": "TLS",
+        "insecure": true,
+        "host": "www.1234.com"
+      },
+      {
+        "type": "WebSocket",
+        "authority": "myhost",
+        "path": "/path1",
+        "use_early_data": true
+      }
+    ]
+  }
+}

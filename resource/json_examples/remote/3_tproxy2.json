@@ -1,0 +1,44 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10801"
+      },
+      {
+        "type": "TLS",
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ],
+        "cert": "test2.crt",
+        "key": "test2.key"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword",
+        "more": null
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "OptDirect",
+        "sockopt": {
+          "so_mark": 255,
+          "bind_to_device": "wlp3s0"
+        },
+        "more_num_of_files": true
+      }
+    ]
+  },
+  "routes": {
+    "fallback_route": [
+      [
+        "listen1",
+        "fallback_d"
+      ]
+    ]
+  }
+}

@@ -50,21 +50,21 @@ pub async fn loop_accept_udp(
 ) {
     loop {
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
-            debug!("stack udp thread shutdown_atomic = true");
+            debug!("stack udp loop shutdown_atomic = true");
             break;
         }
 
         let r = r.read().await;
 
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
-            debug!("stack udp thread shutdown_atomic = true");
+            debug!("stack udp loop shutdown_atomic = true");
 
             break;
         }
 
         let r = match r {
             Ok(r) => {
-                tracing::trace!("stack udp thread got {} {} {}", r.0.len(), r.1, r.2);
+                tracing::trace!("stack udp loop got {} {} {}", r.0.len(), r.1, r.2);
 
                 r
             }
@@ -89,7 +89,7 @@ pub async fn loop_accept_udp(
             }
         } else {
             // shouldn't happen
-            warn!("stack loop_accept_udp read got n=0, will continue");
+            warn!("stack loop_accept_udp read got data.is_empty, will continue");
 
             continue;
         }

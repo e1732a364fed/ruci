@@ -257,15 +257,20 @@ impl StaticConfig {
 pub struct DirectConfig {
     /// 此项是用于 建立 Direct 之后, Chain 中还有 后续的 Map, 且还需要读取target_addr时，使用
     /// 默认 Direct 将把 target_addr 消耗掉
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub leak_target_addr: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dns_client: Option<dns::ClientConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct BindDialerConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bind_addr: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dial_addr: Option<String>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dns_client: Option<dns::ClientConfig>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -318,6 +323,7 @@ impl TryFrom<Box<BindDialerConfig>> for MapBox {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct StdioConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub write_mode: Option<ruci::map::stdio::WriteMode>,
 
     #[serde(skip_serializing_if = "Option::is_none")]

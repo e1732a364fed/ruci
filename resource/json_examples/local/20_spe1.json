@@ -1,0 +1,38 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10800"
+      },
+      {
+        "type": "Socks5Http"
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "BindDialer",
+        "dial_addr": "tcp://127.0.0.1:10801"
+      },
+      {
+        "type": "SPE1",
+        "qa": [
+          [
+            "q1",
+            "a1"
+          ],
+          [
+            "q2",
+            "a2"
+          ]
+        ]
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword"
+      }
+    ]
+  }
+}

@@ -226,6 +226,8 @@ impl Map for OptDirect {
 pub struct OptDialerOption {
     pub dial_addr: String,
     pub sockopt: crate::net::so2::SockOpt,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dns_client: Option<dns::ClientConfig>,
 }
 

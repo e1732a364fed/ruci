@@ -13,9 +13,11 @@ use serde::{Deserialize, Serialize};
 /// used by various Maps in ruci that has a http layer
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CommonConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
 
     /// 如 https, ws
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub scheme: Option<String>,
 
     /// uri 中的 authority, 包含端口号，如 user@www.ruci.com:80
@@ -23,8 +25,10 @@ pub struct CommonConfig {
 
     /// 带 前缀`/`
     pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub headers: Option<BTreeMap<String, String>>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub use_early_data: Option<bool>,
     //pub can_fallback: Option<bool>,
 }

@@ -20,6 +20,7 @@ use self::utils::HexSlice;
 use super::*;
 use tokio::io::{self, AsyncRead, AsyncWrite, AsyncWriteExt, Stdin, Stdout};
 
+/// default is UTF8
 #[derive(Default, Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum WriteMode {
     #[default]

@@ -1,0 +1,39 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10801"
+      },
+      {
+        "type": "TLS",
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ],
+        "cert": "test2.crt",
+        "key": "test2.key"
+      },
+      {
+        "type": "H2",
+        "is_grpc": true,
+        "http_config": {
+          "authority": "myhost",
+          "path": "/service1/Tun"
+        }
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword",
+        "more": null
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "Direct"
+      }
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10801"
+      },
+      {
+        "type": "TLS",
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ],
+        "cert": "test2.crt",
+        "key": "test2.key"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword",
+        "more": null
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "Direct",
+        "leak_target_addr": true
+      },
+      {
+        "type": "TLS",
+        "insecure": false,
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ]
+      }
+    ],
+    "fallback_d": [
+      {
+        "type": "BindDialer",
+        "dial_addr": "tcp://0.0.0.0:4433"
+      }
+    ]
+  },
+  "routes": {
+    "fallback_route": [
+      [
+        "listen1",
+        "fallback_d"
+      ]
+    ]
+  }
+}

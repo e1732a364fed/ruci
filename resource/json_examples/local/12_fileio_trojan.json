@@ -1,0 +1,33 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Fileio",
+        "i": "test.crt",
+        "o": "testfile.txt",
+        "sleep_interval": 500,
+        "bytes_per_turn": 10,
+        "ext": {
+          "fixed_target_addr": "fake.com:80"
+        }
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "BindDialer",
+        "dial_addr": "tcp://127.0.0.1:10801"
+      },
+      {
+        "type": "TLS",
+        "insecure": true,
+        "host": "www.1234.com"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword"
+      }
+    ]
+  }
+}

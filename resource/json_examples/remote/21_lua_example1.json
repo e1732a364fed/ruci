@@ -1,0 +1,36 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10801"
+      },
+      {
+        "type": "TLS",
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ],
+        "cert": "test2.crt",
+        "key": "test2.key"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword",
+        "more": null
+      },
+      {
+        "type": "Lua",
+        "file_name": "lua_protocol_e1.lua",
+        "handshake_function": "Handshake2"
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "Direct"
+      }
+    ]
+  }
+}

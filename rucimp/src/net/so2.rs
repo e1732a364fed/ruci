@@ -16,8 +16,11 @@ use socket2::{Domain, Protocol, Socket, Type};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SockOpt {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tproxy: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub so_mark: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bind_to_device: Option<String>,
 }
 

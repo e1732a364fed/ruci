@@ -1,0 +1,23 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Stdio",
+        "ext": {
+          "pre_defined_early_data": "abc"
+        }
+      },
+      {
+        "type": "Adder",
+        "value": 1
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "Blackhole"
+      }
+    ]
+  }
+}

@@ -68,15 +68,23 @@ pub enum SessionTruncateOption {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_dir: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_file_extension: Option<OutputFileExtension>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_format: Option<OutputFormat>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub record_mode: Option<RecordMode>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prettify: Option<bool>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub piece_truncate_option: Option<PieceTruncateOption>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub session_truncate_option: Option<SessionTruncateOption>,
 }
 

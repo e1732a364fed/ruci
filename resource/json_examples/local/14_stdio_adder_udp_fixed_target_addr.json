@@ -1,0 +1,28 @@
+{
+  "inbounds": {
+    "in_stdio_adder_chain": [
+      {
+        "type": "Stdio",
+        "ext": {
+          "fixed_target_addr": "udp://127.0.0.1:20800",
+          "pre_defined_early_data": "abc"
+        }
+      },
+      {
+        "type": "Adder",
+        "value": 1
+      }
+    ]
+  },
+  "outbounds": {
+    "d1": [
+      {
+        "type": "BindDialer",
+        "dial_addr": "tcp://127.0.0.1:10801"
+      },
+      {
+        "type": "Socks5"
+      }
+    ]
+  }
+}

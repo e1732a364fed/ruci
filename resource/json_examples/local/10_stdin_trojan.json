@@ -1,0 +1,33 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Stdio",
+        "ext": {
+          "pre_defined_early_data": "abc"
+        }
+      },
+      {
+        "type": "Adder",
+        "value": 1
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "BindDialer",
+        "dial_addr": "tcp://127.0.0.1:10801"
+      },
+      {
+        "type": "TLS",
+        "insecure": true,
+        "host": "www.1234.com"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword"
+      }
+    ]
+  }
+}

@@ -2,8 +2,11 @@
   "inbounds": {
     "listen1": [
       {
-        "type": "BindDialer",
-        "bind_addr": "ip://#123"
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10800"
+      },
+      {
+        "type": "Socks5Http"
       }
     ]
   },

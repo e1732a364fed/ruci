@@ -1,0 +1,61 @@
+{
+  "inbounds": {
+    "l1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10800"
+      },
+      {
+        "type": "Socks5Http"
+      }
+    ],
+    "l2": [
+      {
+        "type": "Listener",
+        "listen_addr": "udp://0.0.0.0:20800",
+        "ext": {
+          "fixed_target_addr": "udp://8.8.8.8:53"
+        }
+      }
+    ],
+    "l3": [
+      {
+        "type": "Listener",
+        "listen_addr": "[::1]:30800"
+      },
+      {
+        "type": "TLS",
+        "cert": "test.crt",
+        "key": "test.key"
+      }
+    ]
+  },
+  "outbounds": {
+    "d1": [
+      {
+        "type": "Direct"
+      }
+    ],
+    "d2": [
+      {
+        "type": "BindDialer",
+        "dial_addr": "tcp://127.0.0.1:10801"
+      },
+      {
+        "type": "TLS",
+        "insecure": true,
+        "host": "www.1234.com"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword"
+      }
+    ],
+    "fallback_d": [
+      {
+        "type": "BindDialer",
+        "dial_addr": "tcp://127.0.0.1:80"
+      }
+    ]
+  }
+}

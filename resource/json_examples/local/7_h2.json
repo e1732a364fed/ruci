@@ -7,15 +7,6 @@
       },
       {
         "type": "Socks5Http"
-      },
-      {
-        "type": "MITM",
-        "cert": "test_ca_cert.pem",
-        "key": "test_ca_key.pem",
-        "alpn": [
-          "h2",
-          "http/1.1"
-        ]
       }
     ]
   },
@@ -23,19 +14,20 @@
     "dial1": [
       {
         "type": "BindDialer",
-        "bind_addr": null,
-        "dial_addr": "tcp://127.0.0.1:10801",
-        "dns_client": null
+        "dial_addr": "tcp://127.0.0.1:10801"
       },
       {
         "type": "TLS",
-        "host": "www.google.com",
         "insecure": true,
-        "alpn": [
-          "h2",
-          "http/1.1"
-        ],
-        "cert": null
+        "host": "www.1234.com"
+      },
+      {
+        "type": "H2Single",
+        "is_grpc": true,
+        "http_config": {
+          "authority": "myhost",
+          "path": "/service1/Tun"
+        }
       },
       {
         "type": "Trojan",

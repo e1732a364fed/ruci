@@ -110,7 +110,7 @@ where
         let cc = cid.clone();
         let ccc = cid.clone();
 
-        let (mut r, mut w) = udp_socket;
+        let (mut udp_r, mut udp_w) = udp_socket;
 
         tokio::spawn(async move {
             loop {
@@ -123,7 +123,7 @@ where
                     }
 
                     Some(d) => {
-                        let r = w.write((d.0, d.1, d.2)).await;
+                        let r = udp_w.write((d.0, d.1, d.2)).await;
                         match r {
                             Ok(_) => {
                                 // debug!("write ok");
@@ -141,14 +141,14 @@ where
         let shutdown_atomic: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
         tokio::spawn(async move {
             crate::map::tcp_ip_stack_common::udp::loop_accept_udp(
-                r.as_mut(),
+                udp_r.as_mut(),
                 udp_new_msg_tx_stack_end,
                 shutdown_atomic,
             )
             .await
         });
 
-        let mut l = crate::map::tcp_ip_stack_common::udp::Listener::new(
+        let mut udp_listener = crate::map::tcp_ip_stack_common::udp::Listener::new(
             udp_new_msg_tx_self_end,
             udp_new_msg_rx_self_end,
         )
@@ -157,7 +157,7 @@ where
 
         tokio::spawn(async move {
             loop {
-                let r = l.accept().await;
+                let r = udp_listener.accept().await;
                 match r {
                     Ok(d) => {
                         let m = MapResult::new_u(d.ac)

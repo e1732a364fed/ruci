@@ -1,0 +1,90 @@
+{
+  "inbounds": {
+    "listen_socks5": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10800"
+      },
+      {
+        "type": "Recorder",
+        "label": "socks5",
+        "output_file_extension": "cbor"
+      },
+      {
+        "type": "Socks5Http"
+      }
+    ],
+    "listen_trojans": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10801"
+      },
+      {
+        "type": "Recorder",
+        "label": "trojans",
+        "output_file_extension": "cbor"
+      },
+      {
+        "type": "TLS",
+        "alpn": [
+          "h2",
+          "http/1.1"
+        ],
+        "cert": "test.crt",
+        "key": "test.key"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword",
+        "more": null
+      }
+    ]
+  },
+  "outbounds": {
+    "dial_direct": [
+      {
+        "type": "Direct"
+      },
+      {
+        "type": "Recorder",
+        "label": "direct",
+        "output_file_extension": "cbor"
+      }
+    ],
+    "dial_trojans": [
+      {
+        "type": "BindDialer",
+        "dial_addr": "tcp://127.0.0.1:10801"
+      },
+      {
+        "type": "NativeTLS",
+        "insecure": true,
+        "host": "www.bilibili.com",
+        "alpn": [
+          "http/1.1"
+        ]
+      },
+      {
+        "type": "Recorder",
+        "label": "trojan",
+        "output_file_extension": "cbor"
+      },
+      {
+        "type": "Trojan",
+        "password": "mypassword"
+      }
+    ]
+  },
+  "routes": {
+    "tag_route": [
+      [
+        "listen_socks5",
+        "dial_trojans"
+      ],
+      [
+        "listen_trojans",
+        "dial_direct"
+      ]
+    ]
+  }
+}
