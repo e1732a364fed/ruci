@@ -32,8 +32,14 @@ jobs:
     - name: Build
       run: cargo build --verbose
 
-    - name: Run tests
+    - name: Run Ruci tests
       run: cargo test --verbose
+
+    - name: Run Rucimp tests
+      run: cd rucimp && cargo test --verbose
+
+    - name: Run Ruci-cmd tests
+      run: cd crates/ruci-cmd && cargo test --verbose
       
     - name: Test Ruci Every feature tag
       run: cargo hack check --feature-powerset --no-dev-deps

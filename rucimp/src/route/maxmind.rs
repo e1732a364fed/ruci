@@ -97,7 +97,12 @@ mod test {
     #[test]
     fn test1() {
         set_var("RUST_LOG", "debug");
-        let _ = env_logger::try_init();
+
+        use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+        let _ = tracing_subscriber::registry()
+            .with(EnvFilter::from_default_env())
+            .with(fmt::layer().with_writer(std::io::stderr))
+            .try_init();
 
         let s = get_ip_iso("127.0.0.1".parse().unwrap(), "Country.mmdb", &COMMON_DIRS);
         println!("{s}");

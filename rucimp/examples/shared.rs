@@ -2,6 +2,14 @@ use std::env::{self, set_var};
 
 use tracing::info;
 
+fn init_log() {
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    let _ = tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(fmt::layer().with_writer(std::io::stderr))
+        .try_init();
+}
+
 pub fn print_env_version(name: &str) {
     println!("rucimp~ {}\n", name);
     let cdir = std::env::current_dir().expect("has current directory");
@@ -15,7 +23,7 @@ pub fn print_env_version(name: &str) {
     }
 
     set_var(RL, l);
-    env_logger::init();
+    init_log();
 
     println!(
         "Log Level(env): {:?}",

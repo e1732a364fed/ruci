@@ -37,6 +37,14 @@ const WAITID: i32 = 10101;
 const TARGET_PORT: u16 = 80;
 const TARGET_NAME: &str = "www.baidu.com";
 
+fn init_log() {
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    let _ = tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(fmt::layer().with_writer(std::io::stderr))
+        .try_init();
+}
+
 //参见 src/socks5/test.rs
 async fn f_dial_future(
     rid: i32,
@@ -370,7 +378,7 @@ async fn lisen_ser() -> anyhow::Result<(
 #[tokio::test]
 async fn socks5_direct_and_request() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     info!("start socks5_direct_and_request_baidu test");
 
@@ -416,7 +424,7 @@ async fn socks5_direct_and_request() -> anyhow::Result<()> {
 #[tokio::test]
 async fn socks5_direct_and_outadder() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     info!("start socks5_direct_and_request_baidu test");
 
@@ -454,7 +462,7 @@ async fn socks5_direct_and_outadder() -> anyhow::Result<()> {
 #[tokio::test]
 async fn socks5_direct_and_request_no_transmission_info() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     info!("start socks5_direct_and_request_baidu test");
 
@@ -494,7 +502,7 @@ async fn socks5_direct_and_request_no_transmission_info() -> anyhow::Result<()> 
 #[tokio::test]
 async fn socks5_direct_and_request_counter() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     info!("start socks5_direct_and_request_baidu test");
 
@@ -560,7 +568,7 @@ async fn socks5_direct_and_request_counter() -> anyhow::Result<()> {
 #[tokio::test]
 async fn socks5_direct_and_request_earlydata() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     info!("start socks5_direct_and_request_baidu test");
 
@@ -603,7 +611,7 @@ async fn socks5_direct_and_request_earlydata() -> anyhow::Result<()> {
 #[allow(dead_code)]
 async fn socks5_direct_longwait_write_and_request() {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
     set_var("RUST_BACKTRACE", "0");
 
     info!("start socks5_direct_and_request_baidu test");
@@ -643,7 +651,7 @@ async fn socks5_direct_longwait_write_and_request() {
 #[tokio::test]
 async fn suit_engine_socks5_direct_and_request() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     for i in 0..2 {
         let r = suit_engine_socks5_direct_and_request_block_or_non_block(i % 2 == 0).await;
@@ -724,7 +732,7 @@ async fn suit_engine_socks5_direct_and_request_block_3_listen() -> anyhow::Resul
     let even = true;
 
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     info!(
         "start suit_engine_socks5_direct_and_request_baidu test, {}",
@@ -792,7 +800,7 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
     let even = true;
 
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     info!(
         "start suit_engine_socks5_direct_and_request_baidu test, {}",
@@ -889,7 +897,7 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> anyhow::Resu
 #[tokio::test]
 async fn socks5_direct_and_request_2_async() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
 
     info!("start socks5_direct_and_request_baidu_2_async");
 

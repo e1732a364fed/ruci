@@ -20,6 +20,14 @@ use tracing::info;
 const TARGET_PORT: u16 = 80;
 const TARGET_NAME: &str = "www.baidu.com";
 
+fn init_log() {
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    let _ = tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(fmt::layer().with_writer(std::io::stderr))
+        .try_init();
+}
+
 fn get_lconfig_str() -> (String, u16) {
     let toml_str = r#"
     [[listen]]
@@ -115,7 +123,7 @@ async fn f_dial_future_tls_out_adder(
 #[tokio::test]
 async fn suit_engine_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
     std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../resource"))?;
 
     let (ws, port) = get_lconfig_str();
@@ -171,7 +179,7 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
 #[tokio::test]
 async fn suit_engine2_socks5_tls_direct_and_outadder() -> anyhow::Result<()> {
     set_var("RUST_LOG", "debug");
-    let _ = env_logger::try_init();
+    init_log();
     std::env::set_current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../resource"))?;
 
     let (ws, port) = get_lconfig_str();
