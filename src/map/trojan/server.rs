@@ -62,11 +62,17 @@ impl Server {
         //trojan的 CRLF 是为了模拟http服务器的行为, 所以此时不要一次性Read，而是要Read到CRLF为止
 
         const CAP: usize = 1024;
+        let mut previous_read_len: usize;
         let mut buf = match ob {
-            Some(b) => b,
-            None => BytesMut::zeroed(CAP),
+            Some(b) => {
+                previous_read_len = b.len();
+                b
+            }
+            None => {
+                previous_read_len = 0;
+                BytesMut::zeroed(CAP)
+            }
         };
-        let mut previous_read_len: usize = buf.len();
 
         if previous_read_len == 0 {
             loop {

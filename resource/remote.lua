@@ -38,7 +38,6 @@ ws = {
     WebSocket = {
         host = "myhost",
         path = "/path1",
-        use_early_data = true
     }
 }
 
