@@ -15,15 +15,12 @@ pub struct StaticEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<TransmissionInfo>,
 
-    //pub config: StaticConfig,
     servers: Vec<Vec<Box<dyn MapperSync>>>,
     clients: Vec<Vec<Box<dyn MapperSync>>>,
 }
 
 impl StaticEngine {
     pub fn init(&mut self, sc: StaticConfig) {
-        //self.config = sc;
-
         self.servers = sc.get_listens();
         self.clients = sc.get_dials();
     }
@@ -53,10 +50,8 @@ impl StaticEngine {
         let mut hv = Vec::new();
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
-                let h1 = tokio::spawn(task.0);
-                let h2 = tokio::spawn(task.1);
-                hv.push(h1);
-                hv.push(h2);
+                hv.push(tokio::spawn(task.0));
+                hv.push(tokio::spawn(task.1));
             }
         })?;
         let r = futures::future::join_all(hv).await;
@@ -99,9 +94,9 @@ impl StaticEngine {
             Box::leak(selector);
 
         self.servers.iter().for_each(|inmappers| {
-            let (tx, rx) = oneshot::channel(); //todo: change this
+            let (tx, rx) = oneshot::channel();
 
-            let (atx, mut arx) = mpsc::channel(100);
+            let (atx, mut arx) = mpsc::channel(100); //todo: change this
 
             let oti = self.ti.clone();
             let t1 = async {

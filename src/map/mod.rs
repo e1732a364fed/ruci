@@ -11,7 +11,7 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 流映射函数 的提供者 在本包中被命名为 "Mapper", 映射的行为叫 "maps"
 
-按代理的方向，逻辑上分 InAdder 和 OutAdder 两种，以 maps 方法的 behavior 参数加以区分.
+按代理的方向, 逻辑上分 InAdder 和 OutAdder 两种, 以 maps 方法的 behavior 参数加以区分.
 
 按顺序执行若干映射函数 的迭代行为 被ruci称为“累加”, 执行者被称为 “累加器”
 
@@ -52,6 +52,8 @@ use std::{
     io,
     sync::Arc,
 };
+
+//todo: 移除 State。其作用不大
 
 /// 描述一条代理连接
 pub trait State<T>
@@ -361,17 +363,17 @@ pub enum ProxyBehavior {
     DECODE,
 }
 
-/// Mapper 流映射函数, 在一个Conn 的基础上添加新read/write层，形成一个新Conn
+/// Mapper 流映射函数, 在一个Conn 的基础上添加新read/write层, 形成一个新Conn
 ///
 /// 且InAdder试图生产出 target_addr 和 pre_read_data
 ///
-/// 一般来说add方法就是执行一个新层中的握手，之后得到一个新Conn;
-/// 在 新Conn中 对数据进行加/解密后，pass to next layer Conn
+/// 一般来说add方法就是执行一个新层中的握手, 之后得到一个新Conn;
+/// 在 新Conn中 对数据进行加/解密后, pass to next layer Conn
 ///
 /// 一旦某一层中获得了 target_addr, 就要继续将它传到下一层。参阅累加器部分。
 ///
-/// 因为客户端有可能发来除握手数据以外的用户数据(earlydata), 所以返回值里有 Option<BytesMut>，
-/// 其不为None时，下一级的 add就要将其作为 pre_read_buf 调用
+/// 因为客户端有可能发来除握手数据以外的用户数据(earlydata), 所以返回值里有 Option<BytesMut>,
+/// 其不为None时, 下一级的 add就要将其作为 pre_read_buf 调用
 ///
 ///
 #[async_trait]
@@ -384,30 +386,30 @@ pub trait Mapper: crate::Name + DynClone {
     ///
     /// 返回值的 MapResult.d: OptData 用于 获取关于该层连接的额外信息, 一般情况为None即可
     ///
-    /// 约定：如果一个代理在代理时切换了内部底层连接，其返回的 extra_data 需为一个
-    /// NewConnectionOptData ， 这样 ruci::relay 包才能对其进行识别并处理
+    /// 约定：如果一个代理在代理时切换了内部底层连接, 其返回的 extra_data 需为一个
+    /// NewConnectionOptData ,  这样 ruci::relay 包才能对其进行识别并处理
     ///
-    /// 如果其不是 NewConnectionOptData ， 则不能使用 ruci::relay 作转发逻辑
+    /// 如果其不是 NewConnectionOptData ,  则不能使用 ruci::relay 作转发逻辑
     ///
-    /// 注：切换底层连接是有的协议中会发生的情况，比如先用 tcp 握手，之后采用udp；或者
-    /// 先用tcp1 握手，再换一个端口得到新的tcp2, 用新的连接去传输数据
+    /// 注：切换底层连接是有的协议中会发生的情况, 比如先用 tcp 握手, 之后采用udp; 或者
+    /// 先用tcp1 握手, 再换一个端口得到新的tcp2, 用新的连接去传输数据
     ///
-    /// 一旦切换连接，则原连接将不再被 ruci::relay 包控制关闭, 其关闭将由InAdder自行处理.
-    /// 这种情况下，如果 socks5 支持 udp associate，则 socks5必须为 代理链的最终端。此时base会被关闭，返回的 AddResult.c 应为 None
+    /// 一旦切换连接, 则原连接将不再被 ruci::relay 包控制关闭, 其关闭将由InAdder自行处理.
+    /// 这种情况下, 如果 socks5 支持 udp associate, 则 socks5必须为 代理链的最终端。此时base会被关闭, 返回的 AddResult.c 应为 None
     ///
-    /// 这里不用 Result<...> 的形式，是因为 在有错误的同时也可能返回一些有用的数据，比如用于回落等
+    /// 这里不用 Result<...> 的形式, 是因为 在有错误的同时也可能返回一些有用的数据, 比如用于回落等
     ///
     /// # OutAdder
     ///
-    /// OutAdder 是 out client 的 adder，从拨号基本连接开始,
+    /// OutAdder 是 out client 的 adder, 从拨号基本连接开始,
     ///  以 targetAddr (不是direct时就不是拔号的那个地址) 为参数创建新层
     ///
-    /// 与InAdder 相比，InAdder是试图生产 target_addr 和 earlydata 的机器，而OutAdder 就是 试图消耗 target_addr 和 earlydata 的机器
+    /// 与InAdder 相比, InAdder是试图生产 target_addr 和 earlydata 的机器, 而OutAdder 就是 试图消耗 target_addr 和 earlydata 的机器
     ///
-    /// 如果传入的 target_addr不为空，且 该 层的add 将 其消耗掉了，则返回的 Option<net::Addr> 为None；
-    /// 如果没消耗掉，或是仅对 target_addr 做了修改，则 返回的 Option<net::Addr> 不为 None.
+    /// 如果传入的 target_addr不为空, 且 该 层的add 将 其消耗掉了, 则返回的 Option<net::Addr> 为None;
+    /// 如果没消耗掉, 或是仅对 target_addr 做了修改, 则 返回的 Option<net::Addr> 不为 None.
     ///
-    /// 与 InAdder 一样，它返回一个可选的额外数据  OptData
+    /// 与 InAdder 一样, 它返回一个可选的额外数据  OptData
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult;
 
@@ -422,7 +424,7 @@ pub trait ToMapper {
     fn to_mapper(&self) -> MapperBox;
 }
 
-//令 Mapper 实现 Send + Sync，否则异步/多线程报错
+//令 Mapper 实现 Send + Sync, 否则异步/多线程报错
 pub trait MapperSync: Mapper + Send + Sync + Debug {}
 impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
 
@@ -438,7 +440,10 @@ where
     pub d: Vec<OptData>,
     pub e: Option<io::Error>,
 
-    pub id: Option<CID>, //有值代表产生了与之前不同的 cid
+    /// 有值代表产生了与之前不同的 cid
+    pub id: Option<CID>,
+
+    /// 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
     pub left_mappers_iter: IterMapperBoxRef,
 }
 
@@ -447,24 +452,21 @@ where
 /// cid 为 跟踪 该连接的 标识
 /// 返回的元组包含新的 Conn 和 可能的目标地址
 ///
-/// decode: 用途： 从listen得到的tcp开始，一层一层往上加，直到加到能解析出代理目标地址为止
+/// decode: 用途： 从listen得到的tcp开始, 一层一层往上加, 直到加到能解析出代理目标地址为止
 ///
-/// 一般 【中同层是返回的 target_addr都是None，只有最后一层会返回出目标地址，即，
+/// 一般 【中同层是返回的 target_addr都是None, 只有最后一层会返回出目标地址, 即,
 ///只有代理层会有目标地址】
 ///
-/// 注意，考虑在两个累加结果的Conn之间拷贝，若用 ruci::net::cp 拷贝并给出 TransmissionInfo,
-/// 则它统计出的流量为 未经加密的原始流量，实际流量一般会比原始流量大。要想用
-/// ruci::net::cp 统计真实流量，只能有一种情况，那就是 tcp到tcp的直接拷贝，
+/// 注意, 考虑在两个累加结果的Conn之间拷贝, 若用 ruci::net::cp 拷贝并给出 TransmissionInfo,
+/// 则它统计出的流量为 未经加密的原始流量, 实际流量一般会比原始流量大。要想用
+/// ruci::net::cp 统计真实流量, 只能有一种情况, 那就是 tcp到tcp的直接拷贝,
 /// 不使用累加器。
 ///
-/// 一种统计正确流量的办法是，将 Tcp连接包装一层专门记录流量的层，见 counter 模块
-///
-/// extra_data_vec 若不为空，其须与 mappers 提供同数量的元素, 否则
-/// 将panic
+/// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 counter 模块
 ///
 /// accumulate 只适用于 不含 Stream::Generator 的情况,
 ///
-/// 结果中 Stream为 None 或 一个 Stream::Generator ，或e不为None时，将退出累加
+/// 结果中 Stream为 None 或 一个 Stream::Generator , 或e不为None时, 将退出累加
 ///
 /// 能生成 Stream::Generator 说明其 behavior 为 DECODE
 ///
@@ -498,11 +500,6 @@ where
                         },
                         None => None,
                     },
-                    // hyperparameter: if let Some(v) = hyperparameter_vec.as_mut() {
-                    //     v.next().unwrap()
-                    // } else {
-                    //     None
-                    // },
                     hyperparameter: None,
                 };
                 let input_data = if input_data.calculated_data.is_none()
@@ -562,7 +559,7 @@ where
     };
 }
 
-/// 先调用第一个 mapper 生成 流，然后调用 in_iter_accumulate
+/// 先调用第一个 mapper 生成 流, 然后调用 in_iter_accumulate_forever
 pub async fn accumulate_from_start<IterMapperBoxRef>(
     tx: tokio::sync::mpsc::Sender<AccumulateResult<'static, IterMapperBoxRef>>,
     shutdown_rx: oneshot::Receiver<()>,

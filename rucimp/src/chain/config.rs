@@ -154,24 +154,22 @@ impl ToMapper for InMapperConfig {
             InMapperConfig::Socks5(c) => {
                 let mut so = socks5::server::Config::default();
                 so.user_whitespace_pass = c.userpass.clone();
-                let ruci_userpass = c.more.as_ref().map_or(None, |up_v| {
+                so.user_passes = c.more.as_ref().map_or(None, |up_v| {
                     Some(
                         up_v.iter()
                             .map(|up| ruci::user::UserPass::from(up.to_string()))
                             .collect::<Vec<_>>(),
                     )
                 });
-                so.user_passes = ruci_userpass;
 
                 so.to_mapper()
             }
             InMapperConfig::Trojan(c) => {
                 let mut so = trojan::server::Config::default();
                 so.pass = c.password.clone();
-                let ruci_userpass = c.more.as_ref().map_or(None, |up_v| {
+                so.passes = c.more.as_ref().map_or(None, |up_v| {
                     Some(up_v.iter().map(|up| up.clone()).collect::<Vec<_>>())
                 });
-                so.passes = ruci_userpass;
 
                 so.to_mapper()
             }

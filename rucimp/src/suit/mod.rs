@@ -336,7 +336,7 @@ where
     }
 }
 
-/// 阻塞监听 ins tcp。
+/// blocking loop listen ins tcp。calls handle_conn_clonable inside the loop.
 async fn listen_tcp2(
     ins: &'static dyn Suit,
     outc: &'static dyn Suit,

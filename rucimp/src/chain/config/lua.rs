@@ -2,6 +2,8 @@ use crate::chain::config::*;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Result, Value};
 
+/// load chain::config::StaticConfig from a lua file which has a
+/// "config" global variable
 pub fn load(lua_text: &str) -> Result<StaticConfig> {
     let lua = Lua::new();
 
