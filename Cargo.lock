@@ -1840,6 +1840,7 @@ dependencies = [
  "chrono",
  "clap",
  "futures",
+ "openssl",
  "parking_lot",
  "reqwest",
  "ruci",
