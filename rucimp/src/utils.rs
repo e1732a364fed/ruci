@@ -137,6 +137,8 @@ pub async fn wait_close_sig_with_closer(
 #[cfg(all(any(feature = "lua", feature = "lua54"), feature = "repl"))]
 pub fn lua_repl() {
     info!("Running lua repl. Press Ctrl+D to exit");
+    //https://github.com/mlua-rs/mlua/blob/main/examples/repl.rs
+
     let lua = mlua::Lua::new();
     let mut editor = rustyline::DefaultEditor::new().expect("Failed to create editor");
 

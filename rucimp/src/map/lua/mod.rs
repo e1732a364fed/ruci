@@ -2,6 +2,8 @@
 Defines a Map that uses lua code as its maps method.
 
 In order to let lua take full use of rust code, we have to wrap everything for lua.
+
+注意，此模块写的是 lua自定义协议。若要看 lua配置代码, 见 rucimp/src/modes/chain/config/lua
  */
 
 use std::future::Future;

@@ -46,17 +46,17 @@ pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
 /// get (inbounds generator map, outbounds generator map).
 ///
 /// read INFINITE_CONFIG_FIELD  global variable
-pub fn load_infinite_io(text: &str) -> anyhow::Result<(GMap, GMap)> {
-    let i = get_g_map_from(text, ProxyBehavior::DECODE)?;
-    let o = get_g_map_from(text, ProxyBehavior::ENCODE)?;
+pub fn load_infinite_io(lua_text: &str) -> anyhow::Result<(GMap, GMap)> {
+    let i = get_g_map_from(lua_text, ProxyBehavior::DECODE)?;
+    let o = get_g_map_from(lua_text, ProxyBehavior::ENCODE)?;
     Ok((i, o))
 }
 
-fn get_g_map_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMap> {
+fn get_g_map_from(lua_text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMap> {
     let mut g_map: GMap = HashMap::new();
 
     let lua = Lua::new();
-    lua.load(text).eval().context("eval lua failed")?;
+    lua.load(lua_text).eval().context("eval lua failed")?;
 
     let t: LuaTable = lua
         .globals()
@@ -76,7 +76,7 @@ fn get_g_map_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMap> {
     // lua 的 index 是从 1 算起
     for i in 1..len + 1 {
         let lua = Lua::new();
-        lua.load(text).eval()?;
+        lua.load(lua_text).eval()?;
         set_lua_create_in_map_func(&lua)?;
         set_lua_create_out_map_func(&lua)?;
 

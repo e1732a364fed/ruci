@@ -32,7 +32,9 @@ pub enum Commands {
     /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name.
     Pack { folder: String },
 
-    /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name, then compress it into a .zip file
+    /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name, then compress it into a .zip file.
+    ///
+    /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
     PackZ { folder: String },
     // Test,
 }
