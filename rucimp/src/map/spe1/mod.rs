@@ -31,7 +31,7 @@ id+1; 如此便可区别不同的客户端 以及 不同的请求连接。
 use std::{collections::HashMap, fmt::Write, io, pin::Pin, sync::Arc, task::Poll};
 
 use anyhow::anyhow;
-use bytes::{Buf, BytesMut};
+use bytes::BytesMut;
 use itertools::Itertools;
 use macro_map::*;
 use rand::Rng;
@@ -40,7 +40,7 @@ use ruci::{
     net::CID,
 };
 use tokio::io::{AsyncRead, AsyncWrite};
-use tracing::trace;
+// use tracing::trace;
 
 pub type QA = (String, String);
 pub type Token = [QA; 128]; //每个 Token都有128种可能, 128个问答同时表示同一种信息（类比“量子态”）
@@ -148,7 +148,7 @@ impl QaData {
     // u8 表示 问题索引
     //true 代表1，false 代表0，错误代表 其不在 本QA表中。
     pub fn match_question(&self, s: &str) -> Result<(bool, u8), anyhow::Error> {
-        // trace!("matching question {s}");
+        // //trace!("matching question {s}");
         let o = self.q_hash_map[0].get(s);
         match o {
             Some(i) => Ok((false, *i)),
@@ -323,20 +323,22 @@ fn b2b() {
 pub enum WriteState {
     #[default]
     ReadyForNew,
-    Previous,
+    Previous(usize),
 }
 
 #[derive(Default)]
 pub enum ReadState {
     #[default]
     ReadyForNew,
-    Previous(usize, usize, usize), //Content-Length, body_start_index, filled_data_len
+    ContinueReadRemote(usize, usize, usize), //Content-Length, body_start_index, filled_data_len
+    ContinueReadLocalCache(usize, usize),    // from, to
     Closed,
 }
 
 pub struct Conn {
-    cid: CID,
+    // cid: CID,
     is_server: bool,
+    hasnt_written: bool,
 
     // 缓存的 已解析后的 answer 的索引
     // bool 为 true 对应 1，为 false 对应 0
@@ -381,103 +383,37 @@ impl Conn {
                 match self.base.as_mut().poll_read(cx, &mut rb) {
                     Poll::Pending => {
                         let _ = self.read_cache.insert(rc);
+
+                        //trace!(cid=%self.cid, "spe1server read pending");
+
                         Poll::Pending
                     }
                     Poll::Ready(r) => match r {
                         Err(e) => {
                             let _ = self.read_cache.insert(rc);
+
+                            //trace!(cid=%self.cid, "spe1server read err");
+
                             Poll::Ready(Err(e))
                         }
                         Ok(_) => {
-                            let data = rb.filled();
-                            if data.is_empty() {
+                            let l = rb.filled().len();
+                            if l == 0 {
                                 self.read_state = ReadState::Closed;
+
+                                //trace!(cid=%self.cid, "spe1server read ok empty");
+
                                 let _ = self.poll_shutdown(cx);
-                                return Poll::Ready(Err(io::Error::new(
-                                    io::ErrorKind::ConnectionAborted,
-                                    "closed",
-                                )));
+
+                                return Poll::Ready(Ok(()));
                             }
-                            let pr = ruci::net::http::parse_h1_request(data, false);
-                            match pr.parse_result {
-                                Err(e) => {
-                                    let es = format!("{e:?}");
-                                    let io_e = std::io::Error::new(
-                                        std::io::ErrorKind::Other,
-                                        format!(
-                                            "spe1: parse http1.1 request err: {}, {es}",
-                                            data.len()
-                                        ),
-                                    );
 
-                                    let _ = self.read_cache.insert(rc);
-                                    Poll::Ready(Err(io_e))
-                                }
-                                Ok(_) => {
-                                    match pr
-                                        .headers
-                                        .iter()
-                                        .find(|h| h.head.contains("Content-Length"))
-                                    {
-                                        None => {
-                                            let io_e = std::io::Error::new(
-                                                std::io::ErrorKind::Other,
-                                                "no content length",
-                                            );
-
-                                            let _ = self.read_cache.insert(rc);
-                                            Poll::Ready(Err(io_e))
-                                        }
-                                        Some(h) => {
-                                            let clr: Result<usize, _> = h.value.parse();
-                                            match clr {
-                                                Err(_) => {
-                                                    let io_e = std::io::Error::new(
-                                                        std::io::ErrorKind::Other,
-                                                        " content length 无法解析为整数",
-                                                    );
-
-                                                    let _ = self.read_cache.insert(rc);
-                                                    Poll::Ready(Err(io_e))
-                                                }
-                                                Ok(content_len) => {
-                                                    let si = pr.body_start_index;
-
-                                                    let real_len = &data[si..].len();
-
-                                                    if *real_len < content_len {
-                                                        trace!("spe1server partial read: {} {content_len}",*real_len);
-
-                                                        self.read_state = ReadState::Previous(
-                                                            content_len,
-                                                            si,
-                                                            data.len(),
-                                                        );
-
-                                                        let _ = self.read_cache.insert(rc);
-
-                                                        self.server_read(cx, buf)
-                                                    } else {
-                                                        let r = self.server_real_read(
-                                                            si,
-                                                            content_len,
-                                                            buf,
-                                                            data,
-                                                        );
-                                                        let _ = self.read_cache.insert(rc);
-                                                        r
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            self.server_read_header(cx, rc, 0, l, buf)
                         }
                     },
                 }
             }
-            ReadState::Previous(content_len, body_start_index, filled_data_len) => {
+            ReadState::ContinueReadRemote(content_len, body_start_index, filled_data_len) => {
                 let mut rb = tokio::io::ReadBuf::new(&mut rc);
 
                 rb.set_filled(filled_data_len);
@@ -495,31 +431,34 @@ impl Conn {
                         Ok(_) => {
                             let data = rb.filled();
 
-                            let real_len = &data[body_start_index..].len();
+                            let real_len = data[body_start_index..].len();
 
-                            if *real_len < content_len {
-                                trace!(
-                                    cid=%self.cid,
-                                    "spe1server partial read2: {} {content_len}", *real_len
+                            if real_len < content_len {
+                                //trace!(
+                                //     cid=%self.cid,
+                                //     "spe1server partial read2: {} {content_len}", real_len
+                                // );
+
+                                self.read_state = ReadState::ContinueReadRemote(
+                                    content_len,
+                                    body_start_index,
+                                    data.len(),
                                 );
-
-                                self.read_state =
-                                    ReadState::Previous(content_len, body_start_index, data.len());
 
                                 let _ = self.read_cache.insert(rc);
 
                                 self.server_read(cx, buf)
                             } else {
-                                let real_data =
-                                    &data[body_start_index..body_start_index + content_len];
-                                let real_string = String::from_utf8_lossy(real_data);
+                                // let real_data =
+                                //     &data[body_start_index..body_start_index + content_len];
+                                // let real_string = String::from_utf8_lossy(real_data);
 
-                                trace!( cid=%self.cid,
-                                    "spe1server partial read2 finish, {}, {}, {}",
-                                    *real_len,
-                                    content_len,
-                                    real_string.len()
-                                );
+                                //trace!( cid=%self.cid,
+                                //     "spe1server partial read2 finish, {}, {}, {}",
+                                //     real_len,
+                                //     content_len,
+                                //     real_string.len()
+                                // );
 
                                 let r =
                                     self.server_real_read(body_start_index, content_len, buf, data);
@@ -528,6 +467,85 @@ impl Conn {
                             }
                         }
                     },
+                }
+            }
+            ReadState::ContinueReadLocalCache(from, to) => {
+                //trace!(cid=%self.cid,"ContinueReadLocalCache");
+
+                self.server_read_header(cx, rc, from, to, buf)
+            }
+        }
+    }
+
+    fn server_read_header(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        rc: BytesMut,
+        from: usize,
+        to: usize,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        let data = &rc[from..to];
+
+        let pr = ruci::net::http::parse_h1_request(data, false);
+        match pr.parse_result {
+            Err(_) => todo!(),
+
+            Ok(_) => {
+                match pr
+                    .headers
+                    .iter()
+                    .find(|h| h.head.contains("Content-Length"))
+                {
+                    None => todo!(),
+
+                    Some(h) => {
+                        let clr: Result<usize, _> = h.value.parse();
+                        match clr {
+                            Err(_) => todo!(),
+
+                            Ok(content_len) => {
+                                let si = pr.body_start_index;
+
+                                let real_len = data[si..].len();
+
+                                match content_len.cmp(&real_len) {
+                                    std::cmp::Ordering::Less => {
+                                        let r = self.server_real_read(si, content_len, buf, data);
+
+                                        self.read_state =
+                                            ReadState::ContinueReadLocalCache(content_len + si, to);
+                                        let _ = self.read_cache.insert(rc);
+
+                                        r
+                                    }
+                                    std::cmp::Ordering::Equal => {
+                                        //trace!(cid=%self.cid, "spe1server read ok {content_len} {real_len}");
+
+                                        let r = self.server_real_read(si, content_len, buf, data);
+                                        let _ = self.read_cache.insert(rc);
+                                        r
+                                    }
+                                    std::cmp::Ordering::Greater => {
+                                        //trace!(
+                                        //     "spe1server partial read: {} {content_len}",
+                                        //     real_len
+                                        // );
+
+                                        self.read_state = ReadState::ContinueReadRemote(
+                                            content_len,
+                                            si,
+                                            data.len(),
+                                        );
+
+                                        let _ = self.read_cache.insert(rc);
+
+                                        self.server_read(cx, buf)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -548,6 +566,8 @@ impl Conn {
 
         match self.qa.questions_to_bytes(&real_string, true, true) {
             Ok(bm) => {
+                //trace!(cid=%self.cid, "spe1server server_real_read {}, {}",bm.0.len(),&data[..si + content_len].len() );
+
                 buf.put_slice(&bm.0);
                 self.server_cached_answers = bm.1.unwrap();
 
@@ -602,100 +622,28 @@ impl Conn {
                             Poll::Ready(Err(e))
                         }
                         Ok(_) => {
-                            let data = rb.filled();
-                            if data.is_empty() {
+                            let dl = rb.filled().len();
+                            if dl == 0 {
                                 self.read_state = ReadState::Closed;
                                 let _ = self.poll_shutdown(cx);
-                                return Poll::Ready(Err(io::Error::new(
-                                    io::ErrorKind::ConnectionAborted,
-                                    "closed",
-                                )));
+                                return Poll::Ready(Ok(()));
                             }
-                            let pr = ruci::net::http::parse_h1_response(data);
-                            match pr.parse_result {
-                                Err(e) => {
-                                    let es = format!("{e:?}");
-                                    let io_e = std::io::Error::new(
-                                        std::io::ErrorKind::Other,
-                                        format!("spe1: parse http1.1 response err: {es}"),
-                                    );
 
-                                    let _ = self.read_cache.insert(rc);
-                                    Poll::Ready(Err(io_e))
-                                }
-                                Ok(_) => {
-                                    match pr
-                                        .headers
-                                        .iter()
-                                        .find(|h| h.head.contains("Content-Length"))
-                                    {
-                                        None => {
-                                            let io_e = std::io::Error::new(
-                                                std::io::ErrorKind::Other,
-                                                "no content length",
-                                            );
-
-                                            let _ = self.read_cache.insert(rc);
-                                            Poll::Ready(Err(io_e))
-                                        }
-                                        Some(h) => {
-                                            let clr: Result<usize, _> = h.value.parse();
-                                            match clr {
-                                                Err(_) => {
-                                                    let io_e = std::io::Error::new(
-                                                        std::io::ErrorKind::Other,
-                                                        " content length 无法解析为整数",
-                                                    );
-
-                                                    let _ = self.read_cache.insert(rc);
-                                                    Poll::Ready(Err(io_e))
-                                                }
-                                                Ok(content_len) => {
-                                                    let si = pr.body_start_index;
-
-                                                    let real_len = &data[si..].len();
-
-                                                    if *real_len < content_len {
-                                                        trace!( cid=%self.cid,"spe1client partial read: {} {content_len}",*real_len);
-
-                                                        self.read_state = ReadState::Previous(
-                                                            content_len,
-                                                            si,
-                                                            data.len(),
-                                                        );
-
-                                                        let _ = self.read_cache.insert(rc);
-
-                                                        self.client_read(cx, buf)
-                                                    } else {
-                                                        let r = self.client_real_read(
-                                                            si,
-                                                            content_len,
-                                                            data,
-                                                            buf,
-                                                        );
-                                                        let _ = self.read_cache.insert(rc);
-
-                                                        r
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            self.client_read_header(cx, rc, 0, dl, buf)
                         }
                     },
                 }
             }
-            ReadState::Previous(content_len, body_start_index, filled_data_len) => {
+            ReadState::ContinueReadRemote(content_len, body_start_index, filled_data_len) => {
                 let mut rb = tokio::io::ReadBuf::new(&mut rc);
 
                 rb.set_filled(filled_data_len);
+                let before_len = filled_data_len;
 
                 match self.base.as_mut().poll_read(cx, &mut rb) {
                     Poll::Pending => {
                         let _ = self.read_cache.insert(rc);
+                        //trace!(cid=%self.cid,"spe1client ContinueReadRemote got pending");
                         Poll::Pending
                     }
                     Poll::Ready(r) => match r {
@@ -707,26 +655,151 @@ impl Conn {
                         Ok(_) => {
                             let data = rb.filled();
 
-                            let real_len = &data[body_start_index..].len();
+                            let dl = data.len();
 
-                            if *real_len < content_len {
-                                trace!( cid=%self.cid,"spe1client partial read2: {} {content_len}", *real_len);
+                            if dl == before_len {
+                                self.read_state = ReadState::Closed;
+                                let _ = self.poll_shutdown(cx);
+                                return Poll::Ready(Ok(()));
+                            }
 
-                                self.read_state =
-                                    ReadState::Previous(content_len, body_start_index, data.len());
+                            let real_len = data[body_start_index..].len();
 
-                                let _ = self.read_cache.insert(rc);
+                            match content_len.cmp(&real_len) {
+                                std::cmp::Ordering::Less => {
+                                    let r = self.client_real_read(
+                                        body_start_index,
+                                        content_len,
+                                        data,
+                                        buf,
+                                    );
 
-                                self.client_read(cx, buf)
-                            } else {
-                                let r =
-                                    self.client_real_read(body_start_index, content_len, data, buf);
-                                let _ = self.read_cache.insert(rc);
+                                    self.read_state = ReadState::ContinueReadLocalCache(
+                                        body_start_index + content_len,
+                                        dl,
+                                    );
+                                    let _ = self.read_cache.insert(rc);
 
-                                r
+                                    r
+                                }
+                                std::cmp::Ordering::Equal => {
+                                    let r = self.client_real_read(
+                                        body_start_index,
+                                        content_len,
+                                        data,
+                                        buf,
+                                    );
+
+                                    self.read_state = ReadState::ReadyForNew;
+
+                                    let _ = self.read_cache.insert(rc);
+
+                                    r
+                                }
+                                std::cmp::Ordering::Greater => {
+                                    //trace!( cid=%self.cid,"spe1client partial read2: {} {content_len}", real_len);
+
+                                    self.read_state = ReadState::ContinueReadRemote(
+                                        content_len,
+                                        body_start_index,
+                                        dl,
+                                    );
+
+                                    let _ = self.read_cache.insert(rc);
+
+                                    self.client_read(cx, buf)
+                                }
                             }
                         }
                     },
+                }
+            }
+            ReadState::ContinueReadLocalCache(from, to) => {
+                //trace!(cid=%self.cid,"ContinueReadLocalCache");
+
+                self.client_read_header(cx, rc, from, to, buf)
+            }
+        }
+    }
+
+    fn client_read_header(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        rc: BytesMut,
+        from: usize,
+        to: usize,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        let data = &rc[from..to];
+        let dl = data.len();
+
+        let pr = ruci::net::http::parse_h1_response(data);
+        match pr.parse_result {
+            Err(e) => {
+                let es = format!("{e:?}");
+                let io_e = std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("spe1: parse http1.1 response err: {es}"),
+                );
+
+                let _ = self.read_cache.insert(rc);
+                Poll::Ready(Err(io_e))
+            }
+            Ok(_) => {
+                match pr
+                    .headers
+                    .iter()
+                    .find(|h| h.head.contains("Content-Length"))
+                {
+                    None => {
+                        let io_e =
+                            std::io::Error::new(std::io::ErrorKind::Other, "no content length");
+
+                        let _ = self.read_cache.insert(rc);
+                        Poll::Ready(Err(io_e))
+                    }
+                    Some(h) => {
+                        let clr: Result<usize, _> = h.value.parse();
+                        match clr {
+                            Err(_) => {
+                                let io_e = std::io::Error::new(
+                                    std::io::ErrorKind::Other,
+                                    " content length 无法解析为整数",
+                                );
+
+                                let _ = self.read_cache.insert(rc);
+                                Poll::Ready(Err(io_e))
+                            }
+                            Ok(content_len) => {
+                                let si = pr.body_start_index;
+
+                                let real_len = data[si..].len();
+
+                                if real_len < content_len {
+                                    //trace!( cid=%self.cid,"spe1client partial read: {} {content_len}",real_len);
+
+                                    self.read_state =
+                                        ReadState::ContinueReadRemote(content_len, si, dl);
+
+                                    let _ = self.read_cache.insert(rc);
+
+                                    self.client_read(cx, buf)
+                                } else {
+                                    let r = self.client_real_read(si, content_len, data, buf);
+
+                                    if real_len > content_len {
+                                        self.read_state = ReadState::ContinueReadLocalCache(
+                                            from + si + content_len,
+                                            to,
+                                        );
+                                    }
+                                    let _ = self.read_cache.insert(rc);
+
+                                    r
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -742,9 +815,7 @@ impl Conn {
         let real_data = &data[si..si + content_len];
         let real_string = String::from_utf8_lossy(real_data);
 
-        self.read_state = ReadState::ReadyForNew;
-
-        trace!( cid=%self.cid,"spe1client read finish ");
+        //trace!( cid=%self.cid,"spe1client read finish ");
 
         match Self::server_response_to_2_parts(&real_string) {
             Some(answers_questions) => {
@@ -762,7 +833,7 @@ impl Conn {
                     Err(e) => {
                         let io_e = std::io::Error::new(
                             std::io::ErrorKind::Other,
-                            format!("questions string to bytes err: {e}"),
+                            format!("client_real_read: questions string to bytes err: {e}"),
                         );
 
                         Poll::Ready(Err(io_e))
@@ -793,10 +864,25 @@ impl AsyncWrite for Conn {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> std::task::Poll<Result<usize, std::io::Error>> {
+        if matches!(self.read_state, ReadState::Closed) {
+            return Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::ConnectionAborted,
+                "spe1: writing when read end closed",
+            )));
+        }
+
+        // if self.is_server || !self.hasnt_written {
+        //     //一次最多只传送 少数 字节，以防出问题
+        //     // 客户端的第一次传送除外
+        //     if buf.len() > 1500 {
+        //         buf = &buf[..1500];
+        //     }
+        // }
+
         if self.is_server {
             match self.write_state {
                 WriteState::ReadyForNew => {
-                    let mut content_buf = BytesMut::new();
+                    let mut content_buf = BytesMut::with_capacity(READ_CAP);
                     let s = self
                         .server_cached_answers
                         .iter()
@@ -826,6 +912,8 @@ impl AsyncWrite for Conn {
 
                     write_cache.extend_from_slice(&content_buf[..]);
 
+                    let wl = write_cache.len();
+
                     match self.base.as_mut().poll_write(cx, &write_cache[..]) {
                         Poll::Pending => {
                             let _ = self.write_cache.insert(write_cache);
@@ -840,15 +928,14 @@ impl AsyncWrite for Conn {
                                 Poll::Ready(Err(e))
                             }
 
-                            Ok(n) => match n.cmp(&write_cache.len()) {
+                            Ok(n) => match n.cmp(&wl) {
                                 std::cmp::Ordering::Less => {
-                                    trace!( cid=%self.cid,
-                                        "spe1server partial write {n}, {}",
-                                        write_cache.len()
-                                    );
+                                    //trace!( cid=%self.cid,
+                                    //     "spe1server partial write {n}, {}, {}",
+                                    //     wl, buf.len()
+                                    // );
 
-                                    write_cache.advance(n);
-                                    self.write_state = WriteState::Previous;
+                                    self.write_state = WriteState::Previous(n);
                                     let _ = self.write_cache.insert(write_cache);
 
                                     self.poll_write(cx, buf)
@@ -856,7 +943,7 @@ impl AsyncWrite for Conn {
                                 std::cmp::Ordering::Equal => {
                                     let _ = self.write_cache.insert(write_cache);
 
-                                    trace!( cid=%self.cid,"spe1server  write ok {n}");
+                                    //trace!( cid=%self.cid,"spe1server  write ok {n}, {}",buf.len());
 
                                     Poll::Ready(Ok(buf.len()))
                                 }
@@ -872,13 +959,18 @@ impl AsyncWrite for Conn {
                         },
                     }
                 }
-                WriteState::Previous => {
-                    let mut write_cache = self.write_cache.take().unwrap();
+                WriteState::Previous(head) => {
+                    let write_cache = self.write_cache.take().unwrap();
 
-                    match self.base.as_mut().poll_write(cx, &write_cache[..]) {
+                    let write_data = &write_cache[head..];
+
+                    match self.base.as_mut().poll_write(cx, write_data) {
                         Poll::Pending => {
                             let _ = self.write_cache.insert(write_cache);
 
+                            //trace!( cid=%self.cid,
+                            //     "spe1server partial write2  continue got pending, {}",buf.len(),
+                            // );
                             Poll::Pending
                         }
 
@@ -889,17 +981,16 @@ impl AsyncWrite for Conn {
 
                                 Poll::Ready(Err(e))
                             }
-                            Ok(n) => match n.cmp(&write_cache.len()) {
+                            Ok(n) => match n.cmp(&write_data.len()) {
                                 std::cmp::Ordering::Less => {
-                                    trace!( cid=%self.cid,
-                                        "spe1server partial write2 {n}, {}",
-                                        write_cache.len()
-                                    );
+                                    //trace!( cid=%self.cid,
+                                    //     "spe1server partial write2 {head} {n}, {}, {}",
+                                    //     write_cache.len(),buf.len()
+                                    // );
 
-                                    write_cache.advance(n);
                                     let _ = self.write_cache.insert(write_cache);
 
-                                    self.write_state = WriteState::Previous;
+                                    self.write_state = WriteState::Previous(head + n);
 
                                     self.poll_write(cx, buf)
                                 }
@@ -907,7 +998,7 @@ impl AsyncWrite for Conn {
                                     let _ = self.write_cache.insert(write_cache);
                                     self.write_state = WriteState::ReadyForNew;
 
-                                    trace!( cid=%self.cid,"spe1server partial write2 finish");
+                                    //trace!( cid=%self.cid,"spe1server partial write2 finish, {}",buf.len());
 
                                     Poll::Ready(Ok(buf.len()))
                                 }
@@ -926,6 +1017,7 @@ impl AsyncWrite for Conn {
                 }
             }
         } else {
+            // is client
             match self.write_state {
                 WriteState::ReadyForNew => {
                     let mut content_buf = BytesMut::new();
@@ -940,8 +1032,10 @@ impl AsyncWrite for Conn {
                     }
                     write_cache.clear();
 
+                    let content_len = content_buf.len();
+
                     let _ = write_cache.write_str("POST /ask HTTP/1.1\r\nHost: httpbin.org\r\nConnection: keep-alive\r\nContent-Length: ");
-                    let _ = write_cache.write_str(&content_buf.len().to_string());
+                    let _ = write_cache.write_str(&content_len.to_string());
                     let _ = write_cache.write_str("\r\nContent-Type: text/plain\r\n\r\n");
 
                     write_cache.extend_from_slice(&content_buf[..]);
@@ -953,24 +1047,32 @@ impl AsyncWrite for Conn {
                     match r {
                         Poll::Pending => {
                             let _ = self.write_cache.insert(write_cache);
+
+                            //trace!(cid=%self.cid, "spe1client write pending");
                             Poll::Pending
                         }
 
                         Poll::Ready(r) => match r {
                             Err(e) => {
                                 let _ = self.write_cache.insert(write_cache);
+                                //trace!(cid=%self.cid, "spe1client write err");
+
                                 Poll::Ready(Err(e))
                             }
 
                             Ok(n) => {
                                 if n == wcl {
                                     let _ = self.write_cache.insert(write_cache);
+
+                                    //trace!(cid=%self.cid, "spe1client write ok, {}, {n}, {content_len}",buf.len());
+
+                                    self.hasnt_written = false;
+
                                     Poll::Ready(Ok(buf.len()))
                                 } else {
-                                    write_cache.advance(n);
                                     let _ = self.write_cache.insert(write_cache);
 
-                                    self.write_state = WriteState::Previous;
+                                    self.write_state = WriteState::Previous(n);
 
                                     self.poll_write(cx, buf)
                                 }
@@ -978,10 +1080,10 @@ impl AsyncWrite for Conn {
                         },
                     }
                 }
-                WriteState::Previous => {
-                    let mut write_cache = self.write_cache.take().unwrap();
+                WriteState::Previous(head) => {
+                    let write_cache = self.write_cache.take().unwrap();
 
-                    match self.base.as_mut().poll_write(cx, &write_cache[..]) {
+                    match self.base.as_mut().poll_write(cx, &write_cache[head..]) {
                         Poll::Pending => {
                             let _ = self.write_cache.insert(write_cache);
 
@@ -995,17 +1097,15 @@ impl AsyncWrite for Conn {
 
                                 Poll::Ready(Err(e))
                             }
-                            Ok(n) => match n.cmp(&write_cache.len()) {
+                            Ok(n) => match n.cmp(&write_cache[head..].len()) {
                                 std::cmp::Ordering::Less => {
-                                    trace!( cid=%self.cid,
-                                        "spe1client partial write2 {n}, {}",
-                                        write_cache.len()
-                                    );
+                                    //trace!( cid=%self.cid,
+                                    //     "spe1client partial write2 {n}, {}",
+                                    //     write_cache.len()
+                                    // );
 
-                                    write_cache.advance(n);
+                                    self.write_state = WriteState::Previous(n + head);
                                     let _ = self.write_cache.insert(write_cache);
-
-                                    self.write_state = WriteState::Previous;
 
                                     self.poll_write(cx, buf)
                                 }
@@ -1013,7 +1113,7 @@ impl AsyncWrite for Conn {
                                     let _ = self.write_cache.insert(write_cache);
                                     self.write_state = WriteState::ReadyForNew;
 
-                                    trace!( cid=%self.cid,"spe1client partial write2 finish");
+                                    //trace!( cid=%self.cid,"spe1client partial write2 finish");
 
                                     Poll::Ready(Ok(buf.len()))
                                 }
@@ -1063,11 +1163,12 @@ impl ruci::Name for ClientOrServer {
 }
 #[async_trait::async_trait]
 impl map::Map for ClientOrServer {
-    async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             ruci::net::Stream::Conn(base) => {
                 let c = Conn {
-                    cid,
+                    hasnt_written: true,
+                    // cid,
                     qa: self.qa.clone(),
                     is_server: self.is_server,
                     server_cached_answers: vec![],
