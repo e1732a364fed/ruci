@@ -188,7 +188,7 @@ pub async fn fold(params: FoldParams) -> FoldResult {
         };
 
         if tracing::enabled!(Level::DEBUG) {
-            debug!(cid = %cid, mapper = adder.name(), behavior = ?params.behavior, "acc:",)
+            debug!(cid = %cid, mapper = adder.name(), behavior = ?params.behavior, "folding",)
         }
         last_r = adder
             .maps(

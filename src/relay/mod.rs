@@ -18,7 +18,7 @@ use tracing::{debug, info, warn};
 use crate::net::addr_conn::AsyncWriteAddrExt;
 use crate::net::{self, Addr, Stream, CID};
 
-use self::acc::{DMIterBox, FoldParams};
+use self::fold::{DMIterBox, FoldParams};
 use self::route::OutSelector;
 
 use anyhow::anyhow;
@@ -48,7 +48,7 @@ pub async fn handle_in_stream(
     let cid_c = cid.clone();
     let listen_result = tokio::time::timeout(
         Duration::from_secs(READ_HANDSHAKE_TIMEOUT),
-        acc::fold(FoldParams {
+        fold::fold(FoldParams {
             cid: cid_c,
             behavior: ProxyBehavior::DECODE,
             initial_state: MapResult::builder().c(in_conn).build(),
@@ -85,7 +85,7 @@ pub async fn handle_in_stream(
 
 /// block until out handshake is over
 pub async fn handle_in_fold_result(
-    mut listen_result: acc::FoldResult,
+    mut listen_result: fold::FoldResult,
 
     out_selector: Arc<Box<dyn OutSelector>>,
 
@@ -152,7 +152,7 @@ pub async fn handle_in_fold_result(
     let ta_clone = target_addr.clone();
     let dial_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            acc::fold(FoldParams {
+            fold::fold(FoldParams {
                 cid: cid_c,
                 behavior: ProxyBehavior::ENCODE,
                 initial_state: MapResult {

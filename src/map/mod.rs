@@ -1,7 +1,7 @@
 /*!
 module map defines some important traits for proxy
 
-几个关键部分: Data, MapParams, MapResult, Mapper, 和 acc 模块
+几个关键部分: Data, MapParams, MapResult, Mapper, 和 fold 模块
 
 ruci 包中实现 Mapper 的模块有: math, counter,stdio, network, socks5,http, socks5http, trojan,  tls
 
@@ -21,13 +21,13 @@ ruci 将任意代理行为分割成若干个不可再分的
 按代理的方向, 逻辑上分 Encode 和 Decode 两种, 以 maps 方法的 behavior 参数加以区分.
 
 
-一个完整的代理链 是由 【生成 映射函数 的迭代器】生成的, 其在 acc 和 acc2 模块中有定义
+一个完整的代理链 是由 【生成 映射函数 的迭代器】生成的, 其在 fold 模块中有定义
 
 
 */
 
-pub mod acc;
 pub mod data;
+pub mod fold;
 
 pub use data::*;
 

@@ -28,7 +28,7 @@ use std::{
 use async_trait::async_trait;
 
 use crate::{
-    map::acc::DMIterBox,
+    map::fold::DMIterBox,
     net,
     user::{self, UserVec},
 };
@@ -194,7 +194,7 @@ mod test {
     use crate::net::Addr;
     use crate::user::PlainText;
 
-    use self::acc::DynVecIterWrapper;
+    use self::fold::DynVecIterWrapper;
 
     use super::*;
 

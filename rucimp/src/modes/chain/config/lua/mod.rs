@@ -10,7 +10,7 @@ use lua::dynamic::Finite;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Value};
 use parking_lot::Mutex;
-use ruci::map::acc::OVOD;
+use ruci::map::fold::OVOD;
 use ruci::net::CID;
 
 /// load chain::config::StaticConfig from a lua file which has a

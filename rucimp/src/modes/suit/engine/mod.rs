@@ -5,7 +5,7 @@ use config::LDConfig;
 use futures::Future;
 use parking_lot::Mutex;
 use ruci::{
-    map::{acc::DynVecIterWrapper, *},
+    map::{fold::DynVecIterWrapper, *},
     net::{GlobalTrafficRecorder, Stream},
     relay::{self, route::*},
 };

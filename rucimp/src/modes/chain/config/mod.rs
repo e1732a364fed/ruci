@@ -15,8 +15,8 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 use bytes::BytesMut;
 use ruci::{
     map::{
-        acc::{DMIterBox, DynVecIterWrapper},
         counter::Counter,
+        fold::{DMIterBox, DynVecIterWrapper},
         network::{echo::Echo, BlackHole, Direct},
         *,
     },

@@ -9,7 +9,7 @@ use parking_lot::Mutex;
 use ruci::net;
 use ruci::{
     map::{
-        acc::{DMIterBox, DynVecIterWrapper},
+        fold::{DMIterBox, DynVecIterWrapper},
         *,
     },
     net::{GlobalTrafficRecorder, CID},
@@ -236,7 +236,7 @@ impl Engine {
 
             let cid = CID::new(index);
             debug!(inbound_index = index, "fold_from_start");
-            let t1 = acc::fold_from_start(cid, atx, rx, miter.clone(), Some(self.gtr.clone()));
+            let t1 = fold::fold_from_start(cid, atx, rx, miter.clone(), Some(self.gtr.clone()));
             index += 1;
 
             let t2 = Engine::loop_a(
@@ -258,7 +258,7 @@ impl Engine {
     }
 
     async fn loop_a(
-        mut arx: Receiver<acc::FoldResult>,
+        mut arx: Receiver<fold::FoldResult>,
         out_selector: Arc<Box<dyn OutSelector>>,
         gtr: Arc<GlobalTrafficRecorder>,
         conn_info_recorder: OptNewInfoSender,

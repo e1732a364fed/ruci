@@ -27,7 +27,7 @@ use ipnet::*;
 use iprange::IpRange;
 use regex::RegexSet;
 use ruci::{
-    map::{acc::DMIterBox, Data},
+    map::{fold::DMIterBox, Data},
     net::{self, *},
     relay::route::{self, *},
     user::*,
@@ -297,7 +297,7 @@ mod test {
 
     use std::net::Ipv4Addr;
 
-    use ruci::map::{acc::DynVecIterWrapper, math::Adder, MapperBox};
+    use ruci::map::{fold::DynVecIterWrapper, math::Adder, MapperBox};
 
     use crate::COMMON_DIRS;
 

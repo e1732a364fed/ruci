@@ -26,7 +26,7 @@ use std::{cmp::Ordering, fmt::Debug, sync::Arc};
 use dyn_clone::DynClone;
 use ruci::{
     map::{
-        acc::{DynIterator, OVOD},
+        fold::{DynIterator, OVOD},
         MapperBox,
     },
     net::CID,

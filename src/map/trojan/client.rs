@@ -58,9 +58,10 @@ impl Client {
         if self.is_tail_of_chain() && !is_udp {
             if let Some(b) = &first_payload {
                 if !b.is_empty() {
+                    let bl = b.len();
                     buf.extend_from_slice(b);
                     first_payload = None;
-                    debug!("trojan client writing ed");
+                    debug!("trojan client writing ed {}", bl);
                 }
             }
         }

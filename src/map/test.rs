@@ -1,4 +1,4 @@
-use crate::map::acc::MIterBox;
+use crate::map::fold::MIterBox;
 use crate::map::math::{AddDirection, Adder};
 use crate::map::network::Direct;
 use crate::map::{MapParams, Mapper, CID};
