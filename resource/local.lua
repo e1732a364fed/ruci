@@ -259,6 +259,8 @@ config = {
 
 此时需要注意, 该配置下 要用 sudo 运行, 且 rucimp 的 "tun" feature 是打开的
 
+它会建一个 叫 utun321 的 utun 虚拟网卡, 然后 ruci 会监听 其 网卡的 10.0.0.1 
+
 --]]
 
     outbounds = { { tag="dial1", chain = out_stdio_chain } }

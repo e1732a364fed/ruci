@@ -33,8 +33,5 @@ ruci(定义) - rucimp（实现） - rucimple（可执行文件）
 比如，对于 同一个版本的 rucimp, 可以在其上不断更新可执行文件 rucimple 的版本。
 这样版本号能更好地反映哪里产生的修改。
 
-## 减少 mod.rs 文件的数量
-
-多个 mod.rs 文件不利于在 IDE中识别与切换
 
 ## 减少 unwrap, todo!, unimplemented! 数量
