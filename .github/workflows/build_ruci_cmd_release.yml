@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo dpkg --add-architecture aarch64
-          sudo apt-get update && apt-get install --assume-yes libssl-dev:aarch64
+          sudo apt-get update && sudo apt-get install --assume-yes libssl-dev:aarch64
 
       - name: Build ${{ matrix.target }}
         run: |
