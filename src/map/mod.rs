@@ -439,18 +439,40 @@ where
 
 /// 用于 已知一个初始点为 Stream::Generator, 向其所有子连接进行accumulate，
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator，或e不为None
-pub async fn propagation<'a, IterMapperBoxRef, IterOptData>(
+pub async fn propagation<IterMapperBoxRef, IterOptData>(
     cid: u32,
     mut rx: tokio::sync::mpsc::Receiver<Stream>,
-    mut mappers: IterMapperBoxRef,
-    mut hyperparameter_vec: Option<IterOptData>,
+    tx: tokio::sync::mpsc::Sender<AccumulateResult>,
+    mappers: IterMapperBoxRef,
+    hyperparameter_vec: Option<IterOptData>,
 ) where
-    IterMapperBoxRef: Iterator<Item = &'a MapperBox>,
-    IterOptData: Iterator<Item = OptData>,
+    IterMapperBoxRef: Iterator<Item = &'static MapperBox> + Clone + Send + 'static,
+    IterOptData: Iterator<Item = OptData> + Clone + Send + 'static,
 {
     loop {
-        let x = rx.recv().await;
-        if x.is_none() {}
-        let x = x.unwrap();
+        let opt_stream = rx.recv().await;
+        if opt_stream.is_none() {}
+        let stream = opt_stream.unwrap();
+
+        let mc = mappers.clone();
+        let txc = tx.clone();
+        let hvc = hyperparameter_vec.clone();
+        tokio::spawn(async move {
+            let r = accumulate::<IterMapperBoxRef, IterOptData>(
+                cid,
+                ProxyBehavior::DECODE,
+                MapResult {
+                    a: None,
+                    b: None,
+                    c: stream,
+                    d: None,
+                    e: None,
+                },
+                mc,
+                hvc,
+            )
+            .await;
+            let _ = txc.send(r).await;
+        });
     }
 }
