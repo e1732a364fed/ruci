@@ -6,6 +6,7 @@ Only support linux
 pub mod route;
 
 pub use route::*;
+use socket2::Socket;
 
 use std::cmp::min;
 use std::collections::HashMap;
@@ -28,7 +29,6 @@ use ruci::{
 
 use macro_mapper::{mapper_ext_fields, MapperExt};
 use serde::{Deserialize, Serialize};
-use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, info, warn};
 
@@ -166,22 +166,21 @@ impl UDPListener {
         let (shutdown_addrconn_tx, shutdown_addrconn_rx) = oneshot::channel();
 
         let r = match listen_a.network {
-            Network::UDP => so2::listen_udp(&listen_a, &self.sopt).await.map(|s| {
-                let (tx, rx) = mpsc::channel(100); //todo: adjust this
-                let us = Arc::new(s);
-                let usc = us.clone();
+            Network::UDP => so2::rawlisten_udp(&listen_a, &self.sopt).map(|socket| {
+                let (tx, rx) = mpsc::channel(5); //todo: adjust this
+                                                 //let usc = us.clone();
 
-                let src_dst_map = Arc::new(Mutex::new(HashMap::new()));
-                let mapc = src_dst_map.clone();
+                let dst_src_map = Arc::new(Mutex::new(HashMap::new()));
+                let mapc = dst_src_map.clone();
 
                 let r = UdpR { rx };
 
-                let w = UdpW { us, src_dst_map };
+                let w = UdpW { dst_src_map };
 
                 // 阻塞函数要用 新线程 而不是 tokio::spawn, 否则 程序退出时会卡住
 
                 use terminate_thread::Thread;
-                let thr = Thread::spawn(|| loop_accept_udp(usc, tx, mapc));
+                let thr = Thread::spawn(|| loop_accept_udp(socket, tx, mapc));
 
                 //let _jh = std::thread::spawn(|| loop_accept_udp(usc, tx, mapc));
 
@@ -252,8 +251,8 @@ pub struct UdpR {
 
 /// tproxy 的 udp 不是 fullcone 的, 而是对称的
 pub struct UdpW {
-    us: Arc<UdpSocket>,
-    src_dst_map: Arc<Mutex<HashMap<Addr, Addr>>>,
+    //us: Arc<UdpSocket>,
+    dst_src_map: Arc<Mutex<HashMap<Addr, Addr>>>,
 }
 
 impl Name for UdpW {
@@ -270,26 +269,43 @@ impl Name for UdpR {
 
 pub type AddrData = (BytesMut, net::Addr);
 
+/// 将 外来 的udp 数据 写回 本机
 impl AsyncWriteAddr for UdpW {
     fn poll_write_addr(
         self: Pin<&mut Self>,
-        cx: &mut Context,
+        _cx: &mut Context,
         buf: &[u8],
-        addr: &Addr,
+        raddr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        let real_target = {
-            let mg = self.src_dst_map.lock();
-            mg.get(addr).cloned()
+        let laddr = {
+            let mg = self.dst_src_map.lock();
+            mg.get(raddr).cloned()
         };
 
-        let rt = match real_target {
-            Some(rt) => rt,
+        let laddr = match laddr {
+            Some(laddr) => {
+                debug!(
+                    "tproxy UdpW get from dst_src_map ,{} {} {}",
+                    buf.len(),
+                    raddr,
+                    laddr
+                );
+                laddr
+            }
             None => {
-                warn!("tproxy udp get from src_dst_map got none, {}", addr);
+                warn!("tproxy UdpW get from dst_src_map got none, {}", raddr);
                 return Poll::Ready(Ok(buf.len()));
             }
         };
-        self.us.poll_send_to(cx, buf, rt.get_socket_addr().unwrap())
+        let us = so2::connect_tproxy_udp(raddr, &laddr).unwrap();
+        // 实测这里不能 将 socket2::Socket 转成 tokio 的 UdpSocket使用,  否 则 poll send 会一直为 pending
+
+        debug!("tproxy UdpW connected ,will send");
+
+        let r = us.send(buf);
+        debug!("tproxy UdpW try_send_to r {:?}", r);
+
+        Poll::Ready(r)
     }
 
     fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -298,45 +314,83 @@ impl AsyncWriteAddr for UdpW {
 
     fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         debug!("tproxy UdpW close called");
-        let mut mg = self.src_dst_map.lock();
+        let mut mg = self.dst_src_map.lock();
         mg.clear();
         Poll::Ready(Ok(()))
     }
 }
 
+/// 读取 向外的udp 请求
 impl AsyncReadAddr for UdpR {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
+        cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        let r = self.rx.try_recv();
+        // let r = self.rx.try_recv();
+        // debug!("tproxy UdpR try recv got r {:?}", r);
+        // match r {
+        //     Ok(mut ad) => {
+        //         let l = ad.0.len();
+        //         let bl = buf.len();
+        //         let len_to_cp = min(bl, l);
+        //         if bl != len_to_cp {
+        //             debug!("tproxy UdpR try recv will short write {} {}", bl, len_to_cp);
+        //         }
+        //         ad.0.copy_to_slice(&mut buf[..len_to_cp]);
+
+        //         let a = ad.1;
+        //         return Poll::Ready(Ok((len_to_cp, a)));
+        //     }
+        //     Err(e) => match e {
+        //         mpsc::error::TryRecvError::Empty => {
+        //             cx.waker().wake_by_ref();
+        //             return Poll::Pending;
+        //         }
+        //         mpsc::error::TryRecvError::Disconnected => {
+        //             return Poll::Ready(Err(io_error("tproxy UdpR rx closed")));
+        //         }
+        //     },
+        // }
+
+        debug!("tproxy UdpR try recv");
+        let r = self.rx.poll_recv(cx);
+        debug!("tproxy UdpR try recv got r {:?}", r);
+
         match r {
-            Err(e) => match e {
-                mpsc::error::TryRecvError::Empty => return Poll::Pending,
-                mpsc::error::TryRecvError::Disconnected => {
-                    return Poll::Ready(Err(io_error("tproxy udp read got disconnected")))
+            Poll::Ready(r) => match r {
+                Some(mut ad) => {
+                    let data_l = ad.0.len();
+                    let bl = buf.len();
+                    let len_to_cp = min(bl, data_l);
+                    if data_l != len_to_cp {
+                        debug!("tproxy UdpR try recv will short write {} {}", bl, len_to_cp);
+                    }
+                    ad.0.copy_to_slice(&mut buf[..len_to_cp]);
+
+                    let a = ad.1;
+                    return Poll::Ready(Ok((len_to_cp, a)));
+                }
+                None => {
+                    return Poll::Ready(Err(io_error("tproxy UdpR rx closed")));
                 }
             },
-
-            Ok(mut ad) => {
-                let l = ad.0.len();
-                let bl = buf.len();
-                let len_to_cp = min(bl, l);
-                ad.0.copy_to_slice(&mut buf[..len_to_cp]);
-
-                let a = ad.1;
-                return Poll::Ready(Ok((len_to_cp, a)));
-            }
+            Poll::Pending => return Poll::Pending,
         }
+    }
+}
+
+impl Drop for UdpR {
+    fn drop(&mut self) {
+        debug!("UdpR Dropped!")
     }
 }
 
 /// blocking
 fn loop_accept_udp(
-    us: Arc<UdpSocket>,
+    us: Socket,
     tx: mpsc::Sender<AddrData>,
-    src_dst_map: Arc<Mutex<HashMap<Addr, Addr>>>,
+    dst_src_map: Arc<Mutex<HashMap<Addr, Addr>>>,
 ) {
     loop {
         let mut buf = BytesMut::zeroed(1500);
@@ -353,6 +407,7 @@ fn loop_accept_udp(
         };
         debug!("loop_accept_udp got r {:?}", r);
 
+        // 如 本机请求 dns, 则 src 为 本机ip 随机高端口， dst 为 路由器ip 53 端口
         let (n, src, dst) = r;
 
         if n != 0 {
@@ -366,12 +421,17 @@ fn loop_accept_udp(
                 network: Network::UDP,
             };
 
+            // debug!("loop_accept_udp lock");
+
             {
-                let mut mg = src_dst_map.lock();
-                mg.insert(src_a, dst_a.clone());
+                let mut mg = dst_src_map.lock();
+                mg.insert(dst_a.clone(), src_a);
             }
+            // debug!("loop_accept_udp lock ok, try send");
 
             let r = tx.try_send((buf, dst_a));
+            // debug!("loop_accept_udp lock ok, try send ok",);
+
             if let Err(e) = r {
                 warn!("tproxy loop_accept_udp tx.send got err {e}");
 

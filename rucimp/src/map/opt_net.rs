@@ -32,7 +32,7 @@ impl TcpOptListener {
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
     ) -> anyhow::Result<Receiver<MapResult>> {
-        let listener = match so2::listen_tcp(a, &self.sopt).await {
+        let listener = match so2::listen_tcp(a, &self.sopt) {
             Ok(l) => l,
             Err(e) => return Err(e.context(format!("tcp_opt_listener failed for {}", a))),
         };
@@ -46,7 +46,7 @@ impl TcpOptListener {
 
     /// not recommended, use listen_addr
     pub async fn listen_addr_forever(&self, a: &net::Addr) -> anyhow::Result<Receiver<MapResult>> {
-        let listener = so2::listen_tcp(a, &self.sopt).await?;
+        let listener = so2::listen_tcp(a, &self.sopt)?;
         let listener = ruci::net::listen::Listener::TCP(listener);
 
         let r = accept::loop_accept_forever(listener).await;
@@ -124,11 +124,8 @@ impl Mapper for OptDirect {
         let dial_r: anyhow::Result<Stream> = match behavior {
             ProxyBehavior::ENCODE => match a.network {
                 Network::UDP => so2::dial_udp(&a, &self.sopt)
-                    .await
                     .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None))),
-                Network::TCP => so2::dial_tcp(&a, &self.sopt)
-                    .await
-                    .map(|s| Stream::Conn(Box::new(s))),
+                Network::TCP => so2::dial_tcp(&a, &self.sopt).map(|s| Stream::Conn(Box::new(s))),
                 _ => todo!(),
             },
             _ => todo!(),
@@ -191,11 +188,8 @@ impl OptDialer {
     ) -> MapResult {
         let r = match dial_a.network {
             Network::UDP => so2::dial_udp(&dial_a, &self.sopt)
-                .await
                 .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None))),
-            Network::TCP => so2::dial_tcp(&dial_a, &self.sopt)
-                .await
-                .map(|s| Stream::Conn(Box::new(s))),
+            Network::TCP => so2::dial_tcp(&dial_a, &self.sopt).map(|s| Stream::Conn(Box::new(s))),
             _ => todo!(),
         };
 

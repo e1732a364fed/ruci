@@ -11,14 +11,14 @@ use super::so_opts;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SockOpt {
-    tproxy: Option<bool>,
-    so_mark: Option<u8>,
-    bind_to_device: Option<String>,
+    pub tproxy: Option<bool>,
+    pub so_mark: Option<u8>,
+    pub bind_to_device: Option<String>,
 }
 
 /// can listen tcp or dial udp, regard to na.network
 ///
-pub async fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Result<Socket> {
+pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Result<Socket> {
     let a = na
         .get_socket_addr()
         .context("new_socket2 failed, requires a has socket addr")?;
@@ -80,30 +80,82 @@ pub async fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyho
     Ok(socket)
 }
 
-pub async fn listen_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpListener> {
-    let socket = new_socket2(na, so, true).await?;
+pub fn listen_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpListener> {
+    let socket = new_socket2(na, so, true)?;
     let listener: TcpListener = TcpListener::from_std(std::net::TcpListener::from(socket))?;
     Ok(listener)
 }
 
-pub async fn dial_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpStream> {
-    let socket = new_socket2(na, so, false).await?;
+pub fn dial_tcp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<TcpStream> {
+    let socket = new_socket2(na, so, false)?;
     let s: TcpStream = TcpStream::from_std(std::net::TcpStream::from(socket))?;
     Ok(s)
 }
 
 /// just bind to empty addr
-pub async fn dial_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
-    let socket = new_socket2(na, so, false).await?;
+pub fn dial_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
+    let socket = new_socket2(na, so, false)?;
     let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
     Ok(s)
 }
 
-pub async fn listen_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
+pub fn rawlisten_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<Socket> {
     //debug!("listen_udp {}", na);
-    let socket = new_socket2(na, so, true).await?;
+    let socket = new_socket2(na, so, true)?;
+
+    Ok(socket)
+}
+
+/// bind to na
+pub fn listen_udp(na: &net::Addr, so: &SockOpt) -> anyhow::Result<UdpSocket> {
+    //debug!("listen_udp {}", na);
+    let socket = new_socket2(na, so, true)?;
     let s: UdpSocket = UdpSocket::from_std(std::net::UdpSocket::from(socket))?;
     Ok(s)
+}
+
+pub fn new_socket2_udp_tproxy_dial(laddr: &net::Addr) -> anyhow::Result<Socket> {
+    let laddr = laddr
+        .get_socket_addr()
+        .context("new_socket2_udp_tproxy_dial failed, requires a has socket addr")?;
+
+    let is_v4;
+    let domain = if laddr.is_ipv4() {
+        is_v4 = true;
+        Domain::IPV4
+    } else {
+        is_v4 = false;
+        Domain::IPV6
+    };
+
+    let socket = Socket::new(domain, Type::DGRAM, Some(Protocol::UDP))?;
+
+    socket.set_reuse_address(true)?;
+    //socket.set_nonblocking(true)?;
+    // DO NOT set IP_RECVORIGDSTADDR
+    so_opts::set_tproxy_socket_opts(is_v4, false, &socket)?;
+    // if let Some(m) = so.so_mark {
+    //     so_opts::set_mark(&socket, m)?;
+    // }
+    // if let Some(d) = &so.bind_to_device {
+    //     socket.bind_device(Some(d.as_bytes()))?;
+    // }
+
+    socket.bind(&laddr.into())?;
+
+    Ok(socket)
+}
+
+/// bind to laddr
+pub fn connect_tproxy_udp(laddr: &net::Addr, raddr: &net::Addr) -> anyhow::Result<Socket> {
+    let socket = new_socket2_udp_tproxy_dial(laddr)?;
+    let ra = raddr
+        .get_socket_addr()
+        .context("new_socket2 failed, requires a has socket addr")?;
+
+    socket.connect(&ra.into()).context("connect failed")?;
+
+    Ok(socket)
 }
 
 /// returns stream, raddr, laddr

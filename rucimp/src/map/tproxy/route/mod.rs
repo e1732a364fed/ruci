@@ -5,6 +5,7 @@ const DEFAULT_PORT: u16 = 12345;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Options {
+    /// tproxy 监听的端口, 默认为 [`DEFAULT_PORT`]
     pub port: Option<u16>,
     pub route_ipv6: Option<bool>,
     pub proxy_local_udp_53: Option<bool>,
