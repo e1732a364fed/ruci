@@ -26,7 +26,7 @@ download Country.mmdb from https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@releas
 
 then put it to resource folder
 
-## tun
+## tun
 
 need to enable rucimp's tun feature (which enables ruci's tun feature):
 
@@ -36,7 +36,15 @@ sudo RUST_LOG=debug cargo run --example chain -F tun
 
 ### macos test
 
-使用 local.lua 的对应示例 config, 运行上面命令运行 chian, 然后在terminal 输入下面命令
+使用 local.lua 的对应示例 config, inbounds 如
+
+```lua
+inbounds = { 
+    {chain = { { Dialer="ip://10.0.0.1:24#utun321" } }, tag = "listen1"} ,
+}
+```
+
+运行上面命令运行 chain, 然后在terminal 输入下面命令
 
 ```sh
 sudo ifconfig utun321 10.0.0.1 10.0.0.2 up
@@ -44,6 +52,12 @@ ping 10.0.0.2
 ```
 
 将能在 chain 的命令行中接收到 ping 的数据包
+
+### 全局代理路由
+
+如果您要将您个人电脑的全局网络流量全交由 ruci 代理, 则您需要自行配置系统的路由。
+
+在未来的 rucimple 项目中, 会添加 自动全局路由功能
 
 
 # suit 的功能还不全

@@ -162,6 +162,7 @@ o2node-.->collector
 - [x] Direct, Blackhole, Listener, Dialer, Stdio, Fileio
 - [x] Tls, Socks5(including UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
 - [x] Adder (按字节加法器), Counter (层流量计), Echo
+- [x] tun feature([tun example](rucimp/examples/readme.md#tun))
 - [x] Unix Domain Socket
 - [x] 路由 (tag_route)
 - [ ] 回落
