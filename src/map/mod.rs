@@ -86,7 +86,7 @@ impl State {
 }
 
 /// 如果新连接不是udp, 则内含新连接
-pub enum Connection {
+pub enum NewConnection {
     TcpConnection(TcpStream),
     #[cfg(unix)]
     UnixConnection(tokio::net::UnixStream),
@@ -94,7 +94,7 @@ pub enum Connection {
 }
 
 pub struct NewConnectionOptData {
-    pub new_connection: Connection,
+    pub new_connection: NewConnection,
     pub data: OptData,
 }
 
@@ -121,7 +121,7 @@ pub enum Stream {
     None,
 }
 
-/// add方法的参数
+/// map方法的参数
 pub struct MapParams {
     ///base conn
     pub c: Stream,

@@ -37,8 +37,6 @@ pub async fn handle_tcp<'a>(
 
     let cid = state.cid;
 
-    //let intcpc = in_tcp.clone();
-
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
             type DummyType = std::vec::IntoIter<OptData>;

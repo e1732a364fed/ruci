@@ -603,7 +603,7 @@ impl Server {
                 b: if buf.len() > 0 { Some(buf) } else { None },
                 c: None,
                 d: Some(map::AnyData::B(Box::new(map::NewConnectionOptData {
-                    new_connection: map::Connection::UdpConnection,
+                    new_connection: map::NewConnection::UdpConnection,
                     data: None,
                 }))), //标记我们 采用了新的udp连接
                 e: None,

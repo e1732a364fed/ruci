@@ -43,15 +43,20 @@ rucimple 是最终的全功能的可执行文件，利用rucimp中的实现构�
 
 ruci根项目只提供 TLS, Socks5, Trojan 这三种主要的 流映射函数, 以及一些辅助的 流映射函数（如 Counter, MathAdder 等）, 以及一些流发生器（listen tcp, dial tcp 等)，其它第三方协议要在 rucimp中实现
 
+## 目前的编译执行方式
+
+在 rucimp 文件夹执行 `cargo build --release` 编译，
+
+到 ruci/target/release 找rucimp可执行文件，拷回 rucimp 文件夹(config.toml 所在的位置)，执行 rucimp
+
 ## 开发
 
 采用TDD开发模式。具体见 [doc/CONTRIBGUITING_zh.md](doc/CONTRIBUTING_zh.md)
 
 ### 异步架构
 
-为了避免有人说笔者抄袭，在项目初期笔者选用了 async_std （现有rust代理一般使用的都是 tokio）。
-
-以后如果有必要，可以创建 tokio 分支
+为了避免有人说笔者抄袭，在项目初期笔者选用了 async_std。
+后来才创建的 tokio 分支，可查看commit历史 求证。
 
 ### 链式结构
 

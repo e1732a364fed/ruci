@@ -30,6 +30,13 @@ pub struct AdderConn {
     pub add: i8,
     pub cid: u32,
     base: Pin<net::Conn>,
+    wbuf: BytesMut,
+}
+
+impl AdderConn {
+    fn write_wbuf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<usize>> {
+        self.base.as_mut().poll_write(cx, &self.wbuf)
+    }
 }
 
 impl AsyncRead for AdderConn {
@@ -50,12 +57,17 @@ impl AsyncWrite for AdderConn {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        let mut abuf = BytesMut::from(buf);
-        for a in abuf.iter_mut() {
-            *a = ((self.add as i16) + *a as i16) as u8;
-        }
+        let x: i16 = self.add as i16;
 
-        let r = self.base.as_mut().poll_write(cx, &abuf);
+        {
+            let abuf = &mut self.wbuf;
+            abuf.clear();
+            abuf.extend_from_slice(buf);
+            for a in abuf.iter_mut() {
+                *a = (x + *a as i16) as u8;
+            }
+        }
+        let r = self.write_wbuf(cx);
 
         if let Poll::Ready(Ok(_)) = &r {}
         r
@@ -99,6 +111,7 @@ impl crate::map::Mapper for Adder {
                     cid,
                     add: self.addnum,
                     base: Box::pin(c),
+                    wbuf: BytesMut::new(),
                 };
 
                 MapResult {

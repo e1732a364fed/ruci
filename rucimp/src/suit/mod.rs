@@ -256,7 +256,7 @@ async fn listen_tcp(
                 debug!("new tcp in, laddr:{}, raddr: {:?}", laddr, raddr);
             }
 
-            let r = relay::tcp::handle_tcp(
+            let _ = relay::tcp::handle_tcp(
                 tcpstream,
                 ins.whole_name(),
                 outc.whole_name(),
