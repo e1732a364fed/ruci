@@ -63,7 +63,7 @@ impl Name for TcpDialer {
 }
 
 impl TcpDialer {
-    ///  panic if a is invalid
+    ///  panic if dial_a is invalid. todo: try not panic
     pub async fn dial_addr(dial_a: &net::Addr, pass_a: Option<net::Addr>) -> MapResult {
         //todo: DNS 功能
 
@@ -82,7 +82,7 @@ impl Mapper for TcpDialer {
         self.addr.clone()
     }
 
-    /// try the paramater first, if no addr was given, use configured addr
+    /// try the paramater first, if no addr was given, use configured addr.
     /// 注意, dial addr 和target addr (params.a) 不一样
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {

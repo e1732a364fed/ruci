@@ -1,0 +1,88 @@
+/*!
+* write, read 到 stdio (标准输入输出，即命令行). 理解上, stdio 和 tcp_dialer 类似,
+  都是 一种 【 单流发生器 】
+*/
+
+use std::{pin::Pin, task::Poll};
+
+use async_trait::async_trait;
+
+use crate::{net::CID, Name};
+
+use super::*;
+use tokio::io::{self, AsyncRead, AsyncWrite, Stdin, Stdout};
+
+pub struct Conn {
+    input: Pin<Box<Stdin>>,
+    out: Pin<Box<Stdout>>,
+}
+impl Name for Conn {
+    fn name(&self) -> &'static str {
+        "stdio_conn"
+    }
+}
+
+impl AsyncRead for Conn {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        let r = self.input.as_mut().poll_read(cx, buf);
+        r
+    }
+}
+
+impl AsyncWrite for Conn {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        let r = self.out.as_mut().poll_write(cx, buf);
+
+        r
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<io::Result<()>> {
+        self.out.as_mut().poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<io::Result<()>> {
+        self.out.as_mut().poll_shutdown(cx)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Stdio;
+
+impl Name for Stdio {
+    fn name(&self) -> &'static str {
+        "stdio"
+    }
+}
+
+#[async_trait]
+impl Mapper for Stdio {
+    async fn maps(&self, _cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        if params.c.is_not_none() {
+            return MapResult::err_str("stdio can't generate stream when there's already one");
+        };
+
+        let stdin = tokio::io::stdin();
+        let stdout = tokio::io::stdout();
+
+        let c = Conn {
+            input: Box::pin(stdin),
+            out: Box::pin(stdout),
+        };
+
+        MapResult::oabc(params.a, params.b, Box::new(c))
+    }
+}

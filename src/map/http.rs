@@ -1,3 +1,7 @@
+/*!
+ * imp http proxy as map::Mapper
+ */
+
 use std::cmp::min;
 use std::io::{self, Error};
 

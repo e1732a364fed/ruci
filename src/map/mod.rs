@@ -25,13 +25,13 @@ ruci 将任意代理行为分割成若干个不可再分的
 */
 
 pub mod counter;
-
 pub mod http;
 /// math 中有一些基本数学运算的 adder
 pub mod math;
 pub mod network;
 pub mod socks5;
 pub mod socks5http;
+pub mod stdio;
 pub mod tls;
 pub mod trojan;
 
@@ -169,6 +169,17 @@ impl MapResult {
         MapResult {
             a: Some(a),
             b: if b.is_empty() { None } else { Some(b) },
+            c: Stream::TCP(c),
+            d: None,
+            e: None,
+            new_id: None,
+        }
+    }
+
+    pub fn oabc(a: Option<net::Addr>, b: Option<BytesMut>, c: net::Conn) -> Self {
+        MapResult {
+            a,
+            b,
             c: Stream::TCP(c),
             d: None,
             e: None,

@@ -1,3 +1,6 @@
+/*!
+ * 先试 socks5, 不是 socks5协议的话, 再试 http proxy
+ */
 use std::io::{self};
 
 use futures::executor::block_on;
