@@ -405,11 +405,10 @@ mod test {
 
             Ok::<(), io::Error>(())
         });
-        // let (_, rx) = oneshot::channel();
-        let (tx1, rx1) = tokio::sync::broadcast::channel(10);
+        let (_tx, rx) = oneshot::channel();
 
         let _ =
-            crate::net::addr_conn::cp_addr(r2, ms, "".to_string(), false, rx1, false, None).await;
+            crate::net::addr_conn::cp_addr(r2, ms, "".to_string(), false, rx, false, None).await;
 
         let nv = buf_to_write.repeat(5);
 

@@ -476,6 +476,11 @@ impl Addr {
     ///
     /// 对于 tcp/uds, dial_a 须提供，否则将报错
     ///
+    /// ## udp_fix_target_listen
+    ///
+    /// 为 true 时, 会对udp 做针对 fixed_target_addr 的 特殊处理,
+    /// 对 非 udp 情况 无意义
+    ///
     pub async fn bind_dial(
         bind_a: Option<&Self>,
         dial_a: Option<&Self>,

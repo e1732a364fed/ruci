@@ -67,6 +67,17 @@ fn try_resolve_host() {
 }
 
 #[test]
+fn ipv6_str_to_addr() {
+    let s = "[1:2::3]:4";
+    let a = Addr::from_name_network_addr_url(s).unwrap();
+    println!("{:?}", a.addr);
+    match a.addr {
+        NetAddr::Socket(so) => assert!(so.is_ipv6()),
+        _ => panic!("false"),
+    }
+}
+
+#[test]
 fn addr_to_name_ip_netmask() {
     let a = Addr::from_strs("ip", "utun432", "10.0.0.1", 24).unwrap();
     println!("{:?}", a);

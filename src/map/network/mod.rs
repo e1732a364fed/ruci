@@ -208,7 +208,9 @@ impl Mapper for BindDialer {
     }
 }
 
-/// Listener can listen tcp and unix domain socket
+/// Listener can listen tcp,udp and unix domain socket.
+///
+/// udp Listener is only supported with fixed_target_addr
 #[mapper_ext_fields]
 #[derive(MapperExt, Clone, Debug, Default)]
 pub struct Listener {

@@ -10,8 +10,8 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::sync::{broadcast, oneshot};
-use tracing::{info, warn};
+use tokio::sync::oneshot;
+use tracing::info;
 
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
 // 只是加了一个 Addr 参数. 这一部分比较难懂.
@@ -330,18 +330,18 @@ pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(100); //todo: adj
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 pub const MTU: usize = 1400;
 
-async fn read_once<R1: AddrReadTrait, W1: AddrWriteTrait>(
-    r1: &mut R1,
-    w1: &mut W1,
+async fn rw_once<R: AddrReadTrait, W: AddrWriteTrait>(
+    r: &mut R,
+    w: &mut W,
     buf: &mut [u8],
 ) -> io::Result<usize> {
-    let (u, a) = r1.read(buf).await?;
+    let (rn, a) = r.read(buf).await?;
 
-    let u = w1.write(&buf[..u], &a).await?;
+    let wn = w.write(&buf[..rn], &a).await?;
 
-    let r = w1.flush().await;
+    let r = w.flush().await;
     match r {
-        Ok(_) => Ok(u),
+        Ok(_) => Ok(wn),
         Err(e) => Err(e),
     }
 }
@@ -355,7 +355,7 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
     mut w: W,
     name: String,
     no_timeout: bool,
-    mut shutdown_rx: broadcast::Receiver<()>,
+    mut shutdown_rx: oneshot::Receiver<()>,
     is_d: bool,
     opt: Option<Arc<GlobalTrafficRecorder>>,
 ) -> Result<u64, Error> {
@@ -365,78 +365,47 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
     let mut whole_write = 0;
     let mut buf = Box::new([0u8; MTU]);
 
-    if no_timeout {
-        loop {
-            let rf = read_once(&mut r, &mut w, buf.as_mut());
+    loop {
+        tokio::select! {
+            r = rw_once(&mut r, &mut w, buf.as_mut()) =>{
+                match r {
+                    Ok(n) => whole_write+=n,
+                    Err(e) => {
+                        match e.kind(){
+                            io::ErrorKind::Other => {
+                                debug!("cp_addr got other e, will continue: {e}");
+                                continue;
+                            },
+                            _ => {
+                                // udp timeout 时 常会发生, 因此不能认为是错误
+                                info!(name = name,"cp_addr got e, will break: {e}");
+                            },
+                        }
 
-            tokio::select! {
-                r = rf =>{
-                    match r {
-                        Ok(n) => whole_write+=n,
-                        Err(e) => {
-                            match e.kind(){
-                                io::ErrorKind::Other => {
-                                    debug!("cp_addr got other e, will continue. {e}");
-                                    continue;
-                                },
-                                _ => {
-                                    warn!(name = name,"cp_addr got e, will break {e}");
-                                },
-                            }
-
-                            break
-                        },
-                    }
-                }
-
-                _ = shutdown_rx.recv() =>{
-                    info!("cp_addr got shutdown_rx, will break");
-
-                    break;
+                        break
+                    },
                 }
             }
-            tokio::task::yield_now().await; //necessary, or it is likely to cause stuck issue
-        } //loop
-    } else {
-        loop {
-            let rf = read_once(&mut r, &mut w, buf.as_mut());
-            let timeout_f = tokio::time::sleep(CP_UDP_TIMEOUT);
-
-            tokio::select! {
-                r = rf =>{
-                    match r {
-                        Ok(n) => whole_write+=n,
-                        Err(e) => {
-                            match e.kind(){
-                                io::ErrorKind::Other => {
-                                    debug!("cp_addr got other e, will continue: {e}");
-                                    continue;
-                                },
-                                _ => {
-                                    // udp timeout 时 常会发生, 因此不能认为是错误
-                                    info!(name = name,"cp_addr got e, will break: {e}");
-                                },
-                            }
-
-                            break
-                        },
-                    }
+            _ = async{
+                if no_timeout{
+                    std::future::pending().await
+                }else{
+                    tokio::time::sleep(CP_UDP_TIMEOUT).await
                 }
-                _ = timeout_f =>{
-                    info!(timeout = ?CP_UDP_TIMEOUT,"cp_addr got timeout, will break");
+            } =>{
+                info!(timeout = ?CP_UDP_TIMEOUT,"cp_addr got timeout, will break");
 
-                    break;
-                }
-
-                _ = shutdown_rx.recv() =>{
-                    info!("cp_addr got shutdown_rx, will break");
-
-                    break;
-                }
+                break;
             }
-            tokio::task::yield_now().await; //necessary, or it is likely to cause stuck issue
-        } //loop
-    }
+
+            _ = &mut shutdown_rx =>{
+                info!("cp_addr got shutdown_rx, will break");
+
+                break;
+            }
+        }
+        tokio::task::yield_now().await; //necessary, or it is likely to cause stuck issue
+    } //loop
 
     let l = whole_write as u64;
     if let Some(a) = opt {
@@ -462,18 +431,14 @@ pub async fn cp(
     shutdown_rx1: Option<tokio::sync::oneshot::Receiver<()>>,
     shutdown_rx2: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<u64, Error> {
-    let name1 = c1.cached_name.clone();
-    let name2 = c2.cached_name.clone();
-    let r1 = c1.r;
-    let w1 = c1.w;
-    let r2 = c2.r;
-    let w2 = c2.w;
+    let n1 = c1.cached_name.clone() + " to " + &c2.cached_name;
+    let n2 = c2.cached_name.clone() + " to " + &c1.cached_name;
 
-    let (tx1, rx1) = broadcast::channel(10);
-    let (tx2, rx2) = broadcast::channel(10);
+    let (tx1, rx1) = oneshot::channel();
+    let (tx2, rx2) = oneshot::channel();
 
-    let tx1c = tx1.clone();
-    let tx2c = tx1.clone();
+    let cp1 = tokio::spawn(cp_addr(c1.r, c2.w, n1, no_timeout, rx1, false, opt.clone()));
+    let cp2 = tokio::spawn(cp_addr(c2.r, c1.w, n2, no_timeout, rx2, true, opt.clone()));
 
     let (_tmpx0, tmp_rx0) = oneshot::channel();
     let shutdown_rx1 = if let Some(x) = shutdown_rx1 {
@@ -489,20 +454,12 @@ pub async fn cp(
         tmp_rx
     };
 
-    let n1 = name1.clone() + " to " + &name2;
-    let n2 = name2 + " to " + &name1;
-
-    let o1 = opt.clone();
-    let o2 = opt.clone();
-    let cp1 = tokio::spawn(cp_addr(r1, w2, n1, no_timeout, rx1, false, o1));
-    let cp2 = tokio::spawn(cp_addr(r2, w1, n2, no_timeout, rx2, true, o2));
-
     let r = tokio::select! {
         r = cp1 =>{
             if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!( cid = %cid,"cp_addr end, u");
+                debug!( cid = %cid,"addr_conn::cp end, u");
             }
-            let _ = tx1c.send(());
+            let _ = tx1.send(());
             let _ = tx2.send(());
 
             match r{
@@ -512,10 +469,10 @@ pub async fn cp(
         }
         r = cp2 =>{
             if tracing::enabled!(tracing::Level::DEBUG)  {
-                debug!( cid = %cid,"cp_addr end, d");
+                debug!( cid = %cid,"addr_conn::cp end, d");
             }
-            let _ = tx1c.send(());
-            let _ = tx2c.send(());
+            let _ = tx1.send(());
+            let _ = tx2.send(());
 
             match r{
                 Ok(r) => r.unwrap_or(0),
@@ -525,17 +482,16 @@ pub async fn cp(
          _ = shutdown_rx1 =>{
             debug!("addrconn cp_between got shutdown1 signal");
 
-            let _ = tx1c.send(());
-            let _ = tx2c.send(());
+            let _ = tx1.send(());
+            let _ = tx2.send(());
 
             0
         }
 
         _ = shutdown_rx2 =>{
             debug!("addrconn cp_between got shutdown2 signal");
-
-            let _ = tx1c.send(());
-            let _ = tx2c.send(());
+            let _ = tx1.send(());
+            let _ = tx2.send(());
 
             0
         }

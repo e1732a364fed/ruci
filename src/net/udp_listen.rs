@@ -1,4 +1,5 @@
 use std::{
+    cmp::min,
     collections::HashMap,
     io,
     pin::Pin,
@@ -24,6 +25,8 @@ use super::{
 
 /// 监听一个 udp 端口, 对 每一个 新 源 udp 端口发来的连接
 /// 新建一个 Stream::AddrConn. 用于 udp 端口转发
+///
+/// 只支持 预定义 target_addr
 #[derive(Debug)]
 pub struct FixedTargetAddrUDPListener {
     pub laddr: Addr,
@@ -151,8 +154,9 @@ pub fn new(
 ) -> AddrConn {
     let r = Reader {
         dst,
-        r,
-        first_buf: Some(first_buf),
+        rx: r,
+        last_buf: Some(first_buf),
+        state: ReadState::Buf,
     };
     let w = Writer {
         u: u.clone(),
@@ -217,14 +221,20 @@ impl AsyncWriteAddr for Writer {
 }
 
 pub struct Reader {
-    r: Receiver<BytesMut>,
+    rx: Receiver<BytesMut>,
     dst: Addr,
-    first_buf: Option<BytesMut>,
+    last_buf: Option<BytesMut>,
+    state: ReadState,
 }
 impl crate::Name for Reader {
     fn name(&self) -> &str {
         "udp_fixed_r"
     }
+}
+
+enum ReadState {
+    Buf,
+    Rx,
 }
 
 impl AsyncReadAddr for Reader {
@@ -233,29 +243,47 @@ impl AsyncReadAddr for Reader {
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        if let Some(mut b) = self.first_buf.take() {
-            let r_len = b.len();
-            //debug!("udp fix read first {} {}", r_len, self.dst);
-            b.copy_to_slice(&mut buf[..r_len]);
+        loop {
+            match self.state {
+                ReadState::Buf => {
+                    if let Some(mut b) = self.last_buf.take() {
+                        let r_len = b.len();
 
-            return Poll::Ready(Ok((r_len, self.dst.clone())));
-        }
-        let r = self.r.poll_recv(cx);
-        match r {
-            Poll::Ready(r) => match r {
-                Some(mut b) => {
-                    let r_len = b.len();
-                    //debug!("udp fix read  got {} ", r_len);
-                    b.copy_to_slice(&mut buf[..r_len]);
+                        let min_l = min(r_len, buf.len());
 
-                    Poll::Ready(Ok((r_len, self.dst.clone())))
+                        b.copy_to_slice(&mut buf[..min_l]);
+
+                        if b.is_empty() {
+                            self.state = ReadState::Rx;
+                        } else {
+                            self.last_buf = Some(b);
+                        }
+
+                        return Poll::Ready(Ok((r_len, self.dst.clone())));
+                    } else {
+                        self.state = ReadState::Rx;
+                    }
                 }
-                None => Poll::Ready(Err(io::Error::new(
-                    io::ErrorKind::ConnectionAborted,
-                    "udp_fixed_r r closed",
-                ))),
-            },
-            Poll::Pending => Poll::Pending,
-        }
+                ReadState::Rx => {
+                    let r = self.rx.poll_recv(cx);
+                    match r {
+                        Poll::Ready(rx) => match rx {
+                            Some(b) => {
+                                //debug!("udp_fixed r read got {}", b.len());
+                                self.last_buf = Some(b);
+                                self.state = ReadState::Buf;
+                            }
+                            None => {
+                                return Poll::Ready(Err(io::Error::new(
+                                    io::ErrorKind::ConnectionAborted,
+                                    "udp_fixed_r r closed",
+                                )))
+                            }
+                        },
+                        Poll::Pending => return Poll::Pending,
+                    }
+                }
+            } //match
+        } //loop
     }
 }
