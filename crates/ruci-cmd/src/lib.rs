@@ -16,6 +16,7 @@ mod utils;
 mod mode;
 
 pub use rucimp;
+use serde::{Deserialize, Serialize};
 
 use std::env::{self, set_var};
 
@@ -27,7 +28,9 @@ use tracing::{debug, info, warn};
 #[cfg(feature = "api_server")]
 use utoipa;
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(
+    Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
+)]
 pub enum Mode {
     /// Chain mode, which uses lua/json file
     #[default]
@@ -42,7 +45,7 @@ impl Mode {
 }
 
 /// ruci command line parameters:
-#[derive(Parser, Clone, Default)]
+#[derive(Parser, Clone, Default, Serialize, Deserialize)]
 #[command(author = "e")]
 #[command(version, about, long_about = None)]
 pub struct Args {
@@ -117,16 +120,19 @@ impl Args {
             log_level: self.log_level,
             log_file: self.log_file.clone(),
             log_dir: self.log_dir.clone(),
+            #[cfg(any(feature = "lua", feature = "lua54"))]
             infinite: self.infinite,
             #[cfg(feature = "trace")]
             trace: self.trace,
+            #[cfg(feature = "api_server")]
             api_server: self.api_server,
+            #[cfg(feature = "api_server")]
             api_addr: self.api_addr.clone(),
         }
     }
 }
 
-#[derive(Subcommand, Clone)]
+#[derive(Subcommand, Clone, Serialize, Deserialize)]
 pub enum SubCommands {
     /// Api client
     #[cfg(feature = "api_client")]
@@ -147,6 +153,126 @@ pub enum SubCommands {
 pub async fn run_main() -> anyhow::Result<()> {
     let args = Args::parse();
     run_main_with_args(args).await
+}
+/// blocking
+
+pub async fn run_main_with_json_args(json: &str) -> anyhow::Result<()> {
+    let args = rucimp::serde_json::from_str(&json)?;
+    run_main_with_args(args).await
+}
+
+/// non-blocking, using a new multithread tokio runtime.
+#[no_mangle]
+pub unsafe extern "C" fn c_run_main_with_json_args(
+    json_content: *const std::ffi::c_char,
+) -> *mut std::ffi::c_char {
+    let json_content = std::ffi::CStr::from_ptr(json_content);
+    let json_content_as_str = match json_content.to_str() {
+        Ok(s) => s,
+        Err(e) => {
+            return std::ffi::CString::new(e.to_string()).unwrap().into_raw();
+        }
+    };
+
+    let x = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build();
+    match x {
+        Ok(rt) => {
+            rt.spawn(run_main_with_json_args(json_content_as_str));
+        }
+        Err(e) => return std::ffi::CString::new(e.to_string()).unwrap().into_raw(),
+    }
+
+    let r = "ok".to_string();
+
+    std::ffi::CString::new(r).unwrap().into_raw()
+}
+
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+pub mod android {
+    use jni;
+
+    use self::jni::objects::{JClass, JString};
+    use self::jni::sys::jstring;
+    use self::jni::JNIEnv;
+    use super::*;
+
+    /// real function
+    #[no_mangle]
+    pub unsafe extern "C" fn Java_com_example_myapplication_MainActivity_run(
+        mut env: JNIEnv,
+        _: JClass,
+        java_pattern: JString,
+    ) -> jstring {
+        let r = c_run_main_with_json_args(
+            env.get_string(&java_pattern)
+                .expect("invalid pattern string")
+                .as_ptr(),
+        );
+
+        let r_ptr = std::ffi::CString::from_raw(r);
+
+        let output = env
+            .new_string(r_ptr.to_str().unwrap())
+            .expect("Couldn't create java string!");
+
+        output.into_raw()
+    }
+
+    /// same function in another android kotlin class
+    ///
+    /// ```plaintext
+    /// package com.ruci.android
+    /// class Class1    {
+    ///     init {
+    ///         System.loadLibrary("ruci_cmd")
+    ///     }
+    ///     external fun run(input: String): String
+    /// }
+    /// ```
+    #[no_mangle]
+    pub unsafe extern "C" fn Java_com_ruci_android_Class1_run(
+        env: JNIEnv,
+        jc: JClass,
+        java_pattern: JString,
+    ) -> jstring {
+        Java_com_example_myapplication_MainActivity_run(env, jc, java_pattern)
+    }
+
+    /// export an example function for testing
+    #[no_mangle]
+    pub unsafe extern "C" fn Java_com_example_myapplication_MainActivity_greeting(
+        mut env: JNIEnv,
+        _: JClass,
+        java_pattern: JString,
+    ) -> jstring {
+        fn rust_greeting(to: *const std::ffi::c_char) -> *mut std::ffi::c_char {
+            let c_str = unsafe { std::ffi::CStr::from_ptr(to) };
+            let recipient = match c_str.to_str() {
+                Err(_) => "there",
+                Ok(string) => string,
+            };
+
+            std::ffi::CString::new("Hello ".to_owned() + recipient)
+                .unwrap()
+                .into_raw()
+        }
+
+        let world = rust_greeting(
+            env.get_string(&java_pattern)
+                .expect("invalid pattern string")
+                .as_ptr(),
+        );
+        // Retake pointer so that we can use it below and allow memory to be freed when it goes out of scope.
+        let world_ptr = std::ffi::CString::from_raw(world);
+        let output = env
+            .new_string(world_ptr.to_str().unwrap())
+            .expect("Couldn't create java string!");
+
+        output.into_raw()
+    }
 }
 
 /// blocking

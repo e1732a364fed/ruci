@@ -41,6 +41,17 @@ make BUILD_VERSION=my_version BUILD_TRIPLET=aarch64-apple-darwin
 
 详见 Makefile, build_cross.sh 和 .github/workflows/ 中的 脚本
 
+## build lib(.so) for android:
+export PATH="$PATH:$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+
+arm64:
+
+CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android32-clang cargo build --target aarch64-linux-android --release
+
+x86_64:
+
+CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android32-clang cargo build --target x86_64-linux-android --release
+
 # features
 
 features: lua, lua54, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn, tun, smoltcp

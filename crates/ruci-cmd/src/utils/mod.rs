@@ -3,7 +3,7 @@ use std::{fs, sync::Arc, time::Duration};
 use anyhow::{Context, Ok};
 use clap::Subcommand;
 use ruci::net;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_value::Value;
 use tokio::sync::mpsc;
 use tracing::info;
@@ -21,7 +21,7 @@ pub const RUCI_WEBUI_DOWNLOAD_LINK: &str =
 
 // 运行示例： ruci-cmd utils convert-format local.lua json
 
-#[derive(Subcommand, Clone)]
+#[derive(Subcommand, Clone, Serialize, Deserialize)]
 pub enum Commands {
     /// download Country.mmdb
     Mmdb,

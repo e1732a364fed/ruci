@@ -5,8 +5,10 @@ use anyhow::Context;
 use anyhow::Result;
 use clap::Subcommand;
 use rucimp::api::DEFAULT_API_ADDR;
+use serde::Deserialize;
+use serde::Serialize;
 
-#[derive(Subcommand, Clone)]
+#[derive(Subcommand, Clone, Serialize, Deserialize)]
 pub enum Commands {
     ConnectionCount {
         addr: Option<String>,

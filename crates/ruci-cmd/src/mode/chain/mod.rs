@@ -1,4 +1,3 @@
-#[cfg(feature = "api_server")]
 use std::path::Path;
 
 use anyhow::bail;

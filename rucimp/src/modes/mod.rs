@@ -130,6 +130,8 @@ pub struct CoreArgs {
     #[serde(skip)]
     pub data_source: Option<Arc<DataSource>>,
 
+    /// If true, if the config is a download url, it will not store it in
+    /// file. Only valid when "utils" feature is on.
     #[serde(default)]
     pub in_memory: bool,
 

@@ -3,8 +3,6 @@
 [![release][1]][2] 
 [![FOSSA Status][3]][4]
 
-
-
 [1]: https://img.shields.io/github/v/release/e1732a364fed/ruci
 [2]: https://github.com/e1732a364fed/ruci/releases/latest
 [3]: https://app.fossa.com/api/projects/git%2Bgithub.com%2Fe1732a364fed%2Fruci.svg?type=shield
@@ -87,8 +85,6 @@ The project is work in progress, 功能会陆续添加与调整.
 - [x] api_client
 - [x] static file server 
 - [x] utils
-- [ ] system tray
-- [ ] ~~tui: using ratatui~~
 
 ### 其它生态
 
