@@ -43,6 +43,10 @@ pub struct IndexInfinite {
 pub type IndexMapperBox = (usize, Arc<MapperBox>); //MapperBox 和它的 索引
 
 /// 如果产生的是新的, 则其index 为 cache_len
+///
+/// 如果 index 不为 cache_len, 则不会被写入缓存, 即它指示该新MapperBox只会被
+/// 用到一次
+///
 pub trait IndexNextInMapperGenerator {
     fn next_in_mapper(
         &self,
@@ -52,28 +56,27 @@ pub trait IndexNextInMapperGenerator {
     ) -> Option<IndexMapperBox>;
 }
 
-// #[async_trait]
-// impl DynIterator for IndexInfinite {
-//     async fn next_with_data(
-//         &mut self,
-//         data: Option<Vec<ruci::map::OptVecData>>,
-//     ) -> Option<Arc<MapperBox>> {
-//         let cl = self.cache.len();
-//         let oi = self.selector.next_in_mapper(self.current_index, cl, data);
-//         match oi {
-//             Some(ib) => {
-//                 let i = ib.0;
-//                 self.current_index = i;
-//                 self.history.push(i);
-//                 if i == cl {
-//                     self.cache.push(ib.1.clone());
-//                 }
-//                 Some(ib.1)
-//             }
-//             None => None,
-//         }
-//     }
-// }
+impl DynIterator for IndexInfinite {
+    fn next_with_data(
+        &mut self,
+        data: Option<Vec<ruci::map::OptVecData>>,
+    ) -> Option<Arc<MapperBox>> {
+        let cl = self.cache.len();
+        let oi = self.selector.next_in_mapper(self.current_index, cl, data);
+        match oi {
+            Some(ib) => {
+                let i = ib.0;
+                self.current_index = i;
+                self.history.push(i);
+                if i == cl {
+                    self.cache.push(ib.1.clone());
+                }
+                Some(ib.1)
+            }
+            None => None,
+        }
+    }
+}
 
 /// Complete Dynamic Chain using uuid
 pub struct UuidInfinite {

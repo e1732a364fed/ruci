@@ -59,13 +59,13 @@ fn load_finite_dynamic_helper(
     lua: &Lua,
     lua_text: String,
 ) -> Result<(StaticConfig, SelectorHelper)> {
-    lua.load(lua_text).eval()?;
+    lua.load(&lua_text).eval()?;
 
     let lg = lua.globals();
 
     let clt: LuaTable = lg.get("config").context("lua has no config field")?;
 
-    let getter: LuaFunction = lg
+    let _: LuaFunction = lg
         .get(GET_DYN_SELECTOR_FOR)
         .context(format!("lua has no {}", GET_DYN_SELECTOR_FOR))?;
 
@@ -76,7 +76,15 @@ fn load_finite_dynamic_helper(
         .map(|x| {
             let tag = x.tag.as_ref().unwrap();
 
-            let x = match getter.call::<String, LuaFunction>(tag.to_string()) {
+            let real_lua = Lua::new();
+            real_lua.load(&lua_text).eval::<()>().expect("must be ok");
+
+            let real_getter: LuaFunction = real_lua
+                .globals()
+                .get(GET_DYN_SELECTOR_FOR)
+                .expect("must be ok");
+
+            let x = match real_getter.call::<String, LuaFunction>(tag.to_string()) {
                 Ok(rst) => rst,
                 Err(err) => {
                     panic!("get get_dyn_selector_for for {tag} err: {}", err);
@@ -95,7 +103,15 @@ fn load_finite_dynamic_helper(
         .map(|x| {
             let tag = &x.tag;
 
-            let x = match getter.call::<String, LuaFunction>(tag.to_string()) {
+            let real_lua = Lua::new();
+            real_lua.load(&lua_text).eval::<()>().expect("must be ok");
+
+            let real_getter: LuaFunction = real_lua
+                .globals()
+                .get(GET_DYN_SELECTOR_FOR)
+                .expect("must be ok");
+
+            let x = match real_getter.call::<String, LuaFunction>(tag.to_string()) {
                 Ok(rst) => rst,
                 Err(err) => {
                     panic!("get get_dyn_selector_for for {tag} err: {}", err);
@@ -191,8 +207,9 @@ unsafe impl Sync for LuaNextSelector {}
 impl NextSelector for LuaNextSelector {
     fn next_index(&self, this_index: i64, data: Option<Vec<ruci::map::OptVecData>>) -> Option<i64> {
         let w = OptVecOptVecDataLuaWrapper(data);
+        let f = self.0.lock();
 
-        match self.0.lock().call::<_, i64>((this_index, w)) {
+        match f.call::<_, i64>((this_index, w)) {
             Ok(rst) => Some(rst),
             Err(err) => {
                 warn!("{}", err);

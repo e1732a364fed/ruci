@@ -2,45 +2,93 @@ print("this is a lua config file")
 
 -- lua 的好处有很多，你可以定义很多变量
 
-listen = { Listener =  "0.0.0.0:10800"   }
-l2 = { Listener =   "0.0.0.0:20800"   }
-l3 = { Listener =   "0.0.0.0:30800"   }
+listen = {
+    Listener = "0.0.0.0:10800"
+}
+l2 = {
+    Listener = "0.0.0.0:20800"
+}
+l3 = {
+    Listener = "0.0.0.0:30800"
+}
 
-listen_socks5 = { listen, { Socks5 = {} }, }
-listen_http = { listen, { Http = {} }, }
-listen_socks5http = { listen, { Socks5Http = {} }, }
+listen_socks5 = {listen, {
+    Socks5 = {}
+}}
+listen_http = {listen, {
+    Http = {}
+}}
+listen_socks5http = {listen, {
+    Socks5Http = {}
+}}
 
-tlsout = { TLS = { host = "www.1234.com", insecure = true } }
+tlsout = {
+    TLS = {
+        host = "www.1234.com",
+        insecure = true
+    }
+}
 
-tlsin = { TLS = {  cert = "test.crt", key = "test.key" } }
+tlsin = {
+    TLS = {
+        cert = "test.crt",
+        key = "test.key"
+    }
+}
 
-trojan_in = { Trojan = { password = "mypassword" } }
+trojan_in = {
+    Trojan = {
+        password = "mypassword"
+    }
+}
 
-listen_trojan = { listen, trojan_in, }
+listen_trojan = {listen, trojan_in}
 
-dial = { Dialer =  "tcp://0.0.0.0:10801" }
+dial = {
+    Dialer = "tcp://0.0.0.0:10801"
+}
 
-trojan_out =  { Trojan = "mypassword"}
+trojan_out = {
+    Trojan = "mypassword"
+}
 
-dial_trojan_chain = { dial,tlsout, trojan_out }
+dial_trojan_chain = {dial, tlsout, trojan_out}
 
-stdio_socks5_chain = { { Stdio={ } } , { Socks5 = {} } }
+stdio_socks5_chain = {{
+    Stdio = {}
+}, {
+    Socks5 = {}
+}}
 
 -- stdin + 1 , 在命令行输入 a, 会得到b，输入1，得2，依此类推
 -- 设了 abc 为预先信息, 刚连上后就会发出abc 信号
-in_stdio_adder_chain = { { Stdio={ pre_defined_early_data = "abc" } } , { Adder = 1 } } 
+in_stdio_adder_chain = {{
+    Stdio = {
+        pre_defined_early_data = "abc"
+    }
+}, {
+    Adder = 1
+}}
 
-out_stdio_chain = { { Stdio={} } }
+out_stdio_chain = {{
+    Stdio = {}
+}}
 
-direct_out_chain = { "Direct" }
+direct_out_chain = {"Direct"}
 
 ---[=[
 
 config = {
-    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
-    outbounds = { { tag="dial1", chain = { "Direct" } } }
+    inbounds = {{
+        chain = listen_socks5http,
+        tag = "listen1"
+    }},
+    outbounds = {{
+        tag = "dial1",
+        chain = {"Direct"}
+    }}
 
---[[
+    --[[
 这个 config 块是演示 inbound 是 socks5http, outbound 是 direct 的情况
 
 它是一个基本的本地代理示例. 运行它, 设置您的系统代理为相应端口, 看看能不能正常访问网络吧
@@ -48,9 +96,7 @@ config = {
 
 }
 
---]=]
-
-
+-- ]=]
 
 --[=[
 -- default counterpart for remote.lua
@@ -70,8 +116,6 @@ config = {
 }
 
 --]=]
-
-
 
 --[=[
 
@@ -94,9 +138,6 @@ config = {
 
 --]=]
 
-
-
-
 --[=[
 config = {
 
@@ -118,7 +159,6 @@ config = {
 
 --]=]
 
-
 --[[
 
 
@@ -134,7 +174,6 @@ config = {
 }
 
 --]]
-
 
 --[[
 
@@ -153,7 +192,6 @@ config = {
 }
 
 --]]
-
 
 --[[
 
@@ -181,9 +219,6 @@ config = {
 
 --]]
 
-
-
-
 --[=[
 
 config = {
@@ -205,8 +240,6 @@ config = {
 }
 
 --]=]
-
-
 
 --[=[
 
@@ -240,8 +273,6 @@ config = {
 
 --]=]
 
-
-
 --[=[
 config = {
 
@@ -267,51 +298,94 @@ config = {
 
 --]=]
 
-
 ---[[
 
 -- 演示 动态链的 选择器用法
 
-
 function get_dyn_selector_for(tag)
-    if tag == "listen1" then 
+    if tag == "listen1" then
         return dyn_inbound_next_selector
     end
-     if tag == "dial1" then 
+    if tag == "dial1" then
         return dyn_outbound_next_selector
     end
 end
 
 -- 下面两个selector 示例都是 最简单的示例, 使得动态链的行为和静态链相同
 
-dyn_inbound_next_selector = function (this_index, ovov)
-   -- print("ovov:is_some()",ovov:is_some())
+dyn_inbound_next_selector = function(this_index, ovov)
+    print("ovov:is_some()",ovov:is_some())
 
-    if ovov:is_some()  then
-       -- print("ovov:len()",ovov:len())
+    if ovov:is_some() then
+        -- print("ovov:len()",ovov:len())
 
         if ovov:len() > 0 then
             ov = ovov:get(0)
-           -- print("ov:has_value()",ov:has_value())
+            -- print("ov:has_value()",ov:has_value())
 
             if ov:has_value() then
                 the_type = ov:get_type()
-              --  print(the_type)
+                --  print(the_type)
 
                 if the_type == "data" then
                     d = ov:get_data()
-              --      print(d:get_u64())
+                    --      print(d:get_u64())
                 end
             end
         end
     end
-   
+
     return this_index + 1
 end
 
-dyn_outbound_next_selector = function (this_index, ovov)
+dyn_outbound_next_selector = function(this_index, ovov)
     return this_index + 1
 end
 
+-- ]]
 
---]]
+--[[
+
+-- 完全动态链的演示
+
+-- 完全动态链不使用 config 来预定义任何Mappers, 它只给出一个函数
+
+dyn_config = {
+
+    inbounds = {{
+        tag = "listen1",
+        generator = function(this_index, cache_len, ovov)
+            if this_index == -1 then
+                return {
+                    Listener = "0.0.0.0:10800"
+                }
+            elseif this_index == 0 then
+                return {
+                    Socks5 = {}
+                }
+            end
+        end
+    }, {
+        tag = "listen2",
+        generator = function(this_index, cache_len, ovov)
+
+        end
+    }},
+
+    outbounds = {{
+        tag = "dial1",
+        generator = function(this_index, cache_len, ovov)
+            if this_index == -1 then
+                return "Direct"
+            end
+        end
+    }, {
+        tag = "dial2",
+        generator = function(this_index, cache_len, ovov)
+
+        end
+    }}
+
+}
+
+-- ]]
