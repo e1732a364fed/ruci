@@ -205,6 +205,7 @@ o2node-.->collector
 - [ ] ss
 - [ ] vmess
 - [x] Steganography Protocol Example1
+- [x] User-defined Lua protocol
 
 ### ruci-cmd
 

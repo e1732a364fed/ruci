@@ -95,6 +95,11 @@ impl UserData for BytesMutWrapper {
             b.0.put_u16(u);
             Ok(())
         });
+
+        methods.add_method_mut("put_slice", |_, b, s: mlua::BString| {
+            b.0.put_slice(&s);
+            Ok(())
+        });
     }
 }
 
@@ -175,6 +180,8 @@ impl ReadBufWrapper {
 
 impl UserData for ReadBufWrapper {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method_mut("get_ptr", |_lua, this, ()| Ok(this.ptr));
+
         methods.add_method_mut("drop", |_lua, this, ()| {
             this.release();
             Ok(())

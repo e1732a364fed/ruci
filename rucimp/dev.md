@@ -6,7 +6,7 @@ cargo clippy --all-targets --features "tun quinn lua route geoip sockopt use-nat
 
 cargo clippy --all-targets --all-features
 
-注意 rucimp 中不能使用 --all-features 因为 lua有很多个feature, 却只能使用一个
+注意 rucimp 中不能使用 --all-features 因为 lua 有多个feature, 却只能使用一个
 
 
 

@@ -827,12 +827,23 @@ local config_21_lua_example1 = {
     } },
     outbounds = { {
         tag = "dial1",
-        chain = { dial, tlsout, trojan_out, { Lua = { file_name = "lua_protocol_example1.lua", handshake_function = "Handshake2" } } }
+        chain = { dial, tlsout, trojan_out, { Lua = { file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" } } }
+    } }
+}
+
+local config_22_lua_example2 = {
+    inbounds = { {
+        chain = listen_socks5http,
+        tag = "listen1"
+    } },
+    outbounds = { {
+        tag = "dial1",
+        chain = { dial, tlsout, trojan_out, { Lua = { file_name = "lua_protocol_e2_mathadd.lua", handshake_function = "Handshake" } } }
     } }
 }
 
 
-Config = config_21_lua_example1
+Config = config_22_lua_example2
 
 --[[
 

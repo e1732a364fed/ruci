@@ -26,10 +26,11 @@ function Handshake2(cid, behavior, addr, firstbuff, conn)
     print("written head ", inspect(s))
     b:drop() --调用完 Create_read_buf 后，需要 调用 drop 来释放内存
 
-    return { Read2, Write2, Close2, Flush2 }, addr, firstbuff
+    return { Read, Write, Close, Flush }, addr, firstbuff
 end
 
-function Read2(cx, buf)
+-- 演示读取原流，并查看其头部
+function Read(cx, buf)
     -- print("lua read2 called")
     local result = TheConn:poll_read(cx, buf)
 
@@ -54,7 +55,8 @@ function Read2(cx, buf)
     end
 end
 
-function Write2(cx, str)
+-- 演示按原流写入
+function Write(cx, str)
     -- print("lua write2 called", str:len())
     local result = TheConn:poll_write(cx, str)
 
@@ -70,7 +72,7 @@ function Write2(cx, str)
     end
 end
 
-function Close2(cx)
+function Close(cx)
     -- print("close2 called")
     local result = TheConn:poll_close(cx)
 
@@ -83,7 +85,7 @@ function Close2(cx)
     end
 end
 
-function Flush2(cx)
+function Flush(cx)
     -- print("flush2 called")
 
     local result = TheConn:poll_flush(cx)
