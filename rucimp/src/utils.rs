@@ -1,6 +1,6 @@
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, process::Command};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use tokio::signal;
 use tracing::{debug, info};
 
@@ -125,5 +125,20 @@ pub async fn wait_close_sig_with_closer(
 
     info!("signal received, starting graceful shutdown...");
 
+    Ok(())
+}
+
+pub fn run_command_list(list: Vec<&str>) -> anyhow::Result<()> {
+    for cmd in list {
+        let mut strs: Vec<_> = cmd.split(' ').collect();
+        if strs.is_empty() {
+            bail!("got empty command");
+        }
+        let args = strs.split_off(1);
+
+        debug!(cmd = strs[0], args = ?args, "running command",);
+
+        Command::new(strs[0]).args(args).spawn()?;
+    }
     Ok(())
 }

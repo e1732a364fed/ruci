@@ -35,7 +35,12 @@ listen_socks5http = {listen, {
 }}
 
 tproxy_listen_chain = {
-    tproxy_listen, "TproxyResolver"
+    tproxy_listen, {
+        TproxyResolver = {
+            port = 12345,
+            auto_route_tcp = true,
+        }
+    }
 }
 
 opt_direct_chain = {

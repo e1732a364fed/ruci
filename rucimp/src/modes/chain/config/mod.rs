@@ -35,7 +35,11 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{quic_common, tproxy::TproxyResolver, ws};
+use crate::map::{
+    quic_common,
+    tproxy::{self, TproxyResolver},
+    ws,
+};
 
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
@@ -210,7 +214,7 @@ pub enum InMapperConfig {
     },
 
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
-    TproxyResolver,
+    TproxyResolver(tproxy::Options),
 
     Adder(i8),
     Counter,
@@ -462,9 +466,11 @@ impl ToMapperBox for InMapperConfig {
                     ext_fields: Some(ext.to_ext_fields()),
                 })
             }
-            InMapperConfig::TproxyResolver => Box::new(TproxyResolver {
-                ext_fields: Some(MapperExtFields::default()),
-            }),
+
+            #[cfg(all(feature = "sockopt", target_os = "linux"))]
+            InMapperConfig::TproxyResolver(opts) => {
+                Box::new(TproxyResolver::new(opts.clone()).expect("ok"))
+            }
         }
     }
 }

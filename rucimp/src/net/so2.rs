@@ -55,6 +55,9 @@ pub async fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyho
     }
     if is_listen {
         socket.set_nonblocking(true)?;
+
+        // can't set_nonblocking for dial, or we will get
+        // Operation now in progress (os error 115) when calling connect
     }
     socket.set_reuse_address(true)?;
 
