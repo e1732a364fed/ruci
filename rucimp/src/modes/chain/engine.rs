@@ -12,7 +12,7 @@ use ruci::{
         acc::{DMIterBox, DynVecIterWrapper},
         *,
     },
-    net::GlobalTrafficRecorder,
+    net::{GlobalTrafficRecorder, CID},
     relay::{handle_in_accumulate_result, route::*, *},
 };
 use std::{collections::HashMap, sync::Arc};
@@ -179,12 +179,17 @@ impl Engine {
 
         let out_selector = self.get_out_selector();
 
+        let mut index = 0u32;
+
         self.inbounds.clone().into_iter().for_each(|miter| {
             let (tx, rx) = oneshot::channel();
 
             let (atx, arx) = mpsc::channel(100); //todo: change this
 
-            let t1 = acc::accumulate_from_start(atx, rx, miter.clone(), Some(self.ti.clone()));
+            let cid = CID::Unit(index);
+            debug!("accumulate_from_start {index}");
+            let t1 = acc::accumulate_from_start(cid, atx, rx, miter.clone(), Some(self.ti.clone()));
+            index += 1;
 
             let t2 = Engine::loop_a(
                 arx,

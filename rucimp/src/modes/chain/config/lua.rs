@@ -153,6 +153,57 @@ fn get_iobounds_by_config_and_selector_map(
     (v, first_o.expect("has an outbound"), Arc::new(omap))
 }
 
+/// used by load_infinite,
+pub type GMAP = HashMap<String, LuaNextGenerator>;
+
+/// get (inbounds generator map, outbounds generator map)
+pub fn load_infinite_io(text: &str) -> anyhow::Result<(GMAP, GMAP)> {
+    let i = get_infinite_gmap_from(text, ProxyBehavior::DECODE)?;
+    let o = get_infinite_gmap_from(text, ProxyBehavior::ENCODE)?;
+    Ok((i, o))
+}
+
+fn get_infinite_gmap_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result<GMAP> {
+    let mut gmap: GMAP = HashMap::new();
+
+    let lua = Lua::new();
+    lua.load(text).eval()?;
+
+    let ct: LuaTable = lua.globals().get("dyn_config")?;
+
+    let tkey = match behavior {
+        ProxyBehavior::UNSPECIFIED => todo!(),
+        ProxyBehavior::DECODE => "inbounds",
+        ProxyBehavior::ENCODE => "outbounds",
+    };
+
+    let table: LuaTable = ct.get(tkey)?;
+    let ibc = table.len()?;
+
+    for i in 1..ibc + 1 {
+        let lua = Lua::new();
+        lua.load(text).eval()?;
+
+        let (key, tag) = {
+            let ct: LuaTable = lua.globals().get("dyn_config")?;
+            let table: LuaTable = ct.get(tkey)?;
+
+            let chain: LuaTable = table.get(i)?;
+            let tag: String = chain.get("tag")?;
+            let g: LuaFunction = chain.get("generator")?;
+
+            let key = lua.create_registry_value(g).expect("ok");
+
+            (key, tag)
+        };
+
+        let lng = LuaNextGenerator::new(lua, key, behavior);
+
+        gmap.insert(tag, lng);
+    }
+    Ok(gmap)
+}
+
 /// implements dynamic::NextSelector
 #[derive(Debug, Clone)]
 pub struct LuaNextSelector(Arc<Mutex<(Lua, LuaRegistryKey)>>);
@@ -200,6 +251,7 @@ impl NextSelector for LuaNextSelector {
     }
 }
 
+/// implements dynamic::IndexNextMapperGenerator
 #[derive(Debug, Clone)]
 pub struct LuaNextGenerator {
     inner: Arc<Mutex<InnerLuaNextGenerator>>,
@@ -259,6 +311,9 @@ impl InnerLuaNextGenerator {
             ProxyBehavior::DECODE => get_result::<OutMapperConfig>(&self.lua, i, t),
         }
     }
+
+    /// try get result directly, or use field stream_generator
+    /// and new_thread_fn
     fn get_from_result(
         &mut self,
         cid: CID,
@@ -773,24 +828,24 @@ mod test {
 dyn_config = {
     inbounds = {{
         tag = "listen1",
-        generator = function(this_index, cache_len, data)
+        generator = function(this_index, data)
             if this_index == -1 then
                 return 0, {
-                    Listener = "0.0.0.0:10800"
+                    stream_generator = {
+                        Listener = "0.0.0.0:10800"
+                    },
+                    new_thread_fn = function(this_index, data)
+                        local newi, new_data = coroutine.yield(1, {
+                            Socks5 = {}
+                        })
+                        return -1, {}
+                    end
                 }
-
-            elseif this_index == 0 then
-                return 1, {
-                    Socks5 = {}
-                }
-            else
-                return -1, {}
-
             end
         end
     }, {
         tag = "listen2",
-        generator = function(this_index, cache_len, data)
+        generator = function(this_index, data)
             return -1, {}
         end
     }},
@@ -812,23 +867,8 @@ dyn_config = {
 }
         "#;
 
-        let lua = Lua::new();
-        lua.load(text).eval()?;
-
-        let ct: LuaTable = lua.globals().get("dyn_config")?;
-        let inbounds: LuaTable = ct.get("inbounds")?;
-        let outbounds: LuaTable = ct.get("outbounds")?;
-        inbounds.for_each(|k: usize, v: LuaTable| {
-            println!("{k},{:?}", v);
-            let tag: String = v.get("tag")?;
-            println!("tag, {tag}");
-
-            let g: LuaFunction = v.get("generator")?;
-            println!("g, {:?}", g);
-
-            Ok(())
-        });
-
+        let gm = load_infinite_io(text)?;
+        println!("{:?}", gm);
         Ok(())
     }
 }

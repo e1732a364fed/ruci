@@ -256,6 +256,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
 ///
 ///
 pub async fn accumulate_from_start(
+    in_cid: CID,
     tx: tokio::sync::mpsc::Sender<AccumulateResult>,
     shutdown_rx: oneshot::Receiver<()>,
 
@@ -263,11 +264,11 @@ pub async fn accumulate_from_start(
     oti: Option<Arc<GlobalTrafficRecorder>>,
 ) -> anyhow::Result<()> {
     let first = inmappers
-        .next_with_data(CID::Unit(0), None)
+        .next_with_data(in_cid.clone(), None)
         .expect("first inmapper");
     let first_r = first
         .maps(
-            CID::Unit(0),
+            in_cid.clone(),
             ProxyBehavior::DECODE,
             MapParams::builder().shutdown_rx(shutdown_rx).build(),
         )
@@ -304,10 +305,10 @@ pub async fn accumulate_from_start(
                 debug!("accumulate_from_start: not a stream generator, will accumulate directly.",);
             }
         }
-
+        let cid = in_cid.clone_push(oti);
         tokio::spawn(async move {
             let r = accumulate(AccumulateParams {
-                cid: CID::new_by_ogtr(oti),
+                cid,
                 behavior: ProxyBehavior::DECODE,
                 initial_state: first_r,
                 mappers: inmappers,
@@ -339,7 +340,8 @@ struct InIterAccumulateForeverParams {
 /// 直到遇到结果中 Stream为 None 或 一个 Stream::Generator, 或e不为None
 ///
 ///
-/// 将每一条子连接的accumulate 结果 用 tx 发送出去;
+/// 将每一条子连接的accumulate 结果 用 tx 发送出去; 会对 cid 用 clone_push
+/// 添加新项
 ///
 /// 如果子连接又是一个 Stream::Generator, 则会继续调用 自己 进行递归
 ///

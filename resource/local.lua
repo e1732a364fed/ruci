@@ -359,7 +359,7 @@ dyn_config = {
         end
     }, {
         tag = "listen2",
-        generator = function(this_indexache_len, data)
+        generator = function(this_index, data)
             return -1, {}
         end
     }},
