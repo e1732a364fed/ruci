@@ -10,6 +10,8 @@ tls 中,  native_tls 只支持 pks8 和 pks12 两种格式, 而 ruci 中目前�
 
 而默认的 rustls 则支持得更广泛一些,pem格式的 x509证书（后缀可能为 pem, cer 或 crt）, key(rsa, pks8, ecc) 都支持 , 但不支持 pks12 (pfx) 格式
 
+除了用 ruci-cmd utils gen-cer 命令生成自签名根证书, 还可以试图自行用 openssl 命令生成:
+
 生成 key 和 证书:
 
 ```sh
@@ -133,7 +135,7 @@ ruci中有三种 route 实现 fixed, tag, info; 而 rucimp 有一种完整的 ro
 
 rucimp 中有很多feature :
 
-lua, lua54, route,geoip, tun, sockopt, use-native-tls, native-tls-vendored
+lua, lua54, route,geoip, tun, sockopt, use-native-tls, native-tls-vendored, quinn, quic
 
 
 
@@ -275,4 +277,4 @@ quinn: 全没问题
 上传和下载的缩写代码中使用了 ub, db, 而不是 tx, rx, 是为了简单地与 channel 的Sender和 Receiver的缩写加以区分,
 而且还能看出是以字节为单位
 
-链的发展顺序: 静态链, 有限动态链, 无限动态链
+链的灵活顺序: 静态链, 有限动态链, 无限动态链
