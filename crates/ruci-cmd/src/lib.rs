@@ -117,8 +117,9 @@ pub struct Args {
     pub api_addr: Option<String>,
 
     #[cfg(feature = "file_server")]
+    #[arg(short)]
     #[serde(default)]
-    pub file_server_tar_data_source_base64: Option<String>,
+    pub file_server_tar_zip_data_source_base64: Option<String>,
 
     #[command(subcommand)]
     pub sub_cmds: Option<SubCommands>,
@@ -243,6 +244,22 @@ pub unsafe extern "C" fn c_run_main_with_json_args(
     let r = "ok".to_string();
 
     std::ffi::CString::new(r).unwrap().into_raw()
+}
+
+#[test]
+fn deserialize_config() {
+    let dr = &mut rucimp::serde_json::Deserializer::from_str(
+        "{\"file_server_tar_zip_data_source_base64\": \"sss\"}",
+    );
+
+    let args: Args = match serde_path_to_error::deserialize(dr) {
+        Ok(args) => args,
+        Err(e) => panic!("{}", e),
+    };
+    println!(
+        "file_server_tar_zip_data_source_base64 is {:?}",
+        args.file_server_tar_zip_data_source_base64
+    )
 }
 
 #[cfg(target_os = "android")]
@@ -385,7 +402,7 @@ pub async fn run_main_with_args(mut args: Args) -> anyhow::Result<()> {
                         #[cfg(not(feature = "utils"))]
                         None,
                         #[cfg(feature = "file_server")]
-                        args.file_server_tar_data_source_base64.take(),
+                        args.file_server_tar_zip_data_source_base64.take(),
                     )
                     .await;
                     api_server_started = true;

@@ -60,10 +60,15 @@ pub enum Commands {
         folder: String,
     },
 
-    /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name, then compress it into a .zip file.
+    /// pack a folder into a .tar file, calculate its md5 hash and use it as the tar file name, then compress it into a .zip file.
     ///
     /// 注意 hash 仍为 tar 为 md5 而不是 zip 的 md5
     PackZ {
+        folder: String,
+    },
+
+    /// same as PackZ but convert the zip to a base64 string
+    PackZBase64 {
         folder: String,
     },
 
@@ -110,7 +115,7 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         Commands::Pack { folder } => {
             let (v, md5) = pack_tar(&folder)?;
 
-            write_file(v, md5)?;
+            write_file(&v, md5)?;
         }
         Commands::PackZ { folder } => {
             let (v, mut md5) = pack_tar(&folder)?;
@@ -121,9 +126,23 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
 
             md5.push_str(".zip");
 
-            write_file(data, md5)?;
+            write_file(&data, md5)?;
         }
+        Commands::PackZBase64 { folder } => {
+            let (v, mut md5) = pack_tar(&folder)?;
 
+            info!("compressing into zip...");
+
+            let data = rucimp::utils::compress_bytes_to_zip(&md5, &v)?;
+
+            md5.push_str(".zip.base64");
+
+            use rucimp::base64::engine::general_purpose::STANDARD;
+            use rucimp::base64::engine::Engine as _;
+            let base64_string = STANDARD.encode(&data);
+
+            write_file(base64_string.as_bytes(), md5)?;
+        }
         Commands::QR { str } => print_qrcode_of(&str),
         Commands::ConvertFormat {
             input_file,
@@ -272,10 +291,10 @@ fn pack_tar(folder: &str) -> anyhow::Result<(Vec<u8>, String)> {
     md5.push_str(".tar");
     Ok((bs, md5))
 }
-fn write_file(v: Vec<u8>, name: String) -> anyhow::Result<()> {
+fn write_file(v: &[u8], name: String) -> anyhow::Result<()> {
     let mut file = fs::File::create(&name)?;
     use std::io::Write;
-    file.write_all(&v)?;
+    file.write_all(v)?;
     info!("saved ok, {name}");
     Ok(())
 }

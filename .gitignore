@@ -11,3 +11,4 @@ testfile.txt
 wintun.*
 logs/
 record_dir*/
+*tar.zip.base64

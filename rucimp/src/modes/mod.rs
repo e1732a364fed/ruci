@@ -70,10 +70,12 @@ impl<'de> Deserialize<'de> for LevelWrapper {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let level = match s.as_str() {
+        let level = match s.to_uppercase().as_str() {
             "ERROR" => Level::ERROR,
             "WARN" => Level::WARN,
-            // ... 其他变体
+            "INFO" => Level::INFO,
+            "DEBUG" => Level::DEBUG,
+            "TRACE" => Level::TRACE,
             _ => return Err(serde::de::Error::custom("Invalid level")),
         };
         Ok(LevelWrapper(level))

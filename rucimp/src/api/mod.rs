@@ -438,7 +438,7 @@ pub async fn serve(
     start_core_opts: Opts,
     extension_api_doc: Option<utoipa::openapi::OpenApi>,
 
-    #[cfg(feature = "file_server")] file_server_tar_data_source_base64: Option<String>,
+    #[cfg(feature = "file_server")] file_server_tar_zip_data_source_base64: Option<String>,
 ) {
     let addr = s
         .listen_addr
@@ -450,22 +450,48 @@ pub async fn serve(
 
     #[cfg(feature = "file_server")]
     {
-        match file_server_tar_data_source_base64 {
+        match file_server_tar_zip_data_source_base64 {
+            None => app = app.nest_service("/dist", tower_http::services::ServeDir::new("dist")),
             Some(file_server_tar_data_source_base64) => {
                 use base64::Engine;
                 use data_source::file_server::*;
                 use data_source::DataSource;
-                let data = base64::engine::GeneralPurpose::new(
-                    &base64::alphabet::URL_SAFE,
-                    base64::engine::general_purpose::NO_PAD,
-                )
-                .decode(file_server_tar_data_source_base64)
-                .unwrap();
+                let zip_data = {
+                    match base64::engine::general_purpose::STANDARD
+                        .decode(&file_server_tar_data_source_base64)
+                    {
+                        Ok(d) => d,
+                        Err(_) => base64::engine::general_purpose::STANDARD
+                            .decode(
+                                std::fs::read_to_string(&file_server_tar_data_source_base64)
+                                    .unwrap(),
+                            )
+                            .unwrap(),
+                    }
+                };
 
-                let data_source = DataSource::TarInMemory(data);
-                app = register_data_source_route(app, "/files/*path", data_source);
+                use std::io::Cursor;
+                use zip::ZipArchive;
+
+                let cursor = Cursor::new(zip_data);
+                let mut archive = ZipArchive::new(cursor).expect("Failed to open ZIP archive");
+                if archive.len() != 1 {
+                    panic!("Expected exactly one file in the ZIP archive");
+                }
+
+                use std::io::Read;
+                let mut tar_file = archive
+                    .by_index(0)
+                    .expect("Failed to read TAR file in ZIP archive");
+                let mut tar_data = Vec::new();
+                debug!("tarfile is {}", tar_file.name());
+                tar_file
+                    .read_to_end(&mut tar_data)
+                    .expect("Failed to read TAR file contents");
+
+                let data_source = DataSource::TarInMemory(tar_data);
+                app = register_data_source_route(app, "/files/{*path}", data_source);
             }
-            None => app = app.nest_service("/dist", tower_http::services::ServeDir::new("dist")),
         }
     }
 

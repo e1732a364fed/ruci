@@ -50,9 +50,7 @@ tar = "0.4"
 axum = { version = "0.8", features = ["ws"] }
 tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
 
-data-source = { version = "0.1.4", features = [
-  "file_server",
-], git = "https://github.com/e1732a364fed/data-source.git", rev = "2eafe58d36d43080a8f8c2f241e7200b9735257b" }
+data-source = { version = "0.1.5", features = ["file_server"] }
 utoipa = { version = "5", features = ["axum_extras"] }
 
 reqwest = { version = "0.12", default-features = false, features = [

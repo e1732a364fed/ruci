@@ -46,11 +46,11 @@ export PATH="$PATH:$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 
 arm64:
 
-CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android32-clang cargo build --target aarch64-linux-android --features "api_server utils" --release
+CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android32-clang cargo build --target aarch64-linux-android --features "api_server utils file_server" --release
 
 x86_64:
 
-CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android32-clang cargo build --target x86_64-linux-android --features "api_server utils" --release
+CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android32-clang cargo build --target x86_64-linux-android --features "api_server utils file_server" --release
 
 # features
 
