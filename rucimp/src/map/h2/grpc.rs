@@ -73,15 +73,13 @@ fn put_uvarint(buf: &mut [u8], mut x: usize) -> usize {
     i + 1
 }
 
+use crate::net::HttpMatchError;
 use futures::ready;
 use h2::{RecvStream, SendStream};
 use http::{Request, Uri};
 use ruci::{net::http::CommonConfig, utils::io_error};
 use thiserror::Error;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tracing::debug;
-
-use crate::net::HttpMatchError;
 
 #[derive(Error, Debug)]
 pub enum UVariantErr {
@@ -147,7 +145,7 @@ pub struct Stream {
 impl Stream {
     #[inline]
     pub fn new(recv: RecvStream, send: SendStream<Bytes>) -> Self {
-        debug!("new grpc stream");
+        //debug!("new grpc stream");
         Stream {
             recv,
             send,
@@ -175,8 +173,11 @@ impl AsyncRead for Stream {
         cx: &mut Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
+        //debug!("poll_read called");
         loop {
-            if self.next_data_len > 0 || self.buffer.len() >= READ_HEAD_LEN {
+            //debug!("loop {} {}", self.next_data_len, self.buffer.len());
+
+            if !self.buffer.is_empty() && self.buffer.len() >= self.next_data_len {
                 let r = self.try_read_next_len();
                 if let Err(e) = r {
                     return Poll::Ready(Err(io_error(e)));
@@ -185,8 +186,17 @@ impl AsyncRead for Stream {
                 let v = vec![buf.remaining(), self.buffer.len(), self.next_data_len];
 
                 let r_len = v.into_iter().min().expect("ok");
+
+                // debug!(
+                //     "is {} {} {} {}",
+                //     buf.remaining(),
+                //     self.buffer.len(),
+                //     self.next_data_len,
+                //     r_len
+                // );
+
                 let read_data = self.buffer.split_to(r_len);
-                buf.put_slice(&read_data[..r_len]);
+                buf.put_slice(&read_data);
 
                 self.next_data_len -= r_len;
 

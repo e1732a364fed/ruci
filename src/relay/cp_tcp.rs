@@ -160,7 +160,7 @@ async fn gtr_ed(
     match r {
         Ok(_) => {
             if tracing::enabled!(tracing::Level::DEBUG) {
-                debug!(cid = %cid, "upload earlydata ok ");
+                debug!(cid = %cid, "upload earlydata ok {}",earlydata.len());
             }
 
             gtr.ub.fetch_add(earlydata.len() as u64, Ordering::Relaxed);
