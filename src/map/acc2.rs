@@ -1,5 +1,5 @@
 /*!
-* 与 acc 相同, 但是 Acc 中是 Arc<MapperBox> 不是 &'static MapperBox
+* 与 acc 相同, 但是 MIter 中是 Arc<MapperBox> 不是 &'static MapperBox
 */
 use super::*;
 

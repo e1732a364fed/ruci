@@ -315,16 +315,9 @@ pub enum ProxyBehavior {
 
 /// Mapper 流映射函数, 在一个Conn 的基础上添加新read/write层, 形成一个新Conn
 ///
-/// 且InAdder试图生产出 target_addr 和 pre_read_data
 ///
 /// 一般来说 maps 方法就是执行一个新层中的握手, 之后得到一个新Conn;
 /// 在 新Conn中 对数据进行加/解密后, pass to next layer Conn
-///
-/// 一旦某一层中获得了 target_addr, 就要继续将它传到下一层。参阅累加器部分。
-///
-/// 因为客户端有可能发来除握手数据以外的用户数据(earlydata), 所以返回值里有 Option<BytesMut>,
-/// 其不为None时, 下一级的 add就要将其作为 pre_read_buf 调用
-///
 ///
 #[async_trait]
 pub trait Mapper: crate::Name + Debug {
@@ -335,8 +328,16 @@ pub trait Mapper: crate::Name + Debug {
     /// # InAdder
     ///
     /// 可选地返回 解析出的“目标地址”。一般只在InAdder最后一级产生。
+    /// 且InAdder试图生产出 target_addr 和 pre_read_data
+    /// 一旦某一层中获得了 target_addr, 就要继续将它传到下一层。参阅累加器部分。
+    ///
     ///
     /// 返回值的 MapResult.d: OptData 用于 获取关于该层连接的额外信息, 一般情况为None即可
+    ///
+    /// 因为客户端有可能发来除握手数据以外的用户数据(earlydata), 所以返回值里有 Option<BytesMut>,
+    /// 其不为None时, 下一级的 maps 就要将其作为 pre_read_buf 调用
+    ///
+    ///
     ///
     /// 约定：如果一个代理在代理时切换了内部底层连接, 其返回的 extra_data 需为一个
     /// NewConnectionOptData ,  这样 ruci::relay 包才能对其进行识别并处理
