@@ -6,11 +6,15 @@ mod utils;
 
 mod mode;
 
-use std::env::{self, set_var};
+use std::{
+    env::{self, set_var},
+    sync::Arc,
+};
 
 use anyhow::Ok;
 use clap::{Parser, Subcommand, ValueEnum};
 use log::{info, log_enabled, warn, Level};
+use ruci::net::GlobalTrafficRecorder;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
@@ -157,6 +161,7 @@ async fn start_engine(
     #[cfg(feature = "api_server")] opts: Option<(
         api::server::Server,
         tokio::sync::mpsc::Receiver<()>,
+        Arc<GlobalTrafficRecorder>,
     )>,
 ) -> anyhow::Result<()> {
     match m {

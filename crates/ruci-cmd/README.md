@@ -31,6 +31,14 @@ api:
 
     stop rucimp core
 
+/gt/acc
+/gt/lci
+/gt/u
+/gt/d
+
+/loci
+    get last ok cid
+
 /allc
 
     get all connection's info

@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use log::info;
+use ruci::net::GlobalTrafficRecorder;
 use rucimp::{
     cmd_common::{try_get_filecontent, wait_close_sig, wait_close_sig_with_closer},
     modes::chain::{config::lua, engine::Engine},
@@ -13,7 +16,11 @@ use crate::api;
 ///blocking
 pub(crate) async fn run(
     f: &str,
-    #[cfg(feature = "api_server")] opts: Option<(api::server::Server, mpsc::Receiver<()>)>,
+    #[cfg(feature = "api_server")] opts: Option<(
+        api::server::Server,
+        mpsc::Receiver<()>,
+        Arc<GlobalTrafficRecorder>,
+    )>,
 ) -> anyhow::Result<()> {
     info!("try to start rucimp chain engine");
     let contents = try_get_filecontent("local.lua", Some(f))
@@ -29,7 +36,7 @@ pub(crate) async fn run(
     #[cfg(feature = "api_server")]
     {
         if let Some(mut s) = opts {
-            setup_api_server_with_chain_engine(&mut se, &mut s.0).await;
+            setup_api_server_with_chain_engine(&mut se, &mut s.0, s.2).await;
 
             se.run().await?;
             info!("started rucimp chain engine");
@@ -52,7 +59,13 @@ pub(crate) async fn run(
     Ok(())
 }
 
-async fn setup_api_server_with_chain_engine(se: &mut Engine, s: &mut api::server::Server) {
+async fn setup_api_server_with_chain_engine(
+    se: &mut Engine,
+    s: &mut api::server::Server,
+    ti: Arc<GlobalTrafficRecorder>,
+) {
+    se.ti = ti;
+
     setup_record_newconn_info(se, s).await;
     #[cfg(feature = "trace")]
     setup_trace_flux(se, s).await;
@@ -101,7 +114,6 @@ async fn setup_trace_flux(se: &mut Engine, s: &mut api::server::Server) {
 
         use ruci::net::CID;
         use std::sync::atomic;
-        use std::sync::Arc;
         use tokio::time::Instant;
 
         fn spawn_for(

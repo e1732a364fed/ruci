@@ -11,7 +11,10 @@ use std::{
 use chrono::{DateTime, Utc};
 
 use parking_lot::RwLock;
-use ruci::{net::CID, relay::NewConnInfo};
+use ruci::{
+    net::{GlobalTrafficRecorder, CID},
+    relay::NewConnInfo,
+};
 use tinyufo::TinyUfo;
 use tokio::sync::mpsc;
 
@@ -26,7 +29,10 @@ pub enum Command {
     FileServer,
 }
 
-pub async fn deal_args(cmd: Command, args: &crate::Args) -> Option<(Server, mpsc::Receiver<()>)> {
+pub async fn deal_args(
+    cmd: Command,
+    args: &crate::Args,
+) -> Option<(Server, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>)> {
     match cmd {
         Command::Run => return Some(Server::new(args.api_addr.clone()).await),
         Command::FileServer => folder_serve::serve_static(args.file_server_addr.clone()).await,
@@ -56,6 +62,7 @@ pub struct TracePart {
 pub struct Server {
     listen_addr: Option<String>,
 
+    //pub global_traffic: Arc<ruci::net::GlobalTrafficRecorder>,
     pub close_tx: mpsc::Sender<()>,
 
     pub newconn_info_map: NewConnInfoMap,
@@ -66,7 +73,9 @@ pub struct Server {
 
 impl Server {
     /// non-blocking, init the server and run it
-    pub async fn new(listen_addr: Option<String>) -> (Self, mpsc::Receiver<()>) {
+    pub async fn new(
+        listen_addr: Option<String>,
+    ) -> (Self, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>) {
         let (tx, rx) = mpsc::channel(10);
         let s = Server {
             listen_addr,
@@ -80,8 +89,9 @@ impl Server {
                 d_cache: new_cache(),
             },
         };
-        serve(&s).await;
-        (s, rx)
+        let global_traffic = Arc::new(GlobalTrafficRecorder::default());
+        serve(&s, global_traffic.clone()).await;
+        (s, rx, global_traffic)
     }
 }
 
@@ -139,8 +149,35 @@ async fn get_conn_infos_range(
     s
 }
 
+async fn get_last_ok_cid(State(allconn): State<NewConnInfoMap>) -> String {
+    let mut s = String::new();
+    let m = allconn.read();
+    let lastkv = m.last_key_value();
+    match lastkv {
+        Some(e) => s.push_str(&e.0.to_string()),
+        None => {}
+    }
+    s
+}
+
 async fn get_conn_count(State(allconn): State<NewConnInfoMap>) -> String {
     format!("{}", allconn.read().len())
+}
+
+async fn get_alive_conn_count(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
+    format!("{}", s.alive_connection_count.load(Ordering::Relaxed))
+}
+
+async fn get_last_conn_id(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
+    format!("{}", s.last_connection_id.load(Ordering::Relaxed))
+}
+
+async fn get_gt_u(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
+    format!("{}", s.ub.load(Ordering::Relaxed))
+}
+
+async fn get_gt_d(State(s): State<Arc<ruci::net::GlobalTrafficRecorder>>) -> String {
+    format!("{}", s.db.load(Ordering::Relaxed))
 }
 
 async fn get_conn_info(Path(cid): Path<String>, State(allconn): State<NewConnInfoMap>) -> String {
@@ -201,7 +238,7 @@ async fn stop_core(State(tx): State<mpsc::Sender<()>>) -> String {
 }
 
 /// non-blocking
-pub async fn serve(s: &Server) {
+pub async fn serve(s: &Server, global_traffic: Arc<ruci::net::GlobalTrafficRecorder>) {
     let addr = s
         .listen_addr
         .clone()
@@ -209,11 +246,25 @@ pub async fn serve(s: &Server) {
     info!("api server starting {addr}");
 
     let mut app = Router::new().route("/stop_core", get(stop_core).with_state(s.close_tx.clone()));
-
+    //get_last_ok_cid
     app = app
+        .route(
+            "/gt/acc",
+            get(get_alive_conn_count).with_state(global_traffic.clone()),
+        )
+        .route(
+            "/gt/lci",
+            get(get_last_conn_id).with_state(global_traffic.clone()),
+        )
+        .route("/gt/u", get(get_gt_u).with_state(global_traffic.clone()))
+        .route("/gt/d", get(get_gt_d).with_state(global_traffic.clone()))
         .route(
             "/allc",
             get(get_conn_infos).with_state(s.newconn_info_map.clone()),
+        )
+        .route(
+            "/gt/loci",
+            get(get_last_ok_cid).with_state(s.newconn_info_map.clone()),
         )
         .route(
             "/cr/:cid",
@@ -249,13 +300,23 @@ pub async fn serve(s: &Server) {
 
     // RUST_LOG=tower_http=trace
 
+    use axum::http::Method;
+    use tower_http::cors::{Any, CorsLayer};
     use tower_http::trace::TraceLayer;
+
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
     tokio::spawn(async move {
-        axum::serve(listener, app.layer(TraceLayer::new_for_http()))
-            .await
-            .unwrap();
+        axum::serve(
+            listener,
+            app.layer(TraceLayer::new_for_http()).layer(
+                CorsLayer::new()
+                    .allow_origin(Any)
+                    .allow_methods([Method::GET]),
+            ),
+        )
+        .await
+        .unwrap();
     });
 
     info!("api server started {addr}");

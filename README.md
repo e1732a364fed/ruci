@@ -2,7 +2,7 @@
 
 - [X] Ruci : 如此：
 - [X] Rucimp: 如此实现~
-- [ ] ruci-cmd: 如此简单！
+- [X] ruci-cmd: 如此简单！ 见 [ruci-cmd](crates/ruci-cmd/README.md)
 
 项目命名采用了谐音。同时Ru指代rust, ruci 与 如此谐音.
 rucimp = ruci + imp,
@@ -11,7 +11,7 @@ ruci pronounced lucy。
 ## 介绍
 
 本项目是 [verysimple](https://github.com/e1732a364fed/v2ray_simple) 项目的继承者，
-是一个网络代理项目，采用rust(Rust 2021 edition 1.75+)
+是一个网络代理框架，采用rust(Rust 2021 edition 1.75+)
 
 ruci 对代理架构 做了比verysimple 中更高级的抽象，因此功能更强大. 
 verysimple可以说是一个初级项目，而ruci最终将成为一个中级项目.
@@ -164,6 +164,8 @@ o2node-.->collector
 
 - [x] suit配置格式 （即旧 verysimple 的 toml 配置）
 - [x] chain配置格式 (新增, lua格式)
+- [x] 静态链
+- [ ] 动态链
 - [x] 示例代理程序 (rucimp/examples: suit 或 chain)
 - [x] 路由 (rule_route)
 - [x] tproxy
@@ -175,9 +177,11 @@ o2node-.->collector
 
 ### ruci-cmd
 
-- [ ] chain mode support
+- [x] chain mode support
 - [ ] suit mode support
-- [ ] api_server
+- [x] api_server
+- [x] api_client
+- [x] utils
 - [ ] system auto route
 
 #### 项目的实际目的？

@@ -894,16 +894,6 @@ pub struct GlobalTrafficRecorder {
     pub ub: AtomicU64,
 }
 
-/// 单条连接的 上传下载流量
-#[derive(Debug, Default)]
-pub struct ConnectionTraffic {
-    /// downloaded bytes since start
-    pub db: AtomicU64,
-
-    /// uploaded bytes
-    pub ub: AtomicU64,
-}
-
 /// ConnTrait 将 可异步读写的功能抽象出来。TcpStream 也实现了 ConnTrait
 /// 这是一个很重要的 Trait
 pub trait ConnTrait: AsyncRead + AsyncWrite + Unpin + Send + Sync + Name {}
