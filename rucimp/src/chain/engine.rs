@@ -35,6 +35,16 @@ impl StaticEngine {
         self.clients.len()
     }
 
+    /// non-blocking
+    pub async fn run(&'static self) -> io::Result<()> {
+        self.start_with_tasks().await.map(|tasks| {
+            for task in tasks {
+                tokio::spawn(task.0);
+                tokio::spawn(task.1);
+            }
+        })
+    }
+
     pub async fn start_with_tasks(
         &'static self,
     ) -> std::io::Result<
