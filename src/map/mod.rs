@@ -121,11 +121,12 @@ impl MapParams {
     }
 }
 
-/// add 方法的返回值
+/// Mapper::maps  return type
 #[derive(TypedBuilder, Default)]
 pub struct MapResult {
     #[builder(default)]
     pub a: Option<net::Addr>, //target_addr
+
     #[builder(default)]
     pub b: Option<BytesMut>, //pre read buf
 
