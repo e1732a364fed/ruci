@@ -10,7 +10,9 @@ used by quinn and quic mod
 use std::{fs::File, io::BufReader, path::Path, sync::Arc, time::SystemTime};
 
 use anyhow::bail;
-use rustls::{client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerName};
+use rustls::{
+    client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerConfig, ServerName,
+};
 use rustls_pemfile::{read_one, Item};
 use tracing::debug;
 
@@ -35,6 +37,28 @@ pub(crate) fn cc(opt: ClientOptions) -> ClientConfig {
         cc.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
     }
     cc
+}
+
+#[derive(Debug, Default)]
+pub struct ServerOptions {
+    pub alpn: Option<Vec<String>>,
+
+    pub cert_path: String,
+    pub key_path: String,
+}
+
+pub fn sc(opt: ServerOptions) -> anyhow::Result<ServerConfig> {
+    let (c, k) = read_certs_from_file(opt.cert_path.as_str(), opt.key_path.as_str())?;
+
+    let mut config = ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(c, k)?;
+
+    if let Some(a) = opt.alpn {
+        config.alpn_protocols = a.iter().map(|s| s.as_bytes().to_vec()).collect()
+    }
+    Ok(config)
 }
 
 #[derive(Debug)]

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tracing::debug;
 
-use crate::map::rustls21;
+use crate::map::{quic_common, rustls21};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -44,7 +44,7 @@ impl Name for Client {
 }
 
 impl Client {
-    pub fn new(c: Config) -> anyhow::Result<Self> {
+    pub fn new(c: quic_common::ClientConfig) -> anyhow::Result<Self> {
         let tls = if c.is_insecure.unwrap_or_default() {
             let cc = rustls21::cc(rustls21::ClientOptions {
                 is_insecure: true,

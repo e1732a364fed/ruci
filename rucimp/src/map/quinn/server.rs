@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::{debug, warn};
 
-use crate::map::rustls21::read_certs_from_file;
+use crate::map::{quic_common, rustls21};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -42,7 +42,7 @@ impl Name for Server {
 }
 
 impl Server {
-    pub fn new(c: Config) -> Self {
+    pub fn new(c: quic_common::ServerConfig) -> Self {
         Self {
             tls_key_path: c.key_path,
             tls_cert_path: c.cert_path,
@@ -53,9 +53,12 @@ impl Server {
         }
     }
     async fn handshake(&self, cid: CID) -> anyhow::Result<map::MapResult> {
-        let (c, k) = read_certs_from_file(self.tls_cert_path.as_str(), self.tls_key_path.as_str())?;
-
-        let server_config = ServerConfig::with_single_cert(c, k)?;
+        let server_config = rustls21::sc(rustls21::ServerOptions {
+            alpn: self.alpn.clone(),
+            cert_path: self.tls_cert_path.clone(),
+            key_path: self.tls_key_path.clone(),
+        })?;
+        let server_config = ServerConfig::with_crypto(Arc::new(server_config));
 
         let endpoint = Endpoint::server(server_config, self.listen_addr.parse()?)?;
 

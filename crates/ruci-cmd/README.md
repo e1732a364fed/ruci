@@ -1,7 +1,7 @@
 
 产生的日志会的 logs 文件夹中, daily rolling
 
-features: lua, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored
+features: lua, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored, quic, quinn
 default enables none.
 
 api_server, trace 这两个feature都会少许降低 performance. 
@@ -22,11 +22,11 @@ cargo run -F lua -F api_server -F api_client -F utils -F use-native-tls --releas
 
 debug:
 ```
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quic -- --log-file ""
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn -- --log-file ""
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quic  -- --log-file "" -c remote.lua
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn  -- --log-file "" -c remote.lua
 
-RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quic  -- --log-file "" -c local_mux2_h2.lua --infinite
+RUST_LOG=none,ruci=debug cargo run -F lua -F utils -F use-native-tls -F quinn  -- --log-file "" -c local_mux2_h2.lua --infinite
 
 RUST_LOG=debug cargo run -F lua -F api_server -F api_client -F utils -F trace -- -a run --trace
 

@@ -221,7 +221,7 @@ pub enum InMapperConfig {
     WebSocket {
         http_config: Option<CommonConfig>,
     },
-    #[cfg(feature = "s2n-quic")]
+    #[cfg(any(feature = "quic", feature = "quinn"))]
     Quic(quic_common::ServerConfig),
 }
 
@@ -252,7 +252,7 @@ pub enum OutMapperConfig {
 
         http_config: Option<CommonConfig>,
     },
-    #[cfg(feature = "s2n-quic")]
+    #[cfg(any(feature = "quic", feature = "quinn"))]
     Quic(quic_common::ClientConfig),
 }
 
@@ -437,8 +437,11 @@ impl ToMapperBox for InMapperConfig {
                 *is_grpc,
                 config.clone(),
             )),
-            #[cfg(feature = "s2n-quic")]
+            #[cfg(feature = "quic")]
             InMapperConfig::Quic(c) => Box::new(quic::server::Server::new(c.clone())),
+
+            #[cfg(feature = "quinn")]
+            InMapperConfig::Quic(c) => Box::new(crate::map::quinn::server::Server::new(c.clone())),
         }
     }
 }
@@ -534,10 +537,16 @@ impl ToMapperBox for OutMapperConfig {
 
                 Box::new(m)
             }
-            #[cfg(feature = "s2n-quic")]
+            #[cfg(feature = "quic")]
             OutMapperConfig::Quic(c) => {
                 Box::new(quic::client::Client::new(c.clone()).expect("legal quic client config"))
             }
+
+            #[cfg(feature = "quinn")]
+            OutMapperConfig::Quic(c) => Box::new(
+                crate::map::quinn::client::Client::new(c.clone())
+                    .expect("legal quic client config"),
+            ),
         }
     }
 }

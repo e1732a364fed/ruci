@@ -82,7 +82,7 @@ in_quic_chain = {
             key_path = "test2.key",
             cert_path = "test2.crt",
             listen_addr = "127.0.0.1:10801",
-            -- alpn = ["h3", "myalpn1"]
+            alpn = {"h3"}
         }
     }, trojan_in
 }
