@@ -173,6 +173,13 @@ impl Suit for SuitStruct {
 
         match self.get_behavior() {
             ProxyBehavior::ENCODE => {
+                if self.protocol_str != "direct" {
+                    if self.addr_str != "" {
+                        let mut a = network::Dialer::default();
+                        a.set_configured_target_addr(self.addr.clone());
+                        self.push_mapper(Arc::new(Box::new(a)));
+                    }
+                }
                 if self.has_tls() {
                     let a = tls::client::Client::new(
                         c.host.unwrap_or_default().as_str(),

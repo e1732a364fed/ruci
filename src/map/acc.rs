@@ -188,7 +188,7 @@ pub async fn accumulate(params: AccumulateParams) -> AccumulateResult {
         };
 
         if tracing::enabled!(Level::DEBUG) {
-            debug!(cid = %cid, mapper = adder.name(), "acc:",)
+            debug!(cid = %cid, mapper = adder.name(), behavior = ?params.behavior, "acc:",)
         }
         last_r = adder
             .maps(
