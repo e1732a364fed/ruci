@@ -64,10 +64,9 @@ impl AsyncWrite for Conn {
                 // Windows stdio in console mode does not support writing non-UUTF-8 byte sequence
                 // 别的系统则没问题
 
-                let str = String::from_utf8_lossy(buf);
-                let sb = str.as_bytes();
-                sb_len = sb.len();
-                self.out.as_mut().poll_write(cx, sb)
+                let str = buf.escape_ascii().to_string();
+                sb_len = str.len();
+                self.out.as_mut().poll_write(cx, str.as_bytes())
             }
             WriteMode::Bytes => {
                 let buf = HexSlice(buf);

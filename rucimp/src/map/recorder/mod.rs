@@ -194,7 +194,7 @@ pub enum FullPayloadData {
     Udp((u128, Addr, Vec<u8>)),
 }
 
-/// SimplifiedRecordData 没有时序信息, 也不包含地址信息
+/// SimplifiedRecordData 没有时间信息, 也不包含地址信息
 ///
 /// mainly for export data for machine learning
 ///
@@ -547,12 +547,16 @@ impl Map for RecorderMap {
             common_data.target_addr = Some(target_addr.clone());
         }
 
+        let start = time::Instant::now();
+
+        let config = self.config.clone();
+
         let mut r = match self.config.record_mode {
             RecordMode::Full => {
                 let mut r = FullRecorder {
-                    config: self.config.clone(),
+                    config,
                     data: FullData::default(),
-                    start: time::Instant::now(),
+                    start,
                 };
                 r.data.common_data = common_data;
 
@@ -560,9 +564,9 @@ impl Map for RecorderMap {
             }
             RecordMode::Simplified => {
                 let mut r = SimplifiedRecorder {
-                    config: self.config.clone(),
+                    config,
                     data: SimplifiedRecordData::default(),
-                    start: time::Instant::now(),
+                    start,
                 };
 
                 r.data.common_data = common_data;
@@ -571,9 +575,9 @@ impl Map for RecorderMap {
             }
             RecordMode::Info => {
                 let mut r = InfoRecorder {
-                    config: self.config.clone(),
+                    config,
                     data: InfoData::default(),
-                    start: time::Instant::now(),
+                    start,
                 };
 
                 r.data.common_data = common_data;
@@ -582,8 +586,10 @@ impl Map for RecorderMap {
             }
         };
 
-        if params.b.is_some() && !params.b.as_ref().unwrap().is_empty() {
-            r.record_read(params.b.as_ref().unwrap());
+        if let Some(data) = &params.b {
+            if !data.is_empty() {
+                r.record_read(data);
+            }
         }
 
         match params.c {

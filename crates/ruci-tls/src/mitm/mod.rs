@@ -20,6 +20,7 @@ use macro_map::{map_ext_fields, MapExt};
 use ruci::map::*;
 use ruci::net::helpers::EarlyDataWrapper;
 use ruci::net::CID;
+use ruci::utils::ob_to_buf;
 use ruci::{map, net::MTU};
 use std::fmt::Display;
 use std::sync::Arc;
@@ -114,8 +115,10 @@ impl Map for MITM {
                     Err(e) => return MapResult::from_e(e),
                 };
 
-                let b = if params.b.is_some() && !params.b.as_ref().unwrap().is_empty() {
-                    params.b.unwrap()
+                let b = ob_to_buf(params.b);
+
+                let b = if !b.is_empty() {
+                    b
                 } else {
                     let mut b = BytesMut::zeroed(MTU);
 

@@ -518,11 +518,19 @@ impl Conn {
         data: &[u8],
     ) -> Poll<Result<()>> {
         let real_data = &data[from..to];
-        let real_string = String::from_utf8_lossy(real_data).into_owned();
+        let real_string = match std::str::from_utf8(real_data) {
+            Ok(s) => s,
+            Err(e) => {
+                return Poll::Ready(Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("spe1 real_read: data is not utf-8, {e}"),
+                )))
+            }
+        };
         trace!( cid=%self.cid,"spe1 real_read called ");
 
         if self.is_server {
-            Poll::Ready(match self.qa.questions_to_bytes(&real_string, true, true) {
+            Poll::Ready(match self.qa.questions_to_bytes(real_string, true, true) {
                 Ok(bm) => {
                     trace!(cid=%self.cid, "spe1 real_read {}, {}",bm.0.len(),&data[..to].len() );
 
@@ -537,7 +545,7 @@ impl Conn {
                 )),
             })
         } else {
-            match Self::server_response_to_2_parts(&real_string) {
+            match Self::server_response_to_2_parts(real_string) {
                 None => {
                     warn!("spe1 real_read, server_response_to_2_parts failed");
                     Poll::Ready(Ok(()))

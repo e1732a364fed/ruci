@@ -108,7 +108,7 @@ impl Server {
                 let e1 = anyhow::anyhow!(
                     "http proxy: get method/path failed: {:?}, buf as str:\n{}\n",
                     r.parse_result,
-                    String::from_utf8_lossy(&buf[..min(n, 64)])
+                    &buf[..min(n, 64)].escape_ascii()
                 );
 
                 return Ok(MapResult::ebc(e1, buf, base));

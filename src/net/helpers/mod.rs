@@ -317,11 +317,7 @@ impl AsyncRead for PrintWrapper {
             Ok(_) => {
                 let slice = buf.filled();
                 let sl = slice.len();
-                debug!(
-                    "read: {} {}",
-                    sl,
-                    String::from_utf8_lossy(&slice[..min(sl, 64)])
-                )
+                debug!("read: {} {}", sl, &slice[..min(sl, 64)].escape_ascii())
             }
             Err(e) => {
                 debug!("PrintWrapper read got e: {e}")
@@ -346,7 +342,7 @@ impl AsyncWrite for PrintWrapper {
                     debug!(
                         "write: {}, {}",
                         *n,
-                        String::from_utf8_lossy(&buf[..min(*n, MAX_DISPLAY_LEN)])
+                        &buf[..min(*n, MAX_DISPLAY_LEN)].escape_ascii()
                     )
                 }
                 BytesDisplayMode::Bytes => {

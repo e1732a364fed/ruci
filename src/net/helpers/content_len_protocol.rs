@@ -206,13 +206,12 @@ impl BufReader {
                                 if tracing::enabled!(tracing::Level::TRACE) {
                                     let real_data =
                                         &data[body_start_index..body_start_index + content_len];
-                                    let real_string = String::from_utf8_lossy(real_data);
 
                                     tracing::trace!(
                                         "partial read2 finish, {}, {}, {}",
                                         real_len,
                                         content_len,
-                                        real_string.len()
+                                        real_data.len()
                                     );
                                 }
 
