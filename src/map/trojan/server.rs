@@ -92,21 +92,20 @@ impl Server {
 
         buf.truncate(previous_read_len);
 
-        let x = buf.split_to(PASS_LEN);
+        let pass_part = buf.split_to(PASS_LEN);
 
-        let hash_str = String::from_utf8_lossy(&x);
+        let hash_str = String::from_utf8_lossy(&pass_part);
 
         let opt_user = self.um.auth_user_by_authstr(&hash_str).await;
 
         if let None = opt_user {
             return Ok(MapResult::buf_err_str(buf, "hash not match"));
         }
-        let crb = buf.get_u8();
-        let lfb = buf.get_u8();
-        if crb != CR || lfb != LF {
+        let crlf = buf.get_u16();
+        if crlf != CRLF {
             return Ok(MapResult::buf_err_str(
                 buf,
-                &format!("crlf wrong, {} {}", crb, lfb),
+                &format!("crlf wrong, {} ", crlf),
             ));
         }
         let cmdb = buf.get_u8();

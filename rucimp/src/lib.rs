@@ -1,7 +1,7 @@
 /*!
-定义一个 SuitEngine struct，用于同时执行多个代理
 
-子suit定义了 套装suit 配置格式
+ 定义了 配置格式, 以及以该配置格式运行代理的方法
+
 */
 pub mod chain;
 pub mod suit;

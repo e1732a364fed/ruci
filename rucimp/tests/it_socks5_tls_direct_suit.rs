@@ -89,11 +89,11 @@ async fn f_dial_future_tls_out_adder(
 
     info!("client{} writing hello...", rid,);
 
-    newconn.write(&b"hello\n"[..]).await.unwrap();
+    newconn.write(&b"hello\n"[..]).await?;
 
     info!("client{} reading...", rid,);
 
-    let n = newconn.read(&mut readbuf[..]).await.unwrap();
+    let n = newconn.read(&mut readbuf[..]).await?;
     info!("client{} read, {:?}", rid, &readbuf[..n]);
     info!(
         "client{} read str is, {:?}",

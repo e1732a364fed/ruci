@@ -5,17 +5,17 @@ edition = "2021"
 
 [dependencies]
 ruci = { path = ".." }
-bytes = "1" #1.5.0
+bytes = "1"
 env_logger = "0.11.1"
 log = "0.4.20"
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1.77" 
 futures = "0.3"
-futures-lite = "2" #2.2.0
+futures-lite = "2"
 parking_lot = "0.12.1"
 
 toml = "0.8.1"
-serde = { version = "1", features = ["derive"] }    #1.0.196
+serde = { version = "1", features = ["derive"] }
 
 
 mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lot","luau"] , optional = true }
@@ -25,8 +25,5 @@ default = ["lua"]
 lua = ["mlua"]
 
 [[example]]
-name = "suit"
-
-
-[[example]]
-name = "suit2"
+name = "chain"
+required-features = ["lua"]

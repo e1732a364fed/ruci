@@ -146,7 +146,7 @@ pub async fn handle_conn<'a>(
             //let _ = out_stream.try_shutdown();
             return Err(e);
         } else if let Stream::None = dial_result.c {
-            info!("{state}, dial out client stream got consumed ",);
+            warn!("{state}, dial out client stream got consumed ",);
 
             return Ok(());
         }
@@ -340,7 +340,7 @@ where
         //let _ = out_stream.try_shutdown();
         return Err(e);
     } else if let Stream::None = dial_result.c {
-        info!("{cid}, dial out client stream got consumed ",);
+        warn!("{cid}, dial out client stream got consumed ",);
 
         return Ok(());
     }

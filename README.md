@@ -50,7 +50,7 @@ rucimp 子项目提供若干示例程序, suit, suit2, chain
 
 ```sh
 cd rucimp
-cargo build --release --example suit  --example suit2  --example chain
+cargo build --release --example chain --example suit  --example suit2 
 
 #到 ruci/target/release/examples 找可执行文件，拷回 .toml 或resource文件夹 所在的位置
 
@@ -77,7 +77,7 @@ ruci对代理的原理加以更高的抽象化，认为任何协议都可被认�
 
 有如下定义(伪代码)：
 
-流发生器(stream generator)： function(args)->stream
+单流发生器(stream generator)： function(args)->stream
 
 多流发生器(multi-stream generator)：function( Option<stream> ,args...)->[channel->stream]
 
@@ -147,7 +147,7 @@ o2node-.->collector
 - [x] 日志 （env_logger)
 - [x] 流量记录 (两种实现，分别用于记录原始流量与实际流量)
 - [x] tls,socks5,trojan
-- [x] adder (按字节加法器), counter (流量计)
+- [x] adder (按字节加法器), counter (层流量计)
 - [x] suit配置格式 （即旧 verysimple 的 toml 配置）
 - [x] 链式配置格式 (新增)
 - [ ] unix domain socket

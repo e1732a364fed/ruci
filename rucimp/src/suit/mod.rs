@@ -1,7 +1,7 @@
 /*!
  * suit 模块定义了一个 实现 SuitConfigHolder, ruci::proxy::AddersVec  的结构
  *
- * 通过套装，我们得以将一串代理传播链扁平化
+ * 通过套装, 我们得以将一串代理传播链扁平化
  *
  */
 pub mod config;
@@ -28,7 +28,7 @@ use tokio::sync::oneshot;
 use ruci::map::*;
 use ruci::net::{self, Addr};
 
-/// SuitConfigHolder ：一套完整的代理配置，如从tcp到tls一直到socks5
+/// SuitConfigHolder ：一套完整的代理配置, 如从tcp到tls一直到socks5
 ///
 /// 它定义了一个 rucimp::suit::config::LDConfig 持有者的应有的行为
 ///
@@ -67,7 +67,7 @@ pub trait MappersVec {
 
 #[async_trait]
 pub trait Suit: SuitConfigHolder + MappersVec {
-    /// stop 停止监听，同时移除一切因用户登录而生成的动态数据, 恢复到运行前的状态
+    /// stop 停止监听, 同时移除一切因用户登录而生成的动态数据, 恢复到运行前的状态
     fn stop(&self) {}
 
     fn generate_upper_mappers(&mut self);
@@ -160,7 +160,7 @@ impl MappersVec for SuitStruct {
 
     /// 添加 mapper 到尾部。会自动推导出 whole_name.
     ///
-    /// 可多次调用，每次都会更新 whole_name
+    /// 可多次调用, 每次都会更新 whole_name
     fn push_mapper(&mut self, mapper: MapperBox) {
         self.inmappers.push(mapper);
         self.whole_name = self
@@ -205,8 +205,8 @@ impl Suit for SuitStruct {
 
 /// 阻塞监听 ins。
 ///
-/// 确保调用 listen_ser 前，ins 和 outc 的
-/// generate_...adders 方法被调用过了
+/// 确保调用 listen_ser 前, ins 和 outc 的
+/// generate_upper_mappers 方法被调用过了
 pub async fn listen_ser(
     ins: Arc<dyn Suit>,
     outc: Arc<dyn Suit>,

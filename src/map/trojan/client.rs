@@ -37,7 +37,7 @@ impl Client {
         if ta.network == Network::TCP {
             buf.put_u8(CMD_CONNECT);
         } else {
-            unimplemented!()
+            todo!()
         }
         helpers::addr_to_socks5_bytes(&ta, &mut buf);
         buf.put_u16(CRLF);
