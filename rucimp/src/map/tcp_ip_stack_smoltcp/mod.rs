@@ -92,15 +92,43 @@ impl Map for Stack {
                                         break;
                                     },
                                     Ok(_) => {
-                                        let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
+                                        let now = smoltcp::time::Instant::now();
+
+                                        //先给一个 空列表，只利用它调用到 device.receive
+                                        // 之后拿到 new_read_type 后，再按实际类型走
+
+                                        let fake_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 
                                         //poll->socket_ingress->device.receive->rx_token.consume->process_ip->process_ipv4->process_tcp
 
-                                        iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
-                                            &mut *sockets
+                                        iface.poll(now,&mut device, unsafe {
+                                            &mut *fake_sockets
                                         });
 
-                                        device.process_ingress();
+                                        match device.new_read_type{
+                                            device::NewReadType::None => {},
+
+                                            device::NewReadType::TCP =>{
+
+                                                let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
+
+                                                iface.poll(now,&mut device, unsafe {
+                                                    &mut *tcp_sockets
+                                                });
+                                                device.process_ingress();
+
+                                            },
+                                            device::NewReadType::UDP =>{
+                                                let sockets = &mut device.udp_sockets as *mut smoltcp::iface::SocketSet;
+
+                                                iface.poll(now,&mut device, unsafe {
+                                                    &mut *sockets
+                                                });
+
+                                                device.process_ingress();
+
+                                            },
+                                        }
                                     },
 
                                 }
@@ -112,10 +140,10 @@ impl Map for Stack {
 
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
-                                        let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
+                                        let tcp_sockets = &mut device.tcp_sockets as *mut smoltcp::iface::SocketSet;
 
                                         iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
-                                            &mut *sockets
+                                            &mut *tcp_sockets
                                         });
 
                                     },
@@ -132,15 +160,15 @@ impl Map for Stack {
 
                                         // egress 之后还是要 poll 一次，否则不会真发出去.
 
-                                        let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
+                                        let udp_sockets = &mut device.udp_sockets as *mut smoltcp::iface::SocketSet;
 
                                         iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
-                                            &mut *sockets
+                                            &mut *udp_sockets
                                         });
 
                                     },
                                     None => {
-                                        tracing::warn!("SmoltcpDevice tcp_rx read got None");
+                                        tracing::warn!("SmoltcpDevice udp_rx read got None");
                                         break;
                                     },
                                 }
