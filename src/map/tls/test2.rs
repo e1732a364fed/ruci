@@ -113,7 +113,7 @@ async fn listen_future(
         //let mut buf = BytesMut::zeroed(1024);
         loop {
             unsafe {
-                c.read(&mut VEC1).await?;
+                c.read(&mut *std::ptr::addr_of_mut!(VEC1)).await?;
             }
         }
         Ok::<(), anyhow::Error>(())
@@ -142,7 +142,7 @@ pub async fn test_batch_run(l: usize, layer_num: u8) -> anyhow::Result<()> {
 
 pub async fn test_write(d: &mut Box<dyn AsyncConn>) -> anyhow::Result<()> {
     unsafe {
-        d.write_all(&VEC2).await?;
+        d.write_all(& *std::ptr::addr_of_mut!(VEC2)).await?;
     }
 
     Ok(())
