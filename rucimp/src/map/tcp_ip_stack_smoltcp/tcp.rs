@@ -2,7 +2,6 @@
 Defines a channel based [`TcpStream`] created by [`super::SmoltcpDevice`]
 */
 use std::{
-    io::Error,
     net::SocketAddr,
     pin::Pin,
     task::{ready, Context, Poll},
@@ -120,23 +119,25 @@ impl AsyncWrite for TcpWriteHalf {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-    ) -> Poll<Result<usize, Error>> {
+    ) -> Poll<std::io::Result<usize>> {
         let me = self.get_mut();
-        if ready!(me.tx.poll_reserve(cx)).is_ok() {
-            if let Err(err) = me.tx.send_item((me.h, me.local_addr, buf.into())) {
-                tracing::warn!("tcp send response failed: {}", err);
-            } else {
-                return Poll::Ready(Ok(buf.len()));
+
+        Poll::Ready(match ready!(me.tx.poll_reserve(cx)) {
+            Ok(_) => {
+                if let Err(err) = me.tx.send_item((me.h, me.local_addr, buf.into())) {
+                    tracing::warn!("tcp send response failed: {}", err);
+                }
+                Ok(buf.len())
             }
-        }
-        Poll::Ready(Ok(buf.len()))
+            Err(e) => Err(std::io::Error::other(e)),
+        })
     }
 
-    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
         // debug!("smoltcp tcp shutdown called");
         self.poll_write(cx, &[]).map(|ret| ret.map(|_| ()))
     }
@@ -162,19 +163,24 @@ impl AsyncWrite for TcpStream {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-    ) -> Poll<Result<usize, Error>> {
+    ) -> Poll<std::io::Result<usize>> {
         let me = self.get_mut();
         Pin::new(&mut me.w).poll_write(cx, buf)
     }
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
         let me = self.get_mut();
         Pin::new(&mut me.w).poll_flush(cx)
     }
-    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
         // debug!("smoltcp tcpstream shutdown called");
         let me = self.get_mut();
-        me.is_closed = true;
-        me.r.rx.close();
-        Pin::new(&mut me.w).poll_shutdown(cx)
+
+        if !me.is_closed {
+            me.is_closed = true;
+            me.r.rx.close();
+            Pin::new(&mut me.w).poll_shutdown(cx)
+        } else {
+            Poll::Ready(Ok(()))
+        }
     }
 }

@@ -90,8 +90,7 @@ impl Server {
                         let stream = Box::new(stream);
 
                         let m = MapResult::new_c(stream).new_id(new_cid).build();
-                        let r = tx.send(m).await;
-                        if let Err(e) = r {
+                        if let Err(e) = tx.send(m).await {
                             warn!(cid = %cc, "quic send tx got error: {}", e);
                             break;
                         }

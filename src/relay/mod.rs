@@ -94,10 +94,10 @@ pub async fn handle_in_stream(
     .await
 }
 
-/// fold the inbound, select an outbound, fold the outbound, then calls
+/// Fold the inbound, select an outbound, fold the outbound, then calls
 /// [`cp_stream`] to copy between the inbound stream and outbound stream.
 ///
-/// block until out handshake is over
+/// Blocks until the outbound handshake is over.
 pub async fn handle_in_fold_result(
     mut listen_result: fold::FoldResult,
     global_data: Option<GlobalData>,
@@ -121,13 +121,13 @@ pub async fn handle_in_fold_result(
             match listen_result.e {
                 Some(err) => {
                     if listen_result.c.is_some() {
-                        warn!(cid = %cid, e=%err, "fold inbound failed with Error, will try to fallback: {:#}",err);
+                        warn!(cid = %cid, e=%err, "Fold inbound failed with Error, will try to fallback: {:#}",err);
 
                         is_fallback = true;
                         Addr::default()
                     } else {
                         let return_e =
-                            err.context("fold inbound failed with Error and can't fallback");
+                            err.context("Fold inbound failed with Error and can't fallback");
 
                         warn!(cid = %cid, "{:#}",return_e);
 
@@ -136,14 +136,13 @@ pub async fn handle_in_fold_result(
                 }
                 None => match &listen_result.c {
                     Stream::None => {
-                        return_e = anyhow!("fold inbound ok and stream got consumed");
-                        info!(cid = %cid, "{}", return_e);
+                        return_e = anyhow!("Fold inbound ok and stream got consumed");
+                        info!(cid = %cid, "{:#}", return_e);
                         return Ok(());
                     }
                     _ => {
-                        return_e =
-                            anyhow!( "fold inbound succeed but got no target_addr, will use empty target_addr");
-                        warn!(cid = %cid, "{}", return_e);
+                        return_e = anyhow!("Fold inbound ok and stream got consumed");
+                        warn!(cid = %cid, "{:#}", return_e);
                         Addr::default()
                     }
                 },

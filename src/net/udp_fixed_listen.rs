@@ -30,10 +30,10 @@ use super::{
 /// 只支持 预定义 target_addr
 #[derive(Debug)]
 pub struct FixedTargetAddrUDPListener {
-    laddr: Addr,
-    fixed_target: Addr,
-    new_conn_rx: mpsc::Receiver<(AddrConn, SocketAddr)>,
-    shutdown_tx: Option<oneshot::Sender<()>>,
+    laddr: Addr,                                         // Local address to bind to
+    fixed_target: Addr,                                  // Predefined target address for forwarding
+    new_conn_rx: mpsc::Receiver<(AddrConn, SocketAddr)>, // Receiver for new connections
+    shutdown_tx: Option<oneshot::Sender<()>>,            // Sender for shutdown signal
 }
 
 impl FixedTargetAddrUDPListener {

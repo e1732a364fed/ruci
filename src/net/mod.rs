@@ -301,7 +301,13 @@ pub enum Stream {
 
 impl Debug for Stream {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self, f)
+        match self {
+            Stream::Conn(_) => write!(f, "Stream::Conn"),
+            Stream::RW(_) => write!(f, "Stream::RW"),
+            Stream::AddrConn(_) => write!(f, "Stream::AddrConn"),
+            Stream::Generator(_) => write!(f, "Stream::Generator"),
+            Stream::None => write!(f, "Stream::None"),
+        }
     }
 }
 

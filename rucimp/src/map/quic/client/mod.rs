@@ -48,7 +48,7 @@ impl Client {
             .with_io("0.0.0.0:0")?
             .start()?;
 
-        let a: SocketAddr = c.server_addr.parse()?;
+        let a = c.server_addr.parse::<SocketAddr>()?;
 
         Ok(Self {
             c: client,

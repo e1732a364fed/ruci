@@ -1,12 +1,13 @@
 # Ruci (wip)
 
 [![release][1]][2] 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fe1732a364fed%2Fruci.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fe1732a364fed%2Fruci?ref=badge_shield)
+[![FOSSA Status][3]][4]
 
 
-[1]: https://github.com/e1732a364fed/ruci/releases/latest
-[2]: https://img.shields.io/github/release/e1732a364fed/ruci/all.svg?style=flat-square
-
+[1]: https://img.shields.io/github/v/release/e1732a364fed/ruci
+[2]: https://github.com/e1732a364fed/ruci/releases/latest
+[3]: https://app.fossa.com/api/projects/git%2Bgithub.com%2Fe1732a364fed%2Fruci.svg?type=shield
+[4]: https://app.fossa.com/projects/git%2Bgithub.com%2Fe1732a364fed%2Fruci?ref=badge_shield
 
 - [X] Ruci : 如此: 
 - [X] Rucimp: 如此实现~

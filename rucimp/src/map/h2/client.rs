@@ -216,8 +216,7 @@ impl MuxClient {
                 let mut cache = self.cache.lock().await;
                 if cache.is_none() {
                     //debug!("h2_mux_client got some conn");
-                    let r = h2::client::handshake(conn).await;
-                    let r = match r {
+                    let r = match h2::client::handshake(conn).await {
                         Ok(r) => r,
                         Err(e) => {
                             let e = anyhow::anyhow!("accept h2 got e {}", e);

@@ -265,8 +265,7 @@ impl Addr {
             ns[1].parse::<u16>().map_err(|e| anyhow!("{}", e))?
         };
 
-        let x = ns[0].parse::<IpAddr>();
-        match x {
+        match ns[0].parse::<IpAddr>() {
             Ok(ip) => Addr::from(network, None, Some(ip), port),
             Err(_) => Addr::from(network, Some(ns[0].to_string()), None, port),
         }
@@ -281,7 +280,10 @@ impl Addr {
         };
 
         if ns.len() != 2 {
-            bail!("Addr::from_ip_addr_str, split colon got len!=2",);
+            bail!(
+                "Addr::from_ip_addr_str, split colon got len!=2, found len={}",
+                ns.len()
+            );
         }
         Addr::from_strs(
             network,
@@ -291,7 +293,7 @@ impl Addr {
         )
     }
 
-    /// will set network to Tcp
+    /// Constructs an `Addr` from an `IPName` and port, setting the network to TCP.
     pub fn from_ipname(ipn: IPName, port: u16) -> Self {
         match ipn {
             IPName::IP(ip) => Addr {
@@ -306,6 +308,7 @@ impl Addr {
     }
 
     #[cfg(unix)]
+    /// Constructs an `Addr` from a Unix socket address.
     pub fn from_unix(unix_soa: tokio::net::unix::SocketAddr) -> Self {
         if unix_soa.is_unnamed() {
             Addr {
@@ -315,7 +318,7 @@ impl Addr {
         } else {
             let p = unix_soa
                 .as_pathname()
-                .unwrap()
+                .expect("Unix socket address should have a pathname")
                 .to_string_lossy()
                 .to_string();
 

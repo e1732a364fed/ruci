@@ -27,16 +27,20 @@ pub type MIterBox = Box<dyn MIter>;
 /// if you want to count it, you might use get_miter to try to get MIterBox first.
 ///
 pub trait DynIterator {
+    /// Get the next item with the provided data.
     fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapBox>>;
 
+    /// Get the next item without any data.
     fn next(&mut self) -> Option<Arc<MapBox>> {
         self.next_with_data(CID::default(), None)
     }
 
+    /// Try to get a static iterator. Default returns None.
     fn get_miter(&self) -> Option<MIterBox> {
         None
     }
 
+    /// Check if the iterator requires no data. Default returns false.
     fn requires_no_data(&self) -> bool {
         false
     }

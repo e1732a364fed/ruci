@@ -96,6 +96,7 @@ pub enum UVariantErr {
     OverFlow,
 }
 
+/// Reads a variable-length integer from the buffer.
 pub fn read_uvarint(r: &mut BytesMut) -> (u64, Option<UVariantErr>) {
     let mut x = 0u64;
     let mut s = 0u8;

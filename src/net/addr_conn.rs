@@ -485,9 +485,9 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
     Ok(l)
 }
 
-/// copy data between two [`AddrConn`] struct
+/// Copy data between two [`AddrConn`] structs
 ///
-/// blocking
+/// This function is blocking.
 #[inline]
 pub async fn cp(
     cid: CID,

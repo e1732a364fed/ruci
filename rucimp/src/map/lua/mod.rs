@@ -212,7 +212,9 @@ impl ReadBufWrapper {
 
     pub fn release(&mut self) {
         let buf_void = self.ptr.0;
-        assert!(!buf_void.is_null());
+        if buf_void.is_null() {
+            return;
+        }
 
         let rb = buf_void as *mut ReadBuf<'_>;
 

@@ -13,7 +13,7 @@ use ruci::net::*;
 
 use smoltcp::socket::tcp::{self, State};
 use tokio::sync::mpsc::{self, Receiver, Sender};
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 use anyhow::Context;
 use smoltcp::wire::{IpEndpoint, IpProtocol, TcpPacket, UdpPacket};
@@ -692,9 +692,7 @@ impl SmoltcpDevice {
             // debug!("while left_data>0, {left_data}, {count}"); //一般只会发送一次
             // count += 1;
 
-            let r = socket.send_slice(&data);
-
-            match r {
+            match socket.send_slice(&data) {
                 Ok(n) => {
                     if n == 0 {
                         //necessary
@@ -707,7 +705,8 @@ impl SmoltcpDevice {
                         data.advance(n);
                     }
                 }
-                Err(_) => {
+                Err(e) => {
+                    tracing::error!("smoltcp Failed to send TCP data: {e}");
                     socket.close();
                     break;
                 }
@@ -730,7 +729,7 @@ impl SmoltcpDevice {
         }
 
         if let Err(e) = socket.send_slice(&data, src) {
-            debug!(
+            error!(
                 "smoltcp send udp failed, dst:{src}, l:{}, e:{e}",
                 data.len()
             );

@@ -72,7 +72,7 @@ impl Reader {
                 buffer.resize(TARGET_LEN, 0)
             }
 
-            ReadBuf::new(&mut buffer[..])
+            ReadBuf::new(buffer.as_mut())
         };
         (
             self.base.as_mut().poll_read(cx, &mut tmp_rbuf),

@@ -497,7 +497,7 @@ impl Conn {
         data: &[u8],
     ) -> Poll<Result<()>> {
         let real_data = &data[from..to];
-        let real_string = String::from_utf8_lossy(real_data).to_string();
+        let real_string = String::from_utf8_lossy(real_data).into_owned();
         trace!( cid=%self.cid,"spe1 real_read called ");
 
         if self.is_server {
@@ -831,8 +831,8 @@ mod test {
                 assert_eq!(&readbuf[..n], WRITE_CONTENT);
             }
             Some(e) => {
-                println!("{:?}", e);
-                return Err(e);
+                eprintln!("Error occurred: {:?}", e);
+                assert!(false, "Test failed due to error");
             }
         }
 

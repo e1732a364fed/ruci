@@ -771,7 +771,7 @@ impl<'a> AsyncRead for MockTcpStream2<'a> {
             return Poll::Ready(Ok(()));
         }
 
-        buf.put(&self.read_data[..size]);
+        buf.put_slice(&self.read_data[..size]);
 
         let new_len = self.read_data.len() - size;
 
@@ -788,13 +788,11 @@ impl<'a> AsyncWrite for MockTcpStream2<'a> {
         _: &mut Context,
         buf: &[u8],
     ) -> Poll<Result<usize, Error>> {
-        let mut x = Vec::from(buf);
-
         if let Some(swt) = &self.write_target {
             let mut v = swt.lock();
-            v.append(&mut x);
+            v.extend_from_slice(buf);
         } else {
-            self.write_data.append(&mut x)
+            self.write_data.extend_from_slice(buf);
         }
 
         Poll::Ready(Ok(buf.len()))
