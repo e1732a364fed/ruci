@@ -30,8 +30,8 @@ where
 /// 确保调用 listen_ser 前, ins 和 outc 的
 /// generate_upper_mappers 方法被调用过了
 pub async fn listen_ser(
-    ins: Arc<dyn Suit>,
-    outc: Arc<dyn Suit>,
+    ins: &'static dyn Suit,
+    outc: &'static dyn Suit,
     oti: Option<Arc<net::TransmissionInfo>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
@@ -55,8 +55,8 @@ pub async fn listen_ser(
 
 /// 阻塞监听 ins tcp。
 async fn listen_tcp(
-    ins: Arc<dyn Suit>,
-    outc: Arc<dyn Suit>,
+    ins: &'static dyn Suit,
+    outc: &'static dyn Suit,
     oti: Option<Arc<net::TransmissionInfo>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> io::Result<()> {
@@ -68,11 +68,11 @@ async fn listen_tcp(
 
     let clone_oti = move || oti.clone();
 
-    let ins = Box::new(ins);
-    let ins: &'static Arc<dyn Suit> = Box::leak(ins);
+    // let ins = Box::new(ins);
+    // let ins: &'static Arc<dyn Suit> = Box::leak(ins);
 
-    let outc = Box::new(outc);
-    let outc: &'static Arc<dyn Suit> = Box::leak(outc);
+    // let outc = Box::new(outc);
+    // let outc: &'static Arc<dyn Suit> = Box::leak(outc);
 
     tokio::select! {
         r = async {

@@ -14,21 +14,22 @@ use std::{env::set_var, io, sync::Arc, time::Duration};
 
 use crate::net::CID;
 use bytes::{BufMut, BytesMut};
-use futures::{pin_mut, select, FutureExt};
+use futures::{pin_mut, select, Future, FutureExt};
 use log::{info, warn};
 use ruci::map::socks5;
 use ruci::map::socks5::*;
+use ruci::net::TransmissionInfo;
 use ruci::{map::Mapper, net, user::PlainText};
 use rucimp::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
 };
-use rucimp::suit::config::Config;
+use rucimp::suit::config::{Config, LDConfig};
 use rucimp::suit::engine::relay::listen_ser;
 use rucimp::suit::engine::SuitEngine;
 use rucimp::suit::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio::sync::oneshot;
+use tokio::sync::oneshot::{self, Sender};
 
 const WAITSECS: u64 = ruci::relay::READ_HANDSHAKE_TIMEOUT + 2;
 const WAITID: i32 = 10101;
@@ -324,6 +325,45 @@ async fn get_socks5_mapper(lsuit: &SuitStruct) -> socks5::server::Server {
     .await
 }
 
+async fn lisen_ser() -> std::io::Result<(
+    impl Future<Output = ()>,
+    Sender<()>,
+    Arc<TransmissionInfo>,
+    LDConfig,
+)> {
+    let mut c = get_config();
+
+    let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
+    lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
+
+    let a = get_socks5_mapper(&lsuit).await;
+    lsuit.push_mapper(Box::new(a));
+
+    let csuit = SuitStruct::from(c.dial.pop().unwrap());
+
+    let ti = net::TransmissionInfo::default();
+    let arc_ti = Arc::new(ti);
+    let arc_tic = arc_ti.clone();
+
+    let (tx, rx) = oneshot::channel();
+
+    let alsuitc = Box::leak(Box::new(lsuit));
+
+    let listen_future = async {
+        info!("try start listen");
+
+        let r = listen_ser(alsuitc, Box::leak(Box::new(csuit)), Some(arc_ti), rx).await;
+
+        info!("r {:?}", r);
+    };
+    Ok((
+        listen_future,
+        tx,
+        arc_tic,
+        alsuitc.get_config().unwrap().clone(),
+    ))
+}
+
 /// 基本测试. 百度在遇到非http请求后会主动断开连接，其对于长挂起请求最多60秒后断开连接。
 /// 其对请求中不含\n 时会视为挂起
 #[tokio::test]
@@ -333,36 +373,8 @@ async fn socks5_direct_and_request() -> std::io::Result<()> {
 
     info!("start socks5_direct_and_request_baidu test");
 
-    let mut c = get_config();
+    let (listen_future, tx, arc_tic, cc) = lisen_ser().await?;
 
-    let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
-    lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
-
-    let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Box::new(a));
-
-    //println!("{:?}", lsuit);
-
-    let csuit = SuitStruct::from(c.dial.pop().unwrap());
-    //println!("{:?}", csuit);
-    let ti = net::TransmissionInfo::default();
-    let arc_ti = Arc::new(ti);
-    let arc_tic = arc_ti.clone();
-
-    let alsuit = Arc::new(lsuit);
-    let alsuitc = alsuit.clone();
-
-    let (tx, rx) = oneshot::channel();
-
-    let listen_future = async {
-        info!("try start listen");
-
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
-
-        info!("r {:?}", r);
-    };
-
-    let cc = alsuitc.get_config().unwrap().clone();
     let listen_host = cc.host.unwrap();
     let listen_port = cc.port.unwrap();
 
@@ -407,32 +419,8 @@ async fn socks5_direct_and_outadder() -> std::io::Result<()> {
 
     info!("start socks5_direct_and_request_baidu test");
 
-    let mut c = get_config();
+    let (listen_future, tx, arc_tic, cc) = lisen_ser().await?;
 
-    let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
-    lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
-
-    let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Box::new(a));
-
-    let csuit = SuitStruct::from(c.dial.pop().unwrap());
-    let ti = net::TransmissionInfo::default();
-    let arc_ti = Arc::new(ti);
-    let arc_tic = arc_ti.clone();
-
-    let alsuit = Arc::new(lsuit);
-    let alsuitc = alsuit.clone();
-    let (tx, rx) = oneshot::channel();
-
-    let listen_future = async {
-        info!("try start listen");
-
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
-
-        info!("r {:?}", r);
-    };
-
-    let cc = alsuitc.get_config().unwrap().clone();
     let listen_host = cc.host.unwrap();
     let listen_port = cc.port.unwrap();
 
@@ -469,29 +457,8 @@ async fn socks5_direct_and_request_no_transmission_info() -> std::io::Result<()>
 
     info!("start socks5_direct_and_request_baidu test");
 
-    let mut c = get_config();
+    let (listen_future, tx, _arc_tic, cc) = lisen_ser().await?;
 
-    let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
-    lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
-
-    let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Box::new(a));
-
-    let csuit = SuitStruct::from(c.dial.pop().unwrap());
-
-    let alsuit = Arc::new(lsuit);
-    let alsuitc = alsuit.clone();
-    let (tx, rx) = oneshot::channel();
-
-    let listen_future = async {
-        info!("try start listen");
-
-        let r = listen_ser(alsuit, Arc::new(csuit), None, rx).await;
-
-        info!("r {:?}", r);
-    };
-
-    let cc = alsuitc.get_config().unwrap().clone();
     let listen_host = cc.host.unwrap();
     let listen_port = cc.port.unwrap();
 
@@ -544,20 +511,24 @@ async fn socks5_direct_and_request_counter() -> std::io::Result<()> {
     let wn = lsuit.whole_name.clone();
 
     let csuit = SuitStruct::from(c.dial.pop().unwrap());
+    let cc = lsuit.get_config().unwrap().clone();
 
-    let alsuit = Arc::new(lsuit);
-    let alsuitc = alsuit.clone();
     let (tx, rx) = oneshot::channel();
 
     let listen_future = async {
         info!("try start listen, {}", wn);
 
-        let r = listen_ser(alsuit, Arc::new(csuit), None, rx).await;
+        let r = listen_ser(
+            Box::leak(Box::new(lsuit)),
+            Box::leak(Box::new(csuit)),
+            None,
+            rx,
+        )
+        .await;
 
         info!("r {:?}", r);
     };
 
-    let cc = alsuitc.get_config().unwrap().clone();
     let listen_host = cc.host.unwrap();
     let listen_port = cc.port.unwrap();
 
@@ -592,32 +563,8 @@ async fn socks5_direct_and_request_earlydata() -> std::io::Result<()> {
 
     info!("start socks5_direct_and_request_baidu test");
 
-    let mut c = get_config();
+    let (listen_future, tx, arc_tic, cc) = lisen_ser().await?;
 
-    let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
-    lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
-
-    let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Box::new(a));
-
-    let csuit = SuitStruct::from(c.dial.pop().unwrap());
-    let ti = net::TransmissionInfo::default();
-    let arc_ti = Arc::new(ti);
-    let arc_tic = arc_ti.clone();
-
-    let alsuit = Arc::new(lsuit);
-    let alsuitc = alsuit.clone();
-    let (tx, rx) = oneshot::channel();
-
-    let listen_future = async {
-        info!("try start listen");
-
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
-
-        info!("r {:?}", r);
-    };
-
-    let cc = alsuitc.get_config().unwrap().clone();
     let listen_host = cc.host.unwrap();
     let listen_port = cc.port.unwrap();
 
@@ -660,32 +607,7 @@ async fn socks5_direct_longwait_write_and_request() {
 
     info!("start socks5_direct_and_request_baidu test");
 
-    let mut c = get_config();
-
-    let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
-    lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
-
-    let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Box::new(a));
-
-    let csuit = SuitStruct::from(c.dial.pop().unwrap());
-    let ti = net::TransmissionInfo::default();
-    let arc_ti = Arc::new(ti);
-    let arc_tic = arc_ti.clone();
-
-    let alsuit = Arc::new(lsuit);
-    let alsuitc = alsuit.clone();
-    let (tx, rx) = oneshot::channel();
-
-    let listen_future = async {
-        info!("try start listen");
-
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
-
-        info!("r {:?}", r);
-    };
-
-    let cc = alsuitc.get_config().unwrap().clone();
+    let (listen_future, tx, arc_tic, cc) = lisen_ser().await.expect("listen ok");
     let listen_host = cc.host.unwrap();
     let listen_port = cc.port.unwrap();
 
@@ -937,32 +859,8 @@ async fn socks5_direct_and_request_2_async() -> std::io::Result<()> {
 
     info!("start socks5_direct_and_request_baidu_2_async");
 
-    let mut c = get_config();
+    let (listen_future, tx, arc_tic, cc) = lisen_ser().await?;
 
-    let mut lsuit = SuitStruct::from(c.listen.pop().unwrap());
-    lsuit.set_behavior(ruci::map::ProxyBehavior::DECODE);
-
-    let a = get_socks5_mapper(&lsuit).await;
-    lsuit.push_mapper(Box::new(a));
-
-    let csuit = SuitStruct::from(c.dial.pop().unwrap());
-    let ti = net::TransmissionInfo::default();
-    let arc_ti = Arc::new(ti);
-    let arc_tic = arc_ti.clone();
-
-    let alsuit = Arc::new(lsuit);
-    let alsuitc = alsuit.clone();
-    let (tx, rx) = oneshot::channel();
-
-    let listen_future = async {
-        info!("try start listen");
-
-        let r = listen_ser(alsuit, Arc::new(csuit), Some(arc_ti), rx).await;
-
-        info!("r {:?}", r);
-    };
-
-    let cc = alsuitc.get_config().unwrap().clone();
     let listen_host = cc.host.unwrap();
     let listen_port = cc.port.unwrap();
 

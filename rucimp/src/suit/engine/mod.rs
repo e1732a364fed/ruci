@@ -24,9 +24,9 @@ where
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<TransmissionInfo>,
 
-    servers: Vec<Arc<dyn Suit>>,
-    clients: Vec<Arc<dyn Suit>>,
-    default_c: Option<Arc<dyn Suit>>,
+    servers: Vec<&'static dyn Suit>,
+    clients: Vec<&'static dyn Suit>,
+    default_c: Option<&'static dyn Suit>,
 
     load_inmappers_func: FInadder,
     load_outmappers_func: FOutadder,
@@ -69,24 +69,27 @@ where
             .dial
             .iter()
             .map(|lc| {
-                let mut s = SuitStruct::from(lc.clone());
-                s.set_behavior(ProxyBehavior::ENCODE);
-                s.generate_upper_mappers();
-                let r_proxy_outadder = (self.load_outmappers_func)(s.protocol(), s.config.clone());
+                let mut c = SuitStruct::from(lc.clone());
+                c.set_behavior(ProxyBehavior::ENCODE);
+                c.generate_upper_mappers();
+                let r_proxy_outadder = (self.load_outmappers_func)(c.protocol(), c.config.clone());
                 if let Some(proxy_outadder) = r_proxy_outadder {
-                    s.push_mapper(proxy_outadder);
+                    c.push_mapper(proxy_outadder);
                 }
-                let x: Arc<dyn Suit> = Arc::new(s);
-                x
+
+                let outc: &'static dyn Suit = Box::leak(Box::new(c));
+                if let None = self.default_c {
+                    self.default_c = Some(outc);
+                }
+                outc
             })
             .collect();
 
         if self.clients.is_empty() {
-            let d = Arc::new(direct_suit());
+            let d = Box::leak(Box::new(direct_suit()));
+            self.default_c = Some(d);
             self.clients.push(d);
         }
-
-        self.default_c = Some(self.clients.first().expect("has at lease a client").clone());
 
         self.servers = c
             .listen
@@ -100,8 +103,9 @@ where
                 if let Some(proxy_inadder) = r_proxy_inadder {
                     s.push_mapper(proxy_inadder);
                 }
-                let x: Arc<dyn Suit> = Arc::new(s);
-                x
+
+                let ins: &'static dyn Suit = Box::leak(Box::new(s));
+                ins
             })
             .collect();
     }
@@ -161,7 +165,7 @@ where
         self.servers.iter().for_each(|s| {
             let (tx, rx) = oneshot::channel();
 
-            let task = relay::listen_ser((*s).clone(), defaultc.clone(), Some(self.ti.clone()), rx);
+            let task = relay::listen_ser(*s, defaultc, Some(self.ti.clone()), rx);
             tasks.push(task);
             shutdown_tx_vec.push(tx);
         });
