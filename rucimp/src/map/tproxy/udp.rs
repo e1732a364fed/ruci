@@ -11,7 +11,7 @@ use std::{
 use bytes::{Buf, BytesMut};
 use futures::{channel::oneshot, Future};
 use ruci::{
-    net::{self, addr_conn::MTU},
+    net::{self, MTU},
     Name,
 };
 use tokio::sync::{
@@ -143,14 +143,18 @@ impl Listener {
         let udp = so2::block_listen_udp_socket(&listen_a, &sopt)?;
         let fd = udp.as_raw_fd();
 
-        let (udp_msg_tx, mut udp_msg_rx) = mpsc::channel(1000);
+        let (udp_msg_tx, mut udp_msg_rx) = mpsc::channel(4096);
 
         let shutdown_thread_atomic = Arc::new(AtomicBool::new(false));
-        let stac = shutdown_thread_atomic.clone();
-        let _jh = std::thread::spawn(move || loop_accept_udp(&udp, udp_msg_tx, stac));
+
+        {
+            let stac = shutdown_thread_atomic.clone();
+
+            std::thread::spawn(move || loop_accept_udp(&udp, udp_msg_tx, stac));
+        }
 
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
-        let (new_ac_tx, new_ac_rx) = mpsc::channel(1000);
+        let (new_ac_tx, new_ac_rx) = mpsc::channel(4096);
 
         tokio::spawn(async move {
             let conn_map: Arc<Mutex<HashMap<(Addr, Addr), Sender<BytesMut>>>> =
@@ -158,7 +162,7 @@ impl Listener {
             loop {
                 tokio::select! {
                     _ = &mut shutdown_rx=>{
-                        debug!("tproy UdpListener got shutdown, will break");
+                        debug!("tproxy UdpListener got shutdown, will break");
                         break;
                     }
 
@@ -166,7 +170,7 @@ impl Listener {
                         let ((i,lb,rb), dst,src) = match r {
                             Some(r) => r,
                             None => {
-                                debug!("tproy UdpListener loop rx got none, will break");
+                                debug!("tproxy UdpListener loop rx got none, will break");
                                 break;
                             }
                         };
@@ -180,27 +184,28 @@ impl Listener {
                         };
                         let buf = &b[lb..rb];
 
-                        let mut mg = conn_map.lock().await;
+                        let mut map_mg = conn_map.lock().await;
                         let k = (dst.clone(),src.clone());
 
-                        if mg.contains_key(&k) {
+                        if map_mg.contains_key(&k) {
 
                             let new_buf = BytesMut::from(buf);
 
-                            let tx = mg.get(&k).unwrap();
-                            let r = tx.send(new_buf).await;
+                            let msg_tx = map_mg.get(&k).unwrap();
+                            let r = msg_tx.send(new_buf).await;
                             if let Err(e) = r {
-                                debug!("tproy UdpListener tx send got e: {e}");
+                                debug!("tproxy UdpListener tx send got e: {e}");
+                                map_mg.remove(&k);
                                 continue;
                             }
                         } else {
-                            let (tx2, rx2) = mpsc::channel(100);
+                            let (msg_tx, msg_rx) = mpsc::channel(100);
 
-                            mg.insert(k.clone(), tx2);
+                            map_mg.insert(k.clone(), msg_tx);
                             let first_buf = BytesMut::from(buf);
 
                             let ac = new_addr_conn(
-                                rx2,
+                                msg_rx,
                                 src.clone(),
                                 dst.clone(),
                                 conn_map.clone(),
@@ -208,7 +213,7 @@ impl Listener {
 
                             let r = new_ac_tx.send(AcceptData{ac,dst, src,first_buf}).await;
                             if let Err(e) = r {
-                                debug!("tproy UdpListener loop got e: {e}");
+                                debug!("tproxy UdpListener loop got e: {e}");
                                 break;
                             }
                         }
@@ -250,7 +255,7 @@ impl Listener {
 
             unsafe {
                 //光 调用 close 是不会令 recvmsg 端返回的, shutdown is necessary.
-                // 且 shutdown 后 再调用 close 有10% 左右的几率得到报错 Bad file Descriptor, 所以没必要
+                // 且 shutdown 后 再调用 close 有10% 左右的几率在 thread read 端 得到报错 Bad file Descriptor, 所以没必要
                 libc::shutdown(self.fd, libc::SHUT_RDWR);
             }
         }
@@ -322,7 +327,7 @@ impl AsyncWriteAddr for Writer {
         //     libc::close(fd);
         // }
 
-        // 没必要 用 一个 "hashmap with timeout" 缓存. 因为 udp 主要的用途是 dns,
+        // 没必要 用 一个 "hashmap with timeout" 缓存. 因为 udp 最一般的用途是 dns,
         // 而 dns 都是一次性的 连接
 
         // 如果要大量传 udp 单连接 大数据, 用 tun 是更好的选择
@@ -335,10 +340,9 @@ impl AsyncWriteAddr for Writer {
     }
 
     fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        let x = &self.conn_map;
-        let f = x.lock();
-        let x = Future::poll(std::pin::pin!(f), cx);
-        match x {
+        let lock_future = self.conn_map.lock();
+
+        match std::pin::pin!(lock_future).poll(cx) {
             Poll::Ready(mut map) => {
                 map.remove(&(self.dst.clone(), self.src.clone()));
                 //debug!("tproxy_udp_w got closed, removed from conn map {}", self.src);

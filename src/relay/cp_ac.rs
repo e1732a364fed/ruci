@@ -7,6 +7,7 @@ use crate::net::addr_conn::*;
 use crate::net::Addr;
 use crate::net::Conn;
 use crate::net::CID;
+use crate::net::MTU;
 use anyhow::bail;
 use bytes::BytesMut;
 use std::io;

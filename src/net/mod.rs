@@ -54,6 +54,8 @@ use crate::map::MapResult;
 use self::addr_conn::AddrConn;
 use self::addr_conn::AsyncWriteAddrExt;
 
+pub const MTU: usize = 1500;
+
 pub fn new_rand_cid() -> u32 {
     const ID_RANGE_START: u32 = 100_000;
 

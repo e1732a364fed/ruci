@@ -328,7 +328,6 @@ where
 // quic uses 30 secs, so we use a little more
 pub const CP_UDP_TIMEOUT: time::Duration = Duration::from_secs(40); //todo: adjust this
 pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
-pub const MTU: usize = 1500;
 
 async fn rw_once<R: AddrReadTrait, W: AddrWriteTrait>(
     r: &mut R,
@@ -346,10 +345,11 @@ async fn rw_once<R: AddrReadTrait, W: AddrWriteTrait>(
     }
 }
 
-/// 循环读写直到read错误发生. 不会认为 read错误为错误. 每一次read都会以
-/// CP_UDP_TIMEOUT 为 最长等待时间, 一旦读不到, 就会退出函数
+/// 循环读写直到read错误发生 或收到 shutdown_rx. 不会认为 read错误为错误.
 ///
-/// 读到后, 如果写超过了同样的时间, 也退出函数
+/// 若 no_timeout = false, 每一次 copy 都会以
+/// CP_UDP_TIMEOUT 为 最长等待时间, 一旦超时, 就会退出函数
+///
 pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
     mut r: R,
     mut w: W,
