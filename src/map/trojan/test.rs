@@ -80,7 +80,7 @@ async fn auth_tcp_in_mem_earlydata() -> std::io::Result<()> {
     buf.put_u16(CRLF);
     buf.put_u8(CMD_CONNECT);
     let addr = Addr::from_strs("tcp", name, "", port)?;
-    net::helpers::addr_to_socks5_bytes(addr, &mut buf);
+    net::helpers::addr_to_socks5_bytes(&addr, &mut buf);
     buf.put_u16(CRLF);
     buf.put(&b"hello!"[..]);
 

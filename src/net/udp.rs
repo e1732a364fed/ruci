@@ -34,19 +34,21 @@ impl AsyncWriteAddr for Writer {
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-        addr: Addr,
+        addr: &Addr,
     ) -> Poll<io::Result<usize>> {
         let mut fut = if let Some(fut) = self.fut.take() {
             fut
         } else {
             let waker = cx.waker().clone();
             let udp = self.base.clone();
+            let adcopy = addr.clone();
+
             let mut buf2 = BytesMut::with_capacity(CAP);
             buf2.copy_from_slice(buf);
 
             Box::pin(async move {
                 let n = udp
-                    .send_to(&mut buf2, addr.get_socket_addr_or_resolve().unwrap())
+                    .send_to(&mut buf2, adcopy.get_socket_addr_or_resolve().unwrap())
                     .await
                     .unwrap();
                 waker.wake();
@@ -153,7 +155,7 @@ pub async fn cp_reader_to_w<W1: AddrWriteTrait>(mut r1: Reader, mut w1: W1) -> R
         let (m, ad) = r.unwrap();
         if m > 0 {
             loop {
-                let r = w1.write(&mut buf.filled(), ad.clone()).await;
+                let r = w1.write(&mut buf.filled(), &ad).await;
                 if r.is_err() {
                     break;
                 }
@@ -185,7 +187,7 @@ pub async fn cp_r_to_writer<R1: AddrReadTrait>(mut r1: R1, mut w1: Writer) -> Re
         let (m, ad) = r.unwrap();
         if m > 0 {
             loop {
-                let r = w1.write(buf.filled_mut(), ad.clone()).await;
+                let r = w1.write(buf.filled_mut(), &ad).await;
                 if r.is_err() {
                     break;
                 }

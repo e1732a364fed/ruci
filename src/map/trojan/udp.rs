@@ -86,7 +86,7 @@ impl AsyncWriteAddr for Writer {
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-        addr: Addr,
+        addr: &Addr,
     ) -> Poll<io::Result<usize>> {
         let mut buf2 = BytesMut::with_capacity(CAP);
 
@@ -145,7 +145,7 @@ mod test {
 
         let mut aw = Writer { base: Box::pin(w) };
 
-        let r = aw.write(&b"hello"[..], net::Addr::default()).await;
+        let r = aw.write(&b"hello"[..], &net::Addr::default()).await;
 
         Ok(())
     }

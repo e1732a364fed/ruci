@@ -39,7 +39,7 @@ impl Client {
         } else {
             unimplemented!()
         }
-        helpers::addr_to_socks5_bytes(ta, &mut buf);
+        helpers::addr_to_socks5_bytes(&ta, &mut buf);
         buf.put_u16(CRLF);
         if let Some(b) = first_payload {
             buf.extend_from_slice(&b);

@@ -67,7 +67,7 @@ impl Client {
         }
         buf.clear();
         buf.extend_from_slice(&[VERSION5, CMD_CONNECT, 0][..]);
-        net::helpers::addr_to_socks5_bytes(a, &mut buf);
+        net::helpers::addr_to_socks5_bytes(&a, &mut buf);
         base.write(&buf).await?;
 
         buf.resize(BUFLEN, 0);

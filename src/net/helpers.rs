@@ -96,27 +96,27 @@ pub fn so_to_socks5_bytes(so: SocketAddr, buf: &mut BytesMut) {
     }
 }
 
-pub fn addr_to_socks5_bytes(ta: Addr, buf: &mut BytesMut) {
+pub fn addr_to_socks5_bytes(ta: &Addr, buf: &mut BytesMut) {
     pub const ATYP_DOMAIN: u8 = 3;
-    match ta.addr {
-        NetAddr::Socket(so) => so_to_socks5_bytes(so, buf),
+    match &ta.addr {
+        NetAddr::Socket(so) => so_to_socks5_bytes(*so, buf),
         NetAddr::Name(n, p) => {
             buf.put_u8(ATYP_DOMAIN);
             let nbs = n.as_bytes();
             buf.put_u8(nbs.len() as u8);
             buf.extend_from_slice(nbs);
-            buf.put_u16(p);
+            buf.put_u16(*p);
         }
         NetAddr::NameAndSocket(n, so, p) => {
             let nbs = n.as_bytes();
 
             if nbs.len() > 255 {
-                so_to_socks5_bytes(so, buf)
+                so_to_socks5_bytes(*so, buf)
             } else {
                 buf.put_u8(ATYP_DOMAIN);
                 buf.put_u8(nbs.len() as u8);
                 buf.extend_from_slice(nbs);
-                buf.put_u16(p);
+                buf.put_u16(*p);
             }
         }
     }

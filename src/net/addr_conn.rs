@@ -25,7 +25,7 @@ pub trait AsyncWriteAddr {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-        addr: Addr,
+        addr: &Addr,
     ) -> Poll<io::Result<usize>>;
 
     fn poll_flush_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>>;
@@ -109,7 +109,7 @@ macro_rules! deref_async_write_addr {
             mut self: Pin<&mut Self>,
             cx: &mut Context<'_>,
             buf: &[u8],
-            addr: Addr,
+            addr: &Addr,
         ) -> Poll<io::Result<usize>> {
             Pin::new(&mut **self).poll_write_addr(cx, buf, addr)
         }
@@ -133,7 +133,7 @@ impl<T: ?Sized + AsyncWriteAddr + Unpin> AsyncWriteAddr for &mut T {
 }
 
 pub trait AsyncWriteAddrExt: AsyncWriteAddr {
-    fn write<'a>(&'a mut self, buf: &'a [u8], addr: Addr) -> WriteFuture<'a, Self>
+    fn write<'a>(&'a mut self, buf: &'a [u8], addr: &'a Addr) -> WriteFuture<'a, Self>
     where
         Self: Unpin,
     {
@@ -149,16 +149,21 @@ impl<T: AsyncWriteAddr + ?Sized> AsyncWriteAddrExt for T {}
 pub struct WriteFuture<'a, T: Unpin + ?Sized> {
     pub(crate) writer: &'a mut T,
     pub(crate) buf: &'a [u8],
-    pub(crate) addr: Addr,
+    pub(crate) addr: &'a Addr,
+}
+
+impl<T: AsyncWriteAddr + Unpin + ?Sized> WriteFuture<'_, T> {
+    fn poll_w(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<usize>> {
+        let buf = self.buf;
+        Pin::new(&mut *self.writer).poll_write_addr(cx, buf, self.addr)
+    }
 }
 
 impl<T: AsyncWriteAddr + Unpin + ?Sized> futures::Future for WriteFuture<'_, T> {
     type Output = io::Result<usize>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let buf = self.buf;
-        let addr = self.addr.clone();
-        Pin::new(&mut *self.writer).poll_write_addr(cx, buf, addr)
+        self.poll_w(cx)
     }
 }
 
@@ -198,7 +203,7 @@ pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
                         //let mut buf = ReadBuf::new(frist_mb);
 
                         loop {
-                            let r = w1.write(buf.filled(), ad.clone()).await;
+                            let r = w1.write(buf.filled(), &ad).await;
                             if r.is_err() {
                                 break;
                             }
@@ -289,7 +294,7 @@ mod test {
             self: Pin<&mut Self>,
             _cx: &mut Context<'_>,
             _buf: &[u8],
-            _addr: Addr,
+            _addr: &Addr,
         ) -> Poll<io::Result<usize>> {
             if self.counter <= 5 {
                 Poll::Pending
@@ -320,6 +325,6 @@ mod test {
         buf: &mut [u8],
     ) -> io::Result<usize> {
         let a = Addr::default();
-        obj2.write(buf, a).await
+        obj2.write(buf, &a).await
     }
 }

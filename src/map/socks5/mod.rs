@@ -16,8 +16,8 @@ pub mod server;
 mod test;
 
 use crate::{
-    net::{self},
     map,
+    net::{self},
     user::UserPass,
 };
 use bytes::{Buf, BufMut, BytesMut};
@@ -52,7 +52,6 @@ lazy_static! {
     };
 }
 
-
 //todo: 支持 fragment
 pub fn decode_udp_diagram(buf: &mut BytesMut) -> io::Result<net::Addr> {
     if buf.len() < 11 {
@@ -78,5 +77,5 @@ pub fn encode_udp_diagram(ad: net::Addr, buf: &mut BytesMut) -> io::Result<()> {
     buf.put_u16(0);
     buf.put_u8(0);
 
-    Ok(net::helpers::addr_to_socks5_bytes(ad, buf))
+    Ok(net::helpers::addr_to_socks5_bytes(&ad, buf))
 }
