@@ -1,5 +1,5 @@
 /*!
- * 为 UdpSocket 实现 udp_abstract 中的trait
+ * 为 UdpSocket 实现 net::addr_conn 中的trait
 
 
 */
@@ -139,7 +139,7 @@ pub fn get_rw(u: UdpSocket) -> (Reader, Writer) {
 use crate::net::addr_conn::AsyncReadAddrExt;
 use crate::net::addr_conn::AsyncWriteAddrExt;
 
-// Reader 和 Writer 没有实现 Unpin, 所以先如此写,  仿照 udp_abstract中 cp_addr 的代码
+// Reader 和 Writer 没有实现 Unpin, 所以先如此写,  仿照 addr_conn 中 cp_addr 的代码
 
 pub async fn cp_reader_to_w<W1: AddrWriteTrait>(mut r1: Reader, mut w1: W1) -> Result<u64, Error> {
     const CAP: usize = 1500;
