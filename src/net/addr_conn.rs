@@ -399,20 +399,20 @@ pub async fn cp_between<
 
     let (_tmpx0, tmp_rx0) = oneshot::channel();
     let shutdown_rx1 = if shutdown_rx1.is_some() {
-        debug!("shutdown_rx1.is_some");
+        //debug!("shutdown_rx1.is_some");
         shutdown_rx1.unwrap()
     } else {
-        debug!("shutdown_rx1.isnone");
+        //debug!("shutdown_rx1.isnone");
         tmp_rx0
     }
     .fuse();
 
     let (_tmpx, tmp_rx) = oneshot::channel();
     let shutdown_rx2 = if shutdown_rx2.is_some() {
-        debug!("shutdown_rx2.is_some");
+        //debug!("shutdown_rx2.is_some");
         shutdown_rx2.unwrap()
     } else {
-        debug!("shutdown_rx2.isnone");
+        //debug!("shutdown_rx2.isnone");
         tmp_rx
     }
     .fuse();
