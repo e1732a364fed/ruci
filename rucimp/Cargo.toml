@@ -56,7 +56,7 @@ tun = ["ruci/tun"]
 trace = ["ruci/trace"]
 
 lua = ["mlua/luau"]
-lua54 = ["mlua/lua54"]
+lua54 = ["mlua/lua54","mlua/vendored"]
 
 route = ["ipnet" ,"iprange" ,"regex"]
 
