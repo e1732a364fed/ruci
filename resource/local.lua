@@ -34,7 +34,7 @@ out_stdio_chain = { { Stdio={} } }
 
 direct_out_chain = { "Direct" }
 
----[=[
+--[=[
 
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
@@ -266,3 +266,28 @@ config = {
 }
 
 --]=]
+
+
+--[[
+
+-- 演示 动态链的 选择器用法
+
+dyn_inbound_next_selector = function (this_index, ovov)
+    print(ovov:is_some())
+    print(ovov:len())
+
+    ov = ovov:get(0)
+    print(ov:has_value())
+    print(ov:get_type())
+    d = ov:get_data()
+    print(d:get_u64())
+
+    return this_index + 1
+end
+
+dyn_outbound_next_selector = function (this_index, ovov)
+    return this_index + 1
+end
+
+
+--]]

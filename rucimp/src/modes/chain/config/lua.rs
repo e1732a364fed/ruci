@@ -1,3 +1,5 @@
+use self::dynamic::NextSelector;
+
 use super::*;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Result, Value};
@@ -14,6 +16,46 @@ pub fn load_static(lua_text: &str) -> Result<StaticConfig> {
     let c: StaticConfig = lua.from_value(Value::Table(clt))?;
 
     Ok(c)
+}
+
+/// load config, inbound next selector, and outbound next selector
+pub fn load_bounded_dynamic<'a>(
+    lua: &'a Lua,
+    lua_text: &'a str,
+) -> Result<(StaticConfig, LuaNextSelector<'a>, LuaNextSelector<'a>)> {
+    lua.load(lua_text).eval()?;
+
+    let lg = lua.globals();
+
+    let clt: LuaTable = lg.get("config")?;
+
+    let c: StaticConfig = lua.from_value(Value::Table(clt))?;
+
+    lua.load(lua_text).eval()?;
+
+    let s1: LuaFunction = lg.get("dyn_inbound_next_selector")?;
+    let s2: LuaFunction = lg.get("dyn_outbound_next_selector")?;
+
+    Ok((c, LuaNextSelector(s1), LuaNextSelector(s2)))
+}
+
+pub struct LuaNextSelector<'a>(LuaFunction<'a>);
+impl<'a> NextSelector for LuaNextSelector<'a> {
+    fn next_index(
+        &self,
+        this_index: usize,
+        data: Option<Vec<ruci::map::OptVecData>>,
+    ) -> Option<usize> {
+        let w = OptVecOptVecDataLuaWrapper(data);
+
+        match self.0.call::<_, usize>((this_index, w)) {
+            Ok(rst) => Some(rst),
+            Err(err) => {
+                warn!("{}", err);
+                None
+            }
+        }
+    }
 }
 
 /*
@@ -526,15 +568,15 @@ mod test {
 
         let handler_fn4 = lua
             .load(chunk! {
-                function(this_index, userdata1)
-                    print(userdata1:is_some())
-                    print(userdata1:len())
+                function(this_index, ovov)
+                    print(ovov:is_some())
+                    print(ovov:len())
 
-                    x = userdata1:get(0)
-                    print(x:has_value())
-                    print(x:get_type())
-                    y = x:get_data()
-                    print(y:get_u64())
+                    ov = ovov:get(0)
+                    print(ov:has_value())
+                    print(ov:get_type())
+                    d = ov:get_data()
+                    print(d:get_u64())
 
                     return this_index + 1
                 end
@@ -566,10 +608,45 @@ mod test {
         //     eprintln!("{}", err);
         // }
 
-        match handler_fn4.call_async::<_, u64>((1, vvaw)).await {
+        match handler_fn4.call::<_, u64>((1, vvaw)) {
             Ok(rst) => println!("{}", rst),
             Err(err) => eprintln!("{}", err),
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn load_dynamic1() -> Result<()> {
+        let lua = Lua::new();
+        let lua_text = r"
+        function dyn_next_selector(this_index, ovov)
+            print(ovov:is_some())
+            print(ovov:len())
+        
+            ov = ovov:get(0)
+            print(ov:has_value())
+            print(ov:get_type())
+            d = ov:get_data()
+            print(d:get_u64())
+        
+            return this_index + 1
+        end
+        ";
+
+        lua.load(lua_text).eval()?;
+
+        let func: LuaFunction = lua.globals().get("dyn_next_selector")?;
+
+        let sa22 = AnyData::AU64(Arc::new(AtomicU64::new(321)));
+        let va = Some(VecAnyData::Data(sa22));
+        let vva = Some(vec![va]);
+        let vvaw = OptVecOptVecDataLuaWrapper(vva);
+
+        match func.call::<_, u64>((1, vvaw)) {
+            Ok(rst) => println!("{}", rst),
+            Err(err) => eprintln!("{}", err),
+        }
+
         Ok(())
     }
 
@@ -599,6 +676,9 @@ mod test {
 #[allow(unused)]
 #[cfg(test)]
 mod test1 {
+
+    // example from mlua
+
     use std::io;
     use std::net::SocketAddr;
     use std::rc::Rc;

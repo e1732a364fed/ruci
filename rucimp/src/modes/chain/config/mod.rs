@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::route::{config::RuleSetConfig, RuleSet};
 
-/// 静态配置中有初始化后即确定的listen/dial数量和行为
+/// 静态配置中有初始化后即确定的 Mapper 数量
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
     pub inbounds: Vec<InMapperConfigChain>,
