@@ -113,8 +113,7 @@ har = "0.8.1"
 TinyUFO = { version = "0.1", optional = true }
 
 
-[target.'cfg(not(all(target_os = "windows", target_env = "msvc")))'.dependencies]
-netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d", optional = true }
+netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "8682a98", optional = true }
 
 
 [target.'cfg(windows)'.dependencies]

@@ -9,7 +9,7 @@ ruci-cmd 运行时产生的日志会自动创建并放在 logs 文件夹中, dai
 
 ```sh
 # run with api server
-cargo run --features "lua api_server api_client file_server utils use-native-tls steganography" --release -- -a
+cargo run --features "lua api_server api_client file_server utils use-native-tls steganography lwip" --release -- -a
 
 ```
 

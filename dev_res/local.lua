@@ -596,6 +596,7 @@ local config_16_tun = {
                 -- en0  (macos 的情况)
                 -- WLAN( windows, 英文系统 用wifi联网的情况) (windows中的网卡信息使用 ipconfig 查看)
                 -- 以太网( windows, 中文系统 用网线联网的情况)
+                -- Ethernet 5 (windows, 英文系统 ipconfig 会显示 Ethernet adapter Ethernet 5)
 
             }
         }, tlsout, websocket_out

@@ -144,11 +144,11 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
 
         if let Some(d) = &params.dns_list {
             if !d.is_empty() {
-                let first = d.first().unwrap();
+                let dns = d.first().unwrap();
 
                 let _r = utils::run_command(
                     "netsh",
-                    &format!("interface ip set dns name={tun_dev_name} static {first}"),
+                    &format!("interface ip set dns name={tun_dev_name} static {dns}"),
                 );
             }
         }
@@ -156,8 +156,8 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
         let mut list = vec![format!("netsh interface ip set address name={tun_dev_name} source=static addr={tun_gateway} mask=255.255.255.0 gateway=none")];
 
         if let Some(direct_list) = &params.direct_list {
-            for v in direct_list.iter() {
-                list.push(format!("route add {v} {router_ip} metric 5"))
+            for direct_ip in direct_list.iter() {
+                list.push(format!("route add {direct_ip} {router_ip} metric 5"))
             }
         }
         list.push(format!(

@@ -138,7 +138,10 @@ impl Map for Stack {
                     let r: Option<(Vec<u8>, SocketAddr, SocketAddr)> =
                         udp_new_msg_rx_lwip_end.recv().await;
                     match r {
-                        None => todo!(),
+                        None => {
+                            tracing::info!("udp_new_msg_rx_lwip_end.recv() got none");
+                            break;
+                        }
 
                         Some(d) => {
                             // debug!("will send to stack {},{}", &d.1, &d.2); // 10.0.0.1:55124,114.114.114.114:53
@@ -148,7 +151,10 @@ impl Map for Stack {
                                 Ok(_) => {
                                     // debug!("write ok");
                                 }
-                                Err(_) => todo!(),
+                                Err(e) => {
+                                    warn!("w.send_to got err: {e}");
+                                    break;
+                                }
                             }
                         }
                     }
@@ -181,7 +187,10 @@ impl Map for Stack {
                                 warn!(cid = %ccc, "stack send tx got error: {}", e);
                             }
                         }
-                        Err(_) => todo!(),
+                        Err(e) => {
+                            tracing::warn!("l.accept() got err {e}");
+                            break;
+                        }
                     }
                 }
             });
@@ -220,7 +229,7 @@ impl Map for Stack {
                     .b(params.b)
                     .shutdown_rx(s)
                     .build(),
-                None => todo!(),
+                None => MapResult::from_err_str("params.shutdown_rx is none"),
             }
         } else {
             MapResult::from_err_str("stack only support None stream")

@@ -106,7 +106,7 @@ pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
         }
         let args = strs.split_off(1);
 
-        trace!(cmd = strs[0], args = ?args, "running command",);
+        tracing::debug!(cmd = strs[0], args = ?args, "running command",);
 
         let r = Command::new(strs[0]).args(args).output();
 

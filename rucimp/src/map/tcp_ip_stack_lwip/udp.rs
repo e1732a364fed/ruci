@@ -40,8 +40,6 @@ pub async fn loop_accept_udp(
     shutdown_atomic: Arc<AtomicBool>,
 ) {
     loop {
-        debug!("lwip loop_accept_udp");
-
         if shutdown_atomic.load(std::sync::atomic::Ordering::Relaxed) {
             debug!("lwip udp thread shutdown_atomic = true");
             break;
@@ -57,7 +55,7 @@ pub async fn loop_accept_udp(
 
         let r = match r {
             Ok(r) => {
-                tracing::debug!("lwip udp thread got {} {} {}", r.0.len(), r.1, r.2);
+                tracing::trace!("lwip udp thread got {} {} {}", r.0.len(), r.1, r.2);
 
                 r
             }
@@ -73,7 +71,7 @@ pub async fn loop_accept_udp(
             let r = tx.try_send((data, src, dst));
 
             if let Err(e) = r {
-                warn!("lwip loop_accept_udp tx.send got err {e}");
+                warn!("lwip loop_accept_udp tx.send got err: {e}, {} {}", src, dst);
 
                 return;
             }

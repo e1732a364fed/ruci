@@ -28,8 +28,7 @@ macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关
      2. 转为 AsyncConn 后 用 tokio 的 split
      3. 转为 Frame 后 分成 sink 和 stream
     
-实测3种情况效果相同 但是都卡顿, 且 无论是 netstack-lwip 还是 smoltcp 都有此问题。因此认为是tun 包的问题,与 tcp/ip 栈无关
-
+实测3种情况效果相同 
 
 25.2.24
 
@@ -41,4 +40,4 @@ macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关
 进而发现，fold_from_start 在 c 不是 Stream::Generator 时，不会
 保留c，也没通过 tx 发送，致其被释放
 
-
+又发现 windows 上开启tun 后，存在大量的组播请求，占用大量资源。这里有问题

@@ -49,9 +49,6 @@ use crate::{
 };
 use data_source::{DataSource, SyncFolderSource};
 
-#[cfg(all(feature = "lwip", unix))]
-use crate::map::tcp_ip_stack_lwip;
-
 #[cfg(feature = "steganography")]
 use crate::map::steganography::spe1;
 
@@ -415,7 +412,7 @@ pub enum InMapConfig {
     #[cfg(feature = "smoltcp")]
     Stack,
 
-    #[cfg(all(feature = "lwip", unix))]
+    #[cfg(feature = "lwip")]
     StackLwip,
 
     #[cfg(feature = "steganography")]
@@ -743,8 +740,8 @@ impl TryFrom<InMapConfigWithDataSource> for MapBox {
                     data_source,
                 }))
             }
-            #[cfg(all(feature = "lwip", unix))]
-            InMapConfig::StackLwip => Ok(Box::new(tcp_ip_stack_lwip::Stack {
+            #[cfg(feature = "lwip")]
+            InMapConfig::StackLwip => Ok(Box::new(crate::map::tcp_ip_stack_lwip::Stack {
                 ext_fields: Some(MapExtFields::default()),
             })),
             InMapConfig::MITM(c) => {

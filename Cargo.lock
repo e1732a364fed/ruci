@@ -2365,7 +2365,7 @@ dependencies = [
 [[package]]
 name = "netstack-lwip"
 version = "0.3.4"
-source = "git+https://github.com/e1732a364fed/netstack-lwip.git?rev=b66a15d#b66a15d2cb86f86152cd2189ab717279f070a64f"
+source = "git+https://github.com/e1732a364fed/netstack-lwip.git?rev=8682a98#8682a98c5bebf9cba361861246995e8e30050a6b"
 dependencies = [
  "anyhow",
  "bindgen",
