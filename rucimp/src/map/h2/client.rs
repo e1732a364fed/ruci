@@ -123,6 +123,7 @@ impl MuxClient {
     ) -> anyhow::Result<map::MapResult> {
         match conn {
             Some(conn) => {
+                debug!("h2_mux_client got some conn");
                 let r = h2::client::handshake(conn).await;
                 let r = match r {
                     Ok(r) => r,
@@ -148,26 +149,35 @@ impl MuxClient {
                 Ok(m)
             }
             None => {
+                debug!(cid = %cid , "h2_mux_client got no conn");
+
                 let mut r = self.cache.lock().await;
 
                 let rm = if r.is_some() {
                     let mut rm: Option<MapResult> = None;
-                    r.as_mut().map(|mut r| {
-                        let stream = futures::executor::block_on(async move {
-                            new_stream_by_send_request(cid, r, None).await
-                        });
-                        let stream = match stream {
-                            Ok(s) => s,
-                            Err(_) => return,
-                        };
+                    let mut rr = r.take().unwrap();
+                    debug!(cid = %cid , "h2_mux_client try to get new sub conn");
 
-                        let m = MapResult::new_c(Box::new(stream))
-                            .a(a)
-                            .b(early_data)
-                            .build();
+                    let cc = cid.clone();
 
-                        rm = Some(m)
-                    });
+                    let rrr = &mut rr;
+                    let stream = new_stream_by_send_request(cc, rrr, None).await;
+                    let stream = match stream {
+                        Ok(s) => s,
+                        Err(e) => {
+                            debug!(cid = %cid , "h2_mux_client can't get sub stream,{e}");
+                            return Err(e);
+                        }
+                    };
+                    *r = Some(rr);
+                    debug!(cid = %cid , "h2_mux_client got new sub conn");
+
+                    let m = MapResult::new_c(Box::new(stream))
+                        .a(a)
+                        .b(early_data)
+                        .build();
+
+                    rm = Some(m);
                     rm
                 } else {
                     None

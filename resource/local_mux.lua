@@ -48,12 +48,19 @@ infinite = {
         tag = "dial1",
         generator = function(cid, this_index, data)
             if this_index == -1 then
+
+                if h2_mapper ~= nil then
+                    return 2, h2_mapper:clone()
+                end
+
                 if dial_mapper == nil then
-                    print("lua creating dial_mapper")
+                    --print("lua creating dial_mapper")
                     dial_mapper = create_out_mapper_func(dial)
                 end
                 return 0, dial_mapper:clone()
+
             elseif this_index == 0 then
+
                 if tlsout_mapper == nil then
                     tlsout_mapper = create_out_mapper_func(tlsout)
                 end
@@ -61,7 +68,7 @@ infinite = {
                 return 1, tlsout_mapper:clone()
             elseif this_index == 1 then
                 if h2_mapper == nil then
-                    h2_mapper = create_out_mapper_func("H2Single")
+                    h2_mapper = create_out_mapper_func("H2Mux")
                 end
 
                 return 2, h2_mapper:clone()
