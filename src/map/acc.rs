@@ -127,10 +127,7 @@ pub async fn accumulate(
 
         last_stream = oc_ou_og_to_stream(last_r.c, last_r.u, last_r.g);
 
-        if let Stream::None = last_stream {
-            break;
-        }
-        if let Stream::Generator(_) = last_stream {
+        if last_stream.is_none_or_generator() {
             break;
         }
         if last_r.e.is_some() {

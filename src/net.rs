@@ -521,6 +521,9 @@ impl Stream {
     pub fn is_some(&self) -> bool {
         !matches!(self, Stream::None)
     }
+    pub fn is_none_or_generator(&self) -> bool {
+        matches!(self, Stream::None) || matches!(self, Stream::Generator(_))
+    }
     pub async fn try_shutdown(self) -> Result<()> {
         if let Stream::TCP(mut t) = self {
             t.shutdown().await?
