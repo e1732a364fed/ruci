@@ -571,6 +571,7 @@ pub struct ConvertFormatRequestByContent {
     pub output_format: String,
 }
 
+#[cfg(feature = "api_server")]
 #[derive(OpenApi)]
 #[openapi(
     paths(
