@@ -141,7 +141,17 @@ pub fn sync_run_command_list_no_stop(list: Vec<&str>) -> anyhow::Result<()> {
         debug!(cmd = strs[0], args = ?args, "running command",);
 
         let r = Command::new(strs[0]).args(args).output();
-        debug!("result is {:?}", r)
+        match r {
+            Ok(o) => {
+                if !o.status.success() {
+                    bail!("run command not success, result is {:?}", o);
+                }
+            }
+            Err(e) => {
+                debug!("run command got err, result is {:?}", e);
+                return Err(e.into());
+            }
+        }
     }
     debug!("utils: finish run_command_list ");
 
@@ -161,9 +171,17 @@ pub fn sync_run_command_list_stop(list: Vec<&str>) -> anyhow::Result<()> {
         debug!(cmd = strs[0], args = ?args, "running command",);
 
         let r = Command::new(strs[0]).args(args).output();
-        debug!("result is {:?}", r);
-        if let Err(e) = r {
-            return Err(e.into());
+
+        match r {
+            Ok(o) => {
+                if !o.status.success() {
+                    bail!("run command not success, result is {:?}", o);
+                }
+            }
+            Err(e) => {
+                debug!("run command got err, result is {:?}", e);
+                return Err(e.into());
+            }
         }
     }
     debug!("utils: finish run_command_list ");

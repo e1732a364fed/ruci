@@ -269,6 +269,7 @@ pub async fn handle_in_fold_result(
         dial_result.b,
         dial_result.a,
         tr,
+        dial_result.no_timeout,
         #[cfg(feature = "trace")]
         updater,
     );
@@ -284,6 +285,7 @@ pub fn cp_stream(
     ed: Option<BytesMut>,            //earlydata
     first_target: Option<net::Addr>, // 用于 udp
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
+    no_timeout: bool,
 
     #[cfg(feature = "trace")] updater: net::OptUpdater,
 ) {
@@ -299,13 +301,31 @@ pub fn cp_stream(
             updater,
         ),
         (Stream::Conn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(cid, o, i, false, ed, first_target, tr));
+            tokio::spawn(cp_udp::cp_udp_tcp(
+                cid,
+                o,
+                i,
+                false,
+                ed,
+                first_target,
+                tr,
+                no_timeout,
+            ));
         }
         (Stream::AddrConn(i), Stream::Conn(o)) => {
-            tokio::spawn(cp_udp::cp_udp_tcp(cid, i, o, true, ed, first_target, tr));
+            tokio::spawn(cp_udp::cp_udp_tcp(
+                cid,
+                i,
+                o,
+                true,
+                ed,
+                first_target,
+                tr,
+                no_timeout,
+            ));
         }
         (Stream::AddrConn(i), Stream::AddrConn(o)) => {
-            tokio::spawn(cp_udp(cid, i, o, ed, first_target, tr));
+            tokio::spawn(cp_udp(cid, i, o, ed, first_target, tr, no_timeout));
         }
         (s1, s2) => {
             warn!( s1 = %s1, s2 = %s2,"can't cp stream when one of them is not (Conn or AddrConn)");
@@ -320,6 +340,7 @@ pub async fn cp_udp(
     ed: Option<BytesMut>,
     first_target: Option<net::Addr>,
     tr: Option<Arc<net::GlobalTrafficRecorder>>,
+    no_timeout: bool,
 ) {
     info!(cid = %cid, "relay udp start",);
 
@@ -352,5 +373,5 @@ pub async fn cp_udp(
         }
     }
 
-    let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, tr).await;
+    let _ = net::addr_conn::cp(cid.clone(), in_conn, out_conn, tr, no_timeout).await;
 }

@@ -7,7 +7,6 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::io;
 use std::pin::Pin;
-use std::process::Command;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
@@ -55,6 +54,11 @@ impl Name for TcpResolver {
     }
 }
 
+pub const DEFAULT_LOCAL_NET: &str = "192.168.0.0/16";
+
+/// 自动路由
+///
+/// 对 udp 和 tcp 执行一样的过程, 不会特别处理 udp 的 53 端口
 fn run_tcp_route(port: u32, also_udp: bool) -> anyhow::Result<()> {
     let list = r#"ip rule add fwmark 1 table 100
 ip route add local 0.0.0.0/0 dev lo table 100

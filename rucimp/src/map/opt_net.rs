@@ -83,6 +83,10 @@ impl Mapper for TcpOptListener {
     }
 }
 
+/// Dial the given addr and optionaly set sockopt
+///
+/// Note:
+/// dial udp by OptDirect won't timeout
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
 pub struct OptDirect {
@@ -152,6 +156,7 @@ impl Mapper for OptDirect {
                             .c(stream)
                             .b(params.b)
                             .a(Some(a))
+                            .no_timeout(true)
                             .build()
                     }
                     Stream::Generator(_) => todo!(),
@@ -163,6 +168,8 @@ impl Mapper for OptDirect {
     }
 }
 
+/// Dial the pre-set addr and optionaly set sockopt,
+/// pass on the params.a
 #[mapper_ext_fields]
 #[derive(Clone, Debug, Default, MapperExt)]
 pub struct OptDialer {

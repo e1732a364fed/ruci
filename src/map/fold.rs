@@ -115,6 +115,8 @@ pub struct FoldResult {
     // 累加后剩余的iter(用于一次加法后产生了 Generator 的情况)
     pub left_mappers_iter: DMIterBox,
 
+    pub no_timeout: bool,
+
     #[cfg(feature = "trace")]
     pub trace: Vec<String>, // table of Names of each Mapper during accumulation.
 }
@@ -243,6 +245,8 @@ pub async fn fold(params: FoldParams) -> FoldResult {
         left_mappers_iter: mappers,
 
         chain_tag: tag,
+
+        no_timeout: last_r.no_timeout,
 
         #[cfg(feature = "trace")]
         trace,

@@ -144,9 +144,13 @@ pub struct MapResult {
 
     #[builder(default, setter(strip_option))]
     pub dynamic_data: Option<Vec<Arc<AtomicU64>>>,
+
+    /// if true, copying between AddrConn won't timeout
+    #[builder(default)]
+    pub no_timeout: bool,
 }
 
-type MapResultBuilderStreamFilled = MapResultBuilder<((), (), (Stream,), (), (), (), ())>;
+type MapResultBuilderStreamFilled = MapResultBuilder<((), (), (Stream,), (), (), (), (), ())>;
 //some helper initializers
 impl MapResult {
     pub fn c(c: net::Conn) -> Self {

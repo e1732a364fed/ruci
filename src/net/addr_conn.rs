@@ -282,13 +282,18 @@ pub const MAX_DATAGRAM_SIZE: usize = 65535 - 20 - 8;
 pub async fn cp_addr<R1: AddrReadTrait, W1: AddrWriteTrait>(
     mut r1: R1,
     mut w1: W1,
+    no_timeout: bool,
 ) -> Result<u64, Error> {
     let mut whole_write = 0;
 
     loop {
         let r1ref = &mut r1;
 
-        let sleep_f = tokio::time::sleep(CP_UDP_TIMEOUT).fuse();
+        let sleep_f = if no_timeout {
+            tokio::time::sleep(time::Duration::MAX).fuse()
+        } else {
+            tokio::time::sleep(CP_UDP_TIMEOUT).fuse()
+        };
         let read_f = async move {
             let mut buf0 = Box::new([0u8; MAX_DATAGRAM_SIZE]);
             let mut buf = ReadBuf::new(buf0.deref_mut());
@@ -346,8 +351,9 @@ pub async fn cp(
     c1: AddrConn,
     c2: AddrConn,
     opt: Option<Arc<GlobalTrafficRecorder>>,
+    no_timeout: bool,
 ) -> Result<u64, Error> {
-    cp_between(cid, c1.r, c1.w, c2.r, c2.w, opt).await
+    cp_between(cid, c1.r, c1.w, c2.r, c2.w, opt, no_timeout).await
 }
 
 pub async fn cp_between<
@@ -362,8 +368,12 @@ pub async fn cp_between<
     r2: R2,
     w2: W2,
     opt: Option<Arc<GlobalTrafficRecorder>>,
+    no_timeout: bool,
 ) -> Result<u64, Error> {
-    let (c1_to_c2, c2_to_c1) = (cp_addr(r1, w2).fuse(), cp_addr(r2, w1).fuse());
+    let (c1_to_c2, c2_to_c1) = (
+        cp_addr(r1, w2, no_timeout).fuse(),
+        cp_addr(r2, w1, no_timeout).fuse(),
+    );
     pin_mut!(c1_to_c2, c2_to_c1);
 
     futures::select! {

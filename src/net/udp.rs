@@ -333,7 +333,7 @@ mod test {
             Ok::<(), io::Error>(())
         });
 
-        let _ = crate::net::addr_conn::cp_addr(r2, ms).await;
+        let _ = crate::net::addr_conn::cp_addr(r2, ms, false).await;
 
         let nv = buf_to_write.repeat(5);
 
