@@ -6,7 +6,7 @@ use std::env;
 
 use log::warn;
 use rucimp::{
-    example_common::*,
+    cmd_common::*,
     modes::suit::{config::adapter::*, engine::SuitEngine},
 };
 

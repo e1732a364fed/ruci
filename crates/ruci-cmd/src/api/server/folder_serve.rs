@@ -13,12 +13,11 @@ async fn index(Path(folder): Path<String>) -> Html<String> {
             if let Ok(entry) = entry {
                 let path = entry.path();
                 let filename = path.file_name().unwrap().to_string_lossy();
-                let is_dir = path.is_dir();
-                if is_dir {
+                if path.is_dir() {
                     body.push_str(&format!(
                         "<a href=\"{folder}/{filename}\">{filename}/</a><br>",
                     ));
-                } else {
+                } else if path.is_file() {
                     body.push_str(&format!(
                         "<a href=\"/download/{folder}/{filename}\">{filename}</a><br>",
                     ));
@@ -43,8 +42,10 @@ async fn download(Path(filename): Path<String>) -> Result<Vec<u8>, StatusCode> {
     }
 }
 
+/// non-blocking
 pub async fn serve_static() {
-    info!("serving folder");
+    let addr = "0.0.0.0:6000";
+    info!("serving folder {addr}");
 
     // RUST_LOG=tower_http=trace
 
@@ -52,11 +53,13 @@ pub async fn serve_static() {
         .route("/*folder", get(index))
         .route("/download/*filename", get(download));
     use tower_http::trace::TraceLayer;
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
 
-    axum::serve(listener, app.layer(TraceLayer::new_for_http()))
-        .await
-        .unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app.layer(TraceLayer::new_for_http()))
+            .await
+            .unwrap();
+    });
 
-    info!("served folder");
+    info!("served folder {addr}");
 }

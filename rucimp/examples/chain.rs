@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use log::warn;
 use ruci::relay::*;
 use rucimp::{
-    example_common::*,
+    cmd_common::*,
     modes::chain::{config::lua, engine::Engine},
 };
 use tokio::{

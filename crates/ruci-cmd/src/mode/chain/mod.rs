@@ -1,6 +1,7 @@
 use anyhow::Context;
+use log::info;
 use rucimp::{
-    example_common::{try_get_filecontent, wait_close_sig, wait_close_sig_with_closer},
+    cmd_common::{try_get_filecontent, wait_close_sig, wait_close_sig_with_closer},
     modes::chain::{config::lua, engine::Engine},
 };
 use tokio::sync::mpsc;
@@ -12,6 +13,7 @@ pub(crate) async fn run(
     f: &str,
     #[cfg(feature = "api_server")] opts: Option<(api::server::Server, mpsc::Receiver<()>)>,
 ) -> anyhow::Result<()> {
+    info!("try to start rucimp chain engine");
     let contents = try_get_filecontent("local.lua", Some(f))
         .context(format!("run chain engine try get file {} failed", f))?;
 
@@ -28,6 +30,7 @@ pub(crate) async fn run(
             setup_api_server_with_chain_engine(&mut se, &mut s.0).await;
 
             se.run().await?;
+            info!("started rucimp chain engine");
 
             wait_close_sig_with_closer(s.1).await?;
 
@@ -38,6 +41,7 @@ pub(crate) async fn run(
     }
 
     se.run().await?;
+    info!("started rucimp chain engine");
 
     wait_close_sig().await?;
 

@@ -22,7 +22,7 @@ enum Mode {
     S,
 }
 
-/// ruci command line
+/// ruci command line parameters:
 #[derive(Parser)]
 #[command(author = "e")]
 #[command(version, about, long_about = None)]
@@ -40,7 +40,7 @@ struct Args {
 
     #[cfg(feature = "api_server")]
     #[arg(short, long, value_enum)]
-    api_server: Option<api::server::Commands>,
+    api_server: Vec<api::server::Command>,
 
     #[command(subcommand)]
     sub_cmds: Option<SubCommands>,
@@ -79,12 +79,12 @@ async fn main() -> anyhow::Result<()> {
         None => {
             #[cfg(feature = "api_server")]
             {
-                let opts = match args.api_server {
-                    Some(s) => api::server::deal_cmds(s).await,
-                    None => None,
-                };
-
-                start_engine(args.mode, args.config, opts).await?;
+                for cmd in args.api_server {
+                    let x = api::server::deal_cmds(cmd).await;
+                    if let Some(opts) = x {
+                        start_engine(args.mode.clone(), args.config.clone(), Some(opts)).await?;
+                    }
+                }
             }
             #[cfg(not(feature = "api_server"))]
             start_engine(args.mode, args.config).await?;
@@ -136,6 +136,7 @@ pub fn print_env_version() {
     )
 }
 
+/// blocking
 async fn start_engine(
     m: Mode,
     f: String,

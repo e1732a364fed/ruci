@@ -16,7 +16,7 @@ use tokio::sync::mpsc;
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-pub enum Commands {
+pub enum Command {
     /// start api server
     Run,
 
@@ -24,10 +24,10 @@ pub enum Commands {
     FileServer,
 }
 
-pub async fn deal_cmds(cmd: Commands) -> Option<(Server, mpsc::Receiver<()>)> {
+pub async fn deal_cmds(cmd: Command) -> Option<(Server, mpsc::Receiver<()>)> {
     match cmd {
-        Commands::Run => return Some(Server::new().await),
-        Commands::FileServer => folder_serve::serve_static().await,
+        Command::Run => return Some(Server::new().await),
+        Command::FileServer => folder_serve::serve_static().await,
     }
     None
 }
@@ -216,9 +216,7 @@ pub async fn serve(s: &Server) {
         let ism = s.flux_trace.is_monitoring.clone();
 
         app = app.route("/m", get(is_monitoring_flux).with_state(ism.clone()));
-
         app = app.route("/m_on", get(enable_monitor).with_state(ism.clone()));
-
         app = app.route("/m_off", get(disable_monitor).with_state(ism.clone()));
 
         app = app.route(
@@ -243,5 +241,5 @@ pub async fn serve(s: &Server) {
             .unwrap();
     });
 
-    info!("server started {addr}");
+    info!("api server started {addr}");
 }

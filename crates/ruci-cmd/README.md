@@ -14,6 +14,12 @@ RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run
 
 # api server
 
+-a run 运行
+
+-a file-server 来运行 file server. 
+
+可以 -a file-server -a run 来同时运行 file server 和 api server , 但 file-server 必须在 run 前给出
+
 api:
 
 /stop_core
