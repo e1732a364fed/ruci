@@ -34,6 +34,7 @@ pub struct AdderConn {
 }
 
 impl AdderConn {
+    //write self.wbuf to  self.base
     fn write_wbuf(&mut self, cx: &mut std::task::Context<'_>) -> Poll<io::Result<usize>> {
         self.base.as_mut().poll_write(cx, &self.wbuf)
     }
