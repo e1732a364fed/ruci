@@ -205,10 +205,13 @@ fn get_infinite_gmap_from(text: &str, behavior: ProxyBehavior) -> anyhow::Result
 
 /// implements dynamic::NextSelector
 #[derive(Debug, Clone)]
-pub struct LuaNextSelector(Arc<Mutex<(Lua, LuaRegistryKey)>>);
+pub struct LuaNextSelector(Arc<Mutex<InnerLuaNextSelector>>);
 
-unsafe impl Send for LuaNextSelector {}
-unsafe impl Sync for LuaNextSelector {}
+#[derive(Debug)]
+struct InnerLuaNextSelector(Lua, LuaRegistryKey);
+
+unsafe impl Send for InnerLuaNextSelector {}
+unsafe impl Sync for InnerLuaNextSelector {}
 
 impl LuaNextSelector {
     pub fn from(lua_text: &str, tag: &str) -> anyhow::Result<LuaNextSelector> {
@@ -227,7 +230,9 @@ impl LuaNextSelector {
             .create_registry_value(f)
             .expect("cannot store Lua handler");
 
-        Ok(LuaNextSelector(Arc::new(Mutex::new((lua, key)))))
+        Ok(LuaNextSelector(Arc::new(Mutex::new(InnerLuaNextSelector(
+            lua, key,
+        )))))
     }
 }
 
@@ -271,9 +276,8 @@ struct InnerLuaNextGenerator {
     thread_map: HashMap<CID, LuaOwnedThread>,
     create_thread_func_map: HashMap<CID, LuaOwnedFunction>,
 }
-
-unsafe impl Send for LuaNextGenerator {}
-unsafe impl Sync for LuaNextGenerator {}
+unsafe impl Send for InnerLuaNextGenerator {}
+unsafe impl Sync for InnerLuaNextGenerator {}
 
 fn get_result<T: for<'de> Deserialize<'de> + ruci::map::ToMapperBox>(
     lua: &Lua,
