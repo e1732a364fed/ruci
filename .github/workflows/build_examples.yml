@@ -43,7 +43,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Get version
       id: get_version
-      run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
+      run: echo "VERSION=$(echo $GITHUB_REF | cut -d / -f 3)" >> "$GITHUB_OUTPUT"
     - run: rustup target add ${{ matrix.config.target_triple }}
     - name: Build
       run: |
