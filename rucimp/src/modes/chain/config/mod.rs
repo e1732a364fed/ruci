@@ -64,6 +64,7 @@ pub struct StaticConfig {
     pub inbounds: BTreeMap<String, Vec<InMapConfig>>,
     pub outbounds: BTreeMap<String, Vec<OutMapConfig>>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub routes: Option<Routes>,
 }
 

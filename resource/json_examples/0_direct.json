@@ -1,0 +1,23 @@
+{
+  "inbounds": {
+    "listen1": [
+      {
+        "type": "Listener",
+        "listen_addr": "0.0.0.0:10800"
+      },
+      {
+        "type": "Socks5Http"
+      }
+    ]
+  },
+  "outbounds": {
+    "dial1": [
+      {
+        "type": "Direct",
+        "leak_target_addr": null,
+        "dns_client": null
+      }
+    ]
+  },
+  "routes": null
+}
