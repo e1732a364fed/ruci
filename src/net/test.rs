@@ -13,16 +13,17 @@ fn test_cid() {
     let mut c = CID::default();
     c.push_num(1);
     c.push_num(2);
-
     c.push_num(3);
     println!("{}", c);
     let s = c.to_string();
-    c.pop();
-    println!("{}", c);
-    c.pop();
-    println!("{}", c);
-    c.pop();
-    println!("{}", c);
+    let a = c.pop();
+    println!("{} {a}", c);
+    let a = c.pop();
+    println!("{} {a}", c);
+    let a = c.pop();
+    println!("{} {a}", c);
+    let a = c.pop();
+    println!("{} {a}", c);
 
     let cc_new = CID::from_str(&s);
     println!("{}", cc_new.unwrap());

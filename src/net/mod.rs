@@ -221,6 +221,8 @@ impl CID {
     }
 
     /// won't change self
+    ///
+    /// return the new CID
     pub fn clone_push(&self, ogtr: Option<Arc<GlobalTrafficRecorder>>) -> Self {
         let mut cid = self.clone();
         cid.push(ogtr);
@@ -228,12 +230,17 @@ impl CID {
     }
 
     /// won't change self
+    ///
+    /// return the popped value
+    ///
     pub fn clone_pop(&self) -> Self {
         let mut cid = self.clone();
         cid.pop()
     }
 
     /// change self, collapse to Unit if the chain length=1 after pop
+    ///
+    /// return the popped value
     pub fn pop(&mut self) -> Self {
         let last = self.id_list.pop();
         match last {
