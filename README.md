@@ -201,8 +201,7 @@ o2node-.->collector
 - [x] quic (quinn/s2n-quic)
 - [ ] vpn_test1 （目前只有 单ip转发）
 - [x] tcp/ip stack (smoltcp/lwip)
-- [ ] ss
-- [ ] vmess
+- [ ] ~~ss, vmess~~
 - [x] Steganography Protocol Example1
 - [x] User-defined Lua protocol
 
