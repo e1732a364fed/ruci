@@ -184,6 +184,7 @@ o2node-.->collector
 - [x] tproxy
 - [x] native-tls
 - [x] http header, websocket
+- [x] h2
 - [ ] grpc
 - [ ] tcp/ip netstack (lwip/smoltcp)
 - [ ] quic

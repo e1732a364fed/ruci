@@ -9,7 +9,7 @@ use ruci::{
 };
 use tokio::sync::mpsc;
 
-use tracing::{debug, warn};
+use tracing::warn;
 
 use super::*;
 #[derive(Clone, Debug, NoMapperExt, Default)]
@@ -100,9 +100,9 @@ impl Server {
                     }
                 };
                 let subid = recv.stream_id().as_u32();
-                let subid2 = send.stream_id().as_u32();
-                debug!(cid = %cid, "accept h2 got new {}", subid);
-                assert_eq!(subid, subid2);
+                //let subid2 = send.stream_id().as_u32();
+                //debug!(cid = %cid, "accept h2 got new {}", subid);
+                //assert_eq!(subid, subid2);
 
                 let stream = super::H2Stream::new(recv, send);
                 let mut ncid = cid.clone();
