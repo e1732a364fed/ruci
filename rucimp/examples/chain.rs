@@ -39,9 +39,42 @@ async fn main() -> anyhow::Result<()> {
         failed: false,
     };
 
-    let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+    let (nci_tx, mut nci_rx) = tokio::sync::mpsc::channel(100);
 
-    se.conn_info_recorder = Some(tx);
+    se.newconn_recorder = Some(nci_tx);
+
+    #[cfg(feature = "trace")]
+    {
+        let (ub_tx, mut ub_rx) = tokio::sync::mpsc::channel::<(ruci::net::CID, u64)>(4096);
+
+        let (db_tx, mut db_rx) = tokio::sync::mpsc::channel::<(ruci::net::CID, u64)>(4096);
+
+        se.conn_info_updater = Some((ub_tx, db_tx));
+
+        tokio::spawn(async move {
+            loop {
+                let x = db_rx.recv().await;
+                match x {
+                    Some(nc) => {
+                        println!("db: {} {}", nc.0, nc.1)
+                    }
+                    None => break,
+                }
+            }
+        });
+
+        tokio::spawn(async move {
+            loop {
+                let x = ub_rx.recv().await;
+                match x {
+                    Some(nc) => {
+                        println!("ub: {} {}", nc.0, nc.1)
+                    }
+                    None => break,
+                }
+            }
+        });
+    }
 
     let se = Box::new(se);
 
@@ -49,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::spawn(async move {
         loop {
-            let x = rx.recv().await;
+            let x = nci_rx.recv().await;
             match x {
                 Some(nc) => {
                     if !fr.record(nc).await {

@@ -4,7 +4,7 @@ use log::{debug, info, warn};
 use parking_lot::Mutex;
 use ruci::{
     map::{acc::MIterBox, *},
-    net::GlobalTrafficRecorder,
+    net::{self, GlobalTrafficRecorder},
     relay::{handle_in_accumulate_result, route::*, *},
 };
 use std::{collections::HashMap, sync::Arc};
@@ -20,7 +20,10 @@ pub struct Engine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定，所有对 engine的热更新都要先访问running的锁，若有值说明 is running
     pub ti: Arc<GlobalTrafficRecorder>,
 
-    pub conn_info_recorder: OptNewInfoSender,
+    pub newconn_recorder: OptNewInfoSender,
+
+    #[cfg(feature = "trace")]
+    pub conn_info_updater: net::OptUpdater,
 
     inbounds: Vec<MIterBox>,                   // 不为空
     outbounds: Arc<HashMap<String, MIterBox>>, //不为空
@@ -133,7 +136,9 @@ impl Engine {
                 arx,
                 out_selector.clone(),
                 self.ti.clone(),
-                self.conn_info_recorder.clone(),
+                self.newconn_recorder.clone(),
+                #[cfg(feature = "trace")]
+                self.conn_info_updater.clone(),
             );
 
             tasks.push((t1, t2));
@@ -150,6 +155,7 @@ impl Engine {
         out_selector: Arc<Box<dyn OutSelector>>,
         ti: Arc<GlobalTrafficRecorder>,
         conn_info_recorder: OptNewInfoSender,
+        conn_info_updater: net::OptUpdater,
     ) -> anyhow::Result<()> {
         loop {
             let ar = arx.recv().await;
@@ -160,7 +166,7 @@ impl Engine {
                     Some(ti.clone()),
                     conn_info_recorder.clone(),
                     #[cfg(feature = "trace")]
-                    None,
+                    conn_info_updater.clone(),
                 ));
             } else {
                 break;
