@@ -10,17 +10,10 @@ use ruci::Name;
 use ruci::{map, net::Stream};
 
 use macro_mapper::*;
-use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::{debug, warn};
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Config {
-    pub key_path: String,
-    pub cert_path: String,
-    pub listen_addr: String,
-    pub alpn: Option<Vec<String>>,
-}
+use crate::map::quic_common::ServerConfig;
 
 #[mapper_ext_fields]
 #[derive(Debug, Clone, MapperExt)]
@@ -40,7 +33,7 @@ impl Name for Server {
 }
 
 impl Server {
-    pub fn new(c: Config) -> Self {
+    pub fn new(c: ServerConfig) -> Self {
         Self {
             tls_key_path: c.key_path,
             tls_cert_path: c.cert_path,
@@ -72,6 +65,11 @@ impl Server {
         let cidc = cid.clone();
         let a_ncid = self.a_next_cid.clone();
         tokio::spawn(async move {
+            // 这里会比较慢, 因为 accept 是要等一个新连接完全建立 (1rtt)
+            // 后才返回, 如果同时有多个新连接，就会排队
+
+            // 对比 quinn, 它返回一个 Connecting, 就好很多
+
             while let Some(mut connection) = server.accept().await {
                 let mut new_cid = cid.clone();
                 new_cid.push_num(a_ncid.fetch_add(1, Ordering::Relaxed));

@@ -13,6 +13,8 @@ pub mod h2;
 pub mod native_tls;
 pub mod ws;
 
+pub mod quic_common;
+
 #[cfg(feature = "quic")]
 pub mod quic;
 

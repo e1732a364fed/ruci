@@ -35,7 +35,7 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::ws;
+use crate::map::{quic_common, ws};
 
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
@@ -222,7 +222,7 @@ pub enum InMapperConfig {
         http_config: Option<CommonConfig>,
     },
     #[cfg(feature = "s2n-quic")]
-    Quic(quic::server::Config),
+    Quic(quic_common::ServerConfig),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -253,7 +253,7 @@ pub enum OutMapperConfig {
         http_config: Option<CommonConfig>,
     },
     #[cfg(feature = "s2n-quic")]
-    Quic(quic::client::Config),
+    Quic(quic_common::ClientConfig),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

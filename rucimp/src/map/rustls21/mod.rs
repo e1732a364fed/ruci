@@ -1,9 +1,17 @@
 /*!
-Defines facilities for tls insecure for rustls 0.21
- */
-use std::{fs::File, io::BufReader, sync::Arc, time::SystemTime};
+Defines facilities for rustls 0.21
 
-use rustls::{client::ServerCertVerified, Certificate, ClientConfig, ServerName};
+rustls 0.21 和 0.22 有很大不同, 截至 24.3.21, ruci包的 rustls 使用的是
+0.22, 但 rucimp 包中的 s2n-quic 和 quinn 包都使用的是 rustls 0.21,
+故只能在 rucimp 包再实现一个 rustls 0.21 的接口
+
+used by quinn and quic mod
+ */
+use std::{fs::File, io::BufReader, path::Path, sync::Arc, time::SystemTime};
+
+use anyhow::bail;
+use rustls::{client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerName};
+use rustls_pemfile::{read_one, Item};
 use tracing::debug;
 
 #[derive(Debug, Default)]
@@ -50,6 +58,17 @@ impl rustls::client::ServerCertVerifier for SuperDanVer {
     }
 }
 
+pub fn load_key(path: &Path) -> anyhow::Result<PrivateKey> {
+    match read_one(&mut BufReader::new(File::open(path)?)) {
+        Ok(Some(Item::RSAKey(data) | Item::PKCS8Key(data) | Item::ECKey(data))) => {
+            Ok(PrivateKey(data))
+        }
+        Ok(_) => bail!("invalid key in {}, not rsa/pkcs8/ec", path.display()),
+
+        Err(e) => Err(e.into()),
+    }
+}
+
 pub fn read_certs_from_file(
     cert_path: &str,
     key_path: &str,
@@ -60,14 +79,7 @@ pub fn read_certs_from_file(
         .map(rustls::Certificate)
         .collect();
 
-    let mut key_reader = BufReader::new(File::open(key_path)?);
-    // if the file starts with "BEGIN RSA PRIVATE KEY"
-    // let mut keys = rustls_pemfile::rsa_private_keys(&mut key_reader)?;
-    // if the file starts with "BEGIN PRIVATE KEY"
-    let mut keys = rustls_pemfile::pkcs8_private_keys(&mut key_reader)?;
-
-    assert_eq!(keys.len(), 1);
-    let key = rustls::PrivateKey(keys.remove(0));
+    let key = load_key(Path::new(key_path))?;
 
     Ok((certs, key))
 }

@@ -66,7 +66,7 @@ impl Server {
         tokio::spawn(async move {
             let a_ncid = a_ncid.clone();
             let tx = tx.clone();
-            while let Some(connection) = endpoint.accept().await {
+            while let Some(connecting) = endpoint.accept().await {
                 let mut new_cid = cidc.clone();
                 let cidc = cidc.clone();
 
@@ -74,10 +74,13 @@ impl Server {
 
                 let tx = tx.clone();
                 tokio::spawn(async move {
-                    let connection = connection.await;
+                    let connection = connecting.await;
                     let connection = match connection {
                         Ok(c) => c,
-                        Err(_) => return,
+                        Err(e) => {
+                            warn!(cid = %new_cid, e = %e, "quic server await the new connecting failed");
+                            return;
+                        }
                     };
 
                     new_cid.push_num(a_ncid.fetch_add(1, Ordering::Relaxed));

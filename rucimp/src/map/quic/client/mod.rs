@@ -11,21 +11,10 @@ use ruci::{map, net::Stream};
 
 use macro_mapper::*;
 use s2n_quic::client::Connect;
-use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tracing::debug;
 
 use crate::map::rustls21;
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Config {
-    pub server_addr: String,
-    pub server_name: String,
-
-    pub cert_path: Option<String>,
-    pub alpn: Option<Vec<String>>,
-    pub is_insecure: Option<bool>,
-}
 
 #[mapper_ext_fields]
 #[derive(Debug, Clone, MapperExt)]
@@ -44,7 +33,7 @@ impl Name for Client {
 }
 
 impl Client {
-    pub fn new(c: Config) -> anyhow::Result<Self> {
+    pub fn new(c: crate::map::quic_common::ClientConfig) -> anyhow::Result<Self> {
         let tls = if c.is_insecure.unwrap_or_default() {
             let cc = rustls21::cc(rustls21::ClientOptions {
                 is_insecure: true,
