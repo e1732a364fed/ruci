@@ -269,6 +269,12 @@ pub type RW = (
     Box<dyn AsyncRead + Unpin + Send + Sync>,
     Box<dyn AsyncWrite + Unpin + Send + Sync>,
 );
+
+pub fn split(conn: Conn) -> RW {
+    let (r, w) = tokio::io::split(conn);
+    (Box::new(r), Box::new(w))
+}
+
 /// Represents one of the four different kinds of streams. Default is [`Stream::None`]
 #[derive(Default)]
 pub enum Stream {

@@ -129,7 +129,7 @@ impl AsyncWrite for TcpWriteHalf {
                 return Poll::Ready(Ok(buf.len()));
             }
         }
-        Poll::Ready(Ok(0))
+        Poll::Ready(Ok(buf.len()))
     }
 
     fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
