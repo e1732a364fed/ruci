@@ -2,6 +2,7 @@ use super::*;
 
 #[allow(unused)]
 use anyhow::Context;
+use tokio::net::TcpSocket;
 
 pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
     match ip_addr {
@@ -404,6 +405,95 @@ impl Addr {
         }
     }
 
+    pub async fn bind_dial(bind_a: Option<Self>, dial_a: Option<Self>) -> Result<Stream> {
+        if bind_a.is_none() && dial_a.is_none() {
+            bail!("bind_dial: bind_a and dial_a are both none");
+        }
+        let network = bind_a
+            .as_ref()
+            .map(|a| a.network.clone())
+            .or_else(|| dial_a.as_ref().map(|a| a.network.clone()))
+            .unwrap();
+
+        match network {
+            #[cfg(feature = "tun")]
+            Network::IP => {
+                let ip = match &bind_a {
+                    Some(a) => a,
+                    None => bail!("bind_a is required for binding ip"),
+                };
+                debug!("Addr binding IP {}", ip);
+                let (tun_name, dial_addr, netmask) = ip
+                    .to_name_ip_netmask()
+                    .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
+                let c = tun::create_bind(tun_name, dial_addr, netmask)
+                    .await
+                    .context("bind_dial failed for tun")?;
+                Ok(Stream::Conn(Box::new(c)))
+            }
+            Network::TCP => {
+                let dial_a = match &dial_a {
+                    Some(a) => a,
+                    None => bail!("bind_dial: tcp must provide dial_a "),
+                };
+                let c = match bind_a {
+                    Some(bind_a) => {
+                        let bind_so = bind_a.get_socket_addr_or_resolve()?;
+                        let socket = if bind_so.is_ipv4() {
+                            TcpSocket::new_v4()?
+                        } else {
+                            TcpSocket::new_v6()?
+                        };
+                        socket.bind(bind_so)?;
+
+                        let dial_so = dial_a.get_socket_addr_or_resolve()?;
+
+                        socket.connect(dial_so).await?
+                    }
+                    None => {
+                        let dial_so = dial_a.get_socket_addr_or_resolve()?;
+
+                        TcpStream::connect(dial_so).await?
+                    }
+                };
+                Ok(Stream::Conn(Box::new(c)))
+            }
+            Network::UDP => {
+                let bind_a = match bind_a {
+                    Some(a) => a,
+                    None => bail!("bind_dial: udp must provide bind_a "),
+                };
+
+                let bind_so = bind_a.get_socket_addr_or_resolve()?;
+
+                let u = UdpSocket::bind(bind_so).await?;
+                let u = match dial_a {
+                    Some(dial_a) => {
+                        let dial_so = dial_a.get_socket_addr_or_resolve()?;
+
+                        u.connect(dial_so).await?;
+
+                        udp::new(u, Some(dial_a))
+                    }
+                    None => udp::new(u, None),
+                };
+                Ok(Stream::AddrConn(u))
+            }
+            #[cfg(unix)]
+            Network::Unix => {
+                let dial_a = match dial_a {
+                    Some(a) => a,
+                    None => bail!("bind_dial: uds must provide dial_a "),
+                };
+
+                let u = UnixStream::connect(dial_a.get_name().unwrap_or_default()).await?;
+                Ok(Stream::Conn(Box::new(u)))
+            }
+            #[cfg(not(feature = "tun"))]
+            _ => bail!("bind_dial failed, not supported network: {}", self.network),
+        }
+    }
+
     /// dial tcp/udp/unix_domain_socket
     ///
     /// can dial ip if feature "tun" is enabled
@@ -420,7 +510,7 @@ impl Addr {
                 let (tun_name, dial_addr, netmask) = self
                     .to_name_ip_netmask()
                     .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
-                let c = tun::dial(tun_name, dial_addr, netmask)
+                let c = tun::create_bind(tun_name, dial_addr, netmask)
                     .await
                     .context("Addr::try_dial tun, dial failed")?;
                 Ok(Stream::Conn(Box::new(c)))

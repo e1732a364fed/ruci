@@ -12,7 +12,7 @@ impl Name for AsyncDevice {
     }
 }
 
-pub async fn dial<A1, A2>(
+pub async fn create_bind<A1, A2>(
     tun_name: Option<String>,
     dial_addr: A1,
     netmask: A2,
@@ -36,7 +36,7 @@ where
 
     let dev = tun2::create_as_async(&config).unwrap();
 
-    debug!("tun: dial succeed");
+    debug!("tun: create_bind succeed");
 
     Ok(Box::new(dev))
 }
@@ -48,14 +48,14 @@ mod test {
 
     use crate::net::Addr;
 
-    use super::dial;
+    use super::create_bind;
 
     //sudo -E cargo test --package ruci --lib --features tun -- net::tun::test::test --exact --nocapture
     //#[tokio::test]
     async fn test() {
         let a = Addr::from_strs("ip", "utun432", "10.0.0.1", 24).unwrap();
         let (dn, ip, nm) = a.to_name_ip_netmask().unwrap();
-        let mut conn = dial(dn, ip, nm).await.unwrap();
+        let mut conn = create_bind(dn, ip, nm).await.unwrap();
         let mut buf = [0; 4096];
         println!("reading...\nuse:\nsudo ifconfig utun432 10.0.0.1 10.0.0.2 up\non macos, then \nping 10.0.0.2");
         let amount = conn.read(&mut buf).await.unwrap();
