@@ -46,3 +46,4 @@ macOS/linux 上存在内存泄漏，不知如何解决，可能与 tun 包有关
 
 新的 netstack-lwip 代码已可以在 windows 上编译通过。
 使用了 netstack-smoltcp 包解决 自实现的 smoltcp 的 bug.
+但发现其依然有 内存占用 或 内存 泄漏的问题，因此 默认 发布包只 使用 lwip 

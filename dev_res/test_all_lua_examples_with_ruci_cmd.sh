@@ -18,7 +18,7 @@ test_lua_file() {
     echo "Testing $file..."
     
     # 运行命令
-    RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn steganography lwip smoltcp" -- --log-file "" -c "../../$file" &
+    RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn steganography lwip" -- --log-file "" -c "../../$file" &
     local pid=$!
     
     sleep 2
@@ -46,7 +46,7 @@ cd "$SCRIPT_DIR/../crates/ruci-cmd" || exit 1
 
 echo "Building ruci-cmd..."
 
-RUST_LOG=none,ruci=debug cargo build --features "lua utils use-native-tls quinn steganography lwip smoltcp"
+RUST_LOG=none,ruci=debug cargo build --features "lua utils use-native-tls quinn steganography lwip"
 
 # 主测试逻辑
 echo "Starting Lua examples test with ruci-cmd..."
