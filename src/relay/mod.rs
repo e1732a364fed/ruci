@@ -166,7 +166,7 @@ pub async fn handle_in_fold_result(
     let outbound = match outbound {
         Some(o) => o,
         None => {
-            info!(cid = %cid, "out selector got None, shutting down the connection");
+            info!(cid = %cid, is_fallback = is_fallback, "out selector got None, shutting down the connection");
 
             let r = listen_result.c.try_shutdown().await;
             if let Err(e) = r {

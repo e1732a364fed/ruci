@@ -40,6 +40,7 @@ config = {
             out_tag = "dial1", 
             mode = "WhiteList",
             in_tags = { "listen1" } ,
+            is_fallback = false,
              userset = {
                 { "plaintext:u0 p0", "trojan:mypassword" },
                 { "plaintext:u1 p1", "trojan:password1" },
@@ -60,6 +61,8 @@ config = {
 要求每一条inbound 都要有一个 tag, 每一个 inbound 中的 chain 都要有至少一个 mapper (映射函数)
 
 rule_route 和 tag_route 同时出现时，程序只会采用 rule_route. 因为 rule_route 的内容涵盖了 tag_route 
+
+rule_route 的 mode 可为 WhiteList 或 BlackList
 
 # 动态链
 

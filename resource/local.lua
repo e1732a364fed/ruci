@@ -1,6 +1,5 @@
 print("this is a lua config file")
 
-
 -- lua 的好处有很多，你可以定义很多变量
 -- 真正的配置块是 config 变量，可以用搜索快速找到它
 
@@ -55,7 +54,7 @@ trojan_out = {
 }
 
 websocket_out = {
-    WebSocket ={
+    WebSocket = {
         host = "myhost",
         path = "/path1",
         use_early_data = true
@@ -63,7 +62,7 @@ websocket_out = {
 }
 
 dial_trojan_chain = {dial, tlsout, trojan_out}
-dial_trojan_ws_chain = {dial,tlsout, websocket_out, trojan_out}
+dial_trojan_ws_chain = {dial, tlsout, websocket_out, trojan_out}
 
 stdio_socks5_chain = {{
     Stdio = {}
@@ -149,7 +148,6 @@ config = {
 
 --]=]
 
-
 --[=[
 config = {
     inbounds = { {chain = listen_socks5http, tag = "listen1"} },
@@ -162,7 +160,6 @@ config = {
 }
 
 --]=]
-
 
 --[=[
 config = {
@@ -248,33 +245,69 @@ config = {
 ---[=[
 
 config = {
-    inbounds = { 
-        {chain = listen_socks5http, tag = "l1"}, {chain = {l2,tlsin}, tag = "l2"} , 
-        {chain = {l3,tlsin}, tag = "l3"} 
-    } ,
-    outbounds = { 
-        { tag="d1", chain = { "Direct" } } ,  { tag="d2", chain = { dial, tlsout } } ,
-        {
-            tag = "fallback_d", chain = {{
-                Dialer = "tcp://0.0.0.0:80"
-            }}
-        }
-    },
+    inbounds = {{
+        chain = listen_socks5http,
+        tag = "l1"
+    }, {
+        chain = {l2, tlsin},
+        tag = "l2"
+    }, {
+        chain = {l3, tlsin},
+        tag = "l3"
+    }},
+    outbounds = {{
+        tag = "d1",
+        chain = {"Direct"}
+    }, {
+        tag = "d2",
+        chain = {dial, tlsout}
+    }, {
+        tag = "fallback_d",
+        chain = {{
+            Dialer = "tcp://0.0.0.0:80"
+        }}
+    }},
 
-    tag_route = {  { "l1","d1" },{ "l2","d2"},{"l3","d2"} },
+    ---[==[
+    tag_route = {{"l1", "d1"}, {"l2", "d2"}, {"l3", "d2"}},
 
-    fallback_route = { {  "l1", "fallback_d" } }
+    fallback_route = {{"l1", "fallback_d"}}
 
---[[
+    -- ]==]
+
+    --[==[
+
+    rule_route = {{
+        mode = "WhiteList",
+        out_tag = "d1",
+        in_tags = {"l1"}
+    }, {
+        mode = "WhiteList",
+        out_tag = "d2",
+        in_tags = {"l2", "l3"}
+    }, {
+        mode = "WhiteList",
+        out_tag = "fallback_d",
+        in_tags = {"l1"},
+        is_fallback = true
+    }}
+
+    -- ]==]
+
+    --[[
 这个 config 块是演示 多in多out的情况, 只要outbounds有多个，您就应该考虑使用路由配置
-该 tag_route 示例明确指出，l1将被路由到d1, l2 -> d2, l3 -> d2
 
-l1 的回落为 fallback_d
+路由同时给出了 使用 tag_route + fallback_route 的 简单配置 和用 rule_route 的复杂配置
+
+这两种给出的配置在行为上是等价的
+
+该 路由 示例明确指出，l1将被路由到d1, l2 -> d2, l3 -> d2, 且 l1 的回落为 fallback_d
+
 --]]
 
 }
 
---]=]
+-- ]=]
 
 --[=[
 
@@ -343,11 +376,10 @@ config = {
 function dyn_selectors(tag)
     return function(this_index, data)
         -- print("data:",data)
-    
+
         return this_index + 1
     end
 end
-
 
 -- ]]
 
@@ -361,11 +393,11 @@ end
 
 local inspect = require("inspect")
 
---my_cid_record = {}
+-- my_cid_record = {}
 
 infinite = {
 
-    -- 下面这个演示 与第一个普通示例 形式上等价
+    -- 下面这个演示 与第一个普通示例 行为上等价
 
     inbounds = {{
         tag = "listen1",
@@ -377,9 +409,9 @@ infinite = {
                         Listener = "0.0.0.0:10800"
                     },
                     new_thread_fn = function(cid, this_index, data)
-                        --print("lua: cid",inspect(cid))
-                        --table.insert(my_cid_record,cid)
-                        --print("lua: cid cache",inspect(my_cid_record))
+                        -- print("lua: cid",inspect(cid))
+                        -- table.insert(my_cid_record,cid)
+                        -- print("lua: cid cache",inspect(my_cid_record))
 
                         local new_cid, newi, new_data = coroutine.yield(1, {
                             Socks5 = {}

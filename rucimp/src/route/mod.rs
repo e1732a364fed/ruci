@@ -87,6 +87,8 @@ pub enum Mode {
     WhiteList,
 }
 
+/// RuleSet 是一项 多个子规则的 集合
+///
 /// ta 前缀 意思是 target_addr,
 #[derive(Clone, Default)]
 pub struct RuleSet {
@@ -94,6 +96,8 @@ pub struct RuleSet {
 
     pub mode: Mode,
     pub in_tags: Option<HashSet<String>>,
+
+    pub is_fallback: Option<bool>,
 
     /// 一个条代理链握手成功后可能出现多个层的user, 即每条链都有一个 UserVec数据
     pub userset: Option<HashSet<UserVec>>,
@@ -145,6 +149,10 @@ impl RuleSet {
 
     /// 只有所有的匹配项全通过, 才返回 true
     pub fn matches_whitelist(&self, r: &InboundInfo) -> bool {
+        if r.is_fallback != self.is_fallback.unwrap_or_default() {
+            return false;
+        }
+
         let is_in_in_tags = self.is_in_in_tags(true, &r.in_tag);
         if !is_in_in_tags {
             return false;
@@ -181,6 +189,10 @@ impl RuleSet {
 
     /// 有一个匹配项通过, 就返回 true
     pub fn matches_blacklist(&self, r: &InboundInfo) -> bool {
+        if r.is_fallback == self.is_fallback.unwrap_or_default() {
+            return true;
+        }
+
         let is_in_in_tags = self.is_in_in_tags(false, &r.in_tag);
         if is_in_in_tags {
             return true;

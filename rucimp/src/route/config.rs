@@ -21,6 +21,7 @@ pub struct RuleSetConfig {
 
     pub mode: ModeConfig,
     pub in_tags: Option<HashSet<String>>,
+    pub is_fallback: Option<bool>,
 
     pub userset: Option<HashSet<Vec<String>>>,
 
@@ -106,6 +107,7 @@ impl RuleSetConfig {
 
         RuleSet {
             out_tag: self.out_tag,
+            is_fallback: self.is_fallback,
             mode: self.mode.to_mode(),
             userset,
             in_tags: self.in_tags,
