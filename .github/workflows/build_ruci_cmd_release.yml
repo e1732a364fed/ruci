@@ -60,7 +60,7 @@ jobs:
           fi
 
           cd crates/ruci-cmd
-          make BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }} TARGET_FEATURES=$compile_features
+          make -f Makefile_cross BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=${{ matrix.target }} TARGET_FEATURES=$compile_features
 
       - name: Upload Github Assets
         uses: softprops/action-gh-release@v1
