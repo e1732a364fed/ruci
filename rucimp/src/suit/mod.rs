@@ -12,7 +12,6 @@ pub mod engine;
 /// mock of engine, but relay procedure is listen_ser2 -> listen_tcp2
 ///   -> ruci::relay::handle_conn_clonable
 ///
-/// `Arc<Suit>` to  `&'static dyn Suit`
 pub mod engine2;
 
 #[cfg(test)]

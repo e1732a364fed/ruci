@@ -1,6 +1,7 @@
 use crate::net::CID;
 use futures::FutureExt;
 use log::info;
+use parking_lot::Mutex;
 use ruci::{
     map::{socks5, tls, MapParams, Mapper},
     net,
@@ -10,7 +11,7 @@ use rucimp::suit::config::{
     adapter::{load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig},
     Config,
 };
-use std::{env::set_var, io, time::Duration};
+use std::{env::set_var, io, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -122,9 +123,10 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-    let se = Box::leak(Box::new(se));
+    let se = Arc::new(Mutex::new(Box::new(se)));
+    let sec = se.clone();
 
-    se.load_config(c);
+    se.lock().load_config(c);
 
     let se = &se;
     //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future
@@ -133,7 +135,7 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
     let listen_future = async move {
         info!("try start listen");
 
-        let r = se.run().await;
+        let r = se.lock().run().await;
 
         info!("listenr {:?}", r);
     };
@@ -147,9 +149,9 @@ async fn suit_engine_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
         futures::select! {
 
             r = dialh => {
-                info!("dial finished first, will return ,{:?}, {:?}",r, se.ti);
+                info!("dial finished first, will return ,{:?}, {:?}",r, sec.lock().ti);
                 tokio::time::sleep(Duration::from_millis(400)).await;
-                info!("dial finished first ,print again, {:?}",se.ti);
+                info!("dial finished first ,print again, {:?}",sec.lock().ti);
 
                 break;
             },
@@ -172,13 +174,15 @@ async fn suit_engine2_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
     let (ws, port) = get_lconfig_str();
     let c: Config = toml::from_str(&ws).unwrap();
 
-    let se = rucimp::suit::engine2::SuitEngine::new(
+    let se = rucimp::suit::engine2::SuitEngine::new();
+    let se = Arc::new(Mutex::new(Box::new(se)));
+    let sec = se.clone();
+
+    se.lock().load_config(
+        c,
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-    let se: &'static mut rucimp::suit::engine2::SuitEngine<_, _> = Box::leak(Box::new(se));
-
-    se.load_config(c);
 
     //注意，不用 借用的话，下面的 move 会 转移所有权，导致在非阻塞的 listen_future
     // 刚退出就会执行 drop(se), 进而将其内部储存的tx drop掉，进而关闭监听，导致失败
@@ -186,7 +190,7 @@ async fn suit_engine2_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
     let listen_future = async {
         info!("try start listen");
 
-        let r = se.run().await;
+        let r = se.lock().run().await;
 
         info!("listenr {:?}", r);
     };
@@ -200,9 +204,9 @@ async fn suit_engine2_socks5_tls_direct_and_outadder() -> std::io::Result<()> {
         futures::select! {
 
             r = dialh => {
-                info!("dial finished first, will return ,{:?}, {:?}",r, se.ti);
+                info!("dial finished first, will return ,{:?}, {:?}",r, sec.lock().ti);
                 tokio::time::sleep(Duration::from_millis(400)).await;
-                info!("dial finished first ,print again, {:?}",se.ti);
+                info!("dial finished first ,print again, {:?}",sec.lock().ti);
 
                 break;
             },

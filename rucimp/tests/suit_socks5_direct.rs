@@ -16,6 +16,7 @@ use crate::net::CID;
 use bytes::{BufMut, BytesMut};
 use futures::{pin_mut, select, Future, FutureExt};
 use log::{info, warn};
+use parking_lot::Mutex;
 use ruci::map::socks5;
 use ruci::map::socks5::*;
 use ruci::net::TransmissionInfo;
@@ -799,30 +800,47 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> std::io::Res
     let c: Config = get_nl_config(3);
     let cc = c.clone();
 
-    let se = rucimp::suit::engine2::SuitEngine::new(
-        load_in_mappers_by_str_and_ldconfig,
-        load_out_mappers_by_str_and_ldconfig,
-    );
-    let se = Box::leak(Box::new(se));
-    se.load_config(c);
+    let se = rucimp::suit::engine2::SuitEngine::new();
+    let se = Arc::new(Mutex::new(Box::new(se)));
+    {
+        let mut lo = se.lock();
+        lo.load_config(
+            c,
+            load_in_mappers_by_str_and_ldconfig,
+            load_out_mappers_by_str_and_ldconfig,
+        );
+    }
+    let sec = se.clone();
 
-    let listen_future = async {
-        if even {
-            info!("try start listen block run");
+    let listen_future = async move {
+        // 使用了 mutex 就不能用block run
+        // if even {
+        //     info!("try start listen block run");
+        //     let lo = se.lock();
 
-            let r = se.block_run().await;
-            //let r = block_on(se.block_run());
-            //let r = join!(se.block_run()) ;
-            //测试表明，只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常。
+        //     tokio::select! {
+        //         r = lo.block_run() =>{
+        //             info!("listen finish {:?}", r);
 
-            info!("r {:?}", r);
-        } else {
-            info!("try start  listen unblock run");
+        //         }
+        //         _ = rx =>{
+        //             info!("rx got");
 
-            let r = se.run().await;
+        //             drop(lo);
+        //         }
+        //     }
+        //     // let r = lo.block_run().await;
+        //     //let r = block_on(se.block_run());
+        //     //let r = join!(se.block_run()) ;
+        //     //测试表明，只能用 await的形式 或 join, 若用 block_on 的形式则运行结果异常。
+        // } else {
+        info!("try start  listen unblock run");
+        let lo = se.lock();
 
-            info!("r {:?}", r);
-        }
+        let r = lo.run().await;
+
+        info!("r {:?}", r);
+        //}
     };
 
     let cl = cc.listen.first().unwrap();
@@ -834,17 +852,30 @@ async fn suit_engine2_socks5_direct_and_request_block_3_listen() -> std::io::Res
 
     pin_mut!(listen_future, dial_future);
 
-    select! {
+    let mut dialfirstok = false;
 
-        () = dial_future => {
-            info!("dial finished first, will return , {:?}",se.ti);
-            tokio::time::sleep(Duration::from_millis(400)).await;
-            info!("dial finished first ,print again, {:?}",se.ti);
+    let x: &mut bool = &mut dialfirstok;
+    loop {
+        select! {
 
-        },
-        () = listen_future => {
-            panic!("listen finished first");
-        },
+            () = dial_future => {
+                info!("dial finished first,");
+                *x = true;
+                break;
+
+
+
+            },
+            () = listen_future => {
+                info!("listen finished first");
+            },
+        }
+    }
+
+    if dialfirstok {
+        info!("dial finished first, will return , {:?}", sec.lock().ti);
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        info!("dial finished first ,print again, {:?}", sec.lock().ti);
     }
 
     //tokio::time::sleep(Duration::from_secs(2)).await;

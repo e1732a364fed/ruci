@@ -21,36 +21,23 @@ use tokio::{
 
 use super::config;
 
-pub struct SuitEngine<FInadder, FOutadder>
-where
-    FInadder: Fn(&str, LDConfig) -> Option<MapperBox>,
-    FOutadder: Fn(&str, LDConfig) -> Option<MapperBox>,
-{
+pub struct SuitEngine {
     pub running: Arc<Mutex<Option<Vec<Sender<()>>>>>, //这里约定, 所有对 engine的热更新都要先访问running的锁
     pub ti: Arc<TransmissionInfo>,
 
     servers: Vec<Arc<Box<dyn Suit>>>,
     clients: Vec<Arc<Box<dyn Suit>>>,
     default_c: Option<Arc<Box<dyn Suit>>>,
-
-    load_inmappers_func: FInadder,
-    load_outmappers_func: FOutadder,
 }
 
-impl<LI, LO> SuitEngine<LI, LO>
-where
-    LI: Fn(&str, LDConfig) -> Option<MapperBox>,
-    LO: Fn(&str, LDConfig) -> Option<MapperBox>,
-{
-    pub fn new(load_inmapper_func: LI, load_outmapper_func: LO) -> Self {
+impl SuitEngine {
+    pub fn new() -> Self {
         SuitEngine {
             ti: Arc::new(TransmissionInfo::default()),
             servers: Vec::new(),
             clients: Vec::new(),
             default_c: None,
             running: Arc::new(Mutex::new(None)),
-            load_inmappers_func: load_inmapper_func,
-            load_outmappers_func: load_outmapper_func,
         }
     }
 
@@ -63,13 +50,29 @@ where
     }
 
     /// convert and calls load_config
-    pub fn load_config_from_str(&mut self, s: &str) {
+    pub fn load_config_from_str<FInadder, FOutadder>(
+        &mut self,
+        s: &str,
+        load_inmappers_func: FInadder,
+        load_outmappers_func: FOutadder,
+    ) where
+        FInadder: Fn(&str, LDConfig) -> Option<MapperBox>,
+        FOutadder: Fn(&str, LDConfig) -> Option<MapperBox>,
+    {
         //todo: 修改 suit::config::Config 的结构后要改这里
         let c: crate::suit::config::Config = crate::suit::config::Config::from_toml(s);
-        self.load_config(c);
+        self.load_config(c, load_inmappers_func, load_outmappers_func);
     }
 
-    pub fn load_config(&mut self, c: crate::suit::config::Config) {
+    pub fn load_config<FInadder, FOutadder>(
+        &mut self,
+        c: crate::suit::config::Config,
+        load_inmappers_func: FInadder,
+        load_outmappers_func: FOutadder,
+    ) where
+        FInadder: Fn(&str, LDConfig) -> Option<MapperBox>,
+        FOutadder: Fn(&str, LDConfig) -> Option<MapperBox>,
+    {
         self.clients = c
             .dial
             .iter()
@@ -77,7 +80,7 @@ where
                 let mut s = SuitStruct::from(lc.clone());
                 s.set_behavior(ProxyBehavior::ENCODE);
                 s.generate_upper_mappers();
-                let r_proxy_outadder = (self.load_outmappers_func)(s.protocol(), s.config.clone());
+                let r_proxy_outadder = load_outmappers_func(s.protocol(), s.config.clone());
                 if let Some(proxy_outadder) = r_proxy_outadder {
                     s.push_mapper(Arc::new(proxy_outadder));
                 }
@@ -103,7 +106,7 @@ where
                 s.set_behavior(ProxyBehavior::DECODE);
 
                 s.generate_upper_mappers();
-                let r_proxy_inadder = (self.load_inmappers_func)(s.protocol(), s.config.clone());
+                let r_proxy_inadder = load_inmappers_func(s.protocol(), s.config.clone());
                 if let Some(proxy_inadder) = r_proxy_inadder {
                     s.push_mapper(Arc::new(proxy_inadder));
                 }
@@ -117,7 +120,7 @@ where
 
     /// non-blocking, return true if run succeed;
     /// calls start_with_tasks
-    pub async fn run(&'static self) -> io::Result<()> {
+    pub async fn run(&self) -> io::Result<()> {
         self.start_with_tasks().await.map(|tasks| {
             for task in tasks {
                 task::spawn(task);

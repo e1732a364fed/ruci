@@ -78,12 +78,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let contents = r_contents.expect(&("no ".to_owned() + &filename));
 
     println!("{}", contents);
-    let mut se = SuitEngine::new(
+    let mut se = SuitEngine::new();
+
+    se.load_config_from_str(
+        &contents,
         load_in_mappers_by_str_and_ldconfig,
         load_out_mappers_by_str_and_ldconfig,
     );
-
-    se.load_config_from_str(&contents);
     let r = se.block_run().await;
 
     warn!("r {:?}", r);
