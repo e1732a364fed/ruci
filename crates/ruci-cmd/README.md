@@ -1,7 +1,7 @@
 
 产生的日志会的 logs 文件夹中, daily rolling
 
-features: api_server, api_client, utils, trace
+features: lua, api_server, api_client, utils, trace, use-native-tls, native-tls-vendored
 default enables none.
 
 api_server, trace 这两个feature都会少许降低 performance. 
@@ -16,7 +16,7 @@ utils feature 可用于下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.d
 run with api server:
 
 ```
-cargo run -F api_server -F api_client -F utils --release -- -a run
+cargo run -F lua -F api_server -F api_client -F utils --release -- -a run
 
 ```
 
@@ -24,7 +24,7 @@ debug:
 ```
 cargo run -F api_server -F lua  -- -l trace --log-file ""
 
-RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run --trace
+RUST_LOG=debug cargo run -F lua -F api_server -F api_client -F utils -F trace -- -a run --trace
 
 ```
 

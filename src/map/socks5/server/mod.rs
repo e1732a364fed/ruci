@@ -108,9 +108,8 @@ impl Server {
     ) -> anyhow::Result<map::MapResult> {
         /*
            todo:
-           本段代码 是verysimple中socks5代码的移植 ，修复了它的一些漏洞
-           并通过了单元测试。
-           不过因为函数太长，依然不是很简洁的实现，可能需要 重构
+           本段代码 通过了单元测试。
+           不过因为函数太长，不是很简洁的实现，可能需要 重构
            使用 bytes 的 BytesMut 可以很好地重构，但因为 async_std中没有 read_buf 方法
            所以还是不方便
            所以使用 read_buf 方法的重构要在 tokio 分支进行了。

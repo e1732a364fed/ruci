@@ -307,8 +307,8 @@ pub fn cp_stream(
         (Stream::AddrConn(i), Stream::AddrConn(o)) => {
             tokio::spawn(cp_udp(cid, i, o, ed, first_target, tr));
         }
-        _ => {
-            warn!("can't cp stream when one of them is not (Conn or AddrConn)");
+        (s1, s2) => {
+            warn!( s1 = %s1, s2 = %s2,"can't cp stream when one of them is not (Conn or AddrConn)");
         }
     }
 }

@@ -14,10 +14,10 @@ chain_infinite 演示 完全动态链，其与 chain 的运行方式一样，不
 # in folder rucimp, run:
 
 # chain mode
-RUST_LOG=none,ruci=debug cargo run --example chain
-RUST_LOG=none,ruci=debug cargo run --example chain -- remote.lua
+RUST_LOG=none,ruci=debug cargo run -F lua --example chain
+RUST_LOG=none,ruci=debug cargo run -F lua --example chain -- remote.lua
 
-RUST_LOG=none,ruci=debug cargo run --example chain_infinite -- local_mux_h2.lua
+RUST_LOG=none,ruci=debug cargo run -F lua --example chain_infinite -- local_mux_h2.lua
 
 
 # suit mode
@@ -40,7 +40,7 @@ then put it to resource folder
 need to enable rucimp's tun feature (which enables ruci's tun feature):
 
 ```sh
-sudo RUST_LOG=debug cargo run --example chain -F tun
+sudo RUST_LOG=debug cargo run --example chain -F tun -F lua
 ```
 
 ### macos test
