@@ -33,6 +33,7 @@ impl TcpOptListener {
         &self,
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
+        opt_fixed_target_addr: Option<net::Addr>,
     ) -> anyhow::Result<Receiver<MapResult>> {
         let listener = match so2::listen_tcp(a, &self.sopt) {
             Ok(l) => l,
@@ -41,17 +42,21 @@ impl TcpOptListener {
 
         let listener = ruci::net::listen::Listener::TCP(listener);
 
-        let r = accept::loop_accept(listener, shutdown_rx).await;
+        let r = accept::loop_accept(listener, shutdown_rx, opt_fixed_target_addr).await;
 
         Ok(r)
     }
 
     /// not recommended, use listen_addr
-    pub async fn listen_addr_forever(&self, a: &net::Addr) -> anyhow::Result<Receiver<MapResult>> {
+    pub async fn listen_addr_forever(
+        &self,
+        a: &net::Addr,
+        opt_fixed_target_addr: Option<net::Addr>,
+    ) -> anyhow::Result<Receiver<MapResult>> {
         let listener = so2::listen_tcp(a, &self.sopt)?;
         let listener = ruci::net::listen::Listener::TCP(listener);
 
-        let r = accept::loop_accept_forever(listener).await;
+        let r = accept::loop_accept_forever(listener, opt_fixed_target_addr).await;
 
         Ok(r)
     }
@@ -65,9 +70,11 @@ impl Mapper for TcpOptListener {
             None => &self.listen_addr,
         };
 
+        let opt_fixed_target_addr = self.configured_target_addr().cloned();
+
         let r = match params.shutdown_rx {
-            Some(rx) => self.listen_addr(a, rx).await,
-            None => self.listen_addr_forever(a).await,
+            Some(rx) => self.listen_addr(a, rx, opt_fixed_target_addr).await,
+            None => self.listen_addr_forever(a, opt_fixed_target_addr).await,
         };
 
         match r {

@@ -1,6 +1,6 @@
 use crate::{
-    map::{self},
-    net::listen::Listener,
+    map,
+    net::{self, listen::Listener},
 };
 use anyhow::anyhow;
 use tokio::sync::{
@@ -15,13 +15,14 @@ use super::MapResult;
 pub async fn loop_accept(
     listener: Listener,
     shutdown_rx: oneshot::Receiver<()>,
+    opt_fixed_target_addr: Option<net::Addr>,
 ) -> Receiver<MapResult> {
     let (tx, rx) = mpsc::channel(100);
 
     tokio::spawn(async move {
         let laddr = listener.laddr();
         tokio::select! {
-            r = real_loop_accept(listener,tx) =>{
+            r = real_loop_accept(listener,tx,opt_fixed_target_addr) =>{
                 r
             }
             _ = shutdown_rx => {
@@ -34,16 +35,23 @@ pub async fn loop_accept(
 }
 
 /// non-blocking
-pub async fn loop_accept_forever(listener: Listener) -> Receiver<MapResult> {
+pub async fn loop_accept_forever(
+    listener: Listener,
+    opt_fixed_target_addr: Option<net::Addr>,
+) -> Receiver<MapResult> {
     let (tx, rx) = mpsc::channel(100);
 
-    tokio::spawn(real_loop_accept(listener, tx));
+    tokio::spawn(real_loop_accept(listener, tx, opt_fixed_target_addr));
 
     rx
 }
 
 /// blocking
-async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::Result<()> {
+async fn real_loop_accept(
+    listener: Listener,
+    tx: Sender<MapResult>,
+    opt_fixed_target_addr: Option<net::Addr>,
+) -> anyhow::Result<()> {
     let last_r;
 
     loop {
@@ -70,7 +78,13 @@ async fn real_loop_accept(listener: Listener, tx: Sender<MapResult>) -> anyhow::
         let output_data = Box::new(data);
 
         let r = tx
-            .send(MapResult::builder().c(stream).d(Some(output_data)).build())
+            .send(
+                MapResult::builder()
+                    .a(opt_fixed_target_addr.clone())
+                    .c(stream)
+                    .d(Some(output_data))
+                    .build(),
+            )
             .await;
 
         if let Err(e) = r {

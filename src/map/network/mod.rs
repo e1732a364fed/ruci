@@ -191,22 +191,26 @@ impl Listener {
     pub async fn listen_addr(
         a: &net::Addr,
         shutdown_rx: oneshot::Receiver<()>,
+        opt_fixed_target_addr: Option<net::Addr>,
     ) -> anyhow::Result<Receiver<MapResult>> {
         let listener = match listen::listen(a).await {
             Ok(l) => l,
             Err(e) => return Err(e.context(format!("Listener failed for {}", a))),
         };
 
-        let r = accept::loop_accept(listener, shutdown_rx).await;
+        let r = accept::loop_accept(listener, shutdown_rx, opt_fixed_target_addr).await;
 
         Ok(r)
     }
 
     /// not recommended, use listen_addr
-    pub async fn listen_addr_forever(a: &net::Addr) -> anyhow::Result<Receiver<MapResult>> {
+    pub async fn listen_addr_forever(
+        a: &net::Addr,
+        opt_fixed_target_addr: Option<net::Addr>,
+    ) -> anyhow::Result<Receiver<MapResult>> {
         let listener = listen::listen(a).await?;
 
-        let r = accept::loop_accept_forever(listener).await;
+        let r = accept::loop_accept_forever(listener, opt_fixed_target_addr).await;
 
         Ok(r)
     }
@@ -223,10 +227,11 @@ impl Mapper for Listener {
         if tracing::enabled!(tracing::Level::DEBUG) {
             debug!(cid = %cid, addr = %a, "start listen")
         }
+        let opt_fixed_target_addr = self.configured_target_addr().cloned();
 
         let r = match params.shutdown_rx {
-            Some(rx) => Listener::listen_addr(a, rx).await,
-            None => Listener::listen_addr_forever(a).await,
+            Some(rx) => Listener::listen_addr(a, rx, opt_fixed_target_addr).await,
+            None => Listener::listen_addr_forever(a, opt_fixed_target_addr).await,
         };
 
         match r {

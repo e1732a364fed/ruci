@@ -7,7 +7,21 @@ listen = {
     Listener = { listen_addr = "0.0.0.0:10800"}
 }
 l2 = {
-    Listener = { listen_addr = "0.0.0.0:20800"}
+    Listener = { 
+        listen_addr = "0.0.0.0:20800",
+
+        --[[ 
+
+        -- 如果 ext 中的 fixed_target_addr 给出, 则其行为等价于
+        -- 一些其它代理程序中 所定义的 "dokodemo door (任意门)"
+
+        -- ruci 中, Listener,TcpOptListener, Dialer, Stdio, Fileio 都能如此配置
+
+        ext = {
+            fixed_target_addr = "1.1.1.1:80"
+        }
+        --]]
+    }
 }
 l3 = {
     Listener = { listen_addr = "0.0.0.0:30800"}
