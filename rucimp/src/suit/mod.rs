@@ -51,6 +51,13 @@ pub trait SuitConfigHolder: Send + Sync {
     }
 }
 
+/// 一种 Mapper 的容器
+pub trait MappersVec {
+    fn get_mappers_vec(&self) -> &Vec<MapperBox>;
+
+    fn push_mapper(&mut self, adder: MapperBox);
+}
+
 #[async_trait]
 pub trait Suit: SuitConfigHolder + MappersVec {
     /// stop 停止监听，同时移除一切因用户登录而生成的动态数据, 恢复到运行前的状态

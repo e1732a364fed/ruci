@@ -313,19 +313,12 @@ impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
 
-/// 一种 Mapper 的容器
-pub trait MappersVec {
-    fn get_mappers_vec(&self) -> &Vec<MapperBox>;
-
-    fn push_mapper(&mut self, adder: MapperBox);
-}
-
-/// TcpInAccumulator 是 inadders的累加器，在每一次 处理 新的 in 连接时都会被调用。
+/// TAccumulator 是 mappers 的累加器
 ///
 /// cid 为 跟踪 该连接的 标识
 /// 返回的元组包含新的 Conn 和 可能的目标地址
 ///
-/// 用途：从listen得到的tcp开始，一层一层往上加，直到加到能解析出代理目标地址为止
+/// decode: 用途： 从listen得到的tcp开始，一层一层往上加，直到加到能解析出代理目标地址为止
 ///
 /// 一般 【中同层是返回的 target_addr都是None，只有最后一层会返回出目标地址，即，
 ///只有代理层会有目标地址】

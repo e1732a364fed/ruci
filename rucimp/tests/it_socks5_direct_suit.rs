@@ -15,8 +15,8 @@ use std::{env::set_var, io, sync::Arc, time::Duration};
 use bytes::{BufMut, BytesMut};
 use futures::{pin_mut, select, FutureExt};
 use log::{info, warn};
+use ruci::map::socks5;
 use ruci::map::socks5::*;
-use ruci::map::{socks5, MappersVec};
 use ruci::{map::Mapper, net, user::UserPass};
 use rucimp::suit::config::adapter::{
     load_in_mappers_by_str_and_ldconfig, load_out_mappers_by_str_and_ldconfig,
