@@ -29,8 +29,8 @@ name = "chain"
 required-features = ["lua"]
 
 [target.armv7-unknown-linux-gnueabihf]
-linker = "arm-linux-gnueabihf-gcc"
+linker = "arm-linux-gnueabihf-g++"
 
 [target.aarch64-unknown-linux-gnu]
-linker = "aarch64-linux-gnu-gcc"
+linker = "aarch64-linux-gnu-g++"
 
