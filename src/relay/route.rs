@@ -1,10 +1,27 @@
 /*!
  * route 模块定义了一些 如何由inbound 的各种信息判断应该选哪个 outbound 作为出口 的方法
+
+它被一些代理称为 ACL (Access Control List), 但这个名称并不准确, "路由规则"更加准确. 因为
+不仅可以用于 "防火墙", 还可以用于分流
+
+因为本模块属于 ruci 包, 所以这里只实现一些简易通用的 OutSelector, 复杂的需要外部依赖包的实现 需要在其它包中实现。
+
+也因为, 复杂的规则往往有自定义的配置格式, 而ruci包是 配置无关的.
+
+
+trait: OutSelector
+
+impl: FixedOutSelector, TagOutSelector, RuleSetOutSelector
+
+struct: Rule, RuleSet
+
+
+
  */
+
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
-    net::IpAddr,
     sync::Arc,
 };
 
@@ -82,23 +99,6 @@ pub struct Rule {
     pub users: Option<UserVec>,
 }
 
-#[derive(Hash, Debug)]
-pub struct RouteRuleConfig {
-    pub out_tag: String,
-    pub users_es: Vec<user::UserVec>,
-    pub in_tags: Vec<String>,
-    pub ips: Vec<IpAddr>,
-    pub domains: Vec<String>,
-    pub networks: Vec<String>,
-    pub countries: Vec<String>,
-}
-
-impl RouteRuleConfig {
-    pub fn matches(&self, _r: Rule) -> bool {
-        unimplemented!()
-    }
-}
-
 /// (k,v), v 为 out_tag, k 为 所有能对应 v的 rule 值的集合
 #[derive(Debug)]
 pub struct RuleSet(HashSet<Rule>, String);
@@ -109,6 +109,10 @@ impl RuleSet {
 }
 
 /// 一种使用 Vec<RuleSet> 的 OutSelector 的实现
+///
+/// 仅用于 RuleSet很少 且每个 RuleSet 中的 HashSet<Rule> 中的 Rule
+/// 都很少的情况
+///
 #[derive(Debug)]
 pub struct RuleSetOutSelector {
     pub outbounds_ruleset_vec: Vec<RuleSet>, // rule -> out_tag

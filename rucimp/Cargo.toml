@@ -18,6 +18,9 @@ dyn-clone = "1"
 toml = "0.8.1"
 serde = { version = "1", features = ["derive"] }
 
+ipnet = "2.9.0"
+iprange = "0.6.7"
+regex = "1.10.3"
 
 mlua = { version = "0.9.5" , features = ["serialize","async", "send","parking_lot","luau","macros"] , optional = true }
 
