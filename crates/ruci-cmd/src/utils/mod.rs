@@ -28,6 +28,13 @@ pub enum Commands {
     /// start a interactive lua shell, which is a read–eval–print loop (REPL).
     #[cfg(any(feature = "lua", feature = "lua54"))]
     Repl,
+
+    /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name.
+    Pack { folder: String },
+
+    /// pack a folder into a .tar file, calculate its md5 hash and use it as the file name, then compress it into a .zip file
+    PackZ { folder: String },
+    // Test,
 }
 
 pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
@@ -53,6 +60,38 @@ pub async fn deal_cmds(command: Option<Commands>) -> anyhow::Result<()> {
         }
         #[cfg(any(feature = "lua", feature = "lua54"))]
         Commands::Repl => rucimp::utils::lua_repl(),
+        Commands::Pack { folder } => {
+            info!("packing into tar...");
+            let (bs, mut md5) = rucimp::utils::tar_folder_and_compute_md5(folder)?;
+            info!("md5: {md5}");
+
+            md5.push_str(".tar");
+
+            let mut file = fs::File::create(md5)?;
+            use std::io::Write;
+            file.write_all(&bs)?;
+
+            info!("saved ok");
+        }
+        Commands::PackZ { folder } => {
+            info!("packing into tar...");
+            let (bs, mut md5) = rucimp::utils::tar_folder_and_compute_md5(folder)?;
+            info!("md5: {md5}");
+
+            md5.push_str(".tar");
+
+            info!("compressing into zip...");
+
+            let data = rucimp::utils::compress_bytesmut_to_zip(&bs, &md5)?;
+
+            md5.push_str(".zip");
+
+            let mut file = fs::File::create(md5)?;
+            use std::io::Write;
+            file.write_all(&data)?;
+
+            info!("saved ok");
+        } // Commands::Test => {}
     };
     Ok(())
 }

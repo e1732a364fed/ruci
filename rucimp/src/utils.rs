@@ -4,6 +4,7 @@ Provides some helper functions to read a certain resource file or to wait the sh
 use std::{fs, path::PathBuf};
 
 use anyhow::anyhow;
+use bytes::{Buf, BufMut, BytesMut};
 use tokio::signal;
 use tracing::{debug, info};
 
@@ -177,4 +178,79 @@ pub fn lua_repl() {
             }
         }
     }
+}
+
+pub fn tar_folder_and_compute_md5<P: AsRef<std::path::Path>>(
+    src_dir: P,
+) -> std::io::Result<(BytesMut, String)> {
+    //https://crates.io/crates/tar
+    let bs = BytesMut::with_capacity(1024 * 1024);
+
+    let mut tar_builder = tar::Builder::new(bs.writer());
+
+    tar_builder.append_dir_all(".", src_dir)?;
+
+    tar_builder.finish()?;
+
+    let bs = tar_builder.into_inner()?.into_inner();
+
+    let md5_result = md5::compute(&bs);
+    Ok((bs, format!("{:x}", md5_result)))
+}
+
+pub fn compress_bytesmut_to_zip(
+    buf: &BytesMut,
+    file_name_in_zip: &str,
+) -> std::io::Result<Vec<u8>> {
+    // https://github.com/zip-rs/zip2/blob/master/examples/write_sample.rs
+
+    let bs = std::io::Cursor::new(Vec::new());
+
+    let mut zip_writer = zip::ZipWriter::new(bs);
+
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+
+    zip_writer.start_file(file_name_in_zip, options)?;
+    use std::io::Write;
+    zip_writer.write_all(buf)?;
+
+    let zr = zip_writer.finish()?;
+    let data = zr.into_inner();
+
+    Ok(data)
+}
+
+pub fn extract_vec_from_zip(file_name_in_zip: &str, v: Vec<u8>) -> std::io::Result<Vec<u8>> {
+    // https://github.com/zip-rs/zip2/blob/master/examples/extract_lorem.rs
+
+    let bs = std::io::Cursor::new(v);
+
+    let mut archive = zip::ZipArchive::new(bs).unwrap();
+
+    let mut file = archive.by_name(file_name_in_zip)?;
+
+    let mut v = vec![];
+    use std::io::Read;
+    file.read_to_end(&mut v)?;
+
+    Ok(v)
+}
+
+pub fn get_file_from_tar(b: BytesMut, file_name: &str) -> anyhow::Result<Vec<u8>> {
+    let mut a = tar::Archive::new(b.reader());
+
+    let tp = std::path::Path::new(file_name);
+
+    let mut e = a
+        .entries()
+        .unwrap()
+        .find(|a| a.as_ref().is_ok_and(|b| b.path().is_ok_and(|c| c == tp)))
+        .ok_or_else(|| anyhow!("can't find the file"))??;
+
+    let mut v = vec![];
+    use std::io::Read;
+    e.read_to_end(&mut v)?;
+    Ok(v)
 }
