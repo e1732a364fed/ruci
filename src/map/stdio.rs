@@ -116,7 +116,7 @@ impl Mapper for Stdio {
                 if let Err(e) = r {
                     return MapResult::from_e(e);
                 }
-                let r = c.flush().await;
+                let r = c.flush().await; //this flush is necessary
                 if let Err(e) = r {
                     return MapResult::from_e(e);
                 }

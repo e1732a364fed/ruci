@@ -28,7 +28,7 @@ impl Client {
         cid: CID,
         mut base: net::Conn,
         a: net::Addr,
-        mut b: Option<BytesMut>,
+        b: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
         //let mut base = params.c;
         let isudp = a.network == Network::UDP;
@@ -88,6 +88,19 @@ impl Client {
         }
         buf.clear();
 
+        let mut the_ed = b;
+
+        match self.get_pre_defined_early_data() {
+            Some(bf) => match the_ed {
+                Some(mut ed) => {
+                    ed.extend_from_slice(&bf);
+                    the_ed = Some(ed);
+                }
+                None => the_ed = Some(bf),
+            },
+            None => {}
+        }
+
         if isudp {
             buf.extend_from_slice(&[VERSION5, CMD_UDPASSOCIATE, 0][..]);
             net::helpers::addr_to_socks5_bytes(&Addr::default(), &mut buf);
@@ -119,7 +132,7 @@ impl Client {
             let ac = new_addr_conn(uso, server_udp_so);
 
             Ok(MapResult::newu(ac)
-                .b(b)
+                .b(the_ed)
                 .d(map::AnyData::B(Box::new(adopted_method)))
                 .build())
         } else {
@@ -137,15 +150,15 @@ impl Client {
                 ));
             }
 
-            if let Some(ed) = &b {
+            if let Some(ed) = &the_ed {
                 if self.is_tail_of_chain() {
                     base.write_all(&ed).await?;
-                    b = None
+                    the_ed = None
                 }
             }
 
             Ok(MapResult::newc(base)
-                .b(b)
+                .b(the_ed)
                 .d(map::AnyData::B(Box::new(adopted_method)))
                 .build())
         }

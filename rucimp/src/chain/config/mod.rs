@@ -198,6 +198,8 @@ pub struct UserPassField {
 pub struct Socks5Out {
     userpass: String,
     early_data: Option<bool>,
+
+    ext: Option<Ext>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -307,7 +309,7 @@ impl ToMapper for OutMapperConfig {
             }
             OutMapperConfig::Socks5(c) => {
                 let u = c.userpass.clone();
-                let a = socks5::client::Client {
+                let mut a = socks5::client::Client {
                     up: if u.is_empty() {
                         None
                     } else {
@@ -315,6 +317,9 @@ impl ToMapper for OutMapperConfig {
                     },
                     use_earlydata: c.early_data.unwrap_or_default(),
                 };
+                if let Some(ext) = &c.ext {
+                    a.set_ext_fields(Some(ext.to_ext_fields()))
+                }
                 Box::new(a)
             }
             OutMapperConfig::Trojan(pass) => {
