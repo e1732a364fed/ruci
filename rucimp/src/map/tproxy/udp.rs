@@ -330,10 +330,6 @@ impl AsyncWriteAddr for Writer {
         Poll::Ready(r)
     }
 
-    fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
-    }
-
     fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         let lock_future = self.conn_map.lock();
 

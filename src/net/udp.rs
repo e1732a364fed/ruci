@@ -163,14 +163,6 @@ impl AsyncWriteAddr for Conn {
             }
         }
     }
-
-    fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
-    }
 }
 
 impl AsyncReadAddr for Conn {
@@ -270,14 +262,6 @@ mod test {
             }
 
             Poll::Ready(Ok(buf.len()))
-        }
-
-        fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-            Poll::Ready(Ok(()))
         }
     }
 

@@ -28,6 +28,11 @@ pub trait AsyncReadAddr: crate::Name {
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>>;
+
+    /// 一般只在 write 端 close, 但是有些代码情况比较特殊，因此也给予 read 端 close 的操作
+    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
 }
 
 /// 每一次写数据时都同时附带一个 Addr
@@ -39,9 +44,13 @@ pub trait AsyncWriteAddr: crate::Name {
         addr: &Addr,
     ) -> Poll<io::Result<usize>>;
 
-    fn poll_flush_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>>;
+    fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
 
-    fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>>;
+    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
 }
 
 /// struct AddrConn wraps its read part `r` and write part `w`. With
@@ -104,6 +113,10 @@ macro_rules! deref_async_read_addr {
         ) -> Poll<io::Result<(usize, Addr)>> {
             Pin::new(&mut **self).poll_read_addr(cx, buf)
         }
+
+        fn poll_close_addr(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+            Pin::new(&mut **self).poll_close_addr(cx)
+        }
     };
 }
 
@@ -121,6 +134,13 @@ pub trait AsyncReadAddrExt: AsyncReadAddr {
         Self: Unpin,
     {
         ReadAddrFuture { reader: self, buf }
+    }
+
+    fn shutdown(&mut self) -> ShutdownR<'_, Self>
+    where
+        Self: Unpin,
+    {
+        shutdown_r(self)
     }
 }
 impl<T: AsyncReadAddr + ?Sized> AsyncReadAddrExt for T {}
@@ -205,6 +225,17 @@ pin_project_lite::pin_project! {
     }
 }
 
+pin_project_lite::pin_project! {
+
+    #[must_use = "futures do nothing unless you `.await` or poll them"]
+    #[derive(Debug)]
+    pub struct ShutdownR<'a, A: ?Sized> {
+        a: &'a mut A,
+        #[pin]
+        _pin: std::marker::PhantomPinned,
+    }
+}
+
 /// Creates a future which will shutdown an I/O object.
 pub(super) fn shutdown<A>(a: &mut A) -> Shutdown<'_, A>
 where
@@ -216,9 +247,31 @@ where
     }
 }
 
+pub(super) fn shutdown_r<A>(a: &mut A) -> ShutdownR<'_, A>
+where
+    A: AsyncReadAddr + Unpin + ?Sized,
+{
+    ShutdownR {
+        a,
+        _pin: std::marker::PhantomPinned,
+    }
+}
+
 impl<A> futures_util::Future for Shutdown<'_, A>
 where
     A: AsyncWriteAddr + Unpin + ?Sized,
+{
+    type Output = io::Result<()>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let me = self.project();
+        Pin::new(me.a).poll_close_addr(cx)
+    }
+}
+
+impl<A> futures_util::Future for ShutdownR<'_, A>
+where
+    A: AsyncReadAddr + Unpin + ?Sized,
 {
     type Output = io::Result<()>;
 
@@ -427,6 +480,7 @@ pub async fn cp_addr<R: AddrReadTrait + 'static, W: AddrWriteTrait + 'static>(
         }
     }
     let _ = w.shutdown().await;
+    let _ = r.shutdown().await;
 
     Ok(l)
 }

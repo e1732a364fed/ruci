@@ -4,7 +4,6 @@ Defines a [`Map`] called [`Stack`] using user level tcp/ip stack based on `smolt
 pub mod device;
 pub mod ip_packet;
 pub mod tcp;
-pub mod udp;
 pub mod udp2;
 
 use std::time::Duration;

@@ -112,7 +112,7 @@ impl AsyncWriteAddr for W {
 
         if ready!(me.tx.poll_reserve(cx)).is_ok() {
             if let Err(err) = me.tx.send_item((me.h, ipe, buf.into())) {
-                tracing::warn!("tcp send response failed: {}", err);
+                tracing::warn!("udp send response failed: {}", err);
                 Poll::Ready(Err(io::Error::other(err)))
             } else {
                 Poll::Ready(Ok(buf.len()))
@@ -120,14 +120,6 @@ impl AsyncWriteAddr for W {
         } else {
             Poll::Pending
         }
-    }
-
-    fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
     }
 }
 
@@ -147,5 +139,11 @@ impl AsyncReadAddr for R {
             }
             None => Poll::Ready(Ok((0, Addr::default()))),
         }
+    }
+
+    fn poll_close_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        let me = self.get_mut();
+        me.rx.close();
+        Poll::Ready(Ok(()))
     }
 }

@@ -31,6 +31,12 @@ RUST_LOG=none,ruci=debug cargo run --features "lua quinn tun sockopt" --example 
 
 ```
 
+powershell 的指定日志等级前缀：
+
+```powershell
+$Env:RUST_LOG="none,ruci=debug";
+```
+
 ( (h2 的代码实现所依赖的 h2包)、 quic 包、 rustls 等包 都会在debug 下打印大量日志输出, 影响观察ruci本身的日志信息, 
 故使用 RUST_LOG=none,ruci=debug 过滤掉非ruci 的 日志)
 

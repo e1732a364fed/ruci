@@ -658,16 +658,6 @@ impl SmoltcpDevice {
         }
     }
 
-    // fn remove_tcp(&mut self, src: IpEndpoint) {
-    //     tracing::debug!("remove tcp {}", src);
-    //     let mut tcp_src_handle_map_lock = self.tcp_src_handle_map.lock();
-    //     if let Some(h) = tcp_src_handle_map_lock.get(&src) {
-    //         self.sockets.remove(*h);
-    //         tcp_src_handle_map_lock.remove(&src);
-    //     }
-    //     self.tcp_read_data_tx_map.lock().remove(&src);
-    // }
-
     fn remove_tcp_list(&mut self, list: Vec<IpEndpoint>) {
         //tracing::debug!("remove udp {}", src);
 
@@ -682,18 +672,6 @@ impl SmoltcpDevice {
             tcp_read_data_tx_map_lock.remove(&src);
         }
     }
-
-    // fn remove_udp(&mut self, src: IpEndpoint) {
-    //     tracing::debug!("remove udp {}", src);
-
-    //     let mut udp_src_handle_map_lock = self.udp_src_handle_map.lock();
-    //     if let Some(h) = udp_src_handle_map_lock.get(&src) {
-    //         self.sockets.remove(*h);
-    //         udp_src_handle_map_lock.remove(&src);
-    //     }
-
-    //     self.udp_read_data_tx_map.lock().remove(&src);
-    // }
 
     fn remove_udp_list(&mut self, list: Vec<IpEndpoint>) {
         //tracing::debug!("remove udp {}", src);
