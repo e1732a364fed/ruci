@@ -259,6 +259,66 @@ impl AsyncWrite for MockTcpStream {
     }
 }
 
+/// useful for testing
+#[derive(Debug)]
+pub struct MockTcpStream2 {
+    pub read_data: &'static mut Vec<u8>,
+    pub write_data: &'static mut Vec<u8>,
+    pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
+}
+impl crate::Name for MockTcpStream2 {
+    fn name(&self) -> &str {
+        "mock_tcpstream2"
+    }
+}
+
+impl Unpin for MockTcpStream2 {}
+impl AsyncRead for MockTcpStream2 {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        _: &mut Context,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        debug!("MockTcp: read called");
+        let size: usize = min(self.read_data.len(), buf.initialized().len());
+        buf.put(&self.read_data[..size]);
+
+        let new_len = self.read_data.len() - size;
+
+        self.read_data.copy_within(size.., 0);
+        self.read_data.truncate(new_len);
+
+        Poll::Ready(Ok(()))
+    }
+}
+
+impl AsyncWrite for MockTcpStream2 {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        _: &mut Context,
+        buf: &[u8],
+    ) -> Poll<Result<usize, Error>> {
+        let mut x = Vec::from(buf);
+
+        if let Some(swt) = &self.write_target {
+            let mut v = swt.lock();
+            v.append(&mut x);
+        } else {
+            self.write_data.append(&mut x)
+        }
+
+        Poll::Ready(Ok(buf.len()))
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context) -> Poll<Result<(), Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context) -> Poll<Result<(), Error>> {
+        Poll::Ready(Ok(()))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -42,3 +42,8 @@ macro_mapper ={ path = "crates/macro_mapper" }
 
 [dev-dependencies]
 env_logger = "0.11.1"
+criterion = {version = "0.5.1", features = ["async_tokio"]}
+
+[[bench]]
+name = "my_ben"
+harness = false

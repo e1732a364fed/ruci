@@ -153,6 +153,11 @@ impl Name for Adder {
         "adder"
     }
 }
+impl std::fmt::Display for Adder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "adder {:?} {}", self.direction, self.addnum)
+    }
+}
 
 impl ToMapper for i8 {
     /// AddDirection = Read

@@ -536,6 +536,13 @@ impl Stream {
         Err(io::Error::other("not tcp"))
     }
 
+    pub fn try_unwrap_tcp_ref(&self) -> io::Result<&Conn> {
+        if let Stream::TCP(t) = self {
+            return Ok(t);
+        }
+        Err(io::Error::other("not tcp"))
+    }
+
     pub fn try_unwrap_udp(self) -> io::Result<AddrConn> {
         if let Stream::UDP(t) = self {
             return Ok(t);
