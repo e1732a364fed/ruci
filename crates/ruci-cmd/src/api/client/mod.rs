@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Clone)]
 pub enum Commands {
     Get1,
     Get2,

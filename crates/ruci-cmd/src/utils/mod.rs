@@ -11,7 +11,7 @@ pub const WINTUN_DOWNLOAD_LINK: &str = "https://www.wintun.net/builds/wintun-0.1
 pub const MMDB_DOWNLOAD_LINK: &str =
     "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb";
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Clone)]
 pub enum Commands {
     DownloadMMDB,
     DownloadWINTUN,

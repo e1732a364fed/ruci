@@ -6,13 +6,18 @@ default enables none.
 utils feature 可用于下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.dll
 
 
-run with api server :3000
+
+run with api server
 
 ```
 RUST_LOG=debug cargo run -F api_server -F api_client -F utils -F trace -- -a run
 ```
 
 # api server
+
+默认api 监听为 127.0.0.1:40681 , file_server 监听默认为 0.0.0.0:18143
+
+可用 --api-addr 和 --file-server-addr 改变
 
 -a run 运行
 

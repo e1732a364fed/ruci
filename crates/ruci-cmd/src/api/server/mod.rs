@@ -24,10 +24,10 @@ pub enum Command {
     FileServer,
 }
 
-pub async fn deal_cmds(cmd: Command) -> Option<(Server, mpsc::Receiver<()>)> {
+pub async fn deal_args(cmd: Command, args: &crate::Args) -> Option<(Server, mpsc::Receiver<()>)> {
     match cmd {
-        Command::Run => return Some(Server::new().await),
-        Command::FileServer => folder_serve::serve_static().await,
+        Command::Run => return Some(Server::new(args.api_addr.clone()).await),
+        Command::FileServer => folder_serve::serve_static(args.file_server_addr.clone()).await,
     }
     None
 }
@@ -52,6 +52,8 @@ pub struct TracePart {
 }
 
 pub struct Server {
+    listen_addr: Option<String>,
+
     pub close_tx: mpsc::Sender<()>,
 
     pub newconn_info: NewConnInfoMap,
@@ -62,9 +64,10 @@ pub struct Server {
 
 impl Server {
     /// non-blocking, init the server and run it
-    pub async fn new() -> (Self, mpsc::Receiver<()>) {
+    pub async fn new(listen_addr: Option<String>) -> (Self, mpsc::Receiver<()>) {
         let (tx, rx) = mpsc::channel(10);
         let s = Server {
+            listen_addr,
             close_tx: tx,
             newconn_info: Arc::new(RwLock::new(BTreeMap::new())),
 
@@ -188,7 +191,10 @@ async fn stop_core(State(tx): State<mpsc::Sender<()>>) -> String {
 
 /// non-blocking
 pub async fn serve(s: &Server) {
-    let addr = "0.0.0.0:3000";
+    let addr = s
+        .listen_addr
+        .clone()
+        .unwrap_or(String::from("127.0.0.1:40681"));
     info!("api server starting {addr}");
 
     let mut app = Router::new().route("/stop_core", get(stop_core).with_state(s.close_tx.clone()));
@@ -233,7 +239,7 @@ pub async fn serve(s: &Server) {
     // RUST_LOG=tower_http=trace
 
     use tower_http::trace::TraceLayer;
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
     tokio::spawn(async move {
         axum::serve(listener, app.layer(TraceLayer::new_for_http()))

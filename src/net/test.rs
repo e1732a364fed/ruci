@@ -1,9 +1,17 @@
 use std::net::IpAddr;
 use std::net::ToSocketAddrs;
 
+use crate::net::gen_random_higher_port;
+
 use super::Addr;
 
 const TEST_DOMAIN: &str = "www.baidu.com";
+
+#[test]
+fn randomport() {
+    let x = gen_random_higher_port();
+    println!("{:?}", x);
+}
 
 #[test]
 #[should_panic]

@@ -23,7 +23,7 @@ enum Mode {
 }
 
 /// ruci command line parameters:
-#[derive(Parser)]
+#[derive(Parser, Clone)]
 #[command(author = "e")]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -42,11 +42,21 @@ struct Args {
     #[arg(short, long, value_enum)]
     api_server: Vec<api::server::Command>,
 
+    /// default is "127.0.0.1:40681"
+    #[cfg(feature = "api_server")]
+    #[arg(long)]
+    api_addr: Option<String>,
+
+    /// default is "0.0.0.0:18143"
+    #[cfg(feature = "api_server")]
+    #[arg(long)]
+    file_server_addr: Option<String>,
+
     #[command(subcommand)]
     sub_cmds: Option<SubCommands>,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Clone)]
 enum SubCommands {
     /// api client
     #[cfg(feature = "api_client")]
@@ -79,8 +89,9 @@ async fn main() -> anyhow::Result<()> {
         None => {
             #[cfg(feature = "api_server")]
             {
-                for cmd in args.api_server {
-                    let x = api::server::deal_cmds(cmd).await;
+                let api_server_args = args.api_server.clone();
+                for arg in api_server_args {
+                    let x = api::server::deal_args(arg, &args).await;
                     if let Some(opts) = x {
                         start_engine(args.mode.clone(), args.config.clone(), Some(opts)).await?;
                     }

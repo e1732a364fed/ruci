@@ -43,8 +43,9 @@ async fn download(Path(filename): Path<String>) -> Result<Vec<u8>, StatusCode> {
 }
 
 /// non-blocking
-pub async fn serve_static() {
-    let addr = "0.0.0.0:6000";
+pub async fn serve_static(listen_addr: Option<String>) {
+    let addr = listen_addr.clone().unwrap_or(String::from("0.0.0.0:18143"));
+
     info!("serving folder {addr}");
 
     // RUST_LOG=tower_http=trace
@@ -53,7 +54,7 @@ pub async fn serve_static() {
         .route("/*folder", get(index))
         .route("/download/*filename", get(download));
     use tower_http::trace::TraceLayer;
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
     tokio::spawn(async move {
         axum::serve(listener, app.layer(TraceLayer::new_for_http()))
