@@ -114,6 +114,7 @@ impl Args {
             log_file: self.log_file.clone(),
             log_dir: self.log_dir.clone(),
             infinite: self.infinite,
+            #[cfg(feature = "trace")]
             trace: self.trace,
             api_server: self.api_server,
             api_addr: self.api_addr.clone(),
@@ -136,8 +137,6 @@ enum SubCommands {
         #[command(subcommand)]
         command: Option<utils::Commands>,
     },
-    // Configure system route table
-    // Route,
 }
 
 #[tokio::main]

@@ -364,7 +364,18 @@ pub async fn dl_url(url: &str, file_name: Option<&str>) -> anyhow::Result<Option
 }
 
 async fn download_webui() -> anyhow::Result<()> {
-    dl_url(RUCI_WEBUI_DOWNLOAD_LINK, None).await?;
+    const FILENAME: &str = "webui.tar.gz";
+    dl_url(RUCI_WEBUI_DOWNLOAD_LINK, Some(FILENAME)).await?;
+
+    use flate2::read::GzDecoder;
+    use std::fs::File;
+    use tar::Archive;
+
+    let tar_gz = File::open(FILENAME)?;
+    let tar = GzDecoder::new(tar_gz);
+    let mut archive = Archive::new(tar);
+    archive.unpack(".")?;
+
     Ok(())
 }
 
@@ -491,6 +502,7 @@ pub fn register_command_apis(
     api_extensions: &mut rucimp::api::ApiExtensionMap,
 ) -> anyhow::Result<()> {
     use axum::routing::{get, post};
+    use tracing::debug;
 
     let mut extensions = api_extensions.write();
 
@@ -515,7 +527,15 @@ pub fn register_command_apis(
     );
 
     extensions.insert(
-        "/api/utils/mmdb".to_string(),
+        "/api/utils/download/webui".to_string(),
+        get(|| async {
+            let r = download_webui().await;
+            format!("{r:?}")
+        }),
+    );
+
+    extensions.insert(
+        "/api/utils/download/mmdb".to_string(),
         get(|| async {
             let r = download_wintun().await;
             format!("{r:?}")
@@ -523,7 +543,7 @@ pub fn register_command_apis(
     );
 
     extensions.insert(
-        "/api/utils/wintun".to_string(),
+        "/api/utils/download/wintun".to_string(),
         get(|| async {
             let r = download_mmdb().await;
             format!("{r:?}")
@@ -597,7 +617,7 @@ pub fn register_command_apis(
         ,
     );
 
-    info!("utils: Registered {} command APIs", extensions.len());
+    debug!("utils: Registered {} command APIs", extensions.len());
 
     Ok(())
 }

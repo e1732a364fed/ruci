@@ -11,7 +11,7 @@ use parking_lot::RwLock;
 use ruci::net::{GlobalTrafficRecorder, CID};
 use ruci::relay::NewConnInfo;
 use tokio::sync::{mpsc, Mutex};
-use tracing::info;
+use tracing::{debug, info};
 
 pub const DEFAULT_API_ADDR: &str = "127.0.0.1:40681";
 
@@ -475,7 +475,7 @@ pub async fn serve(
     // 添加扩展API
     for (path, handler) in s.api_extensions.read().iter() {
         app = app.route(path, handler.clone());
-        info!("Added extension API: {}", path);
+        debug!("Added extension API: {}", path);
     }
 
     #[cfg(feature = "trace")]

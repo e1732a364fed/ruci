@@ -74,11 +74,18 @@ quic feature 使用的是 s2n-quic, 其不能在windows编译, 且与其它代�
 
 # utils
 
+大部分 utils 均有其对应的 api 供远程调用，api 格式见
+https://github.com/e1732a364fed/ruci/blob/tokio/crates/ruci-cmd/src/utils/mod.rs
+中的 register_command_apis 函数
+
 ## 下载外部依赖文件
 
 ./ruci-cmd utils mmdb
 
 ./ruci-cmd utils wintun
+
+./ruci-cmd utils webui
+自动下载 ruci-webui 的 发布包，并 解压到 dist 文件夹
 
 ## 生成自签名根证书:
 
