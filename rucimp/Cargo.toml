@@ -25,7 +25,8 @@ futures-lite = { workspace = true }
 pin-project = { workspace = true }
 
 data-source = { workspace = true }
-
+axum = { workspace = true, optional = true }
+tower-http = { workspace = true, optional = true }
 
 chrono = { version = "0.4", features = ["serde"] }
 
@@ -106,6 +107,8 @@ reqwest = { version = "0.12", features = ["json"] }
 
 har = "0.8.1"
 
+TinyUFO = { version = "0.1", optional = true }
+
 
 [target.'cfg(not(all(target_os = "windows", target_env = "msvc")))'.dependencies]
 netstack-lwip = { git = "https://github.com/e1732a364fed/netstack-lwip.git", rev = "b66a15d", optional = true }
@@ -130,6 +133,7 @@ wiremock = "0.6"
 [features]
 default = ["sockopt"]
 steganography = []
+api_server = ["axum", "tower-http", "TinyUFO"]
 
 # quic = ["s2n-quic", "s2n-quic-rustls", "ruci-rustls21"]
 quinn = ["ruci-rustls21", "dep:quinn"]

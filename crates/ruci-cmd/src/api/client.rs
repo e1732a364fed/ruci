@@ -2,8 +2,9 @@ use std::time::Duration;
 
 use anyhow::Context;
 
-use super::*;
 use anyhow::Result;
+use clap::Subcommand;
+use rucimp::api::DEFAULT_API_ADDR;
 
 #[derive(Subcommand, Clone)]
 pub enum Commands {

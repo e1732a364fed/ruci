@@ -13,6 +13,9 @@ pub mod utils;
 
 pub mod route;
 
+#[cfg(feature = "api_server")]
+pub mod api;
+
 pub use serde_json;
 pub use strum;
 

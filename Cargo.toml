@@ -47,6 +47,8 @@ parking_lot = "0.12"
 smallvec = { version = "1.13", features = ["serde"] }
 dyn-clone = "1"
 tar = "0.4"
+axum = { version = "0.7" }
+tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
 
 data-source = { version = "0.1.2" }
 

@@ -18,7 +18,8 @@ mod mode;
 use std::env::{self, set_var};
 
 use clap::{Parser, Subcommand, ValueEnum};
-use rucimp::DEFAULT_LUA_CONFIG_FILE_NAME;
+use rucimp::{modes::CoreArgs, DEFAULT_LUA_CONFIG_FILE_NAME};
+use tokio::sync::Mutex;
 use tracing::{debug, info};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -27,12 +28,19 @@ enum Mode {
     #[default]
     C,
 }
+impl Mode {
+    fn to_core_mode(&self) -> rucimp::modes::Mode {
+        match self {
+            Mode::C => rucimp::modes::Mode::Chain,
+        }
+    }
+}
 
 /// ruci command line parameters:
 #[derive(Parser, Clone)]
 #[command(author = "e")]
 #[command(version, about, long_about = None)]
-struct Args {
+pub struct Args {
     /// choose the rucimp core mode
     #[arg(short, long, value_enum, default_value_t = Mode::C )]
     mode: Mode,
@@ -51,7 +59,7 @@ struct Args {
     in_memory: bool,
 
     #[arg(short, long)]
-    log_level: Option<tracing::Level>,
+    log_level: Option<rucimp::modes::LevelWrapper>,
 
     /// Specify the log file prefix name.
     ///
@@ -81,8 +89,8 @@ struct Args {
     trace: bool,
 
     #[cfg(feature = "api_server")]
-    #[arg(short, long, value_enum)]
-    api_server: Vec<api::server::Command>,
+    #[arg(short, long, default_value_t = false)]
+    api_server: bool,
 
     /// Default is "127.0.0.1:40681"
     #[cfg(feature = "api_server")]
@@ -91,6 +99,25 @@ struct Args {
 
     #[command(subcommand)]
     sub_cmds: Option<SubCommands>,
+}
+
+impl Args {
+    fn to_core_args(&self) -> rucimp::modes::CoreArgs {
+        CoreArgs {
+            mode: self.mode.to_core_mode(),
+            config_file_name: Some(self.config.clone()),
+            config_file_content: "".to_string(),
+            data_source: None,
+            in_memory: self.in_memory,
+            log_level: self.log_level,
+            log_file: self.log_file.clone(),
+            log_dir: self.log_dir.clone(),
+            infinite: self.infinite,
+            trace: self.trace,
+            api_server: self.api_server,
+            api_addr: self.api_addr.clone(),
+        }
+    }
 }
 
 #[derive(Subcommand, Clone)]
@@ -122,21 +149,47 @@ async fn main() -> anyhow::Result<()> {
         None => {
             #[cfg(feature = "api_server")]
             {
-                let api_server_args = args.api_server.clone();
-                let mut started = false;
-                for arg in api_server_args {
-                    let oa = api::server::deal_args(arg, &args).await;
-                    if let Some(opts) = oa {
-                        started = true;
-                        start_engine(args.clone(), args.config.clone(), Some(opts)).await?;
+                let mut api_server_opts: Option<(
+                    rucimp::api::Server,
+                    tokio::sync::mpsc::Receiver<()>,
+                    std::sync::Arc<ruci::net::GlobalTrafficRecorder>,
+                )> = None;
+
+                let mut engine_started = false;
+                let mut api_server_started = false;
+
+                let epots = std::sync::Arc::new(Mutex::new(None));
+
+                if args.api_server {
+                    let opts = rucimp::api::Server::new(args.api_addr.clone(), epots.clone()).await;
+                    api_server_started = true;
+
+                    if args.config == DEFAULT_LUA_CONFIG_FILE_NAME {
+                        api_server_opts = Some(opts);
+                    } else {
+                        start_engine(args.clone(), Some(opts)).await?;
+                        engine_started = true;
                     }
                 }
-                if !started {
-                    start_engine(args.clone(), args.config, None).await?;
+                if !engine_started {
+                    if api_server_started && args.config == DEFAULT_LUA_CONFIG_FILE_NAME {
+                        // 如果api server 给出，且 配置 文件为默认值，则不直接运行 engine, 而是只启动 api_server, 并在
+                        // api_server 中进行监听，等待 启动engine 的 api 被调用
+
+                        if let Some(opts) = api_server_opts {
+                            let _ = epots.lock().await.insert(opts);
+
+                            info!("api server started, running api...");
+
+                            rucimp::utils::wait_close_sig().await?
+                        }
+                    } else {
+                        start_engine(args.clone(), None).await?;
+                    }
                 }
             }
             #[cfg(not(feature = "api_server"))]
-            start_engine(args.clone(), args.config).await?;
+            start_engine(args.clone()).await?;
         }
 
         Some(cs) => match cs {
@@ -176,7 +229,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     let mut not_given_env = false;
 
     let given_level = if let Some(l) = args.log_level {
-        l.as_str()
+        l.0.as_str()
     } else {
         not_given_flag = true;
         "info"
@@ -297,22 +350,27 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 }
 
 /// blocking
-async fn start_engine(
+pub async fn start_engine(
     args: Args,
-    file_name: String,
-    #[cfg(feature = "api_server")] opts: Option<(
-        api::server::Server,
+    #[cfg(feature = "api_server")] api_server_opts: Option<(
+        rucimp::api::Server,
         tokio::sync::mpsc::Receiver<()>,
         std::sync::Arc<ruci::net::GlobalTrafficRecorder>,
     )>,
 ) -> anyhow::Result<()> {
     match args.mode {
         Mode::C => {
-            mode::chain::run(
-                file_name,
+            let (fc, ds) =
+                mode::chain::get_config_file(&mut args.config.clone(), args.in_memory).await?;
+
+            let mut args = args.to_core_args();
+            args.config_file_content = fc;
+            args.data_source = Some(std::sync::Arc::new(ds));
+
+            rucimp::modes::run(
                 args,
                 #[cfg(feature = "api_server")]
-                opts,
+                api_server_opts,
             )
             .await?;
         }

@@ -172,4 +172,4 @@ lua配置使用 infinite:
 
 运行配置的同时 开启 api-server:
 
-    ./ruci-cmd -c remote.lua -a run 
+    ./ruci-cmd -c remote.lua -a 

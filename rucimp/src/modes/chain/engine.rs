@@ -30,6 +30,8 @@ use tokio::sync::{
 use tokio::task::JoinSet;
 use tracing::{debug, info, warn};
 
+pub type InitEngineFn = Box<dyn Send + FnOnce(&mut Engine) -> anyhow::Result<()>>;
+
 #[derive(Default)]
 pub struct Engine {
     pub global_data: ruci::map::GlobalData,
@@ -445,6 +447,42 @@ impl Engine {
         Ok(())
     }
 
+    /// 阻塞运行Engine, 其运行结束后 会自动对 Engine 调用 reset
+    pub async fn run_with_close_rx(
+        &mut self,
+        close_rx: Option<mpsc::Receiver<()>>,
+    ) -> anyhow::Result<()> {
+        use anyhow::Context;
+        let mut js = self.run().await.context("run_engine got error")?;
+
+        info!("started rucimp chain engine");
+
+        match close_rx {
+            Some(rx) => crate::utils::wait_close_sig_with_closer(rx).await?,
+            None => crate::utils::wait_close_sig().await?,
+        }
+
+        std::thread::spawn(|| {
+            const WAIT_SEC: u64 = 10;
+            std::thread::sleep(time::Duration::from_secs(WAIT_SEC));
+            tracing::warn!("Force shutdown after {WAIT_SEC} secs!");
+            println!("Force shutdown after {WAIT_SEC} secs!");
+            std::process::exit(1);
+        });
+
+        self.stop().await;
+
+        js.shutdown().await;
+
+        self.reset().await;
+        tracing::info!(
+            "chain engine shutted down gracefully, {}",
+            self.global_data.run_instance_id
+        );
+
+        Ok(())
+    }
+
     /// A helper function to start an engine with a static config, run it until it got shutdown signal, then stop it.
     pub async fn new_and_run_static(sc: StaticConfig) -> anyhow::Result<()> {
         let f = move |e: &mut Engine| {
@@ -458,5 +496,3 @@ impl Engine {
         Engine::new_and_run(Box::new(f)).await
     }
 }
-
-pub type InitEngineFn = Box<dyn Send + FnOnce(&mut Engine) -> anyhow::Result<()>>;

@@ -33,7 +33,6 @@ tower-http = { version = "0.5", features = [
   "cors",
 ], optional = true }
 
-TinyUFO = { version = "0.1", optional = true }
 reqwest = { version = "0.12", default-features = false, features = [
   "json",
   "stream",
@@ -44,7 +43,6 @@ rcgen = { version = "0.13", optional = true }
 
 qrcode = { version = "0.14", optional = true, default-features = false }
 
-# toml = "0.8"
 serde_path_to_error = "0.1"
 serde-transcode = "1.1"
 serde-value = "0.7"
@@ -59,12 +57,12 @@ tun = ["rucimp/tun"]
 # quic = ["rucimp/quic"]
 quinn = ["rucimp/quinn"]
 
-api_server = ["chrono", "axum", "tower", "tower-http"]
+api_server = ["chrono", "rucimp/api_server"]
 api_client = ["reqwest"]
 file_server = ["axum", "tower-http"]
 
 utils = ["reqwest", "rcgen", "qrcode"]
-trace = ["rucimp/trace", "TinyUFO"]
+trace = ["rucimp/trace"]
 
 use-native-tls = ["rucimp/use-native-tls"]
 native-tls-vendored = ["rucimp/native-tls-vendored"]

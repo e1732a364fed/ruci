@@ -1,51 +1,32 @@
-use std::{
-    collections::BTreeMap,
-    sync::{atomic::Ordering, Arc},
-};
+use std::collections::BTreeMap;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
-#[cfg(feature = "trace")]
-use std::sync::atomic::AtomicBool;
-
+use axum::extract::{Path, State};
+use axum::{routing::get, Router};
 use chrono::{DateTime, Utc};
-
 use parking_lot::RwLock;
-use ruci::{
-    net::{GlobalTrafficRecorder, CID},
-    relay::NewConnInfo,
-};
-#[cfg(feature = "trace")]
-use tinyufo::TinyUfo;
-use tokio::sync::mpsc;
+use ruci::net::{GlobalTrafficRecorder, CID};
+use ruci::relay::NewConnInfo;
+use tokio::sync::{mpsc, Mutex};
 use tracing::info;
 
-use super::*;
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-pub enum Command {
-    /// start api server
-    Run,
-}
-
-pub async fn deal_args(
-    cmd: Command,
-    args: &crate::Args,
-) -> Option<(Server, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>)> {
-    match cmd {
-        Command::Run => Some(Server::new(args.api_addr.clone()).await),
-    }
-}
+pub const DEFAULT_API_ADDR: &str = "127.0.0.1:40681";
 
 type NewConnInfoMap = Arc<RwLock<BTreeMap<CID, (DateTime<Utc>, NewConnInfo)>>>;
 
 /// 缓存 某cid的 某时间点的流量
-#[cfg(feature = "trace")]
-type FluxCache = Arc<TinyUfo<CID, Vec<(tokio::time::Instant, u64)>>>;
-#[cfg(feature = "trace")]
+#[cfg(all(feature = "trace", feature = "api_server"))]
+type FluxCache = Arc<tinyufo::TinyUfo<CID, Vec<(tokio::time::Instant, u64)>>>;
+#[cfg(all(feature = "trace", feature = "api_server"))]
 fn new_cache() -> FluxCache {
-    Arc::new(TinyUfo::new(100, 100))
+    Arc::new(tinyufo::TinyUfo::new(100, 100))
 }
 
-#[cfg(feature = "trace")]
+#[cfg(all(feature = "trace", feature = "api_server"))]
+use std::sync::atomic::AtomicBool;
+
+#[cfg(all(feature = "trace", feature = "api_server"))]
 pub struct TracePart {
     pub is_monitoring: Arc<AtomicBool>,
 
@@ -59,8 +40,7 @@ pub struct TracePart {
 pub struct Server {
     listen_addr: Option<String>,
 
-    //pub global_traffic: Arc<ruci::net::GlobalTrafficRecorder>,
-    pub close_tx: mpsc::Sender<()>,
+    pub close_engine_tx: mpsc::Sender<()>,
 
     pub new_conn_info_map: NewConnInfoMap,
 
@@ -72,11 +52,15 @@ impl Server {
     /// non-blocking, init the server and run it
     pub async fn new(
         listen_addr: Option<String>,
+        start_core_opts: Opts,
     ) -> (Self, mpsc::Receiver<()>, Arc<GlobalTrafficRecorder>) {
         let (tx, rx) = mpsc::channel(10);
-        let s = Server {
+
+        let global_traffic = Arc::new(GlobalTrafficRecorder::default());
+
+        let server = Server {
             listen_addr,
-            close_tx: tx,
+            close_engine_tx: tx,
             new_conn_info_map: Arc::new(RwLock::new(BTreeMap::new())),
 
             #[cfg(feature = "trace")]
@@ -86,14 +70,10 @@ impl Server {
                 d_cache: new_cache(),
             },
         };
-        let global_traffic = Arc::new(GlobalTrafficRecorder::default());
-        serve(&s, global_traffic.clone()).await;
-        (s, rx, global_traffic)
+        serve(&server, global_traffic.clone(), start_core_opts).await;
+        (server, rx, global_traffic)
     }
 }
-
-use axum::extract::{Path, State};
-use axum::{routing::get, Router};
 
 #[cfg(feature = "trace")]
 async fn is_monitoring_flux(State(is_monitoring_flux): State<Arc<AtomicBool>>) -> String {
@@ -239,16 +219,48 @@ async fn stop_core(State(tx): State<mpsc::Sender<()>>) -> String {
     format!("{:?}", r)
 }
 
-/// non-blocking
-pub async fn serve(s: &Server, global_traffic: Arc<ruci::net::GlobalTrafficRecorder>) {
+pub type Opts = Arc<
+    Mutex<
+        Option<(
+            Server,
+            tokio::sync::mpsc::Receiver<()>,
+            Arc<ruci::net::GlobalTrafficRecorder>,
+        )>,
+    >,
+>;
+
+async fn start_core(
+    State(api_server_opts): State<Opts>,
+    axum::Json(args): axum::Json<crate::modes::CoreArgs>,
+) -> String {
+    let opts = api_server_opts.lock().await.take();
+    match opts {
+        Some(opts) => {
+            let r = crate::modes::run(args, Some(opts)).await;
+            format!("{:?}", r)
+        }
+        None => "server not started".to_string(),
+    }
+}
+
+/// non-blocking, it calls tokio::spawn
+pub async fn serve(
+    s: &Server,
+    global_traffic: Arc<ruci::net::GlobalTrafficRecorder>,
+    start_core_opts: Opts,
+) {
     let addr = s
         .listen_addr
         .clone()
         .unwrap_or_else(|| String::from(DEFAULT_API_ADDR));
     info!("api server starting {addr}");
 
-    let mut app = Router::new().route("/stop_core", get(stop_core).with_state(s.close_tx.clone()));
+    let mut app = Router::new().route(
+        "/stop_core",
+        get(stop_core).with_state(s.close_engine_tx.clone()),
+    );
     app = app
+        .route("/start", get(start_core).with_state(start_core_opts))
         .route(
             "/gt/acc",
             get(get_alive_conn_count).with_state(global_traffic.clone()),
@@ -321,4 +333,109 @@ pub async fn serve(s: &Server, global_traffic: Arc<ruci::net::GlobalTrafficRecor
     });
 
     info!("api server started {addr}");
+}
+
+pub async fn setup_api_server_with_chain_engine(
+    e: &mut crate::modes::chain::engine::Engine,
+    #[cfg(feature = "trace")] is_trace: bool,
+    api_ser: &mut Server,
+    gtr: Arc<ruci::net::GlobalTrafficRecorder>,
+) {
+    e.gtr = gtr;
+
+    setup_record_new_conn_info_with_chain_engine(e, api_ser).await;
+    #[cfg(feature = "trace")]
+    if is_trace {
+        setup_trace_flux_for_chain_engine(e, api_ser).await;
+    }
+}
+
+/// 记录新连接信息
+pub async fn setup_record_new_conn_info_with_chain_engine(
+    e: &mut crate::modes::chain::engine::Engine,
+    api_ser: &mut Server,
+) {
+    let (nci_tx, mut nci_rx) = mpsc::channel(100);
+
+    e.new_conn_recorder = Some(nci_tx);
+
+    let aci = api_ser.new_conn_info_map.clone();
+
+    tokio::spawn(async move {
+        loop {
+            let x = nci_rx.recv().await;
+            match x {
+                Some(nc) => {
+                    let mut aci = aci.write();
+                    let cid = nc.cid.clone();
+
+                    use chrono::Utc;
+                    let now: chrono::DateTime<Utc> = Utc::now();
+                    aci.insert(cid, (now, nc));
+                }
+                None => break,
+            }
+        }
+    });
+}
+
+/// 记录每条连接的实时流量
+#[cfg(feature = "trace")]
+async fn setup_trace_flux_for_chain_engine(
+    se: &mut crate::modes::chain::engine::Engine,
+    s: &mut Server,
+) {
+    let (ub_tx, ub_rx) = mpsc::channel::<(ruci::net::CID, u64)>(4096);
+
+    let (db_tx, db_rx) = mpsc::channel::<(ruci::net::CID, u64)>(4096);
+
+    se.conn_info_updater = Some((ub_tx, db_tx));
+
+    let imc = s.flux_trace.is_monitoring.clone();
+    let imc2 = imc.clone();
+
+    let dc = s.flux_trace.d_cache.clone();
+    let uc = s.flux_trace.u_cache.clone();
+
+    use ruci::net::CID;
+    use std::sync::atomic;
+    use tokio::time::Instant;
+
+    fn spawn_for(
+        mut rx: mpsc::Receiver<(CID, u64)>,
+        is_monitoring: Arc<atomic::AtomicBool>,
+        cache: Arc<tinyufo::TinyUfo<CID, Vec<(Instant, u64)>>>,
+    ) {
+        tokio::spawn(async move {
+            loop {
+                let x = rx.recv().await;
+                match x {
+                    Some(info) => {
+                        if is_monitoring.load(atomic::Ordering::SeqCst) {
+                            let e = (Instant::now(), info.1);
+
+                            let v = cache.get(&info.0);
+
+                            match v {
+                                Some(mut v) => {
+                                    v.push(e);
+                                    let vl = v.len() as u16;
+                                    cache.put(info.0, v, vl);
+                                }
+                                None => {
+                                    let v = vec![e];
+
+                                    cache.put(info.0, v, 1);
+                                }
+                            }
+                        }
+                    }
+                    None => break,
+                }
+            }
+        });
+    }
+
+    spawn_for(db_rx, imc, dc);
+    spawn_for(ub_rx, imc2, uc);
 }

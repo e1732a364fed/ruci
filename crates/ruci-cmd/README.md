@@ -10,7 +10,7 @@ ruci-cmd 运行时产生的日志会自动创建并放在 logs 文件夹中, dai
 
 ```sh
 # run with api server
-cargo run --features "lua api_server api_client utils use-native-tls" --release -- -a run
+cargo run --features "lua api_server api_client utils use-native-tls" --release -- -a
 
 ```
 
@@ -30,7 +30,7 @@ $Env:RUST_LOG="none,ruci=debug";cargo run --features "lua utils use-native-tls q
 RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun"  -- --log-file "" -c local_mux2_h2.lua --infinite
 
 # 开启所有功能并启用 trace
-RUST_LOG=debug cargo run --features "api_server api_client trace lua utils use-native-tls quinn tun" -- -a run --trace
+RUST_LOG=debug cargo run --features "api_server api_client trace lua utils use-native-tls quinn tun" -- -a --trace
 ```
 
 make:
@@ -148,11 +148,7 @@ pack是打包为 tar 文件， pack-z 是在打包为 tar.zip 文件。
 
 可用 --api-addr 和 --file-server-addr 改变
 
--a run 运行
-
--a file-server 来运行 file server. 
-
-可以 -a file-server -a run 来同时运行 file server 和 api server , 但 file-server 必须在 run 前给出
+-a 运行api server
 
 api:
 
