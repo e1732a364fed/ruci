@@ -222,5 +222,5 @@ o2node-.->collector
 
 This project is licensed under the MIT License
 
-Any commit by e1732a364fed is also distributed with CC0 1.0 Universal License if the related file has no confliction with MIT License.
+Any commit by e1732a364fed is also distributed with CC0 1.0 Universal License if the related file has no conflict with MIT License.
 (For example, most readme files and doc files.)
