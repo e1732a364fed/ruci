@@ -643,4 +643,4 @@ listen 一个 本地的 udp 端口 (a), 指定 ext.fixed_target_addr (b), 其为
 现在再读 resource/local.lua 就会轻松很多了。
 
 学点难的？
-[Infinite](./lua/infinite.md)
+[Infinite](infinite.md)
