@@ -147,6 +147,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       RUST_BACKTRACE: full
+      RUSTFLAGS: -Clink-self-contained=yes -Ctarget-feature=+crt-static
     strategy:
       fail-fast: false
       matrix:
@@ -171,7 +172,7 @@ jobs:
       - name: Build x86_64-pc-windows-gnu
         run: |
           cd crates/ruci-cmd
-          make win_gnu BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=x86_64-pc-windows-gnu
+          make win_default_target BUILD_VERSION=${{ inputs.tag || github.ref_name }} BUILD_TRIPLET=x86_64-pc-windows-gnu
   
       - name: Upload Github Assets
         uses: softprops/action-gh-release@v1
