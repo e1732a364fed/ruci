@@ -1,4 +1,7 @@
-use std::net::{Ipv4Addr, SocketAddrV4};
+use std::{
+    net::{Ipv4Addr, SocketAddrV4},
+    time::Duration,
+};
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
@@ -75,9 +78,11 @@ pub fn new_socket2(na: &net::Addr, so: &SockOpt, is_listen: bool) -> anyhow::Res
         socket.bind(&zeroa.into()).context("bind failed")?;
 
         if na.network == Network::TCP {
-            debug!("connecting tcp {}", a);
-            socket.connect(&a.into()).context("connect failed")?;
-            debug!("connected tcp");
+            debug!("so2 connecting tcp {}", a);
+            socket
+                .connect_timeout(&a.into(), Duration::from_secs(3))
+                .context("connect failed")?;
+            debug!("so2 connected tcp");
         }
     }
 
