@@ -14,7 +14,6 @@ use futures::{io::Error, FutureExt};
 use log::{debug, log_enabled};
 use rand::Rng;
 use std::io;
-use std::net::TcpStream;
 use std::{fmt::Debug, net::Ipv4Addr};
 use std::{
     fmt::{Display, Formatter},
@@ -23,12 +22,7 @@ use std::{
 };
 use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
-
-impl crate::Name for TcpStream {
-    fn name(&self) -> &str {
-        "tcpstream"
-    }
-}
+use tokio::net::TcpStream;
 
 pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
     match ip_addr {
@@ -324,6 +318,8 @@ impl<'a> Display for OptAddrRef<'a> {
 
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 
+use crate::Name;
+
 /// 用于状态监视和流量统计；可以用 Arc<TransmissionInfo> 进行全局的监视和统计。
 #[derive(Debug, Default)]
 pub struct TransmissionInfo {
@@ -338,8 +334,14 @@ pub struct TransmissionInfo {
 
 /// ConnTrait 将 可异步读写的功能抽象出来。TcpStream 也实现了 ConnTrait
 /// 这是一个很重要的 Trait
-pub trait ConnTrait: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
-impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync> ConnTrait for T {}
+pub trait ConnTrait: AsyncRead + AsyncWrite + Unpin + Send + Sync + Name {}
+impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync + Name> ConnTrait for T {}
+
+impl crate::Name for TcpStream {
+    fn name(&self) -> &str {
+        "tcpstream"
+    }
+}
 
 /// 一个方便的 对 ConnTrait 的包装。很重要
 pub type Conn = Box<dyn ConnTrait>;

@@ -136,6 +136,12 @@ impl EarlyDataWrapper {
     }
 }
 
+impl Name for EarlyDataWrapper {
+    fn name(&self) -> &'static str {
+        "earlydata wrapper conn"
+    }
+}
+
 impl AsyncRead for EarlyDataWrapper {
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -196,6 +202,12 @@ pub struct MockTcpStream {
     pub write_data: Vec<u8>,
     pub write_target: Option<Arc<Mutex<Vec<u8>>>>,
 }
+impl crate::Name for MockTcpStream {
+    fn name(&self) -> &str {
+        "mock tcpstream"
+    }
+}
+
 impl Unpin for MockTcpStream {}
 impl AsyncRead for MockTcpStream {
     fn poll_read(

@@ -25,6 +25,12 @@ pub struct CounterConn {
     base: Pin<net::Conn>,
 }
 
+impl Name for CounterConn {
+    fn name(&self) -> &str {
+        "counter conn"
+    }
+}
+
 #[derive(Clone)]
 pub struct CounterData {
     pub cid: u32,
@@ -46,7 +52,12 @@ impl AsyncRead for CounterConn {
 
             let db = self.data.db.fetch_add(n as u64, Ordering::Relaxed);
             if log_enabled!(log::Level::Debug) {
-                debug!("cid: {}, counter: db: {}, ", self.data.cid, db,);
+                debug!(
+                    "cid: {}, counter for {}: db: {}, ",
+                    self.data.cid,
+                    self.base.name(),
+                    db,
+                );
             }
         }
         r
@@ -64,7 +75,12 @@ impl AsyncWrite for CounterConn {
         if let Poll::Ready(Ok(u)) = &r {
             let ub = self.data.ub.fetch_add(*u as u64, Ordering::Relaxed);
             if log_enabled!(log::Level::Debug) {
-                debug!("cid: {}, counter: ub: {}, ", self.data.cid, ub,);
+                debug!(
+                    "cid: {}, counter for {}: ub: {}, ",
+                    self.data.cid,
+                    self.base.name(),
+                    ub,
+                );
             }
         }
         r

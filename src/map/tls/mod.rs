@@ -41,6 +41,11 @@ impl fmt::Debug for Server {
         write!(f, "ruci::tls::ServerAdder, {:?}", self.option_cache)
     }
 }
+impl<IO> crate::Name for tokio_rustls::server::TlsStream<IO> {
+    fn name(&self) -> &str {
+        "tokio_rustls server stream"
+    }
+}
 
 impl Server {
     pub fn new(c: ServerOptions) -> Self {
@@ -110,6 +115,12 @@ pub struct Client {
     pub domain: String,
     pub is_insecure: bool,
     client_config: Arc<ClientConfig>,
+}
+
+impl<IO> crate::Name for tokio_rustls::client::TlsStream<IO> {
+    fn name(&self) -> &str {
+        "tokio_rustls client stream"
+    }
 }
 
 impl Client {

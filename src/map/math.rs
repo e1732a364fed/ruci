@@ -39,6 +39,11 @@ impl AdderConn {
         self.base.as_mut().poll_write(cx, &self.wbuf)
     }
 }
+impl Name for AdderConn {
+    fn name(&self) -> &'static str {
+        "adder conn"
+    }
+}
 
 impl AsyncRead for AdderConn {
     fn poll_read(

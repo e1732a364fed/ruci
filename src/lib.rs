@@ -15,3 +15,9 @@ pub const VERSION: &str = "0.0.0";
 pub trait Name {
     fn name(&self) -> &str;
 }
+
+impl<T: Name + ?Sized> Name for Box<T> {
+    fn name(&self) -> &str {
+        (**self).name()
+    }
+}
