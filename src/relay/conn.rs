@@ -168,7 +168,7 @@ pub async fn cp_stream(
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
     match (s1, s2) {
-        (Stream::TCP(s0), Stream::TCP(s1)) => cp_tcp::cp_tcp(cid, s0, s1, ed, ti).await,
+        (Stream::TCP(i), Stream::TCP(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti).await,
         (Stream::TCP(_), Stream::UDP(_)) => todo!(),
         (Stream::UDP(_), Stream::TCP(_)) => todo!(),
         (Stream::UDP(_), Stream::UDP(_)) => todo!(),

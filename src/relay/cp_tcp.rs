@@ -13,7 +13,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::task;
 
 //non-blocking
-pub async fn cp_tcp(
+pub async fn cp_conn(
     cid: u32,
     in_conn: net::Conn,
     out_conn: net::Conn,
