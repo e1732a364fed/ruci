@@ -1,5 +1,5 @@
 /*!
-Defines some tproxy related [`ruci::map::Map`]s. Tproxy is shortcut for transparent proxy which si only supported on linux.
+Defines some tproxy related [`ruci::map::Map`]s. Tproxy is shortcut for transparent proxy which is only supported on linux.
  */
 pub mod route;
 pub mod udp;

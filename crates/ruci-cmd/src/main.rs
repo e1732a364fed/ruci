@@ -249,7 +249,7 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     features_list.push("lua");
 
     #[cfg(feature = "lua54")]
-    fl.push("lua54");
+    features_list.push("lua54");
 
     #[cfg(feature = "trace")]
     features_list.push("trace");
@@ -258,13 +258,13 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
     features_list.push("native-tls");
 
     #[cfg(feature = "native-tls-vendored")]
-    fl.push("native-tls-vendored");
+    features_list.push("native-tls-vendored");
 
     #[cfg(feature = "quinn")]
     features_list.push("quinn");
 
     #[cfg(feature = "quic")]
-    fl.push("quic");
+    features_list.push("quic");
 
     #[cfg(feature = "tun")]
     features_list.push("tun");

@@ -27,6 +27,8 @@ use super::ip_packet::IpPacket;
 
 const BUF_SIZE: usize = 65535;
 
+//todo: 解决内存泄漏 问题 和 卡顿 问题
+
 /// 通过 SmoltcpDevice 创建一个 smoltcp::iface::Interface, 其在 smoltcp 中是关键
 pub fn create_interface(device: &mut SmoltcpDevice) -> smoltcp::iface::Interface {
     use smoltcp::wire;
