@@ -10,7 +10,10 @@ use ruci::{
     map::{self, MapResult, Mapper, ProxyBehavior},
     net::{self, http::CommonConfig, Conn, CID},
 };
-use tokio::sync::Mutex;
+use tokio::sync::{
+    oneshot::{self},
+    Mutex,
+};
 
 use tracing::debug;
 
@@ -18,7 +21,12 @@ use super::*;
 
 /// SingleClient 不使用 h2 的多路复用特性
 #[derive(Clone, Debug, NoMapperExt, Default)]
-pub struct SingleClient {}
+pub struct SingleClient {
+    pub http_config: Option<CommonConfig>,
+    pub is_grpc: bool,
+
+    req: Option<Request<()>>,
+}
 impl ruci::Name for SingleClient {
     fn name(&self) -> &str {
         "h2_single_client"
@@ -26,6 +34,24 @@ impl ruci::Name for SingleClient {
 }
 
 impl SingleClient {
+    pub fn new(is_grpc: bool, http_config: Option<CommonConfig>) -> Self {
+        debug!("h2 new single client");
+
+        let req = if is_grpc {
+            http_config.as_ref().map(grpc::build_grpc_request_from)
+        } else {
+            http_config
+                .as_ref()
+                .map(|c| crate::net::build_request_from(c, "http://"))
+        };
+
+        Self {
+            req,
+            http_config,
+            is_grpc,
+        }
+    }
+
     async fn handshake(
         &self,
         cid: net::CID,
@@ -33,6 +59,8 @@ impl SingleClient {
         a: Option<net::Addr>,
         early_data: Option<BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
+        debug!(cid = %cid,"h2 single client handshake");
+
         let r = h2::client::handshake(conn).await;
         let (mut send_request, connection) = match r {
             Ok(r) => r,
@@ -42,9 +70,15 @@ impl SingleClient {
             }
         };
 
-        let stream =
-            new_stream_by_send_request(cid, false, &mut send_request, None, Some(connection))
-                .await?;
+        let stream = new_stream_by_send_request(
+            cid,
+            false,
+            false,
+            &mut send_request,
+            self.req.clone(),
+            Some(connection),
+        )
+        .await?;
 
         let m = MapResult::new_c(Box::new(stream))
             .a(a)
@@ -57,19 +91,32 @@ impl SingleClient {
 async fn new_stream_by_send_request(
     cid: CID,
     is_grpc: bool,
+    is_mux: bool,
     send_request: &mut SendRequest<Bytes>,
     req: Option<Request<()>>,
     connection: Option<Connection<Conn>>,
 ) -> anyhow::Result<net::Conn> {
-    //这是 h2 包规定的奇怪用法
-    // todo: add a rx parameter and select it to impl graceful shutdown
+    //这是 h2 包规定的奇怪用法, 必须 await Connection
+
+    let (tx, rx) = oneshot::channel();
 
     if let Some(connection) = connection {
         tokio::spawn(async move {
-            // 在连接被强制断开时，这里就会 返回
-            let r = connection.await;
+            // 在连接被强制断开时，connection 就会 返回
 
-            debug!(cid = %cid, r=?r, "h2 await end");
+            if !is_mux {
+                tokio::select! {
+                    r = connection=>{
+                        debug!(cid = %cid, r=?r, "h2 stream disconnected");
+                    }
+                    _ = rx =>{
+                        debug!(cid = %cid, "h2 stream got shutdown signal");
+                    }
+                }
+            } else {
+                let r = connection.await;
+                debug!(cid = %cid, r=?r, "h2 stream disconnected");
+            }
         });
     }
 
@@ -81,9 +128,17 @@ async fn new_stream_by_send_request(
     let recv_stream = resp.await?.into_body();
 
     let stream: net::Conn = if is_grpc {
-        Box::new(super::grpc::Stream::new(recv_stream, send_stream))
+        Box::new(super::grpc::Stream::new(
+            recv_stream,
+            send_stream,
+            if !is_mux { Some(tx) } else { None },
+        ))
     } else {
-        Box::new(super::H2Stream::new(recv_stream, send_stream))
+        Box::new(super::H2Stream::new(
+            recv_stream,
+            send_stream,
+            if !is_mux { Some(tx) } else { None },
+        ))
     };
 
     Ok(stream)
@@ -171,6 +226,7 @@ impl MuxClient {
                     let stream = new_stream_by_send_request(
                         cid,
                         is_grpc,
+                        true,
                         &mut send_request,
                         self.req.clone(),
                         Some(connection),
@@ -198,7 +254,8 @@ impl MuxClient {
 
                     let rrr = &mut real_r;
                     let stream =
-                        new_stream_by_send_request(cc, is_grpc, rrr, self.req.clone(), None).await;
+                        new_stream_by_send_request(cc, is_grpc, true, rrr, self.req.clone(), None)
+                            .await;
                     let stream = match stream {
                         Ok(s) => s,
                         Err(e) => {

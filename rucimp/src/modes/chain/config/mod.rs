@@ -236,7 +236,11 @@ pub enum OutMapperConfig {
     Socks5(Socks5Out),
     Trojan(String),
     WebSocket(CommonConfig),
-    H2Single,
+    H2Single {
+        is_grpc: Option<bool>,
+
+        http_config: Option<CommonConfig>,
+    },
     H2Mux {
         is_grpc: Option<bool>,
 
@@ -499,7 +503,13 @@ impl ToMapperBox for OutMapperConfig {
 
                 Box::new(client)
             }
-            OutMapperConfig::H2Single => Box::new(crate::map::h2::client::SingleClient {}),
+            OutMapperConfig::H2Single {
+                http_config: config,
+                is_grpc,
+            } => Box::new(crate::map::h2::client::SingleClient::new(
+                is_grpc.unwrap_or_default(),
+                config.clone(),
+            )),
             OutMapperConfig::H2Mux {
                 http_config: config,
                 is_grpc,

@@ -1,6 +1,5 @@
 -- 演示了 用完全动态链实现 h2 mux outbound 的配置
 -- 关注 outbounds 的 generator 部分, 它实现了 max_num 条 主h2连接的多路复用
-
 max_num = 12
 
 dial_config = {
@@ -29,8 +28,18 @@ h2_out_config = {
     }
 }
 
+h2_single_out_config = {
+    H2Single = {
+        is_grpc = true,
+        http_config = {
+            host = "myhost",
+            path = "/service1/Tun"
+        }
+    }
+}
+
 h2_out_pool = {}
---local inspect = require("inspect")
+-- local inspect = require("inspect")
 infinite = {
 
     inbounds = {{
@@ -64,10 +73,10 @@ infinite = {
             if state_index == -1 then
 
                 local pool_n = table.getn(h2_out_pool)
-                --print("-1 pooln",pool_n, max_num)
+                -- print("-1 pooln",pool_n, max_num)
 
                 if pool_n >= max_num then
-                    local i = math.random(1,pool_n)
+                    local i = math.random(1, pool_n)
 
                     return 2, h2_out_pool[i]:clone()
                 end
@@ -112,14 +121,14 @@ infinite = {
 
                 local pool_n = table.getn(h2_out_pool)
 
-                local h2_out = create_out_mapper(h2_out_config)
-
                 if pool_n < max_num then
-                    table.insert(h2_out_pool,h2_out)
+
+                    local h2_out = create_out_mapper(h2_out_config)
+                    table.insert(h2_out_pool, h2_out)
+                    return 2, h2_out:clone()
                 end
 
-                return 2, h2_out:clone()
-
+                return 2, create_out_mapper(h2_single_out_config)
 
             elseif state_index == 2 then
                 if trojan_out == nil then

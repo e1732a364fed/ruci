@@ -12,6 +12,8 @@ use futures::ready;
 
 use h2::{RecvStream, SendStream};
 use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::sync::oneshot::Sender;
+use tracing::debug;
 
 // (MIT)
 // https://github.com/zephyrchien/midori/blob/master/src/transport/h2/stream.rs
@@ -22,15 +24,26 @@ pub struct H2Stream {
     recv: RecvStream,
     send: SendStream<Bytes>,
     buffer: BytesMut,
+    shutdown_tx: Option<Sender<()>>,
 }
 
 impl H2Stream {
     #[inline]
-    pub fn new(recv: RecvStream, send: SendStream<Bytes>) -> Self {
+    pub fn new(recv: RecvStream, send: SendStream<Bytes>, shutdown_tx: Option<Sender<()>>) -> Self {
         H2Stream {
             recv,
             send,
             buffer: BytesMut::with_capacity(BUFFER_CAP),
+            shutdown_tx,
+        }
+    }
+}
+
+impl Drop for H2Stream {
+    fn drop(&mut self) {
+        if let Some(tx) = self.shutdown_tx.take() {
+            debug!("h2 got dropped, sending shutdown_tx ");
+            let _ = tx.send(());
         }
     }
 }
@@ -107,9 +120,16 @@ impl AsyncWrite for H2Stream {
         Poll::Ready(ready!(self.send.poll_capacity(cx)).map_or(
             Err(Error::new(ErrorKind::BrokenPipe, "broken pipe")),
             |_| {
-                self.send
+                let r = self
+                    .send
                     .send_data(Bytes::new(), true)
-                    .map_or_else(|e| Err(Error::new(ErrorKind::BrokenPipe, e)), |_| Ok(()))
+                    .map_or_else(|e| Err(Error::new(ErrorKind::BrokenPipe, e)), |_| Ok(()));
+
+                if let Some(tx) = self.shutdown_tx.take() {
+                    debug!("h2 sending shutdown_tx ");
+                    let _ = tx.send(());
+                }
+                r
             },
         ))
     }

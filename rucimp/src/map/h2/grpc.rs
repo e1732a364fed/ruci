@@ -6,6 +6,7 @@ use std::{
 };
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use tracing::debug;
 const MAX_VARINT_LEN64: usize = 10;
 
 pub const CONTENT_TYPE: &str = "content-type";
@@ -79,7 +80,10 @@ use h2::{RecvStream, SendStream};
 use http::{Request, Uri};
 use ruci::{net::http::CommonConfig, utils::io_error};
 use thiserror::Error;
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    sync::oneshot::Sender,
+};
 
 #[derive(Error, Debug)]
 pub enum UVariantErr {
@@ -140,17 +144,29 @@ pub struct Stream {
     buffer: BytesMut,
 
     next_data_len: usize,
+
+    shutdown_tx: Option<Sender<()>>,
+}
+
+impl Drop for Stream {
+    fn drop(&mut self) {
+        if let Some(tx) = self.shutdown_tx.take() {
+            debug!("grpc got dropped, sending shutdown_tx ");
+            let _ = tx.send(());
+        }
+    }
 }
 
 impl Stream {
     #[inline]
-    pub fn new(recv: RecvStream, send: SendStream<Bytes>) -> Self {
+    pub fn new(recv: RecvStream, send: SendStream<Bytes>, shutdown_tx: Option<Sender<()>>) -> Self {
         //debug!("new grpc stream");
         Stream {
             recv,
             send,
             buffer: BytesMut::with_capacity(super::BUFFER_CAP),
             next_data_len: 0,
+            shutdown_tx,
         }
     }
 
@@ -261,9 +277,16 @@ impl AsyncWrite for Stream {
         Poll::Ready(ready!(self.send.poll_capacity(cx)).map_or(
             Err(Error::new(ErrorKind::BrokenPipe, "broken pipe")),
             |_| {
-                self.send
+                let r = self
+                    .send
                     .send_data(Bytes::new(), true)
-                    .map_or_else(|e| Err(Error::new(ErrorKind::BrokenPipe, e)), |_| Ok(()))
+                    .map_or_else(|e| Err(Error::new(ErrorKind::BrokenPipe, e)), |_| Ok(()));
+
+                if let Some(tx) = self.shutdown_tx.take() {
+                    debug!("grpc sending shutdown_tx ");
+                    let _ = tx.send(());
+                }
+                r
             },
         ))
     }

@@ -154,9 +154,9 @@ impl Server {
                 //assert_eq!(subid, subid2);
 
                 let stream: net::Conn = if is_grpc {
-                    Box::new(super::grpc::Stream::new(recv, send))
+                    Box::new(super::grpc::Stream::new(recv, send, None))
                 } else {
-                    Box::new(super::H2Stream::new(recv, send))
+                    Box::new(super::H2Stream::new(recv, send, None))
                 };
 
                 let mut ncid = cid.clone();
