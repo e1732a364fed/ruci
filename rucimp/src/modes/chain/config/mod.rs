@@ -37,7 +37,10 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::map::{recorder, ws};
+use crate::{
+    map::{recorder, ws},
+    utils::FileSource,
+};
 
 #[cfg(feature = "lwip")]
 use crate::map::tcp_ip_stack_lwip;
@@ -66,7 +69,7 @@ pub struct StaticConfig {
 
 impl StaticConfig {
     /// convert config chain to map chain
-    pub fn get_inbounds(&self) -> Vec<Vec<MapBox>> {
+    pub fn get_inbounds(&self, file_source: Option<&FileSource>) -> Vec<Vec<MapBox>> {
         let listens: Vec<_> = self
             .inbounds
             .iter()
@@ -75,7 +78,7 @@ impl StaticConfig {
                     .chain
                     .iter()
                     .map(|map_config| {
-                        let mut map = map_config.to_map_box();
+                        let mut map = map_config.to_map_box(file_source);
                         map.set_chain_tag(config_chain.tag.as_deref().unwrap_or(""));
                         map
                     })
@@ -95,7 +98,7 @@ impl StaticConfig {
     }
 
     /// convert config chain to map chain
-    pub fn get_outbounds(&self) -> Vec<Vec<MapBox>> {
+    pub fn get_outbounds(&self, file_source: Option<&FileSource>) -> Vec<Vec<MapBox>> {
         self.outbounds
             .iter()
             .map(|config_chain| {
@@ -103,7 +106,7 @@ impl StaticConfig {
                     .chain
                     .iter()
                     .map(|map_config| {
-                        let mut map = map_config.to_map_box();
+                        let mut map = map_config.to_map_box(file_source);
                         map.set_chain_tag(&config_chain.tag);
                         map
                     })
@@ -121,8 +124,11 @@ impl StaticConfig {
     }
 
     /// (out_tag, outbound)
-    pub fn get_default_and_outbounds_map(&self) -> (DMIterBox, HashMap<String, DMIterBox>) {
-        let obs = self.get_outbounds();
+    pub fn get_default_and_outbounds_map(
+        &self,
+        file_source: Option<&FileSource>,
+    ) -> (DMIterBox, HashMap<String, DMIterBox>) {
+        let obs = self.get_outbounds(file_source);
 
         let mut first_o: Option<DMIterBox> = None;
 
@@ -470,8 +476,12 @@ pub struct TrojanPassSet {
     more: Option<Vec<String>>,
 }
 
-impl ToMapBox for InMapConfig {
-    fn to_map_box(&self) -> ruci::map::MapBox {
+pub trait AdvancedToMapBox {
+    fn to_map_box(&self, file_source: Option<&FileSource>) -> MapBox;
+}
+
+impl AdvancedToMapBox for InMapConfig {
+    fn to_map_box(&self, file_source: Option<&FileSource>) -> ruci::map::MapBox {
         match self {
             InMapConfig::Echo => Box::<Echo>::default(),
             InMapConfig::Stdio(sc) => sc.to_map_box(),
@@ -635,6 +645,7 @@ impl ToMapBox for InMapConfig {
                         lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
+                        file_source: file_source.cloned(),
                     }),
                     Err(e) => panic!("get lua file content err {e}"),
                 }
@@ -646,8 +657,8 @@ impl ToMapBox for InMapConfig {
         }
     }
 }
-impl ToMapBox for OutMapConfig {
-    fn to_map_box(&self) -> ruci::map::MapBox {
+impl AdvancedToMapBox for OutMapConfig {
+    fn to_map_box(&self, file_source: Option<&FileSource>) -> ruci::map::MapBox {
         match self {
             OutMapConfig::Stdio(sc) => sc.to_map_box(),
             OutMapConfig::Fileio(f) => {
@@ -785,6 +796,7 @@ impl ToMapBox for OutMapConfig {
                         lua_text: String::from_utf8_lossy(lua_bytes.as_slice()).to_string(),
                         handshake_f_key: handshake_function.to_string(),
                         ext_fields: Some(MapExtFields::default()),
+                        file_source: file_source.cloned(),
                     }),
                     Err(_) => todo!(),
                 }

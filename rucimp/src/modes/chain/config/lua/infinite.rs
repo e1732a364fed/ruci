@@ -1,4 +1,4 @@
-use crate::map::lua::MapWrapper;
+use crate::map::lua::{create_load_file_func, MapWrapper};
 
 /*
 Defines functions to load infinite(complete) dynamic chain configs from a lua file.
@@ -18,9 +18,9 @@ pub type GMap = HashMap<String, LuaNextGenerator>;
 ///
 /// 把 lua中的配置 在 rust 中 初始化为 MapBox, 并包在 LuaMapWrapper 中
 pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
-    let f = lua.create_function(|lua, v: LuaValue| {
+    let f = lua.create_function(move |lua, v: LuaValue| {
         let c = lua.from_value::<InMapConfig>(v)?;
-        let m = c.to_map_box();
+        let m = c.to_map_box(None);
         let m = MapWrapper(Arc::new(m));
         Ok(m)
     })?;
@@ -32,9 +32,9 @@ pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
 ///
 /// 把 lua中的配置 在 rust 中 初始化为 MapBox, 并包在 LuaMapWrapper 中
 pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
-    let f = lua.create_function(|lua, v: LuaValue| {
+    let f = lua.create_function(move |lua, v: LuaValue| {
         let c = lua.from_value::<OutMapConfig>(v)?;
-        let m = c.to_map_box();
+        let m = c.to_map_box(None);
         let m = MapWrapper(Arc::new(m));
         Ok(m)
         // }
@@ -157,7 +157,7 @@ impl InnerLuaNextGenerator {
         }
     }
 
-    fn lua_value_to_oim<T: for<'de> Deserialize<'de> + ruci::map::ToMapBox>(
+    fn lua_value_to_oim<T: for<'de> Deserialize<'de> + AdvancedToMapBox>(
         &self,
         i: i64,
         v: Value,
@@ -165,7 +165,7 @@ impl InnerLuaNextGenerator {
         let ic: LuaResult<T> = self.lua.from_value(v);
         match ic {
             Ok(ic) => {
-                let mut mb = ic.to_map_box();
+                let mut mb = ic.to_map_box(None);
                 mb.set_chain_tag(&self.tag);
                 Some((i, Some(Arc::new(mb))))
             }

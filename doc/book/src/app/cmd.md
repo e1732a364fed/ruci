@@ -66,6 +66,7 @@ ruci-cmd 运行时产生的日志会自动创建并放在 logs 文件夹中, dai
 -l, --log-level <LOG_LEVEL>
 
 可为 ERROR, WARN, INFO , DEBUG, TRACE
+小写也可以。
 
 ## 环境变量法
 

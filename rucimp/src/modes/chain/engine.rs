@@ -104,7 +104,7 @@ impl Engine {
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) {
-        let inbounds = sc.get_inbounds();
+        let inbounds = sc.get_inbounds(Some(&self.file_source));
         self.inbounds = inbounds
             .into_iter()
             .map(|v| {
@@ -115,7 +115,7 @@ impl Engine {
             })
             .collect();
 
-        let (d, m) = sc.get_default_and_outbounds_map();
+        let (d, m) = sc.get_default_and_outbounds_map(Some(&self.file_source));
         self.default_outbound = Some(d);
         self.outbounds = Arc::new(m);
         self.load_routes_from(sc);

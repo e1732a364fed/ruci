@@ -36,6 +36,29 @@ use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::io::ReadBuf;
 
+pub fn create_load_file_func(lua: &Lua, file_source: &crate::utils::FileSource) {
+    let raw_ptr = file_source as *const crate::utils::FileSource as *const std::os::raw::c_void;
+
+    let pointer_n = raw_ptr as usize;
+
+    let f = lua
+        .create_function(move |lua, s: mlua::BString| {
+            let file_name = std::str::from_utf8(s.as_slice()).unwrap();
+
+            let file_source = unsafe {
+                &*((pointer_n as *const std::os::raw::c_void) as *const crate::utils::FileSource)
+            };
+
+            let r = file_source
+                .get_file_content(file_name)
+                .map_err(|e| mlua::Error::external(e))?;
+
+            lua.create_string(&r.0)
+        })
+        .unwrap();
+    lua.globals().set("Load_file", f).unwrap();
+}
+
 /// 被用于 infinite.rs 中 给 lua 添加 Create_out_map 和 Create_in_map 函数.
 #[derive(Clone)]
 pub struct MapWrapper(pub Arc<MapBox>);
@@ -435,6 +458,8 @@ impl AsyncWrite for LuaConn {
 pub struct LuaMap {
     pub lua_text: String,        //整个 lua文件的内容
     pub handshake_f_key: String, //lua文件中 对应的 map 函数的 函数名
+
+    pub file_source: Option<crate::utils::FileSource>,
 }
 
 impl Name for LuaMap {
@@ -450,12 +475,6 @@ impl LuaMap {
         // 但 maps却是 多线程 调用的，同一时间可能有很多个 maps 调用
 
         let lua = Lua::new();
-        let _: () = lua
-            .load(&self.lua_text)
-            .eval()
-            .context("eval lua failed")
-            .unwrap();
-        let handshake_f: LuaFunction = lua.globals().get(self.handshake_f_key.as_str()).unwrap();
 
         let f = lua
             .create_function(|_, n: usize| Ok(ReadBufWrapper::new(n)))
@@ -501,6 +520,17 @@ impl LuaMap {
             })
             .unwrap();
         lua.globals().set("Warn_print", f).unwrap();
+
+        if let Some(fs) = &self.file_source {
+            create_load_file_func(&lua, &fs);
+        }
+
+        let _: () = lua
+            .load(&self.lua_text)
+            .eval()
+            .context("eval lua failed")
+            .unwrap();
+        let handshake_f: LuaFunction = lua.globals().get(self.handshake_f_key.as_str()).unwrap();
 
         (lua, handshake_f)
     }

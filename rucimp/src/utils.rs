@@ -9,7 +9,7 @@ use tracing::{debug, info};
 
 use crate::COMMON_DIRS;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FileSource {
     Folders(Vec<String>), //从指定的一组路径来寻找文件
     Tar(Vec<u8>),         // 从一个 已放到内存中的 tar 中 寻找文件

@@ -4,6 +4,9 @@
 
 local add_num = 1
 
+-- 每创建一个连接，本文件中的代码都会被重复调用一遍，因此在 全局上调用的函数要上心使用
+-- print(Load_file("test.crt"))
+
 local function read(cx, buf)
     if Behavior == 1 then -- client
         local result = TheConn:poll_read(cx, buf)

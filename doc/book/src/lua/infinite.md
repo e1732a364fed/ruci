@@ -104,3 +104,6 @@ Config (静态链) 之间，请在 项目中搜索 Dyn_Selectors 以进行学习
 因为其夹在 Config 和 Infinite 之间，并没有什么出彩的地方。但是其使用难度比
 Infinite 要低很多。
 
+# 接下来
+
+[lua自定义协议](lua/user_defined_protocol.md)

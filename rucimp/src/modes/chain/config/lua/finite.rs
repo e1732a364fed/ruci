@@ -2,6 +2,8 @@
 Defines functions to load finite(partial) dynamic chain configs from a lua file.
 */
 
+use crate::map::lua::create_load_file_func;
+
 use super::*;
 use dynamic::Finite;
 use parking_lot::Mutex;
@@ -34,7 +36,7 @@ pub fn load_finite_dynamic(
 ) -> mlua::Result<LoadFiniteDynamicResult> {
     let (sc, sm) = load_finite_config_and_selector_map(lua_text, file_source)?;
 
-    let (ibs, fb, obm) = get_io_bounds_by_config_and_selector_map(sc.clone(), sm);
+    let (ibs, fb, obm) = get_io_bounds_by_config_and_selector_map(sc.clone(), sm, file_source);
     Ok((sc, ibs, fb, obm))
 }
 
@@ -90,8 +92,9 @@ fn load_finite_config_and_selector_map(
 fn get_io_bounds_by_config_and_selector_map(
     c: StaticConfig,
     mut selector_map: HashMap<String, LuaNextSelector>,
+    file_source: Option<&crate::utils::FileSource>,
 ) -> (Vec<DMIterBox>, DMIterBox, Arc<HashMap<String, DMIterBox>>) {
-    let ibs = c.get_inbounds();
+    let ibs = c.get_inbounds(file_source);
     let v: Vec<DMIterBox> = ibs
         .into_iter()
         .map(|v| {
@@ -112,7 +115,7 @@ fn get_io_bounds_by_config_and_selector_map(
         })
         .collect();
 
-    let obs = c.get_outbounds();
+    let obs = c.get_outbounds(file_source);
 
     let mut first_o: Option<DMIterBox> = None;
 

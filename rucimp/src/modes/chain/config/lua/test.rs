@@ -278,7 +278,7 @@ fn test_tag_route() -> mlua::Result<()> {
     assert!(tr.is_some());
     println!("{:#?}", c.get_tag_route());
 
-    println!("{:#?}", c.get_default_and_outbounds_map());
+    println!("{:#?}", c.get_default_and_outbounds_map(None));
 
     Ok(())
 }

@@ -243,6 +243,7 @@ tun 包在 windows 平台使用 wintun, 而在 其它平台使用 系统调用�
 
 smoltcp 的实现 在实践中比 lwip 实现快一些。因此 ruci-cmd 只采用了 smoltcp 的网络栈。
 
+在linux/macOS 上还发现了 内存泄漏问题，也许和 tun 包有关. windows上没有任何问题。
 
 # lib note
 
