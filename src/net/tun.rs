@@ -24,6 +24,8 @@ where
 {
     let mut config = tun2::Configuration::default();
 
+    //macos only support utun{number}
+
     config
         .tun_name(tun_name.as_ref().map(String::as_str).unwrap_or("utun321"))
         .address(dial_addr)

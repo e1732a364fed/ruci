@@ -400,3 +400,26 @@ linux release 使用gnu 版可能会报 glibc 问题, 解决方法是
 而且还能看出是以字节为单位
 
 链的灵活顺序: 静态链, 有限动态链, 无限动态链
+
+### vscode 中为 rust-analyzer 启用feature:
+
+创建 .vscode/settings.json
+
+```json
+{
+    "rust-analyzer.cargo.features": [
+    "api_server",
+    "api_client",
+    "utils",
+    "trace",
+    "sockopt",
+    "lua",
+    "use-native-tls",
+    "route",
+    "quinn",
+    "tun"
+  ],
+  //"rust-analyzer.cargo.target": "aarch64-unknown-linux-gnu"
+}
+```
+

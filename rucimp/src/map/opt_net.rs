@@ -206,7 +206,7 @@ impl OptDialer {
         pass_a: Option<net::Addr>,
         pass_b: Option<BytesMut>,
     ) -> MapResult {
-        debug!("start dial");
+        //debug!("start dial");
         let r = match dial_a.network {
             Network::UDP => so2::dial_udp(&dial_a, &self.sockopt)
                 .map(|s| Stream::AddrConn(ruci::net::udp::new(s, None, false))),
@@ -216,7 +216,7 @@ impl OptDialer {
             _ => todo!(),
         };
 
-        debug!("  dial r {:?}", r);
+        //debug!("  dial r {:?}", r);
 
         match r {
             Ok(c) => MapResult::builder().c(c).a(pass_a).b(pass_b).build(),
