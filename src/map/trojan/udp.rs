@@ -11,12 +11,11 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf, ReadHalf, WriteHalf};
 use crate::net::{
     self,
     addr_conn::{AsyncReadAddr, AsyncWriteAddr},
-    helpers, Addr, Network,
+    helpers::{self, MAX_LEN_SOCKS5_BYTES},
+    Addr, Network,
 };
 
 use super::*;
-
-const CAP: usize = 256 * 256; //todo: change this
 
 //Reader 包装 ReadHalf<net::Conn>，使其可以按trojan 格式读出 数据和Addr
 pub struct Reader {
@@ -92,14 +91,12 @@ impl AsyncWriteAddr for Writer {
         buf: &[u8],
         addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        let mut buf2 = BytesMut::with_capacity(CAP);
+        let mut buf2 = BytesMut::with_capacity(MAX_LEN_SOCKS5_BYTES + buf.len());
 
         helpers::addr_to_socks5_bytes(addr, &mut buf2);
 
         buf2.put_u16(buf.len() as u16);
-
         buf2.put_u16(CRLF);
-
         buf2.put(buf);
 
         self.base.as_mut().poll_write(cx, &buf2)
@@ -123,19 +120,16 @@ pub fn split_conn_to_trojan_udp_rw(c: net::Conn) -> net::addr_conn::AddrConn {
     net::addr_conn::AddrConn(Box::new(ar), Box::new(aw))
 }
 
-#[allow(unused)]
 #[cfg(test)]
 mod test {
 
-    use std::sync::Arc;
-
-    use tokio::{net::TcpStream, sync::Mutex};
-
-    use crate::net::addr_conn::AsyncReadAddrExt;
-
-    use self::net::{addr_conn::AsyncWriteAddrExt, helpers::MockTcpStream};
-
+    use self::net::{
+        addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt},
+        helpers::MockTcpStream,
+    };
     use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
 
     #[tokio::test]
     async fn test_w() -> std::io::Result<()> {
@@ -150,9 +144,7 @@ mod test {
 
         let conn: net::Conn = Box::new(cs);
 
-        let (r, w) = tokio::io::split(conn);
-
-        let mut ar = Reader { base: Box::pin(r) };
+        let (_r, w) = tokio::io::split(conn);
 
         let mut aw = Writer { base: Box::pin(w) };
 
@@ -189,11 +181,9 @@ mod test {
 
         let conn: net::Conn = Box::new(cs);
 
-        let (r, w) = tokio::io::split(conn);
+        let (r, _w) = tokio::io::split(conn);
 
         let mut ar = Reader { base: Box::pin(r) };
-
-        let mut aw = Writer { base: Box::pin(w) };
 
         let ad = net::Addr {
             network: net::Network::UDP,
