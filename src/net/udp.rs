@@ -70,14 +70,87 @@ impl AsyncReadAddr for Conn {
 
 #[allow(unused)]
 mod test {
-    use udp::addr_conn::{AddrReadTrait, AsyncReadAddrExt};
+    use futures_util::join;
 
     use super::*;
-    use std::io;
+    use crate::net::addr_conn::{AddrReadTrait, AsyncReadAddrExt, AsyncWriteAddrExt};
+    use std::{io, str::FromStr, time::Duration};
 
-    async fn t1() -> io::Result<()> {
-        let u = UdpSocket::bind("127.0.0.1:0").await?;
+    const CAP: usize = 1500;
 
-        unimplemented!()
+    async fn read_timeout(name: String, mut r: Conn) -> io::Result<()> {
+        let mut buf = [0u8; CAP];
+
+        let nc = name.clone();
+        let f1 = async move {
+            loop {
+                let (n, ad) = r.read(&mut buf).await?;
+                println!("{} read from,{} {:?}", nc.as_str(), ad, &buf[..n]);
+            }
+            Ok::<(), io::Error>(())
+        }
+        .fuse();
+
+        // read udp must combined with select, or it will never ends
+
+        let sleepf = tokio::time::sleep(Duration::from_secs(10)).fuse();
+        pin_mut!(f1, sleepf);
+
+        select! {
+            x1 = f1 =>{
+                println!("{} read end in select,", &name);
+            }
+            x2 = sleepf =>{
+                println!("{} read timeout in select",&name);
+
+            }
+
+        }
+
+        println!("{} end", name.as_str(),);
+
+        Ok::<(), io::Error>(())
+    }
+
+    #[tokio::test]
+    async fn test() -> io::Result<()> {
+        let u = UdpSocket::bind("127.0.0.1:12345").await?;
+        let u2 = UdpSocket::bind("127.0.0.1:23456").await?;
+        let (mut r, mut w) = duplicate(u);
+        let (mut r2, mut w2) = duplicate(u2);
+
+        let r1 = tokio::task::spawn(read_timeout("1".to_string(), r));
+
+        let r2 = tokio::task::spawn(read_timeout("2".to_string(), r2));
+
+        let w1 = tokio::task::spawn(async move {
+            let mut buf = [0u8, 1, 2, 3, 4];
+            let ta = crate::net::Addr {
+                addr: NetAddr::Socket(
+                    SocketAddr::from_str("127.0.0.1:23456")
+                        .map_err(|x| io::Error::other(format!("{}", x)))?,
+                ),
+                network: Network::TCP,
+            };
+            let mut i = 0;
+            loop {
+                let n = w.write(&mut buf, &ta).await?;
+                println!("w write to,{} {:?}", &ta, &buf[..n]);
+
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                if i == 5 {
+                    break;
+                }
+                i += 1;
+            }
+            println!("w2 end");
+
+            Ok::<(), io::Error>(())
+        });
+
+        join!(w1, r1, r2);
+        println!("join end");
+
+        Ok(())
     }
 }

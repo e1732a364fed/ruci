@@ -370,7 +370,6 @@ mod test {
         }
     }
 
-    // 在 async 函数中调用异步的 trait 方法
     async fn _my_async_function(
         mut obj: Box<dyn AddrReadTrait>,
         buf: &mut [u8],
