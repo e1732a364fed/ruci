@@ -15,7 +15,7 @@ lazy_static! {
 /// protocol: like ws://
 pub fn build_request_from(c: &CommonConfig, protocol: &str) -> Request<()> {
     let mut request = Request::builder()
-        .method(c.method.as_deref().unwrap_or_default())
+        .method(c.method.as_deref().unwrap_or("GET"))
         .header("Host", c.host.as_str())
         .uri(protocol.to_string() + c.host.as_str() + &c.path);
 

@@ -1,7 +1,5 @@
 -- 演示了 用完全动态链实现 h2 mux outbound 的配置
-
 -- 关注 outbounds 的 generator 部分, 它实现了单h2连接的多路复用
-
 dial = {
     Dialer = "tcp://0.0.0.0:10801"
 }
@@ -18,6 +16,15 @@ trojan_out = {
 
 socks5_out = {
     Socks5 = {}
+}
+
+h2_out = {
+    H2Mux = {
+        http_config = {
+            host = "myhost",
+            path = "/path1"
+        }
+    }
 }
 
 infinite = {
@@ -37,7 +44,7 @@ infinite = {
                             socks5_in_mapper = create_in_mapper(socks5_out)
                         end
 
-                        local new_cid, newi, new_data = coroutine.yield(1,socks5_in_mapper:clone() )
+                        local new_cid, newi, new_data = coroutine.yield(1, socks5_in_mapper:clone())
                         return -1, {}
                     end
                 }
@@ -68,7 +75,7 @@ infinite = {
                 return 1, tlsout_mapper:clone()
             elseif state_index == 1 then
                 if h2_mapper == nil then
-                    h2_mapper = create_out_mapper("H2Mux")
+                    h2_mapper = create_out_mapper(h2_out)
                 end
 
                 return 2, h2_mapper:clone()

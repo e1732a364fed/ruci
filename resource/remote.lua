@@ -20,7 +20,7 @@ socks5http_chain = {tcp, {
 }}
 
 tls = {
-    --NativeTLS = {
+    -- NativeTLS = {
     TLS = {
         cert = "test.crt",
         key = "test.key"
@@ -38,20 +38,19 @@ trojan_chain = {tcp, tls, trojan_in}
 http_filter = {
     HttpFilter = {
         host = "127.0.0.1:10801",
-        path = "/path1",
+        path = "/path1"
     }
 }
-
 
 basic_ws = {
     WebSocket = {}
 }
 
 ws = {
-    WebSocket ={
-        http_config =  {
+    WebSocket = {
+        http_config = {
             host = "myhost",
-            path = "/path1",
+            path = "/path1"
         }
     }
 }
@@ -61,12 +60,18 @@ ws = {
 -- if http_filter is used, 
 -- http_config field in WebSocket can be omitted.
 
-ws_trojans_chain = {tcp, tls,http_filter,  basic_ws, trojan_in}
+ws_trojans_chain = {tcp, tls, http_filter, basic_ws, trojan_in}
 
---ws_trojans_chain = {tcp, tls, ws, trojan_in}
+-- ws_trojans_chain = {tcp, tls, ws, trojan_in}
 
-h2_trojans_chain = {tcp, tls, "H2", trojan_in}
-
+h2_trojans_chain = {tcp, tls, {
+    H2 = {
+        http_config = {
+            host = "myhost",
+            path = "/path1"
+        }
+    }
+}, trojan_in}
 
 dial = {
     Dialer = "tcp://0.0.0.0:10801"
@@ -83,13 +88,12 @@ out_stdio_chain = {{
 direct_out_chain = {"Direct"}
 
 config = {
-    inbounds = { 
-        
-       --  {chain = trojan_chain, tag = "listen1"} ,
-     --  {  chain = ws_trojans_chain,  tag = "listen1"  } 
-       {  chain = h2_trojans_chain,  tag = "listen1"  } 
-    
-    -- {chain = socks5http_chain, tag = "listen1"} ,
+    inbounds = { --  {chain = trojan_chain, tag = "listen1"} ,
+    --  {  chain = ws_trojans_chain,  tag = "listen1"  } 
+    {
+        chain = h2_trojans_chain,
+        tag = "listen1"
+    } -- {chain = socks5http_chain, tag = "listen1"} ,
     -- {chain =  { unix,tls, trojan_in }, tag = "listen1"} ,
     -- {chain = { { Dialer =  "udp://127.0.0.1:20800" } , "Echo" }, tag = "udp_echo"} ,
     },
