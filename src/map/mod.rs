@@ -317,7 +317,15 @@ impl<T: Mapper + Send + Sync + Debug> MapperSync for T {}
 
 pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
 
-/// TAccumulator 是 mappers 的累加器
+pub struct AccumulateResult {
+    pub a: Option<net::Addr>,
+    pub b: Option<BytesMut>,
+    pub c: Stream,
+    pub d: Vec<OptData>,
+    pub e: Option<io::Error>,
+}
+
+///  accumulate 是一个作用很强的函数,是 mappers 的累加器
 ///
 /// cid 为 跟踪 该连接的 标识
 /// 返回的元组包含新的 Conn 和 可能的目标地址
@@ -333,19 +341,7 @@ pub type MapperBox = Box<dyn MapperSync>; //必须用Box,不能直接是 Arc
 /// 不使用累加器。
 ///
 /// 一种统计正确流量的办法是，将 Tcp连接包装一层专门记录流量的层，见 counter 模块
-// pub struct Accumulator<'a> {
-//     phantom: std::marker::PhantomData<&'a i32>,
-// }
-
-pub struct AccumulateResult {
-    pub a: Option<net::Addr>,
-    pub b: Option<BytesMut>,
-    pub c: Stream,
-    pub d: Vec<OptData>,
-    pub e: Option<io::Error>,
-}
-
-///  accumulate 是一个作用很强的函数
+///
 /// extra_data_vec 若不为空，其须与 mappers 提供同数量的元素, 否则
 /// 将panic
 ///
