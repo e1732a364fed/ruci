@@ -285,6 +285,7 @@ pub trait ToMapper {
 pub trait MapperExt: Mapper {
     fn set_configured_target_addr(&mut self, _a: Option<net::Addr>);
     fn set_is_tail_of_chain(&mut self, _is: bool);
+    fn set_pre_defined_early_data(&mut self, data: Option<bytes::BytesMut>);
 
     fn configured_target_addr(&self) -> Option<net::Addr>;
     fn is_tail_of_chain(&self) -> bool;

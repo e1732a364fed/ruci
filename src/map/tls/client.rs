@@ -48,6 +48,7 @@ impl Client {
             is_tail_of_chain: false,
             fixed_target_addr: None,
             chain_tag: String::new(),
+            pre_defined_early_data: None,
         }
     }
 }
