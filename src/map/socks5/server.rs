@@ -1,4 +1,3 @@
-pub mod deprecated;
 pub mod udp;
 
 use super::*;
@@ -13,7 +12,6 @@ use bytes::{Buf, BytesMut};
 use futures::{executor::block_on, select};
 use log::{debug, log_enabled, warn};
 use std::{
-    collections::HashMap,
     io::{self, Error},
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     sync::Arc,
