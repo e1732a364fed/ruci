@@ -1,4 +1,4 @@
-use crate::map::lua::LuaMapWrapper;
+use crate::map::lua::MapWrapper;
 
 /*
 Defines functions to load infinite(complete) dynamic chain configs from a lua file.
@@ -14,27 +14,28 @@ const GENERATOR_FIELD: &str = "generator";
 /// used by load_infinite,
 pub type GMap = HashMap<String, LuaNextGenerator>;
 
-/// set global func Create_in_map for lua
+/// set global func Create_in_map for lua.
+///
+/// 把 lua中的配置 在 rust 中 初始化为 MapBox, 并包在 LuaMapWrapper 中
 pub fn set_lua_create_in_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
         let c = lua.from_value::<InMapConfig>(v)?;
         let m = c.to_map_box();
-        let m = LuaMapWrapper(Arc::new(m));
+        let m = MapWrapper(Arc::new(m));
         Ok(m)
     })?;
     lua.globals().set("Create_in_map", f)?;
     Ok(())
 }
 
-/// set global func Create_out_map for lua
+/// set global func Create_out_map for lua.
+///
+/// 把 lua中的配置 在 rust 中 初始化为 MapBox, 并包在 LuaMapWrapper 中
 pub fn set_lua_create_out_map_func(lua: &Lua) -> anyhow::Result<()> {
     let f = lua.create_function(|lua, v: LuaValue| {
-        // if let Some(f) = v.as_function() {
-        //     todo!()
-        // } else {
         let c = lua.from_value::<OutMapConfig>(v)?;
         let m = c.to_map_box();
-        let m = LuaMapWrapper(Arc::new(m));
+        let m = MapWrapper(Arc::new(m));
         Ok(m)
         // }
     })?;
@@ -202,7 +203,7 @@ impl InnerLuaNextGenerator {
             }
             LuaMapRepresentation::OS(s) => self.get_result_by_value(i, Value::String(s)),
             LuaMapRepresentation::OU(ud) => {
-                let m = ud.take::<LuaMapWrapper>().expect("ok");
+                let m = ud.take::<MapWrapper>().expect("ok");
                 Some((i, Some(m.0)))
             }
         }

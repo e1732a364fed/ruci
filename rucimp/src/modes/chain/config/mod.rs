@@ -336,6 +336,13 @@ pub enum InMapConfig {
     SPE1 {
         qa: Option<Vec<(String, String)>>,
     },
+
+    /// Lua 自定义协议
+    #[cfg(any(feature = "lua", feature = "lua54"))]
+    Lua {
+        file_name: String,          //如不给出，默认为直接使用该 lua 配置文件，但不建议
+        handshake_function: String, // 用于 handshake 的 函数名
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -383,6 +390,13 @@ pub enum OutMapConfig {
     #[cfg(feature = "steganography")]
     SPE1 {
         qa: Option<Vec<(String, String)>>,
+    },
+
+    /// Lua 自定义协议
+    #[cfg(any(feature = "lua", feature = "lua54"))]
+    Lua {
+        file_name: String,          //如不给出，默认为直接使用该 lua 配置文件，但不建议
+        handshake_function: String, // 用于 handshake 的 函数名
     },
 }
 
@@ -605,6 +619,21 @@ impl ToMapBox for InMapConfig {
                 is_server: true,
                 ext_fields: Some(MapExtFields::default()),
             }),
+            #[cfg(any(feature = "lua", feature = "lua54"))]
+            InMapConfig::Lua {
+                file_name,
+                handshake_function,
+            } => {
+                let r = crate::utils::try_get_file_content("", Some(file_name));
+                match r {
+                    Ok(lua_text) => Box::new(crate::map::lua::LuaMap {
+                        lua_text,
+                        handshake_f_key: handshake_function.to_string(),
+                        ext_fields: Some(MapExtFields::default()),
+                    }),
+                    Err(_) => todo!(),
+                }
+            }
         }
     }
 }
@@ -736,6 +765,21 @@ impl ToMapBox for OutMapConfig {
                 is_server: false,
                 ext_fields: Some(MapExtFields::default()),
             }),
+            #[cfg(any(feature = "lua", feature = "lua54"))]
+            OutMapConfig::Lua {
+                file_name,
+                handshake_function,
+            } => {
+                let r = crate::utils::try_get_file_content("", Some(file_name));
+                match r {
+                    Ok(lua_text) => Box::new(crate::map::lua::LuaMap {
+                        lua_text,
+                        handshake_f_key: handshake_function.to_string(),
+                        ext_fields: Some(MapExtFields::default()),
+                    }),
+                    Err(_) => todo!(),
+                }
+            }
         }
     }
 }

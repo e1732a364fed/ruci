@@ -820,8 +820,19 @@ local config_20_spe1 = {
     }
 }
 
+local config_21_lua_example1 = {
+    inbounds = { {
+        chain = listen_socks5http,
+        tag = "listen1"
+    } },
+    outbounds = { {
+        tag = "dial1",
+        chain = { direct, { Lua = { file_name = "custom_protocol_example1.lua", handshake_function = "Handshake2" } } }
+    } }
+}
 
-Config = config_20_spe1
+
+Config = config_21_lua_example1
 
 --[[
 

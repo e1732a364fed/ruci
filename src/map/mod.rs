@@ -228,6 +228,15 @@ pub enum ProxyBehavior {
     /// inbound's general behavior
     DECODE,
 }
+impl Into<usize> for ProxyBehavior {
+    fn into(self) -> usize {
+        match self {
+            ProxyBehavior::UNSPECIFIED => 0,
+            ProxyBehavior::ENCODE => 1,
+            ProxyBehavior::DECODE => 2,
+        }
+    }
+}
 
 /// Map: Stream Mapping Function.
 ///
