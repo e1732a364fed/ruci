@@ -324,13 +324,13 @@ impl Stream {
     /// try shutdown the underlying stream. If there's no
     /// stream, no behavior.
     pub async fn try_shutdown(&mut self) -> Result<()> {
-        let r = match self {
+        match self {
             Stream::Conn(ref mut t) => t.shutdown().await?,
             Stream::AddrConn(ref mut c) => c.w.shutdown().await?,
             Stream::Generator(ref mut rx) => rx.close(),
             Stream::None => {}
-        };
-        Ok(r)
+        }
+        Ok(())
     }
 
     pub fn try_unwrap_tcp(self) -> Result<Conn> {

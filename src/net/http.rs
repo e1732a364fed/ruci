@@ -64,7 +64,7 @@ impl ParsedHttpRequest {
                 return &h.value;
             }
         }
-        return "";
+        ""
     }
 }
 

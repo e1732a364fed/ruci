@@ -54,7 +54,7 @@ impl Mapper for Server {
             }
 
             if let Some(c) = &self.config {
-                if c.host != "" {
+                if !c.host.is_empty() {
                     let given_host = result.get_first_header_by("Host");
 
                     if c.host != given_host {

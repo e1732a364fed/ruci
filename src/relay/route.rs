@@ -119,12 +119,10 @@ impl OutSelector for TagOutSelector {
             } else {
                 None
             }
+        } else if let Some(fm) = &self.outbounds_tag_route_map {
+            fm.get(in_chain_tag)
         } else {
-            if let Some(fm) = &self.outbounds_tag_route_map {
-                fm.get(in_chain_tag)
-            } else {
-                None
-            }
+            None
         };
         let r = match ov {
             Some(out_k) => {
