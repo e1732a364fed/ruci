@@ -25,6 +25,7 @@ pub mod udp;
 #[cfg(test)]
 mod test;
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Result;
 use futures::pin_mut;
 use futures::{io::Error, FutureExt};
@@ -424,6 +425,7 @@ impl Addr {
         }
     }
 
+    //todo: DNS 功能
     /// 如果没法从已有的 SocketAddr 转, 则尝试用系统方法解析域名, 并使用第一个值.
     /// 不适用于 UDS
     pub fn get_socket_addr_or_resolve(&self) -> Result<SocketAddr> {
@@ -463,7 +465,7 @@ impl Addr {
                 let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
                 Ok(Stream::TCP(Box::new(u)))
             }
-            _ => unimplemented!(),
+            _ => bail!("try_dail failed, not supported network: {}", self.network),
         }
     }
 

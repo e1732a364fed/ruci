@@ -17,7 +17,7 @@ tlsin = { TLS = {  cert = "test.crt", key = "test.key" } }
 
 listen_trojan = { listen, { Trojan = { password = "mypassword" } }, }
 
-dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
+dial = { Dialer =  "tcp://0.0.0.0:10801" }
 
 dial_trojan_chain = { dial,tlsout,  { Trojan = "mypassword"} }
 

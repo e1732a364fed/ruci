@@ -11,7 +11,7 @@ tls = { TLS = {  cert = "test.crt", key = "test.key" } }
 
 trojan_chain = { tcp, tls,  { Trojan = { password = "mypassword" } }, }
 
-dial = { Dialer = { TcpDialer = "0.0.0.0:10801" }}
+dial = { Dialer =  "tcp://0.0.0.0:10801" }
 
 dial_trojan = { dial, { Trojan = "mypassword"} }
 

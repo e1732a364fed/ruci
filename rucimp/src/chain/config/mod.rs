@@ -148,7 +148,7 @@ pub enum OutMapperConfig {
     Direct,
     Blackhole,
     Stdio(String),
-    Dialer(Dialer),
+    Dialer(String),
     Adder(i8),
     Counter,
     TLS(TlsOut),
@@ -156,11 +156,11 @@ pub enum OutMapperConfig {
     Trojan(String),
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum Dialer {
-    TcpDialer(String),
-    UnixDialer(String),
-}
+// #[derive(Debug, Serialize, Deserialize, Clone)]
+// pub enum Dialer {
+//     TcpDialer(String),
+//     UnixDialer(String),
+// }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Listener {
@@ -282,16 +282,13 @@ impl ToMapper for OutMapperConfig {
             OutMapperConfig::Blackhole => Box::new(ruci::map::network::BlackHole::default()),
 
             OutMapperConfig::Direct => Box::new(ruci::map::network::Direct::default()),
-            OutMapperConfig::Dialer(d) => match d {
-                Dialer::TcpDialer(td_str) => {
-                    let a = net::Addr::from_ip_addr_str("tcp", td_str).expect("ip_addr is valid");
-                    Box::new(ruci::map::network::TcpDialer {
-                        fixed_target_addr: Some(a),
-                        ..ruci::map::network::TcpDialer::default()
-                    })
-                }
-                Dialer::UnixDialer(_) => todo!(),
-            },
+            OutMapperConfig::Dialer(td_str) => {
+                let a = net::Addr::from_network_addr_str(td_str).expect("network_ip_addr is valid");
+                Box::new(ruci::map::network::Dialer {
+                    fixed_target_addr: Some(a),
+                    ..ruci::map::network::Dialer::default()
+                })
+            }
             OutMapperConfig::Adder(i) => i.to_mapper(),
             OutMapperConfig::Counter => Box::new(ruci::map::counter::Counter::default()),
             OutMapperConfig::TLS(c) => {

@@ -33,8 +33,8 @@ impl ToMapper for Config {
 
 #[derive(Debug, Clone, DefaultMapperExt)]
 pub struct Server {
-    pub https: http::Server,
-    pub socks5s: socks5::server::Server,
+    pub http_s: http::Server,
+    pub socks5_s: socks5::server::Server,
 }
 
 impl Name for Server {
@@ -68,11 +68,11 @@ impl Server {
         }
 
         Server {
-            https: http::Server {
+            http_s: http::Server {
                 um: oum.clone(),
                 only_connect: false,
             },
-            socks5s: socks5::server::Server {
+            socks5_s: socks5::server::Server {
                 um: oum,
                 support_udp: false,
             },
@@ -86,7 +86,7 @@ impl Server {
         pre_read_data: Option<bytes::BytesMut>,
     ) -> anyhow::Result<map::MapResult> {
         let r = self
-            .socks5s
+            .socks5_s
             .handshake(cid.clone(), base, pre_read_data)
             .await?;
 
@@ -99,9 +99,9 @@ impl Server {
 
                     _ => unimplemented!(),
                 };
-                debug!("{cid} try https  ",);
+                debug!("{cid} try http proxy  ",);
 
-                let rr = self.https.handshake(cid, c, r.b).await?;
+                let rr = self.http_s.handshake(cid, c, r.b).await?;
 
                 return Ok(rr);
             }
