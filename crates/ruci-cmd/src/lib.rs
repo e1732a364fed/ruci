@@ -694,6 +694,9 @@ fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> 
 
     debug!("possible out maps: {}", all_possible_out_maps.join(", "));
 
+    info!("Running With Mode: {:?}", args.mode);
+    info!("Engine Config file is: {}", args.config);
+
     guard
 }
 

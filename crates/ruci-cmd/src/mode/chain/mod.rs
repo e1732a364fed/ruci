@@ -19,12 +19,9 @@ pub async fn get_config_file(
     let get_file_f = || -> anyhow::Result<_> {
         let r = data_source.get_file_content(Path::new(&file_name));
 
-        // if r.is_err() {
-        //     debug!("get file err, will use default file name, err: {r:?}");
-        //     r = data_source.get_file_content(Path::new(DEFAULT_LUA_CONFIG_FILE_NAME));
-        // }
-
-        r.context("get_config_file data_source.get_file_content failed")
+        r.context(format!(
+            "get_config_file data_source.get_file_content failed, file_name: {file_name}"
+        ))
     };
 
     //获取到文件的 bytes, 或通过下载 或读取文件. 若 in_memory 给出则下载的文件不持久化

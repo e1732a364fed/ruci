@@ -257,6 +257,7 @@ impl Engine {
         Ok(hv)
     }
 
+    /// the real function to run the proxy progress.
     pub async fn start_with_tasks(
         &self,
     ) -> anyhow::Result<
@@ -303,7 +304,7 @@ impl Engine {
             );
             index += 1;
 
-            let t2 = Engine::loop_in_to_out(
+            let t2 = Engine::loop_relay(
                 self.global_data.clone(),
                 out_rx,
                 out_selector.clone(),
@@ -322,7 +323,7 @@ impl Engine {
         Ok(tasks)
     }
 
-    async fn loop_in_to_out(
+    async fn loop_relay(
         global_data: GlobalData,
 
         mut rx: Receiver<fold::FoldResult>,
