@@ -209,7 +209,7 @@ pub fn gen_random_higher_port() -> u16 {
 
 /// work better than use a.eq(b).
 ///
-/// it checks if a or b is  loopback or unspecified (this will be equal too)
+/// it checks if a or b is unspecified (this will be equal too)
 ///
 pub fn eq_socket_addr(a: &SocketAddr, b: &SocketAddr) -> bool {
     if a.eq(b) {
@@ -218,9 +218,7 @@ pub fn eq_socket_addr(a: &SocketAddr, b: &SocketAddr) -> bool {
         if a.port() != b.port() {
             false
         } else {
-            if a.ip().is_loopback() && b.ip().is_unspecified() {
-                true
-            } else if a.ip().is_unspecified() && b.ip().is_loopback() {
+            if a.ip().is_unspecified() || b.ip().is_unspecified() {
                 true
             } else {
                 false

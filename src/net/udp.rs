@@ -146,7 +146,7 @@ impl AsyncWriteAddr for MockStream {
         buf: &[u8],
         _addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        debug!("MockUdp: write called");
+        //debug!("MockUdp: write called");
 
         let mut x = Vec::from(buf);
 
@@ -177,7 +177,7 @@ impl AsyncReadAddr for MockStream {
         _cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
-        debug!("MockUdp: read called");
+        //debug!("MockUdp: read called");
 
         let cp_size: usize = min(self.read_data.len(), buf.len());
         buf.copy_from_slice(&self.read_data[..cp_size]);
