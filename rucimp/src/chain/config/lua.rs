@@ -61,20 +61,20 @@ mod test {
         println!("{:#?}", c);
         let first_listen_group = c.listen.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
-        assert!(matches!(InMapper::Counter, last_m));
+        assert!(matches!(InMapperConfig::Counter, last_m));
 
         let first_m = first_listen_group.chain.first().unwrap();
         let str = "0.0.0.0:1080".to_string();
         assert!(matches!(
             first_m,
-            InMapper::Listener(Listener::TcpListener(str))
+            InMapperConfig::Listener(Listener::TcpListener(str))
         ));
         let str2 = "0.0.0.0:1".to_string();
         assert!(matches!(
             first_m,
-            InMapper::Listener(Listener::TcpListener(str2)) //won't match inner fields
+            InMapperConfig::Listener(Listener::TcpListener(str2)) //won't match inner fields
         ));
-        assert!(false == matches!(first_m, InMapper::Counter));
+        assert!(false == matches!(first_m, InMapperConfig::Counter));
         Ok(())
     }
 
@@ -119,17 +119,20 @@ mod test {
         let dial = c.dial.unwrap();
         let first_listen_group = dial.first().unwrap();
         let last_m = first_listen_group.chain.last().unwrap();
-        assert!(matches!(InMapper::Counter, last_m));
+        assert!(matches!(InMapperConfig::Counter, last_m));
 
         let first_m = first_listen_group.chain.first().unwrap();
         let str = "0.0.0.0:1080".to_string();
-        assert!(matches!(first_m, OutMapper::Dialer(Dialer::TcpDialer(str))));
+        assert!(matches!(
+            first_m,
+            OutMapperConfig::Dialer(Dialer::TcpDialer(str))
+        ));
         let str2 = "0.0.0.0:1".to_string();
         assert!(matches!(
             first_m,
-            OutMapper::Dialer(Dialer::TcpDialer(str2)) //won't match inner fields
+            OutMapperConfig::Dialer(Dialer::TcpDialer(str2)) //won't match inner fields
         ));
-        assert!(false == matches!(first_m, OutMapper::Counter));
+        assert!(false == matches!(first_m, OutMapperConfig::Counter));
         Ok(())
     }
 }

@@ -41,11 +41,11 @@ pub async fn handle_conn<'a>(
 
     let cid = state.cid;
 
-    type T = std::vec::IntoIter<OptData>;
+    type ExtraDataIterType = std::vec::IntoIter<OptData>;
 
     let listen_result =
         tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-            Accumulator::accumulate::<_, T>(
+            Accumulator::accumulate::<_, ExtraDataIterType>(
                 cid,
                 ProxyBehavior::DECODE,
                 MapResult {
@@ -117,7 +117,7 @@ pub async fn handle_conn<'a>(
     } else {
         let dial_result =
             tokio::time::timeout(Duration::from_secs(READ_HANDSHAKE_TIMEOUT), async move {
-                Accumulator::accumulate::<_, T>(
+                Accumulator::accumulate::<_, ExtraDataIterType>(
                     cid,
                     ProxyBehavior::ENCODE,
                     MapResult {

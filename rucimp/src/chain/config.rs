@@ -7,29 +7,68 @@ pub mod lua;
 
 use std::path::PathBuf;
 
-use ruci::map::{socks5, tls, trojan, ToMapper};
+use ruci::map::{socks5, tls, trojan, MapperSync, ToMapper};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
-    pub listen: Vec<InMapperStruct>,
-    pub dial: Option<Vec<OutMapperStruct>>,
+    pub listen: Vec<InMapperConfigChain>,
+    pub dial: Option<Vec<OutMapperConfigChain>>,
+}
+
+impl StaticConfig {
+    /// convert config chain to mapper chain
+    pub fn get_listens(&self) -> Vec<Vec<Box<dyn MapperSync>>> {
+        let listens: Vec<_> = self
+            .listen
+            .iter()
+            .map(|config_chain| {
+                config_chain
+                    .chain
+                    .iter()
+                    .map(|mapper_config| mapper_config.to_mapper())
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        listens
+    }
+
+    /// convert config chain to mapper chain
+    pub fn get_dials(&self) -> Vec<Vec<Box<dyn MapperSync>>> {
+        match &self.dial {
+            None => Vec::new(),
+
+            Some(dials) => {
+                let dials: Vec<_> = dials
+                    .iter()
+                    .map(|config_chain| {
+                        config_chain
+                            .chain
+                            .iter()
+                            .map(|mapper_config| mapper_config.to_mapper())
+                            .collect::<Vec<_>>()
+                    })
+                    .collect();
+                dials
+            }
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct InMapperStruct {
+pub struct InMapperConfigChain {
     tag: Option<String>,
-    chain: Vec<InMapper>,
+    chain: Vec<InMapperConfig>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
-pub struct OutMapperStruct {
+pub struct OutMapperConfigChain {
     tag: Option<String>,
-    chain: Vec<OutMapper>,
+    chain: Vec<OutMapperConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum InMapper {
+pub enum InMapperConfig {
     Listener(Listener),
     Adder(i8),
     Counter,
@@ -39,7 +78,7 @@ pub enum InMapper {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum OutMapper {
+pub enum OutMapperConfig {
     Dialer(Dialer),
     Adder(i8),
     Counter,
@@ -69,7 +108,7 @@ pub struct TlsIn {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TlsOut {
     host: String,
-    insecure: bool,
+    insecure: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -81,7 +120,7 @@ pub struct Socks5In {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Socks5Out {
     userpass: String,
-    early_data: bool,
+    early_data: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -90,19 +129,19 @@ pub struct TrojanIn {
     more: Option<Vec<String>>,
 }
 
-impl ToMapper for InMapper {
+impl ToMapper for InMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            InMapper::Listener(_) => todo!(),
-            InMapper::Adder(i) => i.to_mapper(),
-            InMapper::Counter => Box::new(ruci::map::counter::Counter),
-            InMapper::TLS(c) => tls::server::ServerOptions {
+            InMapperConfig::Listener(_) => todo!(),
+            InMapperConfig::Adder(i) => i.to_mapper(),
+            InMapperConfig::Counter => Box::new(ruci::map::counter::Counter),
+            InMapperConfig::TLS(c) => tls::server::ServerOptions {
                 addr: "todo!()".to_string(),
                 cert: PathBuf::from(c.cert.clone()),
                 key: PathBuf::from(c.key.clone()),
             }
             .to_mapper(),
-            InMapper::Socks5(c) => {
+            InMapperConfig::Socks5(c) => {
                 let mut so = socks5::server::Config::default();
                 so.user_whitespace_pass = c.userpass.clone();
                 let ruci_userpass = c.more.as_ref().map_or(None, |up_v| {
@@ -116,7 +155,7 @@ impl ToMapper for InMapper {
 
                 so.to_mapper()
             }
-            InMapper::Trojan(c) => {
+            InMapperConfig::Trojan(c) => {
                 let mut so = trojan::server::Config::default();
                 so.pass = c.password.clone();
                 let ruci_userpass = c.more.as_ref().map_or(None, |up_v| {
@@ -130,17 +169,17 @@ impl ToMapper for InMapper {
     }
 }
 
-impl ToMapper for OutMapper {
+impl ToMapper for OutMapperConfig {
     fn to_mapper(&self) -> ruci::map::MapperBox {
         match self {
-            OutMapper::Dialer(_) => todo!(),
-            OutMapper::Adder(i) => i.to_mapper(),
-            OutMapper::Counter => Box::new(ruci::map::counter::Counter),
-            OutMapper::TLS(c) => {
-                let a = tls::client::Client::new(c.host.as_str(), c.insecure);
+            OutMapperConfig::Dialer(_) => todo!(),
+            OutMapperConfig::Adder(i) => i.to_mapper(),
+            OutMapperConfig::Counter => Box::new(ruci::map::counter::Counter),
+            OutMapperConfig::TLS(c) => {
+                let a = tls::client::Client::new(c.host.as_str(), c.insecure.unwrap_or_default());
                 Box::new(a)
             }
-            OutMapper::Socks5(c) => {
+            OutMapperConfig::Socks5(c) => {
                 let u = c.userpass.clone();
                 let a = socks5::client::Client {
                     up: if u == "" {
@@ -148,11 +187,11 @@ impl ToMapper for OutMapper {
                     } else {
                         Some(ruci::user::UserPass::from(u))
                     },
-                    use_earlydata: c.early_data,
+                    use_earlydata: c.early_data.unwrap_or_default(),
                 };
                 Box::new(a)
             }
-            OutMapper::Trojan(pass) => {
+            OutMapperConfig::Trojan(pass) => {
                 let a = trojan::client::Client::new(&pass);
                 Box::new(a)
             }
@@ -167,12 +206,12 @@ mod test {
     #[test]
     fn serialize() {
         let sc = StaticConfig {
-            listen: vec![InMapperStruct {
+            listen: vec![InMapperConfigChain {
                 tag: None,
                 chain: vec![
-                    InMapper::Listener(Listener::TcpListener("0.0.0.0:1080".to_string())),
-                    InMapper::Counter,
-                    InMapper::Socks5(Socks5In {
+                    InMapperConfig::Listener(Listener::TcpListener("0.0.0.0:1080".to_string())),
+                    InMapperConfig::Counter,
+                    InMapperConfig::Socks5(Socks5In {
                         userpass: None,
                         more: None,
                     }),
