@@ -2,11 +2,11 @@ use futures::Future;
 use log::{debug, info};
 use parking_lot::Mutex;
 use ruci::{
-    map::{acc::MIterBox, *},
+    map::{acc2::MIterBox, *},
     net::TransmissionInfo,
     relay::{
-        conn::handle_in_accumulate_result,
-        route::{FixedOutSelector, OutSelector, TagOutSelector},
+        conn2::handle_in_accumulate_result,
+        route2::{FixedOutSelector, OutSelector, TagOutSelector},
     },
 };
 use std::{collections::HashMap, io, sync::Arc};
@@ -27,9 +27,6 @@ pub struct StaticEngine {
     outbounds: Arc<HashMap<String, MIterBox>>, //不为空
     default_outbound: Option<MIterBox>, // init 后一定有值
     tag_routes: Option<HashMap<String, String>>,
-
-    //cache of static mems, manualy release required
-    fix_outselector_mem: Option<&'static FixedOutSelector>,
 }
 
 impl StaticEngine {
@@ -38,10 +35,9 @@ impl StaticEngine {
         self.inbounds = inbounds
             .into_iter()
             .map(|v| {
-                let v = Box::leak(Box::new(v));
-                let v = v.iter();
+                let inbound: Vec<_> = v.into_iter().map(|o| Arc::new(o)).collect();
 
-                let x: MIterBox = Box::new(v);
+                let x: MIterBox = Box::new(inbound.into_iter());
                 x
             })
             .collect();
@@ -118,11 +114,11 @@ impl StaticEngine {
 
             let oti = self.ti.clone();
             let t1 = async {
-                acc::accumulate_from_start(atx, rx, inmappers.clone(), Some(oti)).await;
+                acc2::accumulate_from_start(atx, rx, inmappers.clone(), Some(oti)).await;
                 Ok(())
             };
 
-            let t2 = StaticEngine::loop_a(arx, out_selector, self.ti.clone());
+            let t2 = StaticEngine::loop_a(arx, out_selector.clone(), self.ti.clone());
 
             tasks.push((t1, t2));
             shutdown_tx_vec.push(tx);
@@ -134,8 +130,8 @@ impl StaticEngine {
     }
 
     async fn loop_a(
-        mut arx: Receiver<acc::AccumulateResult>,
-        out_selector: &'static dyn OutSelector,
+        mut arx: Receiver<acc2::AccumulateResult>,
+        out_selector: Arc<Box<dyn OutSelector>>,
         ti: Arc<TransmissionInfo>,
     ) -> io::Result<()> {
         loop {
@@ -143,7 +139,7 @@ impl StaticEngine {
             if let Some(ar) = ar {
                 tokio::spawn(handle_in_accumulate_result(
                     ar,
-                    out_selector,
+                    out_selector.clone(),
                     Some(ti.clone()),
                 ));
             } else {
@@ -153,53 +149,32 @@ impl StaticEngine {
         Ok(())
     }
 
-    fn get_out_selector(&mut self) -> &'static dyn OutSelector {
+    fn get_out_selector(&mut self) -> Arc<Box<dyn OutSelector>> {
         if self.tag_routes.is_some() {
             self.get_tag_route_out_selector()
         } else {
             self.get_fixed_out_selector()
         }
     }
-    fn get_tag_route_out_selector(&mut self) -> &'static dyn OutSelector {
+    fn get_tag_route_out_selector(&mut self) -> Arc<Box<dyn OutSelector>> {
         let t = TagOutSelector {
             outbounds_tag_route_map: self.tag_routes.clone().expect("has tag_routes"),
             outbounds_map: self.outbounds.clone(),
             default: self.default_outbound.clone().expect("has default_outbound"),
         };
 
-        //todo: do the same as try_drop_fixed_selector
-        let t = Box::leak(Box::new(t));
-        t
+        Arc::new(Box::new(t))
     }
 
-    fn get_fixed_out_selector(&mut self) -> &'static dyn OutSelector {
+    fn get_fixed_out_selector(&mut self) -> Arc<Box<dyn OutSelector>> {
         let ib = self.default_outbound.clone().expect("has default_outbound");
         let fixed_selector = FixedOutSelector { default: ib };
-        let fixed_selector = Box::new(fixed_selector);
-        let fixed_selector: &'static FixedOutSelector = Box::leak(fixed_selector);
 
-        self.try_drop_fixed_selector();
-        self.fix_outselector_mem = Some(fixed_selector);
-        fixed_selector
-    }
-
-    fn try_drop_fixed_selector(&self) {
-        match self.fix_outselector_mem {
-            Some(exist_mem) => unsafe {
-                let boxed =
-                    Box::from_raw(exist_mem as *const FixedOutSelector as *mut FixedOutSelector);
-
-                std::mem::drop(boxed);
-            },
-            None => {}
-        }
+        Arc::new(Box::new(fixed_selector))
     }
 
     /// 清空配置。reset 后 可以 接着调用 init
-    pub async fn reset(&self) {
-        //todo: 处理 leak
-        self.try_drop_fixed_selector();
-    }
+    pub async fn reset(&self) {}
 
     /// 停止所有的 server, 但并不清空配置。意味着可以stop后接着调用 run
     pub async fn stop(&self) {

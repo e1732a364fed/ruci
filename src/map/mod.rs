@@ -36,6 +36,7 @@ pub mod tls;
 pub mod trojan;
 
 pub mod acc;
+pub mod acc2;
 
 #[cfg(test)]
 mod test;

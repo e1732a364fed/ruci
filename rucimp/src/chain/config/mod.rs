@@ -8,10 +8,10 @@ pub mod lua;
 #[cfg(feature = "lua")]
 pub mod dynamic;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use ruci::{
-    map::{acc::MIterBox, *},
+    map::{acc2::MIterBox, *},
     net,
 };
 use serde::{Deserialize, Serialize};
@@ -82,9 +82,9 @@ impl StaticConfig {
         let obs = self.get_outbounds();
 
         let first_o = obs.first().expect("has a outbound").clone();
-        let static_first_o = Box::leak(Box::new(first_o));
+        let static_first_o: Vec<_> = first_o.into_iter().map(|o| Arc::new(o)).collect();
 
-        let static_default_oiter = Box::new(static_first_o.iter());
+        let static_default_oiter = Box::new(static_first_o.into_iter());
         let omap = obs
             .into_iter()
             .map(|outbound| {
@@ -94,10 +94,12 @@ impl StaticConfig {
                     .expect("outbound has one mapper at least")
                     .get_chain_tag();
 
-                let static_outbound = Box::leak(Box::new(outbound.clone()));
-                let static_outbound_iter: MIterBox = Box::new(static_outbound.iter());
+                let ts = tag.to_string();
+                let outbound: Vec<_> = outbound.into_iter().map(|o| Arc::new(o)).collect();
 
-                (tag.to_string(), static_outbound_iter)
+                let static_outbound_iter: MIterBox = Box::new(outbound.into_iter());
+
+                (ts, static_outbound_iter)
             })
             .collect();
         (static_default_oiter, omap)
