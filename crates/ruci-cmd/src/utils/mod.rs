@@ -16,9 +16,6 @@ pub const WINTUN_DOWNLOAD_LINK: &str = "https://www.wintun.net/builds/wintun-0.1
 pub const MMDB_DOWNLOAD_LINK: &str =
     "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb";
 
-pub const RUCI_WEBUI_DOWNLOAD_LINK: &str =
-    "https://github.com/e1732a364fed/ruci-webui/releases/latest/download/dist.tar.gz";
-
 // 运行示例： ruci-cmd utils convert-format local.lua json
 
 #[derive(Subcommand, Debug, Clone, Serialize, Deserialize)]
@@ -297,6 +294,62 @@ fn print_calcu_trojan_hash(plain_text: &str) {
     info!("trojan hash for {plain_text} is : {h}")
 }
 
+async fn get_url(url: &str) -> anyhow::Result<reqwest::Response> {
+    //reqwest 默认的 get 方法是不带 user-agent 的
+    Ok(reqwest::Client::new()
+        .get(url)
+        .header(reqwest::header::USER_AGENT, "python-requests/2.32.3")
+        .send()
+        .await?)
+}
+
+async fn get_latest_release_url(
+    owner: &str,
+    repo: &str,
+    release_name_start_with: &str,
+    file_name: &str,
+) -> anyhow::Result<String> {
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct Release {
+        name: String,
+        assets: Vec<Asset>,
+    }
+
+    #[derive(Deserialize)]
+    struct Asset {
+        name: String,
+        browser_download_url: String,
+    }
+
+    let url = format!("https://api.github.com/repos/{owner}/{repo}/releases");
+
+    let response = get_url(&url).await.context("get err: ")?;
+
+    let releases: Vec<Release> = response.json().await.context("parse json err: ")?;
+
+    let latest_release = releases
+        .into_iter()
+        .filter(|r| r.name.starts_with(release_name_start_with))
+        .max_by_key(|r| r.name.clone())
+        .ok_or(anyhow::anyhow!(
+            "No release found with prefix '{}'",
+            release_name_start_with
+        ))?;
+
+    let dist_asset = latest_release
+        .assets
+        .into_iter()
+        .find(|a| a.name == file_name)
+        .ok_or(anyhow::anyhow!(
+            "No {} found in the latest release",
+            file_name
+        ))?;
+
+    Ok(dist_asset.browser_download_url)
+}
+
 //https://github.com/seanmonstar/reqwest/issues/482#issuecomment-1951347935
 fn response_to_async_read(resp: reqwest::Response) -> impl tokio::io::AsyncRead {
     use futures::stream::TryStreamExt;
@@ -321,7 +374,7 @@ pub async fn dl_url(url: &str, file_name: Option<&str>) -> anyhow::Result<Option
     use bytesize::ByteSize;
 
     const WAIT_TIME: u64 = 10;
-    let response = tokio::time::timeout(Duration::from_secs(WAIT_TIME), reqwest::get(url))
+    let response = tokio::time::timeout(Duration::from_secs(WAIT_TIME), get_url(url))
         .await
         .context(format!(
             "dl waiting for too long, more than {WAIT_TIME} secs"
@@ -375,8 +428,12 @@ pub async fn dl_url(url: &str, file_name: Option<&str>) -> anyhow::Result<Option
 }
 
 async fn download_webui() -> anyhow::Result<()> {
+    let url = get_latest_release_url("e1732a364fed", "ruci-webui", "Release", "dist.tar.gz")
+        .await
+        .context("get_latest_release_url err: ")?;
+
     const FILENAME: &str = "webui.tar.gz";
-    dl_url(RUCI_WEBUI_DOWNLOAD_LINK, Some(FILENAME)).await?;
+    dl_url(&url, Some(FILENAME)).await?;
 
     use flate2::read::GzDecoder;
     use std::fs::File;

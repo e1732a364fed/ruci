@@ -6,6 +6,7 @@ ruci_config/
 crates/ruci-cmd/static/
 testfile.txt
 *.tar
+*.tar.gz
 *.log
 *.mmdb
 wintun.*
