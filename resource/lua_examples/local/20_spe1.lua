@@ -9,7 +9,7 @@ local outbound_spe1_trojan = {
   chain = {
     { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
     { SPE1 = spe1_config },
-    { Trojan = "mypassword" }
+    { Trojan = { password = "mypassword" } }
   },
   tag = "dial1"
 }

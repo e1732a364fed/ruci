@@ -14,7 +14,7 @@ local outbound_ws_trojan = {
       }
     },
     { WebSocket = ws_config },
-    { Trojan = "mypassword" }
+    { Trojan = { password = "mypassword" } }
   },
   tag = "dial1"
 }

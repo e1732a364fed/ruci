@@ -437,7 +437,7 @@ pub enum OutMapConfig {
 
     Http,
     Socks5(Socks5Out),
-    Trojan(String),
+    Trojan(trojan::client::Config),
     WebSocket(CommonConfig),
     H2Single {
         is_grpc: Option<bool>,
@@ -810,8 +810,8 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                 }
                 Ok(Box::new(a))
             }
-            OutMapConfig::Trojan(pass) => {
-                let a = trojan::client::Client::new(&pass);
+            OutMapConfig::Trojan(config) => {
+                let a = trojan::client::Client::new(&config);
                 Ok(Box::new(a))
             }
             OutMapConfig::WebSocket(c) => {

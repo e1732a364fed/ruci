@@ -370,12 +370,9 @@ Trojan = {
 out:
 
 ```lua
-{
-    Trojan = "mypassword"
-}
+ { Trojan = { password = "mypassword" } }
 ```
 
-Trojan 的 in 和 out 格式 略有区别, 要注意
 
 ## TLS
 in/out

@@ -7,17 +7,25 @@ use tokio::io::AsyncWriteExt;
 use tracing::debug;
 
 use crate::{
-    map::{self, Map, MapExt, MapResult, CID},
+    map::{self, helpers::EarlyDataWrapper, Map, MapExt, MapResult, CID},
     net::{self, helpers, Network},
+    utils::ob_to_buf,
 };
 
 use super::*;
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Config {
+    pub password: Option<String>,
+    pub do_not_use_early_data: Option<bool>,
+}
 
 /// trojan udp won't timeout
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt, Default)]
 pub struct Client {
     pub u: User,
+    pub do_not_use_early_data: bool,
 }
 
 impl Display for Client {
@@ -27,10 +35,11 @@ impl Display for Client {
 }
 
 impl Client {
-    pub fn new(plain_text_password: &str) -> Self {
-        let u = User::new(plain_text_password);
+    pub fn new(config: &Config) -> Self {
+        let u = User::new(config.password.as_ref().unwrap());
         Client {
             u,
+            do_not_use_early_data: config.do_not_use_early_data.unwrap_or_default(),
             ..Default::default()
         }
     }
@@ -62,32 +71,56 @@ impl Client {
         helpers::addr_to_socks5_bytes(&ta, &mut buf);
         buf.put_u16(CRLF);
 
-        if self.is_tail_of_chain() && !is_udp {
-            if let Some(b) = &first_payload {
-                if !b.is_empty() {
-                    let bl = b.len();
-                    buf.extend_from_slice(b);
-                    first_payload = None;
-                    debug!("trojan client writing ed {}", bl);
+        if self.do_not_use_early_data {
+            debug!(
+                "trojan client writing buf(not with early data) {}",
+                &buf[..50.min(buf.len())].escape_ascii()
+            );
+            base.write_all(&buf).await?;
+            base.flush().await?;
+            debug!("trojan client write done");
+
+            if is_udp {
+                let u = udp::from(base);
+                Ok(MapResult::new_u(u).b(first_payload).a(Some(ta)).build())
+            } else {
+                let b = ob_to_buf(first_payload);
+                if b.is_empty() || !self.is_tail_of_chain() {
+                    Ok(MapResult::new_c(base).build())
+                } else {
+                    debug!("trojan client using EarlyDataWrapper, {}", b.len());
+                    let ec = EarlyDataWrapper::from(b, base);
+                    Ok(MapResult::new_c(Box::new(ec)).build())
                 }
             }
-        }
-
-        debug!(
-            "trojan client writing buf {}",
-            &buf[..50.min(buf.len())].escape_ascii()
-        );
-        base.write_all(&buf).await?;
-        base.flush().await?;
-        debug!("trojan client write done");
-
-        if is_udp {
-            let u = udp::from(base);
-
-            // first target 依然要有, 因为 trojan udp 传输格式中没有省略 target addr 的情况
-            Ok(MapResult::new_u(u).b(first_payload).a(Some(ta)).build())
         } else {
-            Ok(MapResult::new_c(base).b(first_payload).build())
+            if self.is_tail_of_chain() && !is_udp {
+                if let Some(b) = &first_payload {
+                    if !b.is_empty() {
+                        let bl = b.len();
+                        buf.extend_from_slice(b);
+                        first_payload = None;
+                        debug!("trojan client writing ed {}", bl);
+                    }
+                }
+            }
+
+            debug!(
+                "trojan client writing buf {}",
+                &buf[..50.min(buf.len())].escape_ascii()
+            );
+            base.write_all(&buf).await?;
+            base.flush().await?;
+            debug!("trojan client write done");
+
+            if is_udp {
+                let u = udp::from(base);
+
+                // first target 依然要有, 因为 trojan udp 传输格式中没有省略 target addr 的情况
+                Ok(MapResult::new_u(u).b(first_payload).a(Some(ta)).build())
+            } else {
+                Ok(MapResult::new_c(base).b(first_payload).build())
+            }
         }
     }
 }

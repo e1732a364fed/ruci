@@ -7,7 +7,7 @@ local outbound_unix_trojan = {
         insecure = true
       }
     },
-    { Trojan = "mypassword" }
+    { Trojan = { password = "mypassword" } }
   },
   tag = "dial1"
 }

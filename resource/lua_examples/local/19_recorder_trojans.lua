@@ -40,7 +40,7 @@ local outbound_trojan = {
       }
     },
     { Recorder = recorder_config.trojan },
-    { Trojan = "mypassword" }
+    { Trojan = { password = "mypassword" } }
   },
   tag = "dial_trojans"
 }

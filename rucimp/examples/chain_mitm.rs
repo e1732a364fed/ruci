@@ -42,7 +42,10 @@ async fn main() -> anyhow::Result<()> {
                     insecure: true,
                     alpn: Some(vec!["h2".to_string(), "http/1.1".to_string()]),
                 }),
-                OutMapConfig::Trojan("".to_string()),
+                OutMapConfig::Trojan(ruci::map::trojan::client::Config {
+                    password: Some("mypassword".to_string()),
+                    ..Default::default()
+                }),
             ],
         }],
         ..Default::default()

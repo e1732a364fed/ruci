@@ -8,7 +8,7 @@ local quic_config = {
 local outbound_quic_trojan = {
   chain = {
     { Quic = quic_config },
-    { Trojan = "mypassword" }
+    { Trojan = { password = "mypassword" } }
   },
   tag = "dial1"
 }

@@ -16,7 +16,7 @@ local outbound_h2_trojan = {
       }
     },
     { H2Single = h2_config },
-    { Trojan = "mypassword" }
+    { Trojan = { password = "mypassword" } }
   },
   tag = "dial1"
 }

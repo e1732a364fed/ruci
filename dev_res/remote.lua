@@ -124,9 +124,7 @@ local dial = {
     }
 }
 
-local dial_trojan = { dial, {
-    Trojan = "mypassword"
-} }
+local dial_trojan = { dial, trojan_in }
 
 local out_stdio_chain = { {
     Stdio = {}

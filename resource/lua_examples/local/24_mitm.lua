@@ -10,7 +10,7 @@ local outbound_trojan = {
         alpn = tls_alpn
       }
     },
-    { Trojan = "mypassword" }
+    { Trojan = { password = "mypassword" } }
   },
   tag = "dial1"
 }

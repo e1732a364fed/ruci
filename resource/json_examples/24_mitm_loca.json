@@ -46,9 +46,7 @@
             "alpn": ["h2", "http/1.1"]
           }
         },
-        {
-          "Trojan": "mypassword"
-        }
+        { "Trojan": { "password": "mypassword" } }
       ]
     }
   ],

@@ -12,7 +12,7 @@ local outbound_lua_trojan = {
         insecure = true
       }
     },
-    { Trojan = "mypassword" },
+    { Trojan = { password = "mypassword" } },
     { Lua = lua_config }
   },
   tag = "dial1"

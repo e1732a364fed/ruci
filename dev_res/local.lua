@@ -134,7 +134,9 @@ local opt_dial = {
 
 
 local trojan_out = {
-    Trojan = "mypassword"
+    Trojan = {
+        password = "mypassword",
+    }
 }
 
 -- http 请求 (ws,h2 有用到)中的 authority 会被填到
@@ -922,7 +924,7 @@ local config_24_chain_mitm = {
                     alpn = { "h2", "http/1.1" }
                 }
             },
-            { Trojan = "mypassword" }
+            { Trojan = { password = "mypassword" } }
         }
     } }
 }
@@ -1003,7 +1005,7 @@ local config_26_chain_mitm_embedder = {
                 }
             },
             { Embedder = { file_name = "record_dir1/1-2_mitm_ruci_info.json" } },
-            { Trojan = "mypassword" }
+            { Trojan = { password = "mypassword", do_not_use_early_data = true } }
         }
     } }
 }

@@ -39,15 +39,9 @@ local tls_list = {
 }
 
 local trojan_list = {
-    {
-        Trojan = "mypassword1"
-    },
-    {
-        Trojan = "mypassword2"
-    },
-    {
-        Trojan = "mypassword3"
-    }
+    { Trojan = { password = "mypassword" } },
+    { Trojan = { password = "mypassword2" } },
+    { Trojan = { password = "mypassword3" } }
 }
 
 

@@ -16,9 +16,7 @@ local tlsout_config = {
 
     }
 }
-local trojan_out_config = {
-    Trojan = "mypassword"
-}
+local trojan_out_config = { Trojan = { password = "mypassword" } }
 
 local h2_common_part = {
     is_grpc = true,

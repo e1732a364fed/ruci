@@ -15,9 +15,7 @@ local tlsout_config = {
 
     }
 }
-local trojan_out_config = {
-    Trojan = "mypassword"
-}
+local trojan_out_config = { Trojan = { password = "mypassword" } }
 
 local h2_out_config = {
     H2Mux = {
