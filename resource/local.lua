@@ -300,7 +300,9 @@ config = {
 
 ---[[
 
--- 演示 有限动态链的 选择器用法
+-- 有限动态链的 选择器用法 的基本演示 
+-- 有限动态链使用 config 所提供的列表, 在 *_next_selector 中动态地
+-- 根据参数 返回列表的索引值
 
 function dyn_selectors(tag)
     if tag == "listen1" then
@@ -313,8 +315,8 @@ end
 
 -- 下面两个selector 示例都是 最简单的示例, 使得动态链的行为和静态链相同
 
-dyn_inbound_next_selector = function(this_index, ovod)
-    --print("ovod:",ovod)
+dyn_inbound_next_selector = function(this_index, data)
+    -- print("data:",data)
 
     return this_index + 1
 end
@@ -327,45 +329,51 @@ end
 
 ---[[
 
--- 完全动态链的演示
+-- 完全动态链的基本演示
 
--- 完全动态链不使用 config 来预定义任何Mappers, 它只给出一个函数
+-- 完全动态链不使用 固定的列表 来预定义任何Mappers, 它只给出一个函数
+-- generator, generator 根据参数内容来动态生成 [Mapper], 如果不想
+-- 重复生成以前生成过的Mapper, 则可以返回一个已存在的索引
 
 dyn_config = {
 
--- 下面这个演示 与第一个普通示例 形式上等价
+    -- 下面这个演示 与第一个普通示例 形式上等价
 
     inbounds = {{
         tag = "listen1",
-        generator = function(this_index, cache_len, ovov)
+        generator = function(this_index, cache_len, data)
             if this_index == -1 then
-                return {
+                return 0, {
                     Listener = "0.0.0.0:10800"
                 }
+
             elseif this_index == 0 then
-                return {
+                return 1, {
                     Socks5 = {}
                 }
+            else
+                return -1, {}
+
             end
         end
     }, {
         tag = "listen2",
-        generator = function(this_index, cache_len, ovov)
-
+        generator = function(this_index, cache_len, data)
+            return -1, {}
         end
     }},
 
     outbounds = {{
         tag = "dial1",
-        generator = function(this_index, cache_len, ovov)
+        generator = function(this_index, cache_len, data)
             if this_index == -1 then
                 return "Direct"
             end
         end
     }, {
         tag = "dial2",
-        generator = function(this_index, cache_len, ovov)
-
+        generator = function(this_index, cache_len, data)
+            return -1, {}
         end
     }}
 

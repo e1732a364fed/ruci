@@ -32,7 +32,10 @@ use ruci::map::{
 use uuid::Uuid;
 
 /// Complete Dynamic Chain using index
+#[derive(Clone)]
 pub struct IndexInfinite {
+    pub tag: String,
+
     pub generator: Box<dyn IndexNextMapperGenerator>,
 
     /// 生成的 新 MapperBox 会存储在 cache 中
@@ -40,24 +43,37 @@ pub struct IndexInfinite {
 
     pub history: Vec<usize>,
 
-    pub current_index: usize,
+    pub current_index: i64,
 }
 
-pub type IndexMapperBox = (usize, Arc<MapperBox>); //MapperBox 和它的 索引
-
-/// 如果产生的是新的, 则其index 为 cache_len
-///
-/// 如果 index 不为 cache_len, 则不会被写入缓存, 即它指示该新MapperBox只会被
-/// 用到一次
-///
-pub trait IndexNextMapperGenerator {
-    fn next_mapper(
-        &self,
-        this_index: usize,
-        cache_len: usize,
-        data: OVOD,
-    ) -> Option<IndexMapperBox>;
+impl IndexInfinite {
+    pub fn new(tag: String, generator: Box<dyn IndexNextMapperGenerator>) -> Self {
+        IndexInfinite {
+            tag,
+            generator,
+            cache: Vec::new(),
+            history: Vec::new(),
+            current_index: -1,
+        }
+    }
 }
+
+pub type IndexMapperBox = (i64, Option<Arc<MapperBox>>); //MapperBox 和它的 索引
+
+/// 如果产生的是新的且需要被缓存, 则其index 为 cache_len
+///
+/// 如果 index 大于 cache_len, 则不会被写入缓存, 即它指示该新MapperBox
+/// 只会被用到一次，
+///
+/// 若 index 在 [0..cache_len) 区间内, 则它指示使用历史生成的MapperBox
+///
+/// 若 index 小于0, 则指示迭代结束
+///
+pub trait IndexNextMapperGenerator: DynClone + Send + Sync {
+    fn next_mapper(&self, this_index: i64, cache_len: usize, data: OVOD) -> Option<IndexMapperBox>;
+}
+
+dyn_clone::clone_trait_object!(IndexNextMapperGenerator);
 
 impl DynIterator for IndexInfinite {
     fn next_with_data(&mut self, data: OVOD) -> Option<Arc<MapperBox>> {
@@ -66,12 +82,27 @@ impl DynIterator for IndexInfinite {
         match oi {
             Some(ib) => {
                 let i = ib.0;
+                if i < 0 {
+                    return None;
+                }
                 self.current_index = i;
+                let i = i as usize;
+
                 self.history.push(i);
                 if i == cl {
-                    self.cache.push(ib.1.clone());
+                    let mb = ib.1.expect("should have a mapperbox");
+                    self.cache.push(mb.clone());
+                    Some(mb)
+                } else if i > cl {
+                    match ib.1 {
+                        Some(mb) => Some(mb),
+                        None => None,
+                    }
+                } else {
+                    let mb = self.cache[i].clone();
+
+                    Some(mb)
                 }
-                Some(ib.1)
             }
             None => None,
         }

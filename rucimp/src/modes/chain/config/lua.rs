@@ -4,17 +4,19 @@ use super::*;
 use lua::dynamic::Finite;
 use mlua::prelude::*;
 use mlua::{Lua, LuaSerdeExt, Value};
+use parking_lot::Mutex;
+use ruci::map::acc::OVOD;
 
 /// load chain::config::StaticConfig from a lua file which has a
 /// "config" global variable
 pub fn load_static(lua_text: &str) -> mlua::Result<StaticConfig> {
     let lua = Lua::new();
 
-    lua.load(lua_text).eval()?;
+    lua.load(lua_text).exec()?;
 
-    let clt: LuaTable = lua.globals().get("config")?;
+    let ct: LuaTable = lua.globals().get("config")?;
 
-    let c: StaticConfig = lua.from_value(Value::Table(clt))?;
+    let c: StaticConfig = lua.from_value(Value::Table(ct))?;
 
     Ok(c)
 }
@@ -197,8 +199,71 @@ impl NextSelector for LuaNextSelector {
     }
 }
 
-use parking_lot::Mutex;
-use ruci::map::acc::OVOD;
+#[derive(Debug, Clone)]
+pub struct LuaNextGenerator {
+    lua: Arc<Mutex<(Lua, LuaRegistryKey)>>,
+    behavior: ProxyBehavior,
+}
+
+unsafe impl Send for LuaNextGenerator {}
+unsafe impl Sync for LuaNextGenerator {}
+
+impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
+    fn next_mapper(
+        &self,
+        this_index: i64,
+        cache_len: usize,
+        data: OVOD,
+    ) -> Option<dynamic::IndexMapperBox> {
+        let mg = self.lua.lock();
+        let lua = &mg.0;
+
+        let f: LuaFunction = lua
+            .registry_value(&mg.1)
+            .expect("must get generator from lua");
+
+        let r = f.call::<_, (i64, LuaTable)>((this_index, cache_len, lua.to_value(&data)));
+
+        match r {
+            Ok(rst) => {
+                if rst.0 < 0 {
+                    return None;
+                }
+                if (rst.0 as usize) < cache_len {
+                    return Some((rst.0, None));
+                }
+
+                fn get_result<T: for<'de> Deserialize<'de> + ruci::map::ToMapperBox>(
+                    lua: &Lua,
+                    i: i64,
+                    t: LuaTable,
+                ) -> Option<dynamic::IndexMapperBox> {
+                    let ic: LuaResult<T> = lua.from_value(Value::Table(t));
+                    match ic {
+                        Ok(ic) => {
+                            let mb = ic.to_mapper_box();
+                            Some((i, Some(Arc::new(mb))))
+                        }
+                        Err(e) => {
+                            warn!("expect an inmapper config, got error: {e}");
+                            None
+                        }
+                    }
+                }
+
+                match self.behavior {
+                    ProxyBehavior::UNSPECIFIED => todo!(),
+                    ProxyBehavior::ENCODE => get_result::<InMapperConfig>(lua, rst.0, rst.1),
+                    ProxyBehavior::DECODE => get_result::<OutMapperConfig>(lua, rst.0, rst.1),
+                }
+            }
+            Err(err) => {
+                warn!("getting lua generator failed: {}", err);
+                None
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 #[allow(unused)]
@@ -578,7 +643,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn load_dynamic1() -> anyhow::Result<()> {
+    async fn load_finite_dynamic1() -> anyhow::Result<()> {
         let lua = Lua::new();
         let lua_text = r#"
            function dyn_next_selector(this_index, ovod)
@@ -598,6 +663,72 @@ mod test {
             Ok(rst) => println!("{}", rst),
             Err(err) => eprintln!("{}", err),
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn load_infinite() -> anyhow::Result<()> {
+        let text = r#"
+        
+dyn_config = {
+    inbounds = {{
+        tag = "listen1",
+        generator = function(this_index, cache_len, data)
+            if this_index == -1 then
+                return 0, {
+                    Listener = "0.0.0.0:10800"
+                }
+
+            elseif this_index == 0 then
+                return 1, {
+                    Socks5 = {}
+                }
+            else
+                return -1, {}
+
+            end
+        end
+    }, {
+        tag = "listen2",
+        generator = function(this_index, cache_len, data)
+            return -1, {}
+        end
+    }},
+
+    outbounds = {{
+        tag = "dial1",
+        generator = function(this_index, cache_len, data)
+            if this_index == -1 then
+                return "Direct"
+            end
+        end
+    }, {
+        tag = "dial2",
+        generator = function(this_index, cache_len, data)
+            return -1, {}
+        end
+    }}
+
+}
+        "#;
+
+        let lua = Lua::new();
+        lua.load(text).eval()?;
+
+        let ct: LuaTable = lua.globals().get("dyn_config")?;
+        let inbounds: LuaTable = ct.get("inbounds")?;
+        let outbounds: LuaTable = ct.get("outbounds")?;
+        inbounds.for_each(|k: usize, v: LuaTable| {
+            println!("{k},{:?}", v);
+            let tag: String = v.get("tag")?;
+            println!("tag, {tag}");
+
+            let g: LuaFunction = v.get("generator")?;
+            println!("g, {:?}", g);
+
+            Ok(())
+        });
 
         Ok(())
     }
