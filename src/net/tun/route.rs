@@ -40,8 +40,11 @@ pub fn out_auto_route(params: &OutAutoRouteParams) -> anyhow::Result<()> {
 
         let router_ip = params.router_ip.as_deref().unwrap_or(DEFAULT_ROUTER_IP);
 
+        // ip_forward is NECESSARY
+
         let list = format!(
-            r#"ip route del default
+            r#"sysctl -w net.ipv4.ip_forward=1
+ip route del default
 ip route add default via {router_ip} dev {original_dev_name}
 iptables -I FORWARD -i {tun_dev_name} -o {original_dev_name} -m conntrack --ctstate NEW -j ACCEPT
 iptables -I FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
@@ -101,8 +104,10 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
         //  因此该命令的成败不影响大局
         let _r = utils::run_command("ip", "route del default");
 
-        let list =
-            format!(r#"ip route add default via {tun_gateway} dev {tun_dev_name} metric 1"#,);
+        let list = format!(
+            r#"sysctl -w net.ipv4.ip_forward=1
+ip route add default via {tun_gateway} dev {tun_dev_name} metric 1"#,
+        );
 
         //ip route add default via {router_ip} dev {original_dev_name} metric 10
 
