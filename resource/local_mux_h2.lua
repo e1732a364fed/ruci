@@ -25,13 +25,13 @@ infinite = {
     inbounds = {{
         tag = "listen1",
 
-        generator = function(cid, this_index, data)
-            if this_index == -1 then
+        generator = function(cid, state_index, data)
+            if state_index == -1 then
                 return 0, {
                     stream_generator = {
                         Listener = "0.0.0.0:10800"
                     },
-                    new_thread_fn = function(cid, this_index, data)
+                    new_thread_fn = function(cid, state_index, data)
 
                         if socks5_in_mapper == nil then
                             socks5_in_mapper = create_in_mapper(socks5_out)
@@ -47,8 +47,8 @@ infinite = {
 
     outbounds = {{
         tag = "dial1",
-        generator = function(cid, this_index, data)
-            if this_index == -1 then
+        generator = function(cid, state_index, data)
+            if state_index == -1 then
 
                 if h2_mapper ~= nil then
                     return 2, h2_mapper:clone()
@@ -59,20 +59,20 @@ infinite = {
                 end
                 return 0, dial_mapper:clone()
 
-            elseif this_index == 0 then
+            elseif state_index == 0 then
 
                 if tlsout_mapper == nil then
                     tlsout_mapper = create_out_mapper(tlsout)
                 end
 
                 return 1, tlsout_mapper:clone()
-            elseif this_index == 1 then
+            elseif state_index == 1 then
                 if h2_mapper == nil then
                     h2_mapper = create_out_mapper("H2Mux")
                 end
 
                 return 2, h2_mapper:clone()
-            elseif this_index == 2 then
+            elseif state_index == 2 then
                 if trojan_mapper == nil then
                     trojan_mapper = create_out_mapper(trojan_out)
                 end

@@ -12,13 +12,8 @@
  * Partial 的状态是有限的 (即有限状态机 FSM),  Complete 的状态是无限的,
  * (即无限状态机)
  *
- * 部分动态链比完全动态链更实用
- *
- * 比如，一个 tcp 到一个 tls 监听 ，这部分是静态的，之后根据 tls 的 alpn 结果
- * ，进行分支，两个子分支后面也是静态的，但这个判断是动态的
- *
- * 在完全动态链中，因为完全不知道任何有效信息，将没办法提前初始化，对每个 Mapper
- * 都要初始化一遍配置（如加载tls证书等），这将是非常低效的
+ * 部分动态例子1: 一个 tcp 到一个 tls 监听 ，这部分是静态的，之后根据 tls 的 alpn 结果
+ * 进行分支，两个子分支后面也是静态的，但这个判断是动态的
  *
  */
 use std::{fmt::Debug, sync::Arc};
@@ -32,16 +27,19 @@ use ruci::{
     net::CID,
 };
 
-/// Complete Dynamic Chain using index
+/// Complete Dynamic (Infinite) Chain that uses a number to indicate the current state
 #[derive(Clone, Debug)]
 pub struct IndexInfinite {
     pub tag: String,
 
     pub generator: Box<dyn IndexNextMapperGenerator>,
 
-    // 生成的 新 MapperBox 会存储在 cache 中
-    // pub cache: Vec<Arc<MapperBox>>,
-    pub current_index: i64,
+    /// current_state_index 是当前状态的指示
+    ///
+    /// 虽说是无限动态, 但实际用数字表示的最大状态数是i64的上限,
+    /// 但实际使用肯定够用了
+    ///
+    pub current_state_index: i64,
 }
 
 impl IndexInfinite {
@@ -49,8 +47,7 @@ impl IndexInfinite {
         IndexInfinite {
             tag,
             generator,
-            // cache: Vec::new(),
-            current_index: -1,
+            current_state_index: -1,
         }
     }
 }
@@ -60,21 +57,28 @@ pub type IndexMapperBox = (i64, Option<Arc<MapperBox>>); //MapperBox 和它的 �
 /// 若返回的 index 小于0, 则指示迭代结束
 ///
 pub trait IndexNextMapperGenerator: DynClone + Debug + Send + Sync {
-    fn next_mapper(&mut self, cid: CID, this_index: i64, data: OVOD) -> Option<IndexMapperBox>;
+    fn next_mapper(
+        &mut self,
+        cid: CID,
+        this_state_index: i64,
+        data: OVOD,
+    ) -> Option<IndexMapperBox>;
 }
 
 dyn_clone::clone_trait_object!(IndexNextMapperGenerator);
 
 impl DynIterator for IndexInfinite {
     fn next_with_data(&mut self, cid: CID, data: OVOD) -> Option<Arc<MapperBox>> {
-        let oi = self.generator.next_mapper(cid, self.current_index, data);
+        let oi = self
+            .generator
+            .next_mapper(cid, self.current_state_index, data);
         match oi {
             Some(ib) => {
                 let i = ib.0;
                 if i < 0 {
                     return None;
                 }
-                self.current_index = i;
+                self.current_state_index = i;
 
                 ib.1
             }
@@ -105,13 +109,13 @@ pub struct Finite {
 /// 即FSM的 状态转移函数
 pub trait NextSelector: Debug + DynClone + Send + Sync {
     ///
-    /// acts like a state-transition function, data and this_index is the current state
+    /// acts like a state-transition function, data and this_state_index is the current state
     ///
     /// initial state is None and -1.
     ///
     /// 初始index 传入 -1. 如果 返回值为 None, 或 返回值<0 或 返回值 大于最大索引值,
     /// 则意味着链终止
-    fn next_index(&self, this_index: i64, data: OVOD) -> Option<i64>;
+    fn next_index(&self, this_state_index: i64, data: OVOD) -> Option<i64>;
 }
 dyn_clone::clone_trait_object!(NextSelector);
 

@@ -433,7 +433,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
     fn next_mapper(
         &mut self,
         cid: CID,
-        this_index: i64,
+        this_state_index: i64,
         data: OVOD,
     ) -> Option<dynamic::IndexMapperBox> {
         let mut mg = self.inner.lock();
@@ -454,7 +454,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
 
                         let r = t.resume::<_, (i64, Value)>((
                             cid_v,
-                            this_index,
+                            this_state_index,
                             mg.lua.to_value(&data),
                         ));
 
@@ -495,7 +495,11 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
 
                         let cid_v = mg.lua.to_value(&cid).ok()?;
 
-                        let r = t.resume::<_, (i64, Value)>((cid_v, this_index, l.to_value(&data)));
+                        let r = t.resume::<_, (i64, Value)>((
+                            cid_v,
+                            this_state_index,
+                            l.to_value(&data),
+                        ));
 
                         let r = r.ok()?;
 
@@ -534,7 +538,7 @@ impl dynamic::IndexNextMapperGenerator for LuaNextGenerator {
             let r = l
                 .registry_value::<LuaFunction>(&mg.key)
                 .expect("must get generator from lua")
-                .call::<_, (i64, Value)>((cid_v, this_index, l.to_value(&data)));
+                .call::<_, (i64, Value)>((cid_v, this_state_index, l.to_value(&data)));
             let r = r.ok()?;
 
             let v = match r.1 {
