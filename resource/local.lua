@@ -156,7 +156,7 @@ config = {
 --]]
 
 
----[[
+--[[
 
 
 config = {
@@ -237,6 +237,27 @@ config = {
 该配置对应的 remote.lua 的 配置应该是 socks5 监听 -> direct
 --]]
 
+}
+
+--]=]
+
+
+
+---[=[
+config = {
+
+    inbounds = { 
+        {chain = { { Dialer="ip://10.0.0.1:24#utun321" } }, tag = "listen1"} ,
+    },
+
+--[[
+这个 config 块是演示 inbound 是 ip, outbound 是stdio的情况, 
+
+此时需要注意, 该配置下 要用 sudo 运行, 且 rucimp 的 "tun" feature 是打开的
+
+--]]
+
+    outbounds = { { tag="dial1", chain = out_stdio_chain } }
 }
 
 --]=]

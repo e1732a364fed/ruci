@@ -18,7 +18,7 @@ impl Name for Echo {
 impl Mapper for Echo {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
-            Stream::TCP(mut c) => {
+            Stream::Conn(mut c) => {
                 if let Some(b) = params.b {
                     let r = c.write_all(&b).await;
                     if let Err(e) = r {
@@ -62,7 +62,7 @@ impl Mapper for Echo {
                     }
                 });
             }
-            Stream::UDP(mut u) => {
+            Stream::AddrConn(mut u) => {
                 if let Some(b) = params.b {
                     if let Some(a) = params.a {
                         debug!("{cid} udp echo, write ed {:?}", b.len());

@@ -79,6 +79,10 @@ pub async fn handle_in_accumulate_result(
             match listen_result.e {
                 Some(err) => {
                     return_e = anyhow!("{cid}, handshake inbound failed with Error: {:#?}", err);
+
+                    warn!("{}", return_e);
+                    let _ = listen_result.c.try_shutdown().await;
+                    return Err(return_e);
                 }
                 None => match &listen_result.c {
                     Stream::None => {
@@ -88,14 +92,12 @@ pub async fn handle_in_accumulate_result(
                     }
                     _ => {
                         return_e =
-                            anyhow!("{cid}, handshake inbound succeed but got no target_addr");
+                            anyhow!("{cid}, handshake inbound succeed but got no target_addr, will use empty target_addr");
+                        warn!("{}", return_e);
+                        Addr::default()
                     }
                 },
             }
-
-            warn!("{}", return_e);
-            let _ = listen_result.c.try_shutdown().await;
-            return Err(return_e);
         }
     };
     if log_enabled!(log::Level::Info) {
@@ -157,7 +159,11 @@ pub async fn handle_in_accumulate_result(
     }
 
     if let Some(rta) = &dial_result.a {
-        debug!("{cid}, dial out client succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
+        if rta.eq(&Addr::default()) {
+            debug!("{cid}, dial out client succeed with empty target_addr left",);
+        } else {
+            debug!("{cid}, dial out client succeed, but the target_addr is not consumed, might be udp first target addr: {rta} ",);
+        }
     }
     cp_stream(
         cid,
@@ -181,18 +187,18 @@ pub fn cp_stream(
     ti: Option<Arc<net::TransmissionInfo>>,
 ) {
     match (s1, s2) {
-        (Stream::TCP(i), Stream::TCP(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti),
-        (Stream::TCP(i), Stream::UDP(o)) => {
+        (Stream::Conn(i), Stream::Conn(o)) => cp_tcp::cp_conn(cid, i, o, ed, ti),
+        (Stream::Conn(i), Stream::AddrConn(o)) => {
             tokio::spawn(cp_udp::cp_udp_tcp(cid, o, i, false, ed, first_target, ti));
         }
-        (Stream::UDP(i), Stream::TCP(o)) => {
+        (Stream::AddrConn(i), Stream::Conn(o)) => {
             tokio::spawn(cp_udp::cp_udp_tcp(cid, i, o, true, ed, first_target, ti));
         }
-        (Stream::UDP(i), Stream::UDP(o)) => {
+        (Stream::AddrConn(i), Stream::AddrConn(o)) => {
             tokio::spawn(cp_udp(cid, i, o, ed, first_target, ti));
         }
         _ => {
-            warn!("can't cp stream when either of them is None");
+            warn!("can't cp stream when one of them is not (Conn or AddrConn)");
         }
     }
 }

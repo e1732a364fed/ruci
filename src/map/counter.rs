@@ -123,7 +123,7 @@ impl Mapper for Counter {
     ///
     async fn maps(&self, cid: CID, behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
-            Stream::TCP(c) => {
+            Stream::Conn(c) => {
                 let mut db = 0;
 
                 if behavior == ProxyBehavior::DECODE {
@@ -149,7 +149,7 @@ impl Mapper for Counter {
                     .d(AnyData::B(Box::new(cd)))
                     .build()
             }
-            Stream::UDP(_) => {
+            Stream::AddrConn(_) => {
                 todo!()
             }
             Stream::None => MapResult::err_str("counter: can't count without a stream"),

@@ -151,7 +151,7 @@ impl map::Mapper for Client {
         params: map::MapParams,
     ) -> map::MapResult {
         let conn = params.c;
-        if let map::Stream::TCP(conn) = conn {
+        if let map::Stream::Conn(conn) = conn {
             let r = self.handshake(conn, params.b, params.a).await;
             match r {
                 Ok(r) => r,

@@ -19,11 +19,32 @@ cargo run --example suit -- local.suit.toml
 cargo run --example suit -- remote.suit.toml
 ```
 
+## route
 to use rule_route,
 
 download Country.mmdb from https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb
 
 then put it to resource folder
+
+## tun
+
+need to enable rucimp's tun feature (which enables ruci's tun feature):
+
+```sh
+sudo RUST_LOG=debug cargo run --example chain -F tun
+```
+
+### macos test
+
+使用 local.lua 的对应示例 config, 运行上面命令运行 chian, 然后在terminal 输入下面命令
+
+```sh
+sudo ifconfig utun321 10.0.0.1 10.0.0.2 up
+ping 10.0.0.2
+```
+
+将能在 chain 的命令行中接收到 ping 的数据包
+
 
 # suit 的功能还不全
 

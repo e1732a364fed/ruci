@@ -38,7 +38,7 @@ async fn dial_tls_in_mem() {
             CID::default(),
             ProxyBehavior::ENCODE,
             MapParams {
-                c: map::Stream::TCP(Box::new(client_tcps)),
+                c: map::Stream::Conn(Box::new(client_tcps)),
                 a: Some(ta),
                 b: None,
                 d: None,
@@ -74,7 +74,7 @@ async fn dial_future(listen_host_str: &str, listen_port: u16) -> anyhow::Result<
             CID::default(),
             ProxyBehavior::ENCODE,
             MapParams {
-                c: map::Stream::TCP(Box::new(cs)),
+                c: map::Stream::Conn(Box::new(cs)),
                 a: Some(ta),
                 b: None,
                 d: None,

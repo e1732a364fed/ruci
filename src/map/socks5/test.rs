@@ -193,7 +193,7 @@ async fn auth_tcp_handshake_in_mem_earlydata() -> anyhow::Result<()> {
             CID::default(),
             ProxyBehavior::DECODE,
             MapParams {
-                c: map::Stream::TCP(Box::new(client_tcps)),
+                c: map::Stream::Conn(Box::new(client_tcps)),
                 a: None,
                 b: Some(earlybuf),
                 d: None,

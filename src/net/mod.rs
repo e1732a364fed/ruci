@@ -394,22 +394,25 @@ impl Addr {
         Addr::from(network, host, ip, port)
     }
 
-    /// like 10.0.0.1:24. this 24 stores in "port",but means netmask, not port.
+    /// like
     ///
-    /// will return (10.0.0.1, 255.255.255.0)
+    /// ip://10.0.0.1:24#utun321
     ///
-    /// if it has a name, it will be returned too. might be used as a tun device name
-    pub fn to_name_ip_netmask(&self) -> Result<(Option<String>, IpAddr, (u8, u8, u8, u8))> {
-        match &self.addr {
-            NetAddr::Socket(so) => {
-                let nm = prefix_length_to_netmask(so.port() as u8);
-                Ok((None, so.ip(), nm))
+    /// tcp://127.0.0.1:80#www.b.com
+    ///
+    /// if no "#", it will fallback to from_network_addr_str
+    ///
+    pub fn from_name_network_addr_str(s: &str) -> Result<Self> {
+        let ns: Vec<_> = s.splitn(2, "#").collect();
+        match ns.len() {
+            1 => Addr::from_network_addr_str(s),
+            2 => {
+                let a = Addr::from_network_addr_str(ns[0])?;
+                Ok(a.set_name(ns[1]))
             }
-            NetAddr::NameAndSocket(name, so, port) => {
-                let nm = prefix_length_to_netmask(*port as u8);
-                Ok((Some(name.clone()), so.ip(), nm))
-            }
-            _ => bail!("Addr::to_netmask requires addr has ip, you have {:?}", self),
+            _ => Err(anyhow!(
+                "Addr::from_name_network_addr_str, split # got len!=2 && len!=1",
+            )),
         }
     }
 
@@ -444,6 +447,20 @@ impl Addr {
         }
     }
 
+    /// 127.0.0.1:80
+    pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
+        let ns: Vec<_> = s.split(':').collect();
+        if ns.len() != 2 {
+            return Err(anyhow!("Addr::from_ip_addr_str, split colon got len!=2",));
+        }
+        Addr::from_strs(
+            network,
+            "",
+            ns[0],
+            ns[1].parse::<u16>().map_err(|e| anyhow!("{}", e))?,
+        )
+    }
+
     /// will set network to Tcp
     pub fn from_ipname(ipn: IPName, port: u16) -> Self {
         match ipn {
@@ -454,6 +471,23 @@ impl Addr {
             IPName::Name(n) => Addr {
                 network: Network::TCP,
                 addr: NetAddr::Name(n, port),
+            },
+        }
+    }
+
+    pub fn set_name(self, n: &str) -> Self {
+        match self.addr {
+            NetAddr::Socket(so) => Addr {
+                network: self.network,
+                addr: NetAddr::NameAndSocket(n.to_string(), so, so.port()),
+            },
+            NetAddr::Name(_, p) => Addr {
+                network: self.network,
+                addr: NetAddr::Name(n.to_string(), p),
+            },
+            NetAddr::NameAndSocket(_, so, p) => Addr {
+                network: self.network,
+                addr: NetAddr::NameAndSocket(n.to_string(), so, p),
             },
         }
     }
@@ -522,7 +556,7 @@ impl Addr {
                 u.connect(so).await?;
                 let mut u = udp::new(u, Some(self.clone()));
                 u.default_write_to = Some(self.clone());
-                Ok(Stream::UDP(u))
+                Ok(Stream::AddrConn(u))
             }
 
             _ => bail!(
@@ -544,31 +578,32 @@ impl Addr {
         match self.network {
             #[cfg(feature = "tun")]
             Network::IP => {
+                debug!("Addr dialing {}", self);
                 let (tun_name, dial_addr, netmask) = self
                     .to_name_ip_netmask()
                     .context("Addr::try_dial tun, to_name_ip_netmask failed")?;
                 let c = tun::dial(tun_name, dial_addr, netmask)
                     .await
                     .context("Addr::try_dial tun, dial failed")?;
-                Ok(Stream::IP(Box::new(c)))
+                Ok(Stream::Conn(Box::new(c)))
             }
             Network::TCP => {
                 let so = self.get_socket_addr_or_resolve()?;
 
                 let c = TcpStream::connect(so).await?;
-                Ok(Stream::TCP(Box::new(c)))
+                Ok(Stream::Conn(Box::new(c)))
             }
             Network::UDP => {
                 let so = self.get_socket_addr_or_resolve()?;
 
                 let u = UdpSocket::bind(so).await?;
                 let u = udp::new(u, None);
-                Ok(Stream::UDP(u))
+                Ok(Stream::AddrConn(u))
             }
             #[cfg(unix)]
             Network::Unix => {
                 let u = UnixStream::connect(self.get_name().unwrap_or_default()).await?;
-                Ok(Stream::TCP(Box::new(u)))
+                Ok(Stream::Conn(Box::new(u)))
             }
             #[cfg(not(feature = "tun"))]
             _ => bail!("try_dial failed, not supported network: {}", self.network),
@@ -599,26 +634,45 @@ impl Addr {
             },
         }
     }
-
-    /// 127.0.0.1:80
-    pub fn from_ip_addr_str(network: &'static str, s: &str) -> Result<Self> {
-        let ns: Vec<_> = s.split(':').collect();
-        if ns.len() != 2 {
-            return Err(anyhow!("Addr::from_ip_addr_str, split colon got len!=2",));
+    pub fn get_display_addr_str(&self) -> String {
+        let mut s = self.get_addr_str();
+        match self.network {
+            Network::IP => match &self.addr {
+                NetAddr::NameAndSocket(n, _, _) => {
+                    s.push('#');
+                    s.push_str(n);
+                }
+                _ => {}
+            },
+            _ => {}
         }
-        Addr::from_strs(
-            network,
-            "",
-            ns[0],
-            ns[1].parse::<u16>().map_err(|e| anyhow!("{}", e))?,
-        )
+        s
+    }
+
+    /// like 10.0.0.1:24. this 24 stores in "port",but means netmask, not port.
+    ///
+    /// will return (10.0.0.1, 255.255.255.0)
+    ///
+    /// if it has a name, it will be returned too. might be used as a tun device name
+    pub fn to_name_ip_netmask(&self) -> Result<(Option<String>, IpAddr, (u8, u8, u8, u8))> {
+        match &self.addr {
+            NetAddr::Socket(so) => {
+                let nm = prefix_length_to_netmask(so.port() as u8);
+                Ok((None, so.ip(), nm))
+            }
+            NetAddr::NameAndSocket(name, so, port) => {
+                let nm = prefix_length_to_netmask(*port as u8);
+                Ok((Some(name.clone()), so.ip(), nm))
+            }
+            _ => bail!("Addr::to_netmask requires addr has ip, you have {:?}", self),
+        }
     }
 }
 
 /// 以 url 的格式 描述 Addr
 impl Display for Addr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = self.get_addr_str();
+        let s = self.get_display_addr_str();
         write!(f, "{}://{}", self.network.to_static_str(), s)
     }
 }
@@ -648,10 +702,11 @@ pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 
 #[derive(Default)]
 pub enum Stream {
-    IP(Conn),
-    ///  tcp / unix domain socket 等 目标 Addr 唯一的 情况
-    TCP(Conn),
-    UDP(AddrConn),
+    ///  ip/ tcp / unix domain socket 等 目标 Addr 唯一的 情况
+    Conn(Conn),
+
+    /// udp 的情况
+    AddrConn(AddrConn),
 
     /// 比如： tcp listener. Receiver 中的元素为 MapResult, 是为了
     /// 方便传递其它信息, 如peer_addr 由 MapResult.a 标识
@@ -670,8 +725,8 @@ impl Debug for Stream {
 impl Display for Stream {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            Stream::TCP(c) | Stream::IP(c) => write!(f, "{}", c.name()),
-            Stream::UDP(ac) => write!(f, "{}", ac.name()),
+            Stream::Conn(c) => write!(f, "{}", c.name()),
+            Stream::AddrConn(ac) => write!(f, "{}", ac.name()),
             Stream::Generator(_) => write!(f, "SomeStreamGenerator"),
             Stream::None => write!(f, "NoStream"),
         }
@@ -680,10 +735,10 @@ impl Display for Stream {
 
 impl Stream {
     pub fn c(c: Conn) -> Self {
-        Stream::TCP(c)
+        Stream::Conn(c)
     }
     pub fn u(u: AddrConn) -> Self {
-        Stream::UDP(u)
+        Stream::AddrConn(u)
     }
     pub fn g(g: StreamGenerator) -> Self {
         Stream::Generator(g)
@@ -702,30 +757,30 @@ impl Stream {
         matches!(self, Stream::None) || matches!(self, Stream::Generator(_))
     }
     pub async fn try_shutdown(self) -> Result<()> {
-        if let Stream::TCP(mut t) = self {
+        if let Stream::Conn(mut t) = self {
             t.shutdown().await?
-        } else if let Stream::UDP(mut c) = self {
+        } else if let Stream::AddrConn(mut c) = self {
             c.w.shutdown().await?
         }
         Ok(())
     }
 
     pub fn try_unwrap_tcp(self) -> Result<Conn> {
-        if let Stream::TCP(t) = self {
+        if let Stream::Conn(t) = self {
             return Ok(t);
         }
         Err(anyhow!("not tcp"))
     }
 
     pub fn try_unwrap_tcp_ref(&self) -> Result<&Conn> {
-        if let Stream::TCP(t) = self {
+        if let Stream::Conn(t) = self {
             return Ok(t);
         }
         Err(anyhow!("not tcp"))
     }
 
     pub fn try_unwrap_udp(self) -> Result<AddrConn> {
-        if let Stream::UDP(t) = self {
+        if let Stream::AddrConn(t) = self {
             return Ok(t);
         }
         Err(anyhow!("not udp"))
@@ -733,8 +788,8 @@ impl Stream {
 
     pub async fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self {
-            Stream::TCP(conn) => conn.write(buf).await,
-            Stream::UDP(ac) => {
+            Stream::Conn(conn) => conn.write(buf).await,
+            Stream::AddrConn(ac) => {
                 let x = ac.default_write_to.as_ref();
                 match x {
                     Some(ta) => ac.w.write(buf, ta).await,
@@ -749,8 +804,8 @@ impl Stream {
 
     pub async fn write_all(&mut self, buf: &[u8]) -> std::io::Result<()> {
         match self {
-            Stream::TCP(conn) => conn.write_all(buf).await,
-            Stream::UDP(ac) => {
+            Stream::Conn(conn) => conn.write_all(buf).await,
+            Stream::AddrConn(ac) => {
                 let x = ac.default_write_to.as_ref();
                 match x {
                     Some(ta) => ac.w.write(buf, ta).await.map(|_| ()),

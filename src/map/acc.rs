@@ -97,6 +97,9 @@ pub async fn accumulate(
             } else {
                 Some(input_data)
             };
+        if log_enabled!(log::Level::Debug) {
+            debug!("acc: {cid} , adder: {}", adder.name())
+        }
         last_r = adder
             .maps(
                 match last_r.new_id {
@@ -188,7 +191,7 @@ pub async fn accumulate_from_start(
                 warn!("accumulate_from_start: no input stream, still trying to accumulate")
             }
             _ => {
-                warn!("accumulate_from_start: not a stream generator, will accumulate directly.",);
+                debug!("accumulate_from_start: not a stream generator, will accumulate directly.",);
             }
         }
 

@@ -87,7 +87,7 @@ impl Listener {
                     addr: net::NetAddr::Socket(tcp_soa),
                     network: net::Network::TCP,
                 };
-                return Ok((Stream::TCP(Box::new(tcp_stream)), a));
+                return Ok((Stream::Conn(Box::new(tcp_stream)), a));
             }
             #[cfg(unix)]
             Listener::UNIX((ul, _)) => {
@@ -112,7 +112,7 @@ impl Listener {
                     }
                 };
 
-                return Ok((Stream::TCP(Box::new(unix_stream)), a));
+                return Ok((Stream::Conn(Box::new(unix_stream)), a));
             }
         }
     }

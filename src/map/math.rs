@@ -164,7 +164,7 @@ impl ToMapper for i8 {
 impl crate::map::Mapper for Adder {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
-            Stream::TCP(c) => {
+            Stream::Conn(c) => {
                 let cc = AdderConn {
                     cid,
                     add: self.addnum,
@@ -179,7 +179,7 @@ impl crate::map::Mapper for Adder {
                     .b(params.b)
                     .build()
             }
-            Stream::UDP(_) => {
+            Stream::AddrConn(_) => {
                 todo!()
             }
             Stream::None => MapResult::err_str("adder: can't add without a stream"),

@@ -189,7 +189,7 @@ impl Mapper for Server {
         params: map::MapParams,
     ) -> MapResult {
         match params.c {
-            map::Stream::TCP(c) => {
+            map::Stream::Conn(c) => {
                 let r = self.handshake(cid, c).await;
                 MapResult::from_result(r)
             }

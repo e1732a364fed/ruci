@@ -285,7 +285,8 @@ impl ToMapper for InMapperConfig {
                 Box::new(s)
             }
             InMapperConfig::Dialer(td_str) => {
-                let a = net::Addr::from_network_addr_str(td_str).expect("network_ip_addr is valid");
+                let a = net::Addr::from_name_network_addr_str(td_str)
+                    .expect("network_ip_addr is valid");
                 let mut d = ruci::map::network::Dialer::default();
                 d.set_configured_target_addr(Some(a));
                 Box::new(d)
@@ -379,7 +380,8 @@ impl ToMapper for OutMapperConfig {
 
             OutMapperConfig::Direct => Box::new(ruci::map::network::Direct::default()),
             OutMapperConfig::Dialer(td_str) => {
-                let a = net::Addr::from_network_addr_str(td_str).expect("network_ip_addr is valid");
+                let a = net::Addr::from_name_network_addr_str(td_str)
+                    .expect("network_ip_addr is valid");
                 let mut d = ruci::map::network::Dialer::default();
                 d.set_configured_target_addr(Some(a));
                 Box::new(d)

@@ -1,4 +1,5 @@
 use anyhow::Ok;
+use log::debug;
 // use futures::StreamExt;
 // use packet::ip::Packet;
 // use tokio::io::AsyncReadExt;
@@ -47,6 +48,7 @@ where
     //         Err(err) => panic!("Error: {:?}", err),
     //     }
     // }
+    debug!("tun: dial succeed");
 
     Ok(Box::new(dev))
 }

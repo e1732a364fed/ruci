@@ -86,7 +86,7 @@ impl map::Mapper for Server {
         params: map::MapParams,
     ) -> map::MapResult {
         let conn = params.c;
-        if let map::Stream::TCP(conn) = conn {
+        if let map::Stream::Conn(conn) = conn {
             let r = self.handshake(cid, conn, params.b, params.a).await;
             match r {
                 anyhow::Result::Ok(r) => r,

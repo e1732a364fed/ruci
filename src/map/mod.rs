@@ -99,11 +99,11 @@ pub struct MapParams {
 
 impl MapParams {
     pub fn new(c: net::Conn) -> Self {
-        MapParams::builder().c(Stream::TCP(c)).build()
+        MapParams::builder().c(Stream::Conn(c)).build()
     }
 
     pub fn newc(c: net::Conn) -> MapParamsBuilder<((Stream,), (), (), (), ())> {
-        MapParams::builder().c(Stream::TCP(c))
+        MapParams::builder().c(Stream::Conn(c))
     }
 
     pub fn ca(c: net::Conn, target_addr: net::Addr) -> Self {

@@ -5,7 +5,7 @@ version = "0.0.1"
 edition = "2021"
 readme = "README.md"
 description = "a network proxy framework"
-categories = ["network-programming","web-programming"]
+categories = ["network-programming"]
  
 [profile.release]
 lto = "fat"

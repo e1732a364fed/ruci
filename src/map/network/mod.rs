@@ -70,7 +70,9 @@ impl Mapper for Direct {
         };
         match dial_r {
             Ok(mut stream) => {
-                if matches!(stream, Stream::TCP(_)) && self.is_tail_of_chain() && params.b.is_some()
+                if matches!(stream, Stream::Conn(_))
+                    && self.is_tail_of_chain()
+                    && params.b.is_some()
                 {
                     let rw = stream
                         .write_all(params.b.as_ref().expect("param.b is some"))
@@ -141,7 +143,7 @@ impl Mapper for Dialer {
                                     }
                                     None => {
                                         return MapResult::err_str(
-                                            "dialer got dial addr paramater but it's None",
+                                            "Dialer got dial addr paramater but it's None",
                                         )
                                     }
                                 }
@@ -154,7 +156,7 @@ impl Mapper for Dialer {
                                     }
                                     None => {
                                         return MapResult::err_str(
-                                            "dialer got dial addr paramater but it's None",
+                                            "Dialer got dial addr paramater but it's None",
                                         )
                                     }
                                 }
@@ -162,13 +164,13 @@ impl Mapper for Dialer {
 
                             _ => {
                                 return MapResult::err_str(&format!(
-                                    "{cid} dialer can't dial without an address-",
+                                    "{cid} Dialer can't dial without an address-",
                                 ));
                             }
                         }
                     }
                     return MapResult::err_str(&format!(
-                        "{cid} dialer can't dial without an address",
+                        "{cid} Dialer can't dial without an address",
                     ));
                 }
                 None => {
@@ -176,14 +178,14 @@ impl Mapper for Dialer {
                         return Dialer::dial_addr(configured_dial_a, params.a, params.b).await;
                     }
                     return MapResult::err_str(&format!(
-                        "{cid} dialer can't dial without an address",
+                        "{cid} Dialer can't dial without an address",
                     ));
                 }
             },
 
             _ => {
                 return MapResult::err_str(&format!(
-                    "{cid} dialer can't dial when a stream already exists"
+                    "{cid} Dialer can't dial when a stream already exists"
                 ))
             }
         }

@@ -38,6 +38,8 @@ route = ["ipnet" ,"iprange" ,"regex"]
 
 geoip = ["maxminddb", "route"]
 
+tun = ["ruci/tun"]
+
 
 [[example]]
 name = "chain"

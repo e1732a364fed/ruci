@@ -191,7 +191,7 @@ impl map::Mapper for Client {
         };
 
         match params.c {
-            map::Stream::TCP(c) => {
+            map::Stream::Conn(c) => {
                 let r = self.handshake(cid, c, target_addr, params.b).await;
                 MapResult::from_result(r)
             }

@@ -90,7 +90,7 @@ impl Mapper for Client {
         params: map::MapParams,
     ) -> MapResult {
         match params.c {
-            map::Stream::TCP(c) => {
+            map::Stream::Conn(c) => {
                 let r = self
                     .handshake(cid, c, params.a.expect("params has target addr"), params.b)
                     .await;
