@@ -54,7 +54,16 @@ trojan_out = {
     Trojan = "mypassword"
 }
 
+websocket_out = {
+    WebSocket ={
+        is_early_data = false,
+        host = "host1",
+        path = "/?ed=2048"
+    }
+}
+
 dial_trojan_chain = {dial, tlsout, trojan_out}
+dial_trojan_ws_chain = {dial, tlsout,websocket_out, trojan_out}
 
 stdio_socks5_chain = {{
     Stdio = {}
@@ -78,7 +87,7 @@ out_stdio_chain = {{
 
 direct_out_chain = {"Direct"}
 
----[=[
+--[=[
 
 config = {
     inbounds = {{
@@ -108,7 +117,7 @@ config = {
     outbounds = { { tag="dial1", chain = dial_trojan_chain } }
 
 --[[
-这个 config 块是演示 inbound 是 socks5http, outbound 是 trojan+若干tls 的情况
+这个 config 块是演示 inbound 是 socks5http, outbound 是 trojan+tls 的情况
 
 它是一个基本的远程代理示例. 运行它, 设置您的系统代理为相应端口,
 并参照 remote.lua 在另一个终端 运行 另一部分,
@@ -139,6 +148,21 @@ config = {
 }
 
 --]=]
+
+
+---[=[
+config = {
+    inbounds = { {chain = listen_socks5http, tag = "listen1"} },
+    outbounds = { { tag="dial1", chain = dial_trojan_ws_chain } }
+
+--[[
+这个 config 块是演示 inbound 是 socks5http, outbound 是 trojan+tls+ws 的情况
+--]]
+
+}
+
+--]=]
+
 
 --[=[
 config = {

@@ -10,7 +10,12 @@ pub mod lua;
 
 pub mod dynamic;
 
-use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::PathBuf,
+    sync::Arc,
+    time::Duration,
+};
 
 use bytes::BytesMut;
 use ruci::{
@@ -25,6 +30,7 @@ use ruci::{
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
+use crate::map::ws;
 #[cfg(feature = "route")]
 use crate::route::{config::RuleSetConfig, RuleSet};
 
@@ -189,6 +195,7 @@ pub enum InMapperConfig {
     Socks5(PlainTextSet),
     Socks5Http(PlainTextSet),
     Trojan(TrojanPassSet),
+    WebSocket,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -203,6 +210,7 @@ pub enum OutMapperConfig {
     TLS(TlsOut),
     Socks5(Socks5Out),
     Trojan(String),
+    WebSocket(HttpConfig),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -245,6 +253,15 @@ pub struct TlsIn {
 pub struct TlsOut {
     host: String,
     insecure: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct HttpConfig {
+    pub is_early_data: bool,
+
+    pub host: String,
+    pub path: String,
+    pub headers: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -355,6 +372,7 @@ impl ToMapperBox for InMapperConfig {
 
                 so.to_mapper_box()
             }
+            InMapperConfig::WebSocket => Box::new(crate::map::ws::server::Server {}),
         }
     }
 }
@@ -413,6 +431,16 @@ impl ToMapperBox for OutMapperConfig {
             OutMapperConfig::Trojan(pass) => {
                 let a = trojan::client::Client::new(pass);
                 Box::new(a)
+            }
+            OutMapperConfig::WebSocket(c) => {
+                let client = ws::client::Client::new(ws::client::Config {
+                    host: c.host.clone(),
+                    path: c.path.clone(),
+                    headers: c.headers.clone(),
+                    is_early_data: c.is_early_data,
+                });
+
+                Box::new(client)
             }
         }
     }

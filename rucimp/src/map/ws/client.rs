@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::BytesMut;
+use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, *},
     net::{self, *},
@@ -14,7 +15,7 @@ use tokio_tungstenite::{
 
 use super::WsStreamToConnWrapper;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, NoMapperExt)]
 pub struct Client {
     request: Request<()>,
 }
@@ -26,11 +27,11 @@ impl ruci::Name for Client {
 }
 
 pub struct Config {
-    host: String,
-    uri: String,
-    headers: Option<BTreeMap<String, String>>,
+    pub host: String,
+    pub path: String,
+    pub headers: Option<BTreeMap<String, String>>,
 
-    is_early_data: bool,
+    pub is_early_data: bool,
 }
 const EARLY_DATA_HEADER_K: &str = "k";
 const EARLY_DATA_HEADER_V: &str = "v";
@@ -47,7 +48,7 @@ impl Client {
                 "Sec-WebSocket-Key",
                 tokio_tungstenite::tungstenite::handshake::client::generate_key(),
             )
-            .uri(c.uri.clone());
+            .uri("ws://".to_string() + c.host.as_str() + &c.path);
 
         if let Some(h) = c.headers {
             for (k, v) in h.iter() {
@@ -103,7 +104,7 @@ impl Mapper for Client {
             let r = self.handshake(cid, conn, params.a, params.b).await;
             match r {
                 anyhow::Result::Ok(r) => r,
-                Err(e) => MapResult::from_e(e.context("websocket_client handshake failed")),
+                Err(e) => MapResult::from_e(e.context("websocket_client maps failed")),
             }
         } else {
             MapResult::err_str("websocket_client only support tcplike stream")

@@ -1,5 +1,6 @@
 use anyhow::Context;
 use async_trait::async_trait;
+use macro_mapper::NoMapperExt;
 use ruci::{
     map::{self, *},
     net::{self, *},
@@ -8,7 +9,7 @@ use tokio_tungstenite::accept_async;
 
 use super::WsStreamToConnWrapper;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, NoMapperExt)]
 pub struct Server {}
 
 impl ruci::Name for Server {
@@ -24,6 +25,7 @@ impl Server {
         conn: net::Conn,
         a: Option<net::Addr>,
     ) -> anyhow::Result<map::MapResult> {
+        //todo: 现在没有任何 host/ path 验证, 想办法加上
         let c = accept_async(conn)
             .await
             .with_context(|| "websocket server handshake failed")?;
