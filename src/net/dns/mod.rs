@@ -3,6 +3,10 @@ Provides functions to set or get system dns servers.
  */
 use std::vec;
 
+mod resolve;
+
+pub use resolve::*;
+
 /*
 从 下面网页学 /etc/resolv.conf
 https://www.baeldung.com/linux/etc-resolv-conf-file

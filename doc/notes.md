@@ -422,6 +422,15 @@ ip route add {v} via {router_ip} dev {original_dev_name} metric 1
 
 ip route add {v} dev {original_dev_name} metric 100
 
+## dns 问题
+
+想法：
+
+在本项目原来的代码中，dns 的 resolve 属于 低级过程，是与链式配置无关的。
+这就意味着就算用户自定义 dns，也只能定义一个全局的dns，没法针对每一个链配置
+
+显然，每一个链都加一个 该链专属的 dns配置项，就可以达到最大的灵活性
+
 
 ## 其它
 
