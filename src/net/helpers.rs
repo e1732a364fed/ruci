@@ -1,5 +1,7 @@
 use std::{io, net::Ipv4Addr, pin::Pin, task::Poll};
 
+use crate::Name;
+
 use super::*;
 use bytes::{Buf, BufMut, BytesMut};
 use parking_lot::Mutex;

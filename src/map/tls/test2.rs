@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::{
     map::{self, *},
-    net::{self, NamedConn, CID},
+    net::{self, AsyncConn, CID},
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -15,7 +15,7 @@ async fn dial_future(
     listen_host_str: &str,
     listen_port: u16,
     layer_num: u8,
-) -> anyhow::Result<Box<dyn NamedConn>> {
+) -> anyhow::Result<Box<dyn AsyncConn>> {
     let cs = TcpStream::connect((listen_host_str, listen_port))
         .await
         .expect("dial tcp succeed");
@@ -115,7 +115,7 @@ async fn listen_future(
     Ok(())
 }
 
-pub async fn test_init(layer_num: u8) -> anyhow::Result<Box<dyn NamedConn>> {
+pub async fn test_init(layer_num: u8) -> anyhow::Result<Box<dyn AsyncConn>> {
     const HOST: &str = "127.0.0.1";
     const PORT: u16 = 23456;
 
@@ -133,7 +133,7 @@ pub async fn test_batch_run(l: usize, layer_num: u8) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn test_write(d: &mut Box<dyn NamedConn>) -> anyhow::Result<()> {
+pub async fn test_write(d: &mut Box<dyn AsyncConn>) -> anyhow::Result<()> {
     unsafe {
         d.write_all(&VEC2).await?;
     }

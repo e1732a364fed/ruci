@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use ruci::{
     map::{self, MapResult, ProxyBehavior},
-    net::{self, helpers::EarlyDataWrapper, NamedConn, CID},
+    net::{self, helpers::EarlyDataWrapper, AsyncConn, CID},
     Name,
 };
 
@@ -49,7 +49,7 @@ impl Name for Server {
     }
 }
 
-pub struct TlsStreamWrapper(TlsStream<Box<dyn NamedConn>>);
+pub struct TlsStreamWrapper(TlsStream<Box<dyn AsyncConn>>);
 
 impl ruci::Name for TlsStreamWrapper {
     fn name(&self) -> &str {

@@ -56,12 +56,7 @@ impl AsyncRead for CounterConn {
 
             let db = self.data.db.fetch_add(n as u64, Ordering::Relaxed);
             if tracing::enabled!(tracing::Level::DEBUG) {
-                debug!(
-                    "{}, counter for {}: db: {}, ",
-                    self.data.cid,
-                    self.base.name(),
-                    db,
-                );
+                debug!("{}, counter : db: {}, ", self.data.cid, db,);
             }
         }
         r
@@ -79,12 +74,7 @@ impl AsyncWrite for CounterConn {
         if let Poll::Ready(Ok(u)) = &r {
             let ub = self.data.ub.fetch_add(*u as u64, Ordering::Relaxed);
             if tracing::enabled!(tracing::Level::DEBUG) {
-                debug!(
-                    "{}, counter for {}: ub: {}, ",
-                    self.data.cid,
-                    self.base.name(),
-                    ub,
-                );
+                debug!("{}, counter : ub: {}, ", self.data.cid, ub,);
             }
         }
         r

@@ -136,8 +136,7 @@ impl Mapper for Client {
     }
 }
 
-type OptDialF =
-    Option<Pin<Box<dyn Future<Output = anyhow::Result<Box<dyn NamedConn>>> + Send + Sync>>>;
+type OptDialF = Option<Pin<Box<dyn Future<Output = anyhow::Result<Conn>> + Send + Sync>>>;
 
 #[derive(Default)]
 struct EarlyConn {

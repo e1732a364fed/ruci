@@ -49,12 +49,10 @@ use tokio::net::UdpSocket;
 use tokio::net::UnixStream;
 use tracing::debug;
 
-// #[derive(Default)]
-// pub enum GenerateCIDBehavior {
-//     #[default]
-//     Random,
-//     Ordered,
-// }
+use crate::map::MapResult;
+
+use self::addr_conn::AddrConn;
+use self::addr_conn::AsyncWriteAddrExt;
 
 pub fn new_rand_cid() -> u32 {
     const ID_RANGE_START: u32 = 100_000;
@@ -292,8 +290,8 @@ impl Display for Stream {
 impl Stream {
     pub fn to_str(&self) -> &str {
         match &self {
-            Stream::Conn(c) => c.name(),
-            Stream::AddrConn(ac) => ac.name(),
+            Stream::Conn(_) => "conn",
+            Stream::AddrConn(ac) => crate::Name::name(ac),
             Stream::Generator(_) => "SomeStreamGenerator",
             Stream::None => "NoStream",
         }
@@ -387,12 +385,6 @@ impl Stream {
     }
 }
 
-use crate::map::MapResult;
-use crate::Name;
-
-use self::addr_conn::AddrConn;
-use self::addr_conn::AsyncWriteAddrExt;
-
 /// 用于全局状态监视和流量统计
 ///
 /// ## About Real Data Traffic and Original Traffic
@@ -424,22 +416,5 @@ pub struct GlobalTrafficRecorder {
 pub trait AsyncConn: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
 impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync> AsyncConn for T {}
 
-/// the Trait is massively used in ruci
-pub trait NamedConn: AsyncConn + Name {}
-impl<T: AsyncConn + Name> NamedConn for T {}
-
-impl crate::Name for TcpStream {
-    fn name(&self) -> &str {
-        "tcp_stream"
-    }
-}
-
-#[cfg(unix)]
-impl crate::Name for UnixStream {
-    fn name(&self) -> &str {
-        "unix_stream"
-    }
-}
-
 /// an important type in ruci
-pub type Conn = Box<dyn NamedConn>;
+pub type Conn = Box<dyn AsyncConn>;
