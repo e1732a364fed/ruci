@@ -7,7 +7,10 @@ use ruci::{
 };
 use tokio_tungstenite::{
     accept_hdr_async,
-    tungstenite::http::{HeaderValue, StatusCode},
+    tungstenite::{
+        handshake::server::{ErrorResponse, Request, Response},
+        http::{HeaderValue, StatusCode},
+    },
 };
 use tracing::{debug, warn};
 
@@ -36,14 +39,9 @@ impl Server {
         conn: net::Conn,
         a: Option<net::Addr>,
     ) -> anyhow::Result<map::MapResult> {
-        let mut ob: Option<BytesMut> = None;
+        let mut early_data: Option<BytesMut> = None;
 
-        let func = |r: &tokio_tungstenite::tungstenite::handshake::server::Request,
-                    response: tokio_tungstenite::tungstenite::handshake::server::Response|
-         -> Result<
-            tokio_tungstenite::tungstenite::handshake::server::Response,
-            tokio_tungstenite::tungstenite::handshake::server::ErrorResponse,
-        > {
+        let func = |r: &Request, response: Response| -> Result<Response, ErrorResponse> {
             use http::Response;
 
             if let Some(c) = &self.config {
@@ -104,7 +102,7 @@ impl Server {
                         match r {
                             Ok(v) => {
                                 debug!("ws got early data {}", v.len());
-                                ob = Some(BytesMut::from(v.as_slice()))
+                                early_data = Some(BytesMut::from(v.as_slice()))
                             }
                             Err(e) => {
                                 warn!(
@@ -127,7 +125,7 @@ impl Server {
             w_buf: None,
         }))
         .a(a)
-        .b(ob)
+        .b(early_data)
         .build())
     }
 }
