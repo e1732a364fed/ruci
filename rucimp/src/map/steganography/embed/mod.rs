@@ -570,7 +570,7 @@ where
 
 ///blocking. write_once 检查包长 而是 直接发送。 使包满足 packet长度 以及包头等情况 都是 调用者的责任
 ///
-/// 如果100ms后收不到write_rx 中的数据，则会自动发送一个隐写包
+/// 如果10ms后收不到write_rx 中的数据，则会自动发送一个隐写包
 async fn write_once<W>(
     writer: &mut W,
     length: usize,
@@ -579,7 +579,7 @@ async fn write_once<W>(
 where
     W: AsyncWrite + Unpin + ?Sized,
 {
-    let timer = tokio::time::sleep(std::time::Duration::from_millis(100));
+    let timer = tokio::time::sleep(std::time::Duration::from_millis(10));
     use tokio::io::AsyncWriteExt;
 
     tokio::select! {
