@@ -525,10 +525,20 @@ impl Addr {
                 let (tun_name, dial_addr, netmask) = ip
                     .to_name_ip_netmask()
                     .context("Addr::bind_dial tun, to_name_ip_netmask failed")?;
+                // let rw = tun::create_bind_rw(tun_name, dial_addr, netmask)
+                //     .await
+                //     .context("bind_dial failed for tun")?;
+                // Ok(Stream::RW(rw))
+
+                // let f = tun::create_bind_sink_stream(tun_name, dial_addr, netmask)
+                //     .await
+                //     .context("bind_dial failed for tun")?;
+                // Ok(Stream::Frame(f))
+
                 let c = tun::create_bind(tun_name, dial_addr, netmask)
                     .await
                     .context("bind_dial failed for tun")?;
-                Ok(Stream::Conn(Box::new(c)))
+                Ok(Stream::Conn(c))
             }
             Network::TCP => {
                 let dial_a = match &dial_a {

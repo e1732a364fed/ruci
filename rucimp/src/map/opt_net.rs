@@ -198,8 +198,7 @@ impl Map for OptDirect {
                             .a(Some(a))
                             .build();
                     }
-                    Stream::Generator(_) => todo!(),
-                    Stream::None => todo!(),
+                    _ => return MapResult::err_str("OptDirect only supports Conn or AddrConn"),
                 }
             }
             Err(e) => return MapResult::from_e(e.context(format!("opt_direct dial {} failed", a))),

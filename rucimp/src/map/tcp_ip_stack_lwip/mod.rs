@@ -27,7 +27,7 @@ use ruci::{
     Name,
 };
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{split, AsyncReadExt, AsyncWriteExt},
     sync::mpsc,
 };
 use tracing::debug;
@@ -47,6 +47,15 @@ impl Name for Stack {
 #[async_trait]
 impl Map for Stack {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
+        //从 tun device 有三种方式可以 异步读取，
+        // 1. 先在 device 用 AsyncDevice 它自己的 split
+        // 2. 转为 AsyncConn 后 用 tokio 的 split
+        // 3. 转为 Frame 后 分成 sync 和 stream
+
+        //24.12.25: 实测第一种情况 会在 向 tun 写入时卡住, 第2、3种情况效果相同。
+
+        // if let ruci::net::Stream::RW(rw) = params.c {
+        // if let ruci::net::Stream::Frame(f) = params.c {
         if let ruci::net::Stream::Conn(conn) = params.c {
             let (stack, mut tcp_listener, udp_socket) = NetStack::new().unwrap();
             let (mut stack_sink, mut stack_stream) = stack.split();
@@ -55,7 +64,10 @@ impl Map for Stack {
             // let r = ruci::net::tun::create_bind_sink_stream(tun_name, dial_addr, netmask).await;
             // 实测使用 frame 转的 stream 和 sink 读取不到任何数据，原因未知，故只能用 原来的 AsyncRead+AsyncWrite 的方式
 
-            let (mut r, mut w) = tokio::io::split(conn);
+            // let (mut r, mut w) = rw;
+            let (mut r, mut w) = split(conn);
+
+            // let (mut tun_sink, mut tun_stream) = f;
 
             // Reads packet from TUN and sends to stack.
             tokio::spawn(async move {
@@ -64,7 +76,7 @@ impl Map for Stack {
                     // debug!("start read bc");
                     let r = r.read(&mut bs).await;
                     if let Ok(n) = r {
-                        // debug!("tun got pkt {:?}", n);
+                        // debug!("tun got pkt {:?},  {:?}", n, &bs[..n]);
                         stack_sink.send((&bs[..n]).to_vec()).await.unwrap();
                     } else {
                         break;
@@ -73,17 +85,40 @@ impl Map for Stack {
                 debug!("end2");
             });
 
+            // tokio::spawn(async move {
+            //     while let Some(pkt) = tun_stream.next().await {
+            //         // debug!("tun got pkt {:?}", pkt);
+            //         if let Ok(pkt) = pkt {
+            //             stack_sink.send(pkt).await.unwrap();
+            //         }
+            //     }
+            //     debug!("end2");
+            // });
+
             // Reads packet from stack and sends to TUN.
             tokio::spawn(async move {
                 while let Some(pkt) = stack_stream.next().await {
-                    // debug!("stack got pkt ",);
+                    // debug!("stack got pkt {:?}", pkt);
 
                     if let Ok(pkt) = pkt {
-                        w.write_all(&pkt).await.unwrap();
+                        // debug!("stack wrting");
+                        w.write(&pkt).await.unwrap();
+                        // debug!("stack wrting ok");
                     }
                 }
                 debug!("end1");
             });
+
+            // tokio::spawn(async move {
+            //     while let Some(pkt) = stack_stream.next().await {
+            //         // debug!("stack got pkt {:?}", pkt);
+
+            //         if let Ok(pkt) = pkt {
+            //             tun_sink.send(pkt).await.unwrap();
+            //         }
+            //     }
+            //     debug!("end1");
+            // });
 
             let (stream_tx, stream_rx) = mpsc::channel(100);
 
@@ -107,9 +142,12 @@ impl Map for Stack {
 
                         Some(d) => {
                             // debug!("will send to stack {},{}", &d.1, &d.2); // 10.0.0.1:55124,114.114.114.114:53
+                            // let r = w.send_to(d.0.as_slice(), &d.1, &d.2);
                             let r = w.send_to(d.0.as_slice(), &d.1, &d.2);
                             match r {
-                                Ok(_) => {}
+                                Ok(_) => {
+                                    // debug!("write ok");
+                                }
                                 Err(_) => todo!(),
                             }
                         }

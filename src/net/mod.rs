@@ -266,12 +266,24 @@ impl CID {
 /// [`crate::map::network::accept`]
 pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 
+pub type RW = (
+    Box<dyn AsyncRead + Unpin + Send + Sync>,
+    Box<dyn AsyncWrite + Unpin + Send + Sync>,
+);
 /// Represents one of the four different kinds of streams. Default is [`Stream::None`]
 #[derive(Default)]
 pub enum Stream {
     ///  raw ip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
     Conn(Conn),
 
+    RW(RW),
+
+    // Frame(
+    //     (
+    //         SplitSink<Framed<AsyncDevice, TunPacketCodec>, Vec<u8>>,
+    //         SplitStream<Framed<AsyncDevice, TunPacketCodec>>,
+    //     ),
+    // ),
     /// 一般为 udp
     ///
     /// 注：如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn. 也是 udp 的情况
@@ -304,6 +316,8 @@ impl Stream {
             Stream::AddrConn(ac) => crate::Name::name(ac),
             Stream::Generator(_) => "SomeStreamGenerator",
             Stream::None => "NoStream",
+            Stream::RW(_) => todo!(),
+            // Stream::Frame(_) => todo!(),
         }
     }
     pub fn c(c: Conn) -> Self {
@@ -337,6 +351,8 @@ impl Stream {
             Stream::AddrConn(ref mut c) => c.w.shutdown().await?,
             Stream::Generator(ref mut rx) => rx.close(),
             Stream::None => {}
+            Stream::RW(rw) => rw.1.shutdown().await?,
+            // Stream::Frame(f) => f.0.close().await?,
         }
         Ok(())
     }

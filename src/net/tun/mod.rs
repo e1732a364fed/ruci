@@ -84,6 +84,22 @@ where
     Ok(device)
 }
 
+pub async fn create_bind_rw<A1, A2>(
+    tun_name: Option<String>,
+    bind_addr: A1,
+    netmask: A2,
+) -> anyhow::Result<crate::net::RW>
+where
+    A1: ToAddress,
+    A2: ToAddress,
+{
+    let device = create_bind_device(tun_name, bind_addr, netmask).await?;
+
+    let wr = device.split().unwrap();
+
+    Ok((Box::new(wr.1), Box::new(wr.0)))
+}
+
 #[cfg(test)]
 #[allow(unused)]
 mod test {
