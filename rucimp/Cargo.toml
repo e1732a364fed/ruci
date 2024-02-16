@@ -1,0 +1,18 @@
+[package]
+name = "rucimp"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+ruci = { path = ".." }
+bytes = "1.5.0"
+env_logger = "0.11.1"
+log = "0.4.20"
+async-trait = "0.1.77"
+async-std-test = "0.0.4"
+async-std = { version = "1.12.0" , features = ["attributes", "unstable"]}
+futures = "0.3"
+futures-lite = "2.2.0"
+
+toml = "0.8.1"
+serde = { version = "1.0.196", features = ["derive"] }

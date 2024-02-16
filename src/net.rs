@@ -1,0 +1,496 @@
+/*!
+ * module net defines some important parts for proxy.
+ *
+ * important parts: Addr, ConnTrait, Conn, TransmissionInfo,
+ *  and a cp function for copying data between Conn
+ *
+*/
+pub mod addr_conn;
+pub mod udp;
+
+use async_std::{
+    io::{self},
+    net::TcpStream,
+};
+use futures::select;
+use futures::AsyncReadExt;
+use futures::{io::Error, FutureExt};
+use futures::{pin_mut, AsyncRead, AsyncWrite};
+use log::{debug, log_enabled};
+use rand::Rng;
+use std::{fmt::Debug, net::Ipv4Addr};
+use std::{
+    fmt::{Display, Formatter},
+    net::{IpAddr, Ipv6Addr, SocketAddr},
+    sync::Arc,
+};
+
+pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
+    match ip_addr {
+        IpAddr::V4(v4) => v4.octets().to_vec(),
+        IpAddr::V6(v6) => v6.octets().to_vec(),
+    }
+}
+
+pub fn gen_random_ipv6() -> IpAddr {
+    let mut rng = rand::thread_rng();
+    let mut octets = [0; 16];
+    rng.fill(&mut octets);
+    IpAddr::V6(Ipv6Addr::from(octets))
+}
+
+/// 1024..=65535
+pub fn gen_random_port() -> u16 {
+    let mut rng = rand::thread_rng();
+    rng.gen_range(1024..=65535)
+}
+
+///10240..=65535
+pub fn gen_random_higher_port() -> u16 {
+    let mut rng = rand::thread_rng();
+    rng.gen_range(10240..=65535)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum NetAddr {
+    Socket(SocketAddr), //ip+port
+    Name(String, u16),
+    NameAndSocket(String, SocketAddr, u16),
+}
+
+impl Default for NetAddr {
+    fn default() -> Self {
+        NetAddr::Socket(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
+pub enum Network {
+    IP,
+
+    #[default]
+    TCP,
+    UDP,
+    Unix,
+}
+
+impl Network {
+    pub fn from_string(s: &str) -> io::Result<Self> {
+        match s {
+            "ip" => Ok(Network::IP),
+            "tcp" => Ok(Network::TCP),
+            "udp" => Ok(Network::UDP),
+            "unix" => Ok(Network::Unix),
+            _ => Err(io::Error::other(format!(
+                "not supported network string: {}",
+                s
+            ))),
+        }
+    }
+
+    pub fn to_static_str(&self) -> &'static str {
+        match self {
+            Network::IP => "ip",
+            Network::TCP => "tcp",
+            Network::UDP => "udp",
+            Network::Unix => "unix",
+        }
+    }
+}
+
+impl Display for Network {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_static_str())
+    }
+}
+
+pub enum IPName {
+    IP(IpAddr),
+    Name(String),
+}
+
+/// Addr 结构是一个可表示多种网络地址的结构,
+/// 可以是 ip, ipv4, ipv6, unix domain socket, domain name
+///
+/// 具体是哪一种由 network 决定。若 network 不为 unix，
+/// addr 可以为 Socket 或 Name (表示 domain name),
+/// 否则 addr 只能为 Name (表示 file name)
+///
+/// port = 0 表示不用端口
+///
+/// Addr实现 Eq和 Hash，以支持作为Key存入 HashMap 等集合中。
+/// 
+/// default is  tcp://0.0.0.0:0
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
+pub struct Addr {
+    pub addr: NetAddr,
+    pub network: Network,
+}
+
+impl Addr {
+    pub fn from(
+        network: &str,
+        host: Option<String>,
+        ip: Option<IpAddr>,
+        port: u16,
+    ) -> io::Result<Self> {
+        let n = Network::from_string(network)?;
+        match host {
+            Some(h) => {
+                if let Some(ip) = ip {
+                    Ok(Addr {
+                        addr: NetAddr::NameAndSocket(h, SocketAddr::new(ip, port), port),
+                        network: n,
+                    })
+                } else {
+                    let a = NetAddr::Name(h, port);
+                    Ok(Addr {
+                        addr: a,
+                        network: n,
+                    })
+                }
+            }
+            None => Ok(Addr {
+                addr: NetAddr::Socket(SocketAddr::new(
+                    ip.ok_or(io::Error::other("neither of ip or host provided"))?,
+                    port,
+                )),
+                network: n,
+            }),
+        }
+    }
+
+    // convert then calls "from"
+    pub fn from_strs(network: &str, host: &str, ip: &str, port: u16) -> io::Result<Self> {
+        let mut host_is_ip = false;
+
+        let ip = if ip == "" {
+            if host == "" {
+                None
+            } else {
+                let parsed = host.parse::<IpAddr>();
+                if let Ok(i) = parsed {
+                    host_is_ip = true;
+                    Some(i)
+                } else {
+                    None
+                }
+            }
+        } else {
+            ip.parse::<IpAddr>().ok()
+        };
+
+        let host = if host == String::new() {
+            None
+        } else {
+            if host_is_ip {
+                None
+            } else {
+                Some(host.to_string())
+            }
+        };
+
+        Addr::from(network, host, ip, port)
+    }
+
+    /// will set network to Tcp
+    pub fn from_ipname(ipn: IPName, port: u16) -> Self {
+        match ipn {
+            IPName::IP(ip) => Addr {
+                network: Network::TCP,
+                addr: NetAddr::Socket(SocketAddr::new(ip, port)),
+            },
+            IPName::Name(n) => Addr {
+                network: Network::TCP,
+                addr: NetAddr::Name(n, port),
+            },
+        }
+    }
+
+    pub fn get_name(&self) -> Option<String> {
+        match &self.addr {
+            NetAddr::Name(n, _) => Some(n.clone()),
+            NetAddr::NameAndSocket(n, _, _) => Some(n.clone()),
+            _ => None,
+        }
+    }
+    pub fn get_port(&self) -> u16 {
+        match &self.addr {
+            NetAddr::Name(_, p) => *p,
+            NetAddr::NameAndSocket(_, _, p) => *p,
+            NetAddr::Socket(so) => so.port(),
+        }
+    }
+
+    pub fn get_ip(&self) -> Option<IpAddr> {
+        match &self.addr {
+            NetAddr::NameAndSocket(_, so, _) => Some(so.ip()),
+            NetAddr::Socket(so) => Some(so.ip()),
+            _ => None,
+        }
+    }
+
+    /// 只由 SocketAddr 转，无视 name
+    pub fn get_socket_addr(&self) -> Option<SocketAddr> {
+        if let NetAddr::Socket(s) = &self.addr {
+            Some(*s)
+        } else if let NetAddr::NameAndSocket(_, so, _) = &self.addr {
+            Some(*so)
+        } else {
+            None
+        }
+    }
+
+    //如果没法从已有的 SocketAddr 转，则尝试用系统方法解析域名, 并使用第一个值
+    pub fn get_socket_addr_or_resolve(&self) -> io::Result<SocketAddr> {
+        use std::net::ToSocketAddrs;
+
+        if let NetAddr::Socket(s) = self.addr {
+            Ok(s)
+        } else if let NetAddr::NameAndSocket(_, so, _) = &self.addr {
+            Ok(*so)
+        } else if let NetAddr::Name(n, port) = &self.addr {
+            let so = (format!("{}:{}", n, port)).to_socket_addrs();
+            so?.next().ok_or(io::Error::other(format!(
+                "resolve to empty socket_addr from {}",
+                self
+            )))
+        } else {
+            Err(io::Error::other(format!(
+                "not possible convert to socket_addr from {}",
+                self
+            )))
+        }
+    }
+
+    ///可为 www.baidu.com:80 或 127.0.0.1:1234 这种形式,
+    /// 如果 name和ip都给出了，首选ip
+    pub fn get_addr_str(&self) -> String {
+        match self.network {
+            Network::IP => match &self.addr {
+                NetAddr::Socket(so) => so.to_string(),
+                NetAddr::Name(n, _) => n.clone(),
+                NetAddr::NameAndSocket(_, ip, _) => ip.to_string(),
+            },
+            Network::TCP | Network::UDP => match &self.addr {
+                NetAddr::Socket(so) => so.to_string(),
+                NetAddr::Name(n, p) => format!("{}:{}", n, p),
+                NetAddr::NameAndSocket(_, ip, p) => format!("{}:{}", ip, p),
+            },
+            Network::Unix => match &self.addr {
+                NetAddr::Socket(_) => {
+                    panic!("network is unix but addr in Addr is SocketAddr rather than Name")
+                }
+                NetAddr::Name(n, p) => format!("{}:{}", n, p),
+                NetAddr::NameAndSocket(_, n, p) => format!("{}:{}", n, p),
+            },
+        }
+    }
+}
+
+/// 以 url 的格式 描述 Addr
+impl Display for Addr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.get_addr_str();
+        write!(f, "{}://{}", self.network.to_static_str(), s)
+    }
+}
+
+pub struct OptAddrRef<'a>(pub &'a Option<Addr>);
+pub struct OptAddr(pub Option<Addr>);
+
+impl Display for OptAddr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.0 {
+            Some(value) => write!(f, "{}", value),
+            None => write!(f, "EmptyAddr"),
+        }
+    }
+}
+
+impl<'a> Display for OptAddrRef<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.0 {
+            Some(value) => write!(f, "{}", value),
+            None => write!(f, "EmptyAddr"),
+        }
+    }
+}
+
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+
+/// 用于状态监视和流量统计；可以用 Arc<TransmissionInfo> 进行全局的监视和统计。
+#[derive(Debug, Default)]
+pub struct TransmissionInfo {
+    pub alive_connection_count: AtomicI32,
+
+    /// total downloaded bytes since start
+    pub db: AtomicU64,
+
+    /// total uploaded bytes
+    pub ub: AtomicU64,
+}
+
+/// ConnTrait 将 可异步读写的功能抽象出来。TcpStream 也实现了 ConnTrait
+pub trait ConnTrait: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
+impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync> ConnTrait for T {}
+
+/// 一个方便的 对 ConnTrait 的包装
+pub type Conn = Box<dyn ConnTrait>;
+
+/// 功能没有 cp 多
+pub async fn copy_between_tcp(
+    c1: TcpStream,
+    c2: TcpStream,
+    opt: Option<Arc<TransmissionInfo>>,
+) -> Result<u64, Error> {
+    let c1c = c1.clone();
+    let c2c = c2.clone();
+
+    let (c1_read, c1_write) = c1.split();
+    let (c2_read, c2_write) = c2.split();
+
+    let (half1, half2) = (
+        io::copy(c1_read, c2_write).fuse(),
+        io::copy(c2_read, c1_write).fuse(),
+    );
+
+    pin_mut!(half1, half2);
+
+    select! {
+        r1 = half1 => {
+            if let Some(ref info) = opt {
+                if let Ok(n) = r1 {
+                    info.ub.fetch_add(n, Ordering::Relaxed);
+                }
+            }
+            let _ = c1c.shutdown(std::net::Shutdown::Both);
+            let _ = c2c.shutdown(std::net::Shutdown::Both);
+
+
+            let r2 = half2.await;
+            if let Some(info) = opt {
+                if let Ok(n) = r2 {
+                    info.db.fetch_add(n, Ordering::Relaxed);
+                }
+            }
+            r1
+        },
+        r2 = half2 => {
+            if let Some(ref info) = opt {
+                if let Ok(n) = r2 {
+                    info.db.fetch_add(n, Ordering::Relaxed);
+                }
+            }
+            let _ = c1c.shutdown(std::net::Shutdown::Both);
+            let _ = c2c.shutdown(std::net::Shutdown::Both);
+
+
+            let r1 = half1.await;
+            if let Some(ref info) = opt {
+                if let Ok(n) = r1 {
+                    info.ub.fetch_add(n, Ordering::Relaxed);
+                }
+            }
+
+            r2
+        },
+    }
+}
+
+/// may log debug or do other side-effect stuff with id.
+/// shutdown_f 用于同时关闭 c1 和 c2 对应的两个底层连接。
+pub async fn cp<F: Fn() -> (), C1: ConnTrait, C2: ConnTrait>(
+    c1: C1,
+    c2: C2,
+    id: u32,
+    shutdown_f: F,
+    opt: Option<Arc<TransmissionInfo>>,
+) -> Result<u64, Error> {
+    if log_enabled!(log::Level::Debug) {
+        debug!("cp start, id: {} ", id);
+    }
+
+    let (c1_read, c1_write) = c1.split();
+    let (c2_read, c2_write) = c2.split();
+
+    let (c1_to_c2, c2_to_c1) = (
+        io::copy(c1_read, c2_write).fuse(),
+        io::copy(c2_read, c1_write).fuse(),
+    );
+
+    pin_mut!(c1_to_c2, c2_to_c1);
+
+    // 一个方向停止后，关闭连接，如果info 不为空，则等待另一个方向关闭, 以获取另一方向的流量信息。
+
+    select! {
+        r1 = c1_to_c2 => {
+            if let Some(ref info) = opt {
+                if let Ok(n) = r1 {
+                    let tt = info.ub.fetch_add(n, Ordering::Relaxed);
+
+                    if log_enabled!(log::Level::Debug) {
+                        debug!("cp, c1_to_c2r1, {}, {}",n,tt);
+                    }
+                }
+
+                shutdown_f();
+
+                let r2 = c2_to_c1.await;
+                if let Some(info) = opt {
+                    if let Ok(n) = r2 {
+                        let tt = info.db.fetch_add(n, Ordering::Relaxed);
+
+                        if log_enabled!(log::Level::Debug) {
+                            debug!("cp, c1_to_c2r2, {}, {}",n,tt);
+                        }
+                    }
+                }
+            }else{
+                shutdown_f();
+            }
+
+            if log_enabled!(log::Level::Debug) {
+                debug!("cp end c1_to_c2, cid: {} ",id);
+            }
+
+            r1
+        },
+        r2 = c2_to_c1 => {
+            if let Some(ref info) = opt {
+                if let Ok(n) = r2 {
+                    let tt = info.db.fetch_add(n, Ordering::Relaxed);
+
+                    if log_enabled!(log::Level::Debug) {
+                        debug!("cp, c2_to_c1r2, {}, {}",n,tt);
+                    }
+                }
+                shutdown_f();
+
+                let r1 = c1_to_c2.await;
+                if let Some(ref info) = opt {
+                    if let Ok(n) = r1 {
+                        let tt = info.ub.fetch_add(n, Ordering::Relaxed);
+
+                        if log_enabled!(log::Level::Debug) {
+                            debug!("cp, c2_to_c1r1, {}, {}",n,tt);
+                        }
+                    }
+                }
+            }else{
+                shutdown_f();
+            }
+
+            if log_enabled!(log::Level::Debug) {
+                debug!("cp end c2_to_c1, { } ",id);
+            }
+
+            r2
+        },
+    }
+}
+
+pub mod helpers;
+
+#[cfg(test)]
+mod test;

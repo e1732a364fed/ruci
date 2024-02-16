@@ -1,0 +1,72 @@
+use std::io;
+
+use async_std::io::WriteExt;
+use async_trait::async_trait;
+use bytes::{BufMut, BytesMut};
+
+use crate::{
+    net::{self, helpers, Network},
+    map::{self, MapResult, Mapper},
+};
+
+use super::*;
+
+#[derive(Debug)]
+pub struct Client {
+    pub u: User,
+}
+
+impl Client {
+    pub fn new(plain_text_password: &str) -> Self {
+        let u = User::new(&plain_text_password);
+        Client { u }
+    }
+
+    pub async fn handshake(
+        &self,
+        _cid: u32,
+        mut base: net::Conn,
+        ta: net::Addr,
+        first_payload: Option<BytesMut>,
+    ) -> io::Result<MapResult> {
+        let mut buf = BytesMut::with_capacity(1024);
+        buf.put(self.u.hex.as_bytes());
+        buf.put_u16(CRLF);
+
+        if ta.network == Network::TCP {
+            buf.put_u8(CMD_CONNECT);
+        } else {
+            unimplemented!()
+        }
+        helpers::addr_to_socks5_bytes(ta, &mut buf);
+        buf.put_u16(CRLF);
+        if let Some(b) = first_payload {
+            buf.extend_from_slice(&b);
+        }
+        base.write(&buf).await?;
+
+        Ok(MapResult::c(base))
+    }
+}
+
+#[async_trait]
+impl Mapper for Client {
+    async fn maps(
+        &self,
+        cid: u32, //state 的 id
+        _behavior: map::ProxyBehavior,
+        params: map::MapParams,
+    ) -> MapResult {
+        match params.c {
+            map::Stream::TCP(c) => {
+                let r = self.handshake(cid, c, params.a.unwrap(), params.b).await;
+                MapResult::from_result(r)
+            }
+            _ => MapResult::err_str("trojan only support tcplike stream"),
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        "trojan"
+    }
+}
