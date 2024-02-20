@@ -30,6 +30,7 @@ use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::net::UdpSocket;
+#[cfg(unix)]
 use tokio::net::UnixStream;
 
 #[derive(Default)]
@@ -495,6 +496,7 @@ impl crate::Name for TcpStream {
     }
 }
 
+#[cfg(unix)]
 impl crate::Name for UnixStream {
     fn name(&self) -> &str {
         "unixstream"
