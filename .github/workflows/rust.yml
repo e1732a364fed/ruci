@@ -3,19 +3,29 @@ name: Rust
 on:
   push:
     branches: [ "tokio" ]
+    paths-ignore: 
+      - '*.md'
   pull_request:
     branches: [ "tokio" ]
+    paths-ignore: 
+      - '*.md'
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
+    strategy:
+      matrix:
+        platform:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
     - name: Run tests
