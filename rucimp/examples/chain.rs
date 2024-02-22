@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     );
 
     if log_enabled!(Level::Info) {
-        info!("versions: ruci_{}_mp_{}", ruci::VERSION, rucimp::VERSION,)
+        info!("version: rucimp_{}", rucimp::VERSION,)
     }
 
     let args: Vec<String> = env::args().collect();

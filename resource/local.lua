@@ -53,7 +53,7 @@ config = {
 这个 config 块是演示 inbound 是 socks5http, outbound 是 trojan+若干tls 的情况
 
 它是一个基本的远程代理示例. 运行它, 设置您的系统代理为相应端口,
-并参照 config.chain2.lua 在另一个终端 运行 另一部分,
+并参照 remote.lua 在另一个终端 运行 另一部分,
 看看能不能正常访问网络吧
 --]]
 
