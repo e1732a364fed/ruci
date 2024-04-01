@@ -169,7 +169,7 @@ Config = {
     --]]
 
     ---[[
-    -- 对应 local.lua 使用 tun+IpRelayTest1 的 outbound 配置. 
+    -- 对应 local.lua 使用 tun 的 outbound 配置. 
     --  注意, 不像 tproxy, tun 示例不能本机自连测试
 
     outbounds = { {
