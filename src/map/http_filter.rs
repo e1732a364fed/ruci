@@ -1,5 +1,5 @@
 /*!
-http_filter 过滤http1.1信息, 并原样返回
+Defines a [`Map`] that filters http1.1 information, with the data unchanged.
 
 一般用于 前置于 websocket 层 或 grpc 层, 提供预过滤以用于 回落
 

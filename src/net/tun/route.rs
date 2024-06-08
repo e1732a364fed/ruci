@@ -1,3 +1,8 @@
+/*!
+Provides functions for routing system network data
+to the tun device.
+ */
+
 use std::time::Duration;
 
 use anyhow::Context;
@@ -137,23 +142,22 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
     {
         info!("tun up auto route for windows...");
 
-
         if let Some(d) = &params.dns_list {
             if !d.is_empty() {
                 let first = d.first().unwrap();
 
-                let _r = utils::run_command("netsh", &format!("interface ip set dns name={tun_dev_name} static {first}"));
+                let _r = utils::run_command(
+                    "netsh",
+                    &format!("interface ip set dns name={tun_dev_name} static {first}"),
+                );
             }
-             
         }
 
         let mut list = vec![format!("netsh interface ip set address name={tun_dev_name} source=static addr={tun_gateway} mask=255.255.255.0 gateway=none")];
 
         if let Some(direct_list) = &params.direct_list {
             for v in direct_list.iter() {
-                list.push(format!(
-                    "route add {v} {router_ip} metric 5"
-                ))
+                list.push(format!("route add {v} {router_ip} metric 5"))
             }
         }
         list.push(format!(
@@ -163,7 +167,6 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
             "route add 0.0.0.0 mask 0.0.0.0 {tun_gateway} metric 6"
         ));
 
-
         let r = sync_run_command_list_stop(list.iter().map(String::as_str).collect());
 
         if let Err(e) = r {
@@ -172,8 +175,6 @@ pub fn in_auto_route(params: &InAutoRouteParams) -> anyhow::Result<Option<Vec<St
             let _ = in_down_route(params);
             return Err(e);
         }
-
-
     }
 
     #[cfg(target_os = "macos")]
@@ -250,13 +251,11 @@ pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
     {
         info!("tun down auto route for windows...");
 
-        let mut list = vec![format!(
-            "route delete 0.0.0.0 mask 0.0.0.0 {tun_gateway}"
-        ),format!(
-            "route delete 0.0.0.0 mask 0.0.0.0 {router_ip}"
-        ),format!(
-            "route add 0.0.0.0 mask 0.0.0.0 {router_ip} metric 50"
-        )];
+        let mut list = vec![
+            format!("route delete 0.0.0.0 mask 0.0.0.0 {tun_gateway}"),
+            format!("route delete 0.0.0.0 mask 0.0.0.0 {router_ip}"),
+            format!("route add 0.0.0.0 mask 0.0.0.0 {router_ip} metric 50"),
+        ];
 
         if let Some(direct_list) = &params.direct_list {
             for v in direct_list.iter() {
@@ -268,7 +267,6 @@ pub fn in_down_route(params: &InAutoRouteParams) -> anyhow::Result<()> {
     #[cfg(target_os = "macos")]
     {
         info!("tun down auto route for macos...");
-
 
         let mut list: Vec<_> = get_macos_route_str(tun_gateway, true);
 

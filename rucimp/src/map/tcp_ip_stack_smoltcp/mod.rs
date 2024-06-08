@@ -1,3 +1,6 @@
+/*!
+Defines a [`Map`] called [`Stack`] using user level tcp/ip stack based on `smoltcp`.
+ */
 pub mod device;
 pub mod ip_packet;
 pub mod tcp;
@@ -14,7 +17,7 @@ use tracing::debug;
 
 use self::device::SmoltcpDevice;
 
-/// split the incomming ip stream into multiple tcp/udp stream
+/// decompose the incomming ip stream into multiple tcp/udp stream.
 #[map_ext_fields]
 #[derive(Debug, Clone, Default, MapExt)]
 pub struct Stack {}
@@ -29,7 +32,9 @@ impl Name for Stack {
 impl Map for Stack {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
-            Stream::Conn(c) => {
+            Stream::Conn(base_conn) => {
+                // base_conn 一般为 tun 设备提供的 Conn, 见 Addr::try_dial 中的 IP 部分
+
                 let mut shutdown_rx = match params.shutdown_rx {
                     Some(r) => r,
                     None => {
@@ -42,11 +47,12 @@ impl Map for Stack {
                 let (new_stream_tx, new_stream_rx) = mpsc::channel(1000);
 
                 tokio::spawn(async move {
-                    let mut device = SmoltcpDevice::new(cid, c, new_stream_tx);
+                    let mut device = SmoltcpDevice::new(cid, base_conn, new_stream_tx);
 
                     let mut iface = device::create_interface(&mut device);
 
                     loop {
+                        debug!("loop...");
                         tokio::select! {
                             _ = &mut shutdown_rx =>{
                                 debug!("smoltcp got shutdown signal");
@@ -54,22 +60,26 @@ impl Map for Stack {
                             }
                             r = device.read() =>{
                                 match r {
+                                    Err(e) => {
+                                        tracing::warn!("SmoltcpDevice read got e {e}");
+                                        break;
+                                    },
                                     Ok(_) => {
                                         let sockets = &mut device.sockets as *mut smoltcp::iface::SocketSet;
 
                                         iface.poll(smoltcp::time::Instant::now(),&mut device, unsafe {
                                             &mut *sockets
                                         });
+
+                                        device.process_ingress();
+                                        device.process_egress();
                                     },
-                                    Err(e) => {
-                                        tracing::warn!("SmoltcpDevice read got e {e}");
-                                        break;
-                                    },
+
                                 }
                             }
 
-                        }
-                    }
+                        } //select!
+                    } //loop
                 });
 
                 return MapResult::builder()

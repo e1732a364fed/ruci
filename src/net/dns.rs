@@ -1,3 +1,6 @@
+/*!
+Provides functions to set or get system dns servers.
+ */
 use std::vec;
 
 /*

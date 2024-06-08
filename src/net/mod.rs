@@ -1,8 +1,8 @@
 /*!
- * module net defines some important parts for proxy.
- *
- * important parts: [`CID`], [`Network`], [`Addr`], [`AsyncConn`], [`Conn`], [`Stream`], [`GlobalTrafficRecorder`],
- *  and a cp mod for copying data between [`Conn`]
+Defines some important parts for networking.
+
+Important parts: [`CID`], [`AsyncConn`], [`Conn`], [`Stream`], [`GlobalTrafficRecorder`],
+ and several submodules.
 
 
 */
@@ -67,7 +67,7 @@ pub fn new_ordered_cid(last_id: &AtomicU32) -> u32 {
     last_id.fetch_add(1, Ordering::Relaxed) + 1
 }
 
-/// stream id ('c' for conn as convention)
+/// stream id ('c' for conn by convention)
 ///
 /// default is CID::unit(0) which means no connection yet
 ///
@@ -259,25 +259,24 @@ impl CID {
     }
 }
 
+/// Receiver 中的元素为 MapResult, 是为了
+///
+/// 方便传递其它信息, 如 RLAddr 由 MapResult.d 标识, 见
+///
+/// [`crate::map::network::accept`]
 pub type StreamGenerator = tokio::sync::mpsc::Receiver<MapResult>;
 
-/// default is None
+/// Represents one of the four different kinds of streams. Default is [`Stream::None`]
 #[derive(Default)]
 pub enum Stream {
     ///  raw ip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
     Conn(Conn),
 
-    //如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn
-    /// udp 的情况
+    /// 如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn. 也是 udp 的情况
     AddrConn(AddrConn),
 
     /// 比如:  tcp listener.
     ///
-    /// Receiver 中的元素为 MapResult, 是为了
-    ///
-    /// 方便传递其它信息, 如 RLAddr 由 MapResult.d 标识, 见
-    ///
-    /// [`crate::map::network::accept`]
     Generator(StreamGenerator),
 
     #[default]
@@ -394,7 +393,7 @@ impl Stream {
     }
 }
 
-/// 用于全局状态监视和流量统计
+/// A struct that is used to record the global status of proxy and the total traffic.
 ///
 /// ## About Real Data Traffic and Original Traffic
 ///
@@ -403,7 +402,7 @@ impl Stream {
 /// [`mod@crate::net::cp`] 统计真实流量, 只能有一种情况, 那就是 tcp到tcp的直接拷贝,
 /// 不使用累加器.
 ///
-/// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 counter 模块
+/// 一种统计正确流量的办法是, 将 Tcp连接包装一层专门记录流量的层, 见 [`crate::map::counter`] 模块
 ///
 #[derive(Debug, Default)]
 pub struct GlobalTrafficRecorder {
@@ -418,9 +417,9 @@ pub struct GlobalTrafficRecorder {
     pub ub: AtomicU64,
 }
 
-/// AsyncConn 将 可异步读写的功能抽象出来.
+/// Abstracts the feature of being able to do both asynchronous reading and writing.
 ///
-/// [`TcpStream`] 也实现了 AsyncConn
+/// [`TcpStream`] of tokio implements AsyncConn.
 ///
 pub trait AsyncConn: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
 impl<T: AsyncRead + AsyncWrite + Unpin + Send + Sync> AsyncConn for T {}

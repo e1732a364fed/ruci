@@ -1,3 +1,6 @@
+/*!
+Defines [`LDConfig`], which is part of the whole config.
+ */
 pub mod adapter;
 
 use std::collections::HashMap;

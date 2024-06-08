@@ -1,7 +1,7 @@
 /*!
-Defines a struct that impl SuitConfigHolder+ MapsVec
+Defines [`SuitStruct`] for suit mode. Suit mode is a mode where the user defines a whole proxy process.
 
-通过套装, 我们得以将一串固定套路的代理传播链的配置扁平化
+通过套装, 我们得以将一串固定套路的代理传播链的配置扁平化.
 
  */
 pub mod config;
@@ -24,7 +24,7 @@ use ruci::net::{self, Addr};
 
 /// SuitConfigHolder : 一套完整的代理配置, 如从tcp到tls一直到socks5
 ///
-/// 它定义了一个 rucimp::suit::config::LDConfig 持有者的应有的行为
+/// 它定义了一个 [`config::LDConfig`] 持有者的应有的行为
 ///
 /// 实现 Send 和 Sync 以在多线程环境中使用
 pub trait SuitConfigHolder: Send + Sync {
@@ -52,7 +52,7 @@ pub trait SuitConfigHolder: Send + Sync {
     }
 }
 
-/// 一种 Map 的容器
+/// a container trait of Map.
 pub trait MapsVec {
     fn get_maps_vec(&self) -> Vec<Arc<MapBox>>;
 
@@ -67,6 +67,7 @@ pub trait Suit: SuitConfigHolder + MapsVec {
     fn generate_upper_maps(&mut self);
 }
 
+/// a struct that impls [`SuitConfigHolder`]+ [`MapsVec`]+[`Suit`] and contains its [`config::LDConfig`]
 #[derive(Default, Debug)]
 pub struct SuitStruct {
     pub addr_str: String,

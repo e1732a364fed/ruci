@@ -1,5 +1,5 @@
 /*!
-Defines Maps for h2 and grpc
+Defines [`ruci::map::Map`]s for h2 and grpc.
 
 目前的设定: grpc client 默认使用 0rtt; 非 grpc 的 h2 不使用0rtt
 */

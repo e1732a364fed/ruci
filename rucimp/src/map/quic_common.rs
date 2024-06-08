@@ -1,5 +1,5 @@
 /*!
-Defines common part for various quic implementations.
+Defines common parts for various quic implementations.
  */
 
 use serde::{Deserialize, Serialize};

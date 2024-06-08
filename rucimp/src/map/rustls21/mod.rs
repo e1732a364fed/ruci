@@ -1,5 +1,5 @@
 /*!
-Defines facilities for rustls 0.21
+Defines facilities for rustls 0.21.
 
 rustls 0.21 和 0.22 有很大不同, 截至 24.3.21, ruci包的 rustls 使用的是
 0.22, 但 rucimp 包中的 s2n-quic 和 quinn 包都使用的是 rustls 0.21,

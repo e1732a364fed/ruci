@@ -1,6 +1,5 @@
 /*!
-定义 Map 所返回的数据类型
-
+Defines types returned by [`Map`].
 */
 
 use std::mem;

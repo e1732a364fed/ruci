@@ -1,5 +1,5 @@
 /*!
- * 为 UdpSocket 实现 net::addr_conn 中的trait
+Implements traits in mod [`crate::net::addr_conn`] for [`tokio::net::UdpSocket`] , and the resulting structure is [`Conn`].
 
 */
 use crate::utils::io_error;

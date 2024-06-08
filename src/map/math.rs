@@ -1,5 +1,5 @@
 /*!
-some math related Map s
+Defines some math related [`Map`]s.
 */
 
 use crate::map;
@@ -166,7 +166,7 @@ impl ToMapBox for i8 {
 }
 
 #[async_trait]
-impl crate::map::Map for Adder {
+impl Map for Adder {
     async fn maps(&self, cid: CID, _behavior: ProxyBehavior, params: MapParams) -> MapResult {
         match params.c {
             Stream::Conn(c) => {

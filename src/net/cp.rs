@@ -1,4 +1,4 @@
-/*!
+/*! Provides functions for copying data between [`AsyncConn`].
 */
 
 use super::*;

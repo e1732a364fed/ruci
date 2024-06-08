@@ -211,10 +211,6 @@ local out_stdio_show_bytes_chain = { {
     }
 } }
 
-
-local direct_out_chain = { "Direct" }
-
-
 local config_1_direct = {
     inbounds = { {
         chain = listen_socks5http,
@@ -524,7 +520,7 @@ local config_14_stdio_adder_udp_fixed_target_addr = {
 
 }
 
-local config_15_tun = {
+local config_15_tun_stdio_out = {
 
     inbounds = {
 
@@ -533,7 +529,7 @@ local config_15_tun = {
                 BindDialer = {
 
 
-                    --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是 子网掩码的 CIDR 表示法,
+                    --这里的 "24" 不是端口, 因为 ip 协议没有 端口的说法; 24 是用的 子网掩码的 CIDR 表示法,
                     -- 表示 255.255.255.0; ruci这里采用与 tcp 端口写法一致的格式, 便于处理
 
                     bind_addr = "ip://10.0.0.1:24#utun321",
@@ -623,7 +619,46 @@ local config_16_tun = {
 }
 
 
-Config = config_16_tun
+local config_17_tcp_ip_stack = {
+
+    inbounds = {
+        {
+            chain = { {
+                BindDialer = {
+                    bind_addr = "ip://10.0.0.1:24#utun321",
+
+                    in_auto_route = {
+                        tun_dev_name = "utun321",
+                        tun_gateway = "10.0.0.1",
+                        router_ip = "192.168.0.1",
+                        dns_list = { "114.114.114.114" }
+                    }
+                }
+            }, "Stack"},
+            tag = "listen1"
+        },
+    },
+    --outbounds = { { tag = "dial1", chain = out_stdio_show_bytes_chain } }
+    -- outbounds = { {
+    --     tag = "dial1",
+    --     chain = { "Direct" }
+    -- } }
+
+    outbounds = { {
+        tag = "dial1",
+        chain = { {
+            OptDialer = {
+                dial_addr = "tcp://192.168.0.225:10801",
+                sockopt = {
+                    bind_to_device = "en0"
+                }
+            }
+        }, tlsout,trojan_out}
+    } }
+}
+
+
+Config = config_17_tcp_ip_stack
 
 --[[
 

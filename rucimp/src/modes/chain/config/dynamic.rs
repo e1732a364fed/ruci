@@ -1,5 +1,5 @@
 /*!
-Defines Dynamic Chain.
+Defines the structures of Dynamic Chains.
 
 动态链的 iter 每次调用时, 会动态地返回一种Map
 只有运行时才能知晓一条链是由哪些 Map 所组成, 所以无法用 Vec等类型表示,

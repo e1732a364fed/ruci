@@ -1,3 +1,8 @@
+/*!
+Defines [`ruci::map::Map`]s for websocket protocol using `tokio_tungstenite`.
+
+ */
+
 pub mod client;
 pub mod server;
 

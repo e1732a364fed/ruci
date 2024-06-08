@@ -1,3 +1,7 @@
+/*!
+Provides facilities to generate, represent and decompose network addresses,
+by important parts like [`Network`], [`NetAddr`], [`IPName`], and [`Addr`].
+ */
 use super::*;
 
 #[allow(unused)]
@@ -416,13 +420,11 @@ impl Addr {
         }
     }
 
-    /// dial tcp/udp/unix_domain_socket
+    /// dial tcp/udp/unix_domain_socket and `ip` if feature "tun" is enabled
     ///
-    /// can dial ip if feature "tun" is enabled
+    /// ## udp
     ///
-    /// ## udp:
-    ///
-    /// Addr 的 try_dial 中的 udp 其实是 listen, 它会bind到Addr
+    /// 本函数对 udp 的作用 其实是 listen, 它会bind到Addr
     ///
     pub async fn try_dial(&self) -> Result<Stream> {
         match self.network {

@@ -1,3 +1,9 @@
+/*!
+Defines a structure [`AddrConn`], and facilities around it.
+
+It provides several functions for copying data bewteen [`AddrReadTrait`] and [`AddrWriteTrait`], like
+[`cp_addr`], and a [fn@`cp`] function for copying data between [`AddrConn`] (which consists of [`AddrReadTrait`] and [`AddrWriteTrait`])
+ */
 use crate::Name;
 
 use super::*;
@@ -15,7 +21,7 @@ use tokio::sync::oneshot;
 // 整个 文件的内容都是在模仿 AsyncRead 和 AsyncWrite 的实现,
 // 只是加了一个 Addr 参数. 这一部分比较难懂.
 
-/// 每一次读都获取到一个 Addr,
+/// 每一次读数据时都同时获取到一个 Addr,
 pub trait AsyncReadAddr: crate::Name {
     fn poll_read_addr(
         self: Pin<&mut Self>,
@@ -24,7 +30,7 @@ pub trait AsyncReadAddr: crate::Name {
     ) -> Poll<io::Result<(usize, Addr)>>;
 }
 
-/// 每一次写都写入一个 Addr
+/// 每一次写数据时都同时附带一个 Addr
 pub trait AsyncWriteAddr: crate::Name {
     fn poll_write_addr(
         self: Pin<&mut Self>,
@@ -38,6 +44,9 @@ pub trait AsyncWriteAddr: crate::Name {
     fn poll_close_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>>;
 }
 
+/// struct AddrConn wraps its read part `r` and write part `w`. With
+/// `default_write_to` and `cached_name` information, it acts as a basic
+/// unit for interchaging network data with address.
 pub struct AddrConn {
     pub r: Box<dyn AddrReadTrait>,
     pub w: Box<dyn AddrWriteTrait>,
@@ -494,7 +503,7 @@ pub async fn cp(
                 std::future::pending().await
             }
         } =>{
-            debug!("addrconn cp_between got shutdown1 signal");
+            debug!(cid = %cid,"addr_conn::cp got shutdown1 signal");
 
             let _ = tx1.send(());
             let _ = tx2.send(());
@@ -509,7 +518,7 @@ pub async fn cp(
                 std::future::pending().await
             }
         } =>{
-            debug!("addrconn cp_between got shutdown2 signal");
+            debug!(cid = %cid,"addr_conn::cp got shutdown2 signal");
             let _ = tx1.send(());
             let _ = tx2.send(());
 
@@ -521,7 +530,7 @@ pub async fn cp(
         gtr.alive_connection_count
             .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
     }
-    debug!( cid = %cid, "cp_addr_conn end" );
+    debug!( cid = %cid, "addr_conn::cp end" );
 
     Ok(r)
 }

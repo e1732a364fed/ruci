@@ -1,6 +1,5 @@
 /*!
-lua defines functions to load static, partial(finite) dynamic and complete(infinite) dynamic chain configs.
-
+Defines functions to load static, partial(finite) dynamic and complete(infinite) dynamic chain configs from a lua file.
  */
 
 #[cfg(test)]

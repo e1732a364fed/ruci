@@ -1,3 +1,6 @@
+/*!
+Defines a struct [`RuleSetConfig`].
+ */
 use std::collections::HashSet;
 
 use ipnet::{Ipv4Net, Ipv6Net};
@@ -14,7 +17,7 @@ use crate::user::str_to_userbox;
 
 use super::{DomainMatcher, Mode, RuleSet};
 
-/// matches the structure of rucimp::route::RuleSet, and provide  serde
+/// Contains the data of a [`crate::route::RuleSet`], and impls serde
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct RuleSetConfig {
     pub out_tag: String,

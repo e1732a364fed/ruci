@@ -1,6 +1,10 @@
+/*!
+[`IpPacket`]
+ */
 use smoltcp::wire::{IpProtocol, IpVersion, Ipv4Packet, Ipv6Packet};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
+/// Represents a Ipv4Packet or a Ipv6Packet.
 #[derive(Debug)]
 pub enum IpPacket<T: AsRef<[u8]>> {
     Ipv4(Ipv4Packet<T>),

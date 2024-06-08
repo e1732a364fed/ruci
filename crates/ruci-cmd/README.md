@@ -1,29 +1,35 @@
 
-产生的日志会的 logs 文件夹中, daily rolling
+ruci-cmd 运行时产生的日志会自动创建并放在 logs 文件夹中, daily rolling
 
 # Run and Compile
 
-用 --infinite 来启用 完全动态链
+在shell中进入 crates/ruci-cmd 文件夹.
 
-run with api server:
+(用 --infinite 来启用 完全动态链)
+
 
 ```sh
+# run with api server
 cargo run --features "lua api_server api_client utils use-native-tls" --release -- -a run
 
 ```
 
 debug:
 ```sh
+
+# 指定不生成 log 
 RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun" -- --log-file ""
 
+# 指定lua配置
 RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun"  -- --log-file "" -c remote.lua
 
-#powershell
+# powershell
 $Env:RUST_LOG="none,ruci=debug";cargo run --features "lua utils use-native-tls quinn tun" -- --log-file ""
 
-
+# 运行 grpc 的 lua 配置. 注意要加 --infinite
 RUST_LOG=none,ruci=debug cargo run --features "lua utils use-native-tls quinn tun"  -- --log-file "" -c local_mux2_h2.lua --infinite
 
+# 开启所有功能并启用 trace
 RUST_LOG=debug cargo run --features "api_server api_client trace lua utils use-native-tls quinn tun" -- -a run --trace
 ```
 
@@ -46,7 +52,7 @@ api_server, trace 这两个feature都会少许降低 performance.
 trace feature 就算启用了, 
 也要在运行ruci-cmd时再加上 --trace 来启用, 因为它一定会影响性能. trace 一般只用于实验/研究/debug
 
-utils feature 可用于下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.dll
+utils feature 启用后，可使用一些子命令下载一些外部依赖文件, 如 `*.mmdb` 和 wintun.dll
 
 ## mutually-exclusive-features
 
@@ -60,9 +66,10 @@ lua, lua54
 
 use-native-tls 在 cross 编译时有问题, 此时只能用 native-tls-vendored
 
-lua 使用的是 luau, 更快，但在 cross 编译时有问题, 此时只能用 lua54
+lua 默认情况使用的是 luau, 更快，但在 cross 编译时有问题, 此时只能用 lua54
 
 quic feature 使用的是 s2n-quic, 其不能在windows编译, 且与其它代理程序的quic有一定的互操作性问题, 此时只能用 quinn
+(默认情况使用的就是quinn)
 
 
 
@@ -157,6 +164,6 @@ api:
 
 # 实现细节
 
-utils, api_client: 发送http请求用reqwest
+utils 和 api_client 模块: 发送http请求用reqwest
 
-api_server: 用了 axum, TinyUFO
+api_server 模块: 用了 axum, TinyUFO

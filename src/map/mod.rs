@@ -1,7 +1,7 @@
 /*!
-module map defines some important traits for proxy
+Defines important parts for "mapping", and submodules that implement or make use of them.
 
-几个关键部分: [`Data`], [`MapParams`], [`MapResult`], [`Map`], 和 [`mod@fold`] 模块
+A [`Map`] has a function `maps` accepts a [`MapParams`], a [`CID`], a [`ProxyBehavior`] and produces a [`MapResult`].
 
 ruci 将任意代理行为分割成若干个不可再分的
 流映射, function map(stream1, args...)-> (stream2, useful_data...)
@@ -17,7 +17,7 @@ ruci 将任意代理行为分割成若干个不可再分的
 
 按代理的方向, 逻辑上分 Encode 和 Decode 两种, 以 maps 方法的 behavior 参数加以区分.
 
-一个完整的代理链 是由 【生成 映射 的迭代器】生成的, 其在 [`fold`] 模块中有定义
+一个完整的代理链 是由 【生成 映射 的迭代器】生成的, 其在 [`mod@fold`] 模块中有定义
 */
 
 pub mod data;
@@ -117,7 +117,7 @@ impl MapParams {
     }
 }
 
-/// Map::maps  return type
+/// [`fn@Map::maps`]s return type.
 ///
 /// MapResult has basic fields : a,b,c,d,e which are
 /// massively used in ruci.
@@ -199,7 +199,7 @@ impl MapResult {
     }
 }
 
-/// indicate what a Map is really doing
+/// Indicates what a Map is really doing, (encoding, decoding, or unspecified).
 ///
 /// A proxy would have two main behaviors in general:
 ///
@@ -222,7 +222,7 @@ pub enum ProxyBehavior {
 ///
 /// Generally [`method@Map::maps`] just do a handshake in the old Stream, then perhaps forms a/some new Stream
 ///
-/// After encode/decode data in the new Stream,it will be passed to
+/// After encoding/decoding data in the new Stream,it will be passed to
 /// the next Map
 ///
 #[async_trait]

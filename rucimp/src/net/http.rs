@@ -1,3 +1,7 @@
+/*!
+Provides some extensions for http matching.
+ */
+
 use http::{HeaderValue, Request};
 use ruci::net::http::CommonConfig;
 
