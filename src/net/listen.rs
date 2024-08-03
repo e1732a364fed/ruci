@@ -10,7 +10,7 @@ use tokio::net::UnixListener;
 
 use crate::net::{self, Stream};
 
-use super::udp_fixed_listen::FixedTargetAddrUDPListener;
+use super::{udp_fixed_listen::FixedTargetAddrUDPListener, Addr};
 
 #[derive(Debug)]
 pub enum Listener {
@@ -38,12 +38,12 @@ pub async fn listen(
             Ok(Listener::TCP(r))
         }
         net::Network::UDP => {
-            let ft = match opt_fixed_target_addr {
+            let fta = match opt_fixed_target_addr {
                 Some(ft) => ft,
                 None => bail!("listen udp requires a fixed_target_addr"),
             };
             Ok(Listener::UDP(
-                FixedTargetAddrUDPListener::new(laddr.clone(), ft).await?,
+                FixedTargetAddrUDPListener::new(laddr.clone(), fta).await?,
             ))
         }
 
@@ -130,7 +130,7 @@ impl Listener {
         }
     }
 
-    /// returns stream, raddr, laddr
+    /// returns stream, raddr, laddr(listener's local addr)
     pub async fn accept(&mut self) -> anyhow::Result<(Stream, net::Addr, net::Addr)> {
         match self {
             Listener::TCP(tl) => {
@@ -159,7 +159,11 @@ impl Listener {
             }
             Listener::UDP(ul) => {
                 let (ac, ra, la) = ul.accept().await?;
-                Ok((Stream::AddrConn(ac), ra, la))
+                let a = Addr {
+                    addr: net::NetAddr::Socket(ra),
+                    network: net::Network::UDP,
+                };
+                Ok((Stream::AddrConn(ac), a, la))
             }
         }
     }

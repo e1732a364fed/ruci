@@ -134,7 +134,7 @@ impl AsyncWriteAddr for Conn {
         buf: &[u8],
         addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        //debug!("udp write called {} {addr} {:?}", buf.len(), self.peer_addr);
+        //trace!("udp write called {} {addr} {:?}", buf.len(), self.peer_addr);
         if self.peer_addr.is_some() || addr.eq(&Addr::default()) {
             self.u.poll_send(cx, buf)
         } else {
@@ -186,7 +186,7 @@ impl AsyncReadAddr for Conn {
                 Poll::Ready(r) => match r {
                     Ok(_) => {
                         let r_len = r_buf.filled().len();
-                        //debug!("udp with peer_addr read got {}", r_len);
+                        //trace!("udp with peer_addr read got {}", r_len);
 
                         Poll::Ready(Ok((r_len, pa.clone())))
                     }
@@ -200,7 +200,7 @@ impl AsyncReadAddr for Conn {
                 Poll::Ready(r) => match r {
                     Ok(so) => {
                         let r_len = r_buf.filled().len();
-                        //debug!("udp read got {} {so}", r_len);
+                        //trace!("udp read got {} {so}", r_len);
 
                         let addr = crate::net::Addr {
                             addr: NetAddr::Socket(so),
@@ -301,14 +301,24 @@ mod test {
         }
     }
 
-    async fn read_timeout(name: String, mut r: Conn) -> io::Result<()> {
+    /// 循环读5遍后退出
+    async fn read_timeout(name: String, mut c: super::Conn) -> io::Result<()> {
         let mut buf = [0u8; CAP];
+        let mut wbuf = [0u8, 2, 2, 3, 4];
 
         let nc = name.clone();
         let f1 = async move {
+            let mut count = 1;
             loop {
-                let (n, ad) = r.read(&mut buf).await?;
+                if count > 5 {
+                    return Ok::<(), io::Error>(());
+                }
+                let (n, ad) = c.read(&mut buf).await?;
                 println!("{} read from,{} {:?}", nc.as_str(), ad, &buf[..n]);
+
+                // c.write(src)
+                c.write(&wbuf, &ad).await;
+                count += 1;
             }
             Ok::<(), io::Error>(())
         }
@@ -337,28 +347,27 @@ mod test {
 
     #[tokio::test]
     async fn test_udp_rw() -> io::Result<()> {
-        let u = UdpSocket::bind("127.0.0.1:23456").await?;
-        let u2 = UdpSocket::bind("127.0.0.1:34567").await?;
-        let (mut r, mut w) = duplicate(u);
+        let u1 = UdpSocket::bind("127.0.0.1:23456").await?;
+
+        let u2_addr_str = "127.0.0.1:34567";
+        let u2 = UdpSocket::bind(u2_addr_str).await?;
+        let (mut r1, mut w1) = duplicate(u1);
         let (mut r2, mut w2) = duplicate(u2);
 
-        let r1 = tokio::task::spawn(read_timeout("1".to_string(), r));
+        let r1 = tokio::task::spawn(read_timeout("1".to_string(), r1));
 
         let r2 = tokio::task::spawn(read_timeout("2".to_string(), r2));
 
         let w1 = tokio::task::spawn(async move {
             let mut buf = [0u8, 1, 2, 3, 4];
-            let ta = crate::net::Addr {
-                addr: NetAddr::Socket(
-                    SocketAddr::from_str("127.0.0.1:34567")
-                        .map_err(|x| io::Error::other(format!("{}", x)))?,
-                ),
+            let ta_u2 = crate::net::Addr {
+                addr: NetAddr::Socket(SocketAddr::from_str(u2_addr_str).unwrap()),
                 network: Network::TCP,
             };
             let mut i = 0;
             while i != 5 {
-                let n = w.write(&mut buf, &ta).await?;
-                println!("w write to,{} {:?}", &ta, &buf[..n]);
+                let n = w1.write(&mut buf, &ta_u2).await?;
+                println!("w write to,{} {:?}", &ta_u2, &buf[..n]);
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
 
@@ -381,19 +390,21 @@ mod test {
     /// then it should hung for CP_UDP_TIMEOUT of time, then returns.
     ///
     #[tokio::test]
-    async fn test_addrconn_cp() -> io::Result<()> {
-        let u = UdpSocket::bind("127.0.0.1:12346").await?;
+    async fn test_addrconn_cp1() -> io::Result<()> {
+        // 从 u1的w 写入 u2的 r，之后用 addr_conn::cp_addr 从 u2的 r 拷贝到 mock_stream1的 write_target
+
+        let u1 = UdpSocket::bind("127.0.0.1:12346").await?;
 
         let ad2_str = "127.0.0.1:23457";
         let u2 = UdpSocket::bind(ad2_str).await?;
 
-        let (_r, mut w) = duplicate(u);
+        let (_r, mut w) = duplicate(u1);
         let (r2, _w2) = duplicate(u2);
 
         let writev = Arc::new(Mutex::new(Vec::new()));
         let writevc = writev.clone();
 
-        let ms = MockStream {
+        let mock_stream1 = MockStream {
             read_data: Vec::new(),
             write_data: Vec::new(),
             write_target: Some(writev),
@@ -426,7 +437,7 @@ mod test {
         let _ = crate::net::addr_conn::cp_addr(
             CID::default(),
             r2,
-            ms,
+            mock_stream1,
             "".to_string(),
             false,
             rx,
@@ -435,11 +446,11 @@ mod test {
         )
         .await;
 
-        let nv = buf_to_write.repeat(5);
+        let data = buf_to_write.repeat(5);
 
         print!("test: cp addr end");
 
-        assert_eq!(&nv, writevc.lock().deref());
+        assert_eq!(&data, writevc.lock().deref());
         Ok(())
     }
 }

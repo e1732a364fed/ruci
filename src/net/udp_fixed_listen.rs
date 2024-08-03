@@ -2,6 +2,7 @@ use std::{
     cmp::min,
     collections::HashMap,
     io,
+    net::SocketAddr,
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
@@ -16,11 +17,11 @@ use tokio::{
         Mutex,
     },
 };
-use tracing::debug;
+use tracing::{debug, trace};
 
 use super::{
     addr_conn::{AddrConn, AsyncReadAddr, AsyncWriteAddr, MAX_DATAGRAM_SIZE},
-    Addr, NetAddr, Network,
+    Addr,
 };
 
 /// 监听一个 udp 端口, 对 每一个 新 源 udp 端口发来的连接
@@ -31,26 +32,26 @@ use super::{
 pub struct FixedTargetAddrUDPListener {
     laddr: Addr,
     fixed_target: Addr,
-    rx: mpsc::Receiver<(AddrConn, Addr)>,
+    new_conn_rx: mpsc::Receiver<(AddrConn, SocketAddr)>,
     shutdown_tx: Option<oneshot::Sender<()>>,
 }
 
 impl FixedTargetAddrUDPListener {
-    pub async fn new(laddr: Addr, dst: Addr) -> anyhow::Result<Self> {
+    pub async fn new(laddr: Addr, fixed_target: Addr) -> anyhow::Result<Self> {
         let bind_so = laddr.get_socket_addr_or_resolve(None).await?;
 
         let u = UdpSocket::bind(bind_so).await?;
         let udp = Arc::new(u);
 
-        let (tx, rx) = mpsc::channel(100);
+        let (new_conn_tx, new_conn_rx) = mpsc::channel(100);
 
-        let dst_c = dst.clone();
+        let dst_c = fixed_target.clone();
 
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
 
         tokio::spawn(async move {
             let mut buf = BytesMut::zeroed(MAX_DATAGRAM_SIZE);
-            let conn_map: Arc<Mutex<HashMap<Addr, Sender<BytesMut>>>> =
+            let conn_map: Arc<Mutex<HashMap<SocketAddr, Sender<BytesMut>>>> =
                 Arc::new(Mutex::new(HashMap::new()));
             loop {
                 tokio::select! {
@@ -60,47 +61,44 @@ impl FixedTargetAddrUDPListener {
                     }
 
                     r =udp.recv_from(&mut buf) =>{
-                        let (u, a) = match r {
+                        let (n, a) = match r {
                             Ok(r) => r,
                             Err(e) => {
                                 debug!("UdpListener loop recv_from got e, will break: {e}");
                                 break;
                             }
                         };
-                        let src = Addr {
-                            network: Network::UDP,
-                            addr: NetAddr::Socket(a),
-                        };
+
+                        // mutex guard
                         let mut mg = conn_map.lock().await;
 
-                        if mg.contains_key(&src) {
-                            //debug!("UdpListener loop got old conn msg: {src} {u}");
+                        if mg.contains_key(&a) {
+                            trace!("FixedUdpListener loop got old conn msg: {a} {n}");
 
-                            let new_buf = BytesMut::from(&buf[..u]);
+                            let new_buf = BytesMut::from(&buf[..n]);
 
-                            let tx = mg.get(&src).unwrap();
+                            let tx = mg.get(&a).unwrap();
                             let r = tx.send(new_buf).await;
                             if let Err(e) = r {
                                 debug!("UdpListener tx send got e: {e}");
                                 continue;
                             }
                         } else {
-                            //debug!("UdpListener loop got new conn: {src} {u}");
-                            let (tx2, rx2) = mpsc::channel(100);
+                            trace!("FixedUdpListener loop got new conn: {a} {n}");
+                            let (tx, rx) = mpsc::channel(100);
 
-                            mg.insert(src.clone(), tx2);
-                            let first_buf = BytesMut::from(&buf[..u]);
+                            mg.insert(a.clone(), tx);
 
                             let ac = new(
                                 udp.clone(),
-                                rx2,
-                                src.clone(),
+                                rx,
+                                a,
                                 dst_c.clone(),
-                                first_buf,
+                                BytesMut::from(&buf[..n]),
                                 conn_map.clone(),
                             );
 
-                            let r = tx.send((ac, src)).await;
+                            let r = new_conn_tx.send((ac, a)).await;
                             if let Err(e) = r {
                                 debug!("UdpListener loop got e: {e}");
                                 break;
@@ -115,18 +113,18 @@ impl FixedTargetAddrUDPListener {
         Ok(Self {
             shutdown_tx: Some(shutdown_tx),
             laddr,
-            rx,
-            fixed_target: dst,
+            new_conn_rx,
+            fixed_target,
         })
     }
 
-    /// conn, raddr, laddr, first_data
-    pub async fn accept(&mut self) -> anyhow::Result<(AddrConn, Addr, Addr)> {
+    /// AddrConn, raddr(udp), laddr(Listener's local addr)
+    pub async fn accept(&mut self) -> anyhow::Result<(AddrConn, SocketAddr, Addr)> {
         let (ac, raddr) = self
-            .rx
+            .new_conn_rx
             .recv()
             .await
-            .ok_or(anyhow::anyhow!("udplistener accept got rx closed"))?;
+            .ok_or(anyhow::anyhow!("FiexedUdpListener accept got rx closed"))?;
         Ok((ac, raddr, self.laddr.clone()))
     }
 
@@ -151,19 +149,15 @@ impl Drop for FixedTargetAddrUDPListener {
     }
 }
 
-/// init a AddrConn from a UdpSocket
-///
-/// 如果 peer_addr 给出, 说明 u 是 connected, 将用 recv 而不是 recv_from,
-/// 以及用 send 而不是 send_to
-///
-pub fn new(
+/// init a AddrConn from a UdpSocket created by a FixedTargetAddrUDPListener
+fn new(
     u: Arc<UdpSocket>,
     r: Receiver<BytesMut>,
-    src: Addr,
+    src: SocketAddr,
     dst: Addr,
 
     first_buf: BytesMut,
-    conn_map: Arc<Mutex<HashMap<Addr, Sender<BytesMut>>>>,
+    conn_map: Arc<Mutex<HashMap<SocketAddr, Sender<BytesMut>>>>,
 ) -> AddrConn {
     let r = Reader {
         dst,
@@ -181,10 +175,11 @@ pub fn new(
     ac
 }
 
-pub struct Writer {
+/// write 时会 舍弃 addr. 且直接向内置的 src:Addr 写入数据
+struct Writer {
     u: Arc<UdpSocket>,
-    src: Addr,
-    conn_map: Arc<Mutex<HashMap<Addr, Sender<BytesMut>>>>,
+    src: SocketAddr,
+    conn_map: Arc<Mutex<HashMap<SocketAddr, Sender<BytesMut>>>>,
 }
 impl crate::Name for Writer {
     fn name(&self) -> &str {
@@ -198,17 +193,11 @@ impl AsyncWriteAddr for Writer {
         buf: &[u8],
         _addr: &Addr,
     ) -> Poll<io::Result<usize>> {
-        //debug!("udp fixed write called {} {addr} {}", buf.len(), self.src);
+        let r = self.u.poll_send_to(cx, buf, self.src);
 
-        let sor_f = self.src.get_socket_addr_or_resolve(None);
-        let pr = Future::poll(std::pin::pin!(sor_f), cx);
-        match pr {
-            Poll::Ready(sor) => match sor {
-                Ok(so) => self.u.poll_send_to(cx, buf, so),
-                Err(e) => Poll::Ready(Err(io::Error::other(e))),
-            },
-            Poll::Pending => return Poll::Pending,
-        }
+        trace!("udp_fix,write, {}, {r:?}", buf.len());
+
+        r
     }
 
     fn poll_flush_addr(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -222,14 +211,14 @@ impl AsyncWriteAddr for Writer {
         match pr {
             Poll::Ready(mut map) => {
                 map.remove(&self.src);
-                //debug!("udp_fixed_w got closed, removed from conn map {}", self.src);
+                trace!("udp_fixed_w got closed, removed from conn map {}", self.src);
 
                 // 移除 tx 后 (drop了), Reader 端的 rx 也会自动失效
 
                 Poll::Ready(Ok(()))
             }
             Poll::Pending => {
-                //debug!("udp_fixed_w got closed, pending lock");
+                trace!("udp_fixed_w got closed, pending lock");
 
                 Poll::Pending
             }
@@ -237,7 +226,8 @@ impl AsyncWriteAddr for Writer {
     }
 }
 
-pub struct Reader {
+/// Reader 从 rx 读到 数据后，会返回预设的 dst 作为 其addr
+struct Reader {
     rx: Receiver<BytesMut>,
     dst: Addr,
     last_buf: Option<BytesMut>,
@@ -258,34 +248,41 @@ impl AsyncReadAddr for Reader {
     fn poll_read_addr(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
+        rbuf: &mut [u8],
     ) -> Poll<io::Result<(usize, Addr)>> {
         loop {
             match self.state {
                 ReadState::Buf => {
-                    if let Some(mut b) = self.last_buf.take() {
-                        let r_len = b.len();
+                    if let Some(mut old_b) = self.last_buf.take() {
+                        let old_len = old_b.len();
 
-                        let min_l = min(r_len, buf.len());
+                        let real_read_l = min(old_len, rbuf.len());
 
-                        b.copy_to_slice(&mut buf[..min_l]);
+                        old_b.copy_to_slice(&mut rbuf[..real_read_l]);
 
-                        if b.is_empty() {
+                        if old_b.is_empty() {
                             self.state = ReadState::Rx;
                         } else {
-                            self.last_buf = Some(b);
+                            self.last_buf = Some(old_b);
                         }
 
-                        return Poll::Ready(Ok((r_len, self.dst.clone())));
+                        trace!("udp_fix,read,Buf, {}", real_read_l);
+
+                        return Poll::Ready(Ok((real_read_l, self.dst.clone())));
                     } else {
                         self.state = ReadState::Rx;
                     }
                 }
                 ReadState::Rx => {
+                    trace!("udp_fix,read,Rx");
                     let r = self.rx.poll_recv(cx);
+                    trace!("udp_fix,read,Rx,{r:?}");
+
                     match r {
                         Poll::Ready(rx) => match rx {
                             Some(b) => {
+                                trace!("udp_fix,read,Rx, {}", b.len());
+
                                 //debug!("udp_fixed r read got {}", b.len());
                                 self.last_buf = Some(b);
                                 self.state = ReadState::Buf;
@@ -302,5 +299,54 @@ impl AsyncReadAddr for Reader {
                 }
             } //match
         } //loop
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::time::Duration;
+
+    use crate::net::addr_conn::{AsyncReadAddrExt, AsyncWriteAddrExt};
+
+    use super::*;
+    use futures_util::join;
+    #[tokio::test]
+    async fn test1() -> anyhow::Result<()> {
+        let listener_addr = "127.0.0.1:12345";
+        let laddr = Addr::from_addr_str("udp", listener_addr).unwrap();
+        let dst = Addr::from_addr_str("udp", "127.0.0.1:23456").unwrap();
+        let mut listener = FixedTargetAddrUDPListener::new(laddr.clone(), dst).await?;
+
+        let u1 = UdpSocket::bind("127.0.0.1:11211").await?;
+
+        let mut wbuf = [0u8, 2, 2, 3, 4];
+        let mut rbuf = [0u8, 0, 0, 0, 0];
+
+        let wbuf2 = [7u8, 2, 2, 3, 4];
+
+        let f1 = tokio::task::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            u1.send_to(&wbuf, laddr.get_socket_addr().unwrap()).await?;
+            u1.send_to(&wbuf, laddr.get_socket_addr().unwrap()).await?;
+
+            let n = u1.recv(&mut wbuf).await?;
+            println!("r:, {:?} {:?}", n, &wbuf[..n]);
+
+            Ok::<(), io::Error>(())
+        });
+
+        let (mut conn, raddr, laddr) = listener.accept().await?;
+
+        println!("raddr, laddr {},{}", raddr, laddr);
+        let n = conn.r.read(&mut rbuf).await?;
+        println!("dn, {:?} {:?}", n, rbuf);
+        let n = conn.r.read(&mut rbuf).await?;
+        println!("dn, {:?} {:?}", n, rbuf);
+        let fake_a = Addr::default();
+        conn.w.write(&wbuf2, &fake_a).await?;
+
+        let _ = join!(f1);
+
+        Ok(())
     }
 }

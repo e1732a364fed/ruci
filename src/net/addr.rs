@@ -418,7 +418,7 @@ impl Addr {
     }
 
     /// only for udp. Unlike try_dial, it will bind to 0.0.0.0:0
-    /// to get a random port, then connect to the target addr.
+    /// to get a random port, then connect to the target addr(self).
     pub async fn try_dial_udp(&self, oc: Option<Arc<dns::AsyncClient>>) -> Result<Stream> {
         match self.network {
             Network::UDP => {

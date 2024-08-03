@@ -272,7 +272,9 @@ pub enum Stream {
     ///  raw ip / tcp / unix domain socket 等 目标 Addr 唯一的 情况
     Conn(Conn),
 
-    /// 如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn. 也是 udp 的情况
+    /// 一般为 udp
+    ///
+    /// 注：如果 从 raw ip 解析出了 ip 目标, 那么该ip流就是 AddrConn. 也是 udp 的情况
     AddrConn(AddrConn),
 
     /// 比如:  tcp listener.

@@ -52,19 +52,6 @@ pub fn create_async_resolver(
     block_on(async { TokioAsyncResolver::tokio(cf, ro) })
 }
 
-// pub struct NamePortAndClient<'a>(pub &'a str, pub u16, pub &'a AsyncClient);
-
-// // https://internals.rust-lang.org/t/custom-global-dns-resolver/18667/5
-// impl std::net::ToSocketAddrs for NamePortAndClient<'_> {
-//     type Iter = std::option::IntoIter<SocketAddr>;
-
-//     fn to_socket_addrs(&self) -> std::io::Result<Self::Iter> {
-//         let x = block_on(self.2.lookup(self.0)).map(|ip| SocketAddr::new(ip, self.1));
-//         let x = x.into_iter();
-//         Ok(x)
-//     }
-// }
-
 #[derive(Debug, Clone)]
 pub struct AsyncClient {
     pub r: TokioAsyncResolver,
@@ -192,7 +179,9 @@ impl AsyncClient {
 // #[tokio::test]
 #[allow(dead_code)]
 async fn test() {
-    let sa = std::net::SocketAddr::V4("0.0.0.0:20800".parse().unwrap());
+    let sa = std::net::SocketAddr::V4("127.0.0.1:20800".parse().unwrap());
+    // 传入 0.0.0.0:20800 则会卡住，应是 hickory_resolver 包的问题.
+    // 说明在给 hickory_resolver 传递ip 地址时不能用 0.0.0.0
 
     let cc = ClientConfig {
         dns_server_list: vec![(sa, TheProtocol::Udp)],

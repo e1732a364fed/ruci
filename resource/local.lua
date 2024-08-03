@@ -214,6 +214,8 @@ local out_stdio_show_bytes_chain = { {
 local direct = { Direct = {} }
 
 -- 该配置 和 listen_fixed_target 联动 (0.0.0.0:20800)
+-- 该配置 会 在该 Direct 所属的 chain 中创建一个 新的 dns client, 对于 域名请求将使用 指定的
+-- dns_server 来 解析. 注意这里 dns_server 就不要再用 域名了，否则就会造成无限循环
 local direct_with_dns = {
     Direct = {
         dns_client = {
