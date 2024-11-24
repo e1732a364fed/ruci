@@ -15,7 +15,10 @@ Config = {
 }
 ```
 
-中级用法中，还有 fallback_route, tag_route, rule_route
+
+
+中级用法中，Config 中还有 fallback_route, tag_route, rule_route 这几项：
+
 ```lua
 
 Config = {
@@ -31,3 +34,16 @@ Config = {
 
 先学 简单的 [Config 入门](./config_intro.md) 吧。
 
+## 关于 lua语法
+
+在lua中，大括号 `{}` 被叫做 table, 它即可以当数组用也可以当"字典"用。
+
+行注释以 `--` 开始，块注释如下：
+```lua
+--[[
+
+]]
+```
+
+如写 x = 1, 则 x会默认成为 全局变量，这不太好。因此一般都写成
+local x = 1

@@ -1,6 +1,12 @@
+use tokio::sync::mpsc::{self, *};
+
 use super::*;
 
-pub type OptNewInfoSender = Option<tokio::sync::mpsc::Sender<NewConnInfo>>;
+pub type OptNewInfoSender = Option<Sender<NewConnInfo>>;
+
+pub fn create_new_info_pipe() -> (Sender<NewConnInfo>, Receiver<NewConnInfo>) {
+    mpsc::channel(1024)
+}
 
 #[derive(Clone, Debug)]
 pub struct NewConnInfo {
@@ -51,5 +57,5 @@ fn test() {
         #[cfg(feature = "trace")]
         out_trace: Vec::new(),
     };
-    println!("{}", n)
+    println!("{n}")
 }

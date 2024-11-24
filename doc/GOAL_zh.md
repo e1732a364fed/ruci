@@ -27,7 +27,7 @@ ruci项目的终极目标是利用人工神经网络针对用户自己的流量�
 你需要自行采集数据, 自行训练网络, 项目本身暂不会为你提供任何生成好的东西. 好在算不上深度学习，很快就能训练好ruciwall
 不过, 不用AI协议的话, 完全可以拿本项目退化作为一个日常代理使用
 
-## 准确描述
+## 较准确的描述
 
 我们要解决的问题是, 
 
@@ -42,17 +42,19 @@ ruci项目的终极目标是利用人工神经网络针对用户自己的流量�
 该问题有很多”弱化版本“, 比如, 不要求对任意P1+D1, 只要求对 TLS+D1
 再弱化, 如, 是否有一个协议 P2, 传输数据 D2=TLS+D1,  无法区分出 P2+D2 和 TLS+D3 的区别, 
 
-已经可以证明，存在一个完美安全的协议。(There exists a Provably Secure Steganography Proxy Protocol.)
+已经可以证明，存在一个完美安全的代理协议。(There exists a Provably Secure Steganography Proxy Protocol.)
 
 # 相关领域
 
 Deep Packet Inspection,数据分析,加密流量识别, 流量分类, 流量分析, 异常流量检测
 
-Steganography, cryptography, Provable Perfect Security 
+Steganography, cryptography, Provable Perfect Security ， Covert Communication
+
+信息隐藏，隐写，隐写分析，隐敝通信
 
 有很多大量的论文和相关的开源项目存在. 很多的流量识别网络有国家（中国）专利
 总之识别异常流量已经是数年前的老内容了，在今天属于入门级的内容（在学习神经网络1天后即应具备识别异常流量的能力）。
-我们主要更关心的是AI协议的问题
+我们主要更关心的是AI协议（生成式隐写）的问题
 
 https://patents.google.com/patent/CN101741744B/zh
 (接着看 Cited By 即可找到更多)
@@ -64,6 +66,12 @@ https://arxiv.org/abs/2210.14889
 
 Deep Packet: A Novel Approach For Encrypted Traffic Classification Using Deep Learning
 https://arxiv.org/abs/1709.02656
+
+可证安全隐写：理论、应用与展望
+https://www.journalofcybersec.com/CN/Y2023/V1/I1/38
+
+生成式隐写研究
+http://cjc.ict.ac.cn/online/bfpub/zlz-202322140707.pdf
 
 一些项目与资源
 
@@ -77,5 +85,35 @@ https://github.com/Srinivas11789/PcapXray
 
 https://wiki.wireshark.org/SampleCaptures
 
+
+
+
+中国计算机学会推荐国际学术刊物
+https://www.ccf.org.cn/Academic_Evaluation/NIS/
+
+IEEE Transactions on Dependable and Secure Computing(TDSC)
+https://dblp.uni-trier.de/db/journals/tdsc/index.html
+
+IEEE Transactions on Information Forensics and Security(TIFS)
+https://dblp.uni-trier.de/db/journals/tifs/index.html
+
+ACM Workshop on Information Hiding and Multimedia Security (IH&MMSec)
+https://dblp.org/db/conf/ih/index.html
+
+
+电子与信息学报
+https://jeit.ac.cn/
+
+应用科学学报
+https://www.jas.shu.edu.cn/
+
 信息安全学报
 http://jcs.iie.ac.cn/xxaqxb/ch/index.aspx
+
+网络空间安全科学学报
+https://www.journalofcybersec.com/CN/home
+
+计算机学报
+http://cjc.ict.ac.cn/
+
+等，以及各大学的学报

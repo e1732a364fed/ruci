@@ -15,7 +15,7 @@ use std::time::Duration;
 ///blocking
 #[allow(unused)]
 pub(crate) async fn run(
-    f: &str,
+    file_name: &str,
     args: crate::Args,
     #[cfg(feature = "api_server")] opts: Option<(
         api::server::Server,
@@ -25,19 +25,19 @@ pub(crate) async fn run(
 ) -> anyhow::Result<()> {
     info!("try to start rucimp chain engine");
 
-    let mut se = rucimp::modes::chain::engine::Engine::default();
+    let mut e = rucimp::modes::chain::engine::Engine::default();
 
     #[cfg(any(feature = "lua", feature = "lua54"))]
     {
         use anyhow::Context;
 
-        let contents = rucimp::utils::try_get_file_content("local.lua", Some(f))
-            .with_context(|| format!("run chain engine try get file {} failed", f))?;
+        let contents = rucimp::utils::try_get_file_content("local.lua", Some(file_name))
+            .with_context(|| format!("run chain engine try get file {} failed", file_name))?;
 
         if args.infinite {
-            se.init_lua_infinite_dynamic(contents)?;
+            e.init_lua_infinite_dynamic(contents)?;
         } else {
-            se.init_lua(contents)?;
+            e.init_lua(contents)?;
         }
     }
 
@@ -45,7 +45,7 @@ pub(crate) async fn run(
     {
         if let Some(mut s) = opts {
             setup_api_server_with_chain_engine(
-                &mut se,
+                &mut e,
                 #[cfg(feature = "trace")]
                 args,
                 &mut s.0,
@@ -53,13 +53,13 @@ pub(crate) async fn run(
             )
             .await;
 
-            run_engine(&mut se, Some(s.1)).await?;
+            run_engine(&mut e, Some(s.1)).await?;
 
             return Ok(());
         }
     }
 
-    run_engine(&mut se, None).await?;
+    run_engine(&mut e, None).await?;
 
     Ok(())
 }

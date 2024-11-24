@@ -26,3 +26,6 @@ pub mod tproxy;
 
 #[cfg(feature = "smoltcp")]
 pub mod tcp_ip_stack_smoltcp;
+
+#[cfg(any(feature = "lua", feature = "lua54"))]
+pub mod lua;

@@ -1,6 +1,6 @@
 use std::{
     cmp::min,
-    collections::HashMap,
+    collections::{hash_map::Entry, HashMap},
     io,
     net::SocketAddr,
     pin::Pin,
@@ -74,7 +74,7 @@ impl FixedTargetAddrUDPListener {
 
                         //if mg.contains_key(&a) {
                         match mg.entry(a) {
-                            std::collections::hash_map::Entry::Occupied(e) => {
+                            Entry::Occupied(e) => {
                                 trace!("FixedUdpListener loop got old conn msg: {a} {n}");
 
                                 let new_buf = BytesMut::from(&buf[..n]);
@@ -86,7 +86,7 @@ impl FixedTargetAddrUDPListener {
                                     continue;
                                 }
                             },
-                            std::collections::hash_map::Entry::Vacant(e) => {
+                            Entry::Vacant(e) => {
 
                                 trace!("FixedUdpListener loop got new conn: {a} {n}");
                                 let (tx, rx) = mpsc::channel(100);

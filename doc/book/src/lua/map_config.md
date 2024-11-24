@@ -24,7 +24,7 @@
     tcp://0.0.0.0:80
     ip://10.0.0.1:24#utun321
 
-`{scheme}://`没给出时，默认使用 tcp. unix 表示 uds(unix domain socket)
+`{scheme}://`没给出时，默认使用 tcp. unix 表示 unix domain socket
 
 方括号括起的表示 ipv6
 
@@ -394,7 +394,7 @@ out:
 }
 ```
 
-如果任意一方的alpn 没给出, 则连接都通过；如果两方 alph 都给出, 则只有匹配了才通过
+如果任意一方的alpn 没给出, 则连接都通过；如果两方 alpn 都给出, 则只有匹配了才通过
 
 
 ## NativeTLS

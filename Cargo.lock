@@ -1595,9 +1595,9 @@ dependencies = [
 
 [[package]]
 name = "luau0-src"
-version = "0.10.2+luau635"
+version = "0.11.1+luau650"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8bd6bc70c84fdd4e89b71b528f7ab7db7b97adf759faa8dbe15c5011468e290"
+checksum = "6940dda003977234fe07c0480a8a05eecea5bed3030567c383336ea432c74d0a"
 dependencies = [
  "cc",
 ]
@@ -1735,9 +1735,9 @@ dependencies = [
 
 [[package]]
 name = "mlua-sys"
-version = "0.6.2"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ab7a5b4756b8177a2dfa8e0bbcde63bd4000afbc4ab20cbb68d114a25470f29"
+checksum = "e9eebac25c35a13285456c88ee2fde93d9aee8bcfdaf03f9d6d12be3391351ec"
 dependencies = [
  "cc",
  "cfg-if",

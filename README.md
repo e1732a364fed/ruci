@@ -29,7 +29,7 @@ Developer chat:     https://t.me/+6yL4ggeyKY0yNjIx
 
 User channel:       https://t.me/+r5hKQKYyeuowMTcx
 
-The project is work in progress, 功能会陆续添加
+The project is work in progress, 功能会陆续添加与调整
 
 
 ## Structure

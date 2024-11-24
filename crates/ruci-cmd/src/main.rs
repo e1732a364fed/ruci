@@ -156,6 +156,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+// 注：返回的 gaurd 超出作用域(被回收)后，log 结束
 fn log_setup(args: Args) -> Option<tracing_appender::non_blocking::WorkerGuard> {
     println!("ruci-cmd");
     let c_dir = std::env::current_dir().expect("has current directory");

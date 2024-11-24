@@ -126,8 +126,8 @@ impl MapParams {
 /// MapResult has basic fields : a,b,c,d,e which are
 /// massively used in ruci.
 ///
-/// if there's an error (e), if c (Stream) is also returned, then this marks
-/// the connection will be fallback.
+/// If there's an error (e), and if c (Stream) is also returned, then this marks
+/// the connection will fallback.
 ///
 #[derive(TypedBuilder, Default, Debug)]
 pub struct MapResult {

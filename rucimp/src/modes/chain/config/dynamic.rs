@@ -29,7 +29,7 @@ use ruci::{
     net::CID,
 };
 
-/// Complete Dynamic (Infinite) Chain that uses a number to indicate the current state
+/// Infinite(Complete) Dynamic Chain that uses a number to indicate the current state
 #[derive(Clone, Debug)]
 pub struct IndexInfinite {
     pub tag: String,
@@ -56,6 +56,8 @@ impl IndexInfinite {
 
 pub type IndexMapBox = (i64, Option<Arc<MapBox>>); //MapBox 和它的 索引
 
+/// 每次 next_map 被调用,都会返回下一个index, 在未结束时,还会下一个状态所需的MapBox
+///
 /// 若返回的 index 小于0, 则指示迭代结束
 ///
 pub trait IndexNextMapGenerator: DynClone + Debug + Send + Sync {

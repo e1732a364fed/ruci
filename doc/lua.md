@@ -1,3 +1,4 @@
+本文是对lua配置的简单介绍，更完整的介绍可见  [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
 
 Config 是 提供给 rucimp 的项, 静态示例如下
 
