@@ -44,7 +44,7 @@ rcgen = { version = "0.13", optional = true }
 qrcode = { version = "0.14", optional = true, default-features = false }
 
 toml = "0.8"
-serde_yaml = "0.9"
+# serde_yaml = "0.9"
 serde_path_to_error = "0.1"
 serde-transcode = "1.1"
 serde-value = "0.7"

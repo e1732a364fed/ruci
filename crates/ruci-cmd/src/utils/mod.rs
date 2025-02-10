@@ -62,7 +62,7 @@ pub enum Commands {
     /// print the QrCode of a string in the console.
     QR { str: String },
 
-    /// 转换配置文件格式，支持在 lua、toml、yaml 之间互相转换。输入格式将根据文件后缀自动识别
+    /// 转换配置文件格式，支持在 lua、toml、json 之间互相转换。输入格式将根据文件后缀自动识别
     ConvertFormat {
         /// 输入文件路径
         input_file: String,
@@ -336,12 +336,12 @@ fn print_qrcode_of(str: &str) {
 }
 
 /// 在不同配置格式之间转换
-/// 支持的格式: lua, toml, yaml, json
+/// 支持的格式: lua, toml, json
 ///
 /// # Arguments
 /// * `input` - 输入的配置文件内容
-/// * `input_format` - 输入格式 ("lua", "toml", "yaml", "json")
-/// * `output_format` - 输出格式 ("lua", "toml", "yaml", "json")
+/// * `input_format` - 输入格式 ("lua", "toml", "json")
+/// * `output_format` - 输出格式 ("lua", "toml", "json")
 pub fn convert_static_config(
     input_file_content: &str,
     input_format: &str,
@@ -362,7 +362,7 @@ pub fn convert_static_config(
             return match output_format.to_lowercase().as_str() {
                 "toml" => Ok(toml::to_string(&config)?),
                 "json" => Ok(rucimp::serde_json::to_string_pretty(&config)?),
-                "yaml" | "yml" => Ok(serde_yaml::to_string(&config)?),
+                // "yaml" | "yml" => Ok(serde_yaml::to_string(&config)?),
                 _ => anyhow::bail!("unsupported output format: {}", output_format),
             };
         }
@@ -376,7 +376,7 @@ pub fn convert_static_config(
             let config: StaticConfig = match input_format.to_lowercase().as_str() {
                 "toml" => toml::from_str(input_file_content)?,
                 "json" => rucimp::serde_json::from_str(input_file_content)?,
-                "yaml" | "yml" => serde_yaml::from_str(input_file_content)?,
+                // "yaml" | "yml" => serde_yaml::from_str(input_file_content)?,
                 _ => anyhow::bail!("unsupported input format: {}", input_format),
             };
             use rucimp::modes::chain::config::lua::mlua::{self, LuaSerdeExt};
@@ -405,7 +405,7 @@ pub fn convert_static_config(
     // 首先将输入解析为 serde_value::Value
     let value: Value = match input_format.to_lowercase().as_str() {
         "json" => rucimp::serde_json::from_str(input_file_content).context("json parse failed")?,
-        "yaml" | "yml" => serde_yaml::from_str(input_file_content).context("yaml parse failed")?,
+        // "yaml" | "yml" => serde_yaml::from_str(input_file_content).context("yaml parse failed")?,
         "toml" => toml::from_str(input_file_content).context("toml parse failed")?,
         _ => anyhow::bail!("unsupported input format: {}", input_format),
     };
@@ -415,7 +415,7 @@ pub fn convert_static_config(
         "json" => {
             Ok(rucimp::serde_json::to_string_pretty(&value)?).context("serialize json failed")
         }
-        "yaml" | "yml" => Ok(serde_yaml::to_string(&value)?).context("serialize yaml failed"),
+        // "yaml" | "yml" => Ok(serde_yaml::to_string(&value)?).context("serialize yaml failed"),
         "toml" => Ok(toml::to_string(&value)?).context("serialize toml failed"),
         _ => anyhow::bail!("unsupported output format: {}", output_format),
     }

@@ -3117,7 +3117,6 @@ dependencies = [
  "serde-transcode",
  "serde-value",
  "serde_path_to_error",
- "serde_yaml",
  "tokio",
  "tokio-util",
  "toml",
