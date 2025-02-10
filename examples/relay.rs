@@ -30,9 +30,9 @@ async fn main() -> anyhow::Result<()> {
     ruci::relay::handle_in_stream(
         stream,
         Box::new(inbounds),
-        Arc::new(Box::new(FixedOutSelector {
+        Arc::new(FixedOutSelector {
             default: Box::new(outbounds),
-        })),
+        }),
         HandleInStreamOptions::default(),
     )
     .await?;

@@ -28,7 +28,7 @@ members = [
 
 [workspace.dependencies]
 tracing = "0.1"
-rand = { version = "0.9", features = ["small_rng"] }
+rand = { version = "0.9" }
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
 serde = { version = "1", features = ["derive"] }
