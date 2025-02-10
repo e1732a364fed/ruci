@@ -52,7 +52,7 @@ use crate::map::steganography::spe1;
 use crate::map::tproxy::{self, TcpResolver};
 
 #[cfg(feature = "route")]
-use crate::route::{config::RuleSetConfig, RuleSet};
+use crate::route::ruleset::{config::RuleSetConfig, RuleSet};
 
 /// 静态配置中有初始化后即确定的 Map 数量
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]

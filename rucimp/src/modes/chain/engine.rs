@@ -3,7 +3,7 @@ Defines the engine to run the chain config.
  */
 
 #[cfg(feature = "route")]
-use crate::route::{RuleSet, RuleSetOutSelector};
+use crate::route::ruleset::{RuleSet, RuleSetOutSelector};
 use crate::utils::FileSource;
 
 use super::config::StaticConfig;
