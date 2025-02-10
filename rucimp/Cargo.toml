@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 ruci = { path = ".." }
 macro_map = { path = "../crates/macro_map" }
-ruci-tls = { path = "../crates/ruci-tls" }
+ruci-rustls22 = { path = "../crates/ruci-rustls22" }
 user_trait = { workspace = true }
 tracing = { workspace = true }
 bytes = { workspace = true }

@@ -304,10 +304,10 @@ pub fn io_error2<T: std::fmt::Display, T2: std::fmt::Display>(
 }
 /// helper function
 pub fn init_tls_server_pem_option(
-    opts: &ruci_tls::server::TlsServerOptions,
+    opts: &ruci_rustls22::server::TlsServerOptions,
     fs: &FileSource,
-) -> std::io::Result<ruci_tls::server::ServerPEMOptions> {
-    Ok(ruci_tls::server::ServerPEMOptions {
+) -> std::io::Result<ruci_rustls22::server::ServerPEMOptions> {
+    Ok(ruci_rustls22::server::ServerPEMOptions {
         cert: fs.read_to_string(opts.cert.clone())?,
         key: fs.read_to_string(opts.key.clone())?,
         alpn: opts.alpn.clone(),
