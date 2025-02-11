@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 ruci = { path = "../.." }
-rucimp = { path = "../../rucimp", features = ["repl"] }
+rucimp = { path = "../../rucimp" }
 
 tracing = { workspace = true }
 anyhow = { workspace = true }

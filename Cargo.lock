@@ -615,6 +615,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
+name = "clash_rules"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0ba9037c44b39bc5c5766cc7253eb792f2f69483a3b79d6b4b239df6c01385d"
+dependencies = [
+ "aho-corasick",
+ "ipnet",
+ "prefix-trie",
+ "radix_trie",
+ "serde",
+ "serde_yaml_ng",
+]
+
+[[package]]
 name = "clipboard-win"
 version = "5.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2665,6 +2679,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "prefix-trie"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb5f930995ba4986bd239ba8d8fded67cad82d1db329c4f316f312847cba16aa"
+dependencies = [
+ "ipnet",
+ "num-traits",
+]
+
+[[package]]
 name = "prettyplease"
 version = "0.2.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3163,6 +3187,7 @@ dependencies = [
  "base64 0.21.7",
  "bytes",
  "chrono",
+ "clash_rules",
  "criterion",
  "dashmap",
  "dyn-clone",
@@ -3581,6 +3606,19 @@ name = "serde_yaml"
 version = "0.9.34+deprecated"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+dependencies = [
+ "indexmap 2.7.0",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
+]
+
+[[package]]
+name = "serde_yaml_ng"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b4db627b98b36d4203a7b458cf3573730f2bb591b28871d916dfa9efabfd41f"
 dependencies = [
  "indexmap 2.7.0",
  "itoa",

@@ -2,7 +2,6 @@
 Defines the engine to run the chain config.
  */
 
-#[cfg(feature = "route")]
 use crate::route::ruleset::{RuleSet, RuleSetOutSelector};
 use crate::utils::FileSource;
 
@@ -56,7 +55,6 @@ pub struct Engine {
     tag_routes: Option<HashMap<String, String>>,
     fallback_routes: Option<HashMap<String, String>>,
 
-    #[cfg(feature = "route")]
     rule_sets: Option<Vec<RuleSet>>,
 }
 
@@ -111,10 +109,7 @@ impl Engine {
         self.tag_routes = sc.get_tag_route();
         self.fallback_routes = sc.get_fallback_route();
 
-        #[cfg(feature = "route")]
-        {
-            self.rule_sets = sc.get_rule_route(self.file_source.clone());
-        }
+        self.rule_sets = sc.get_rule_route(self.file_source.clone());
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) -> anyhow::Result<()> {
@@ -348,31 +343,26 @@ impl Engine {
     }
 
     fn get_out_selector(&self) -> Arc<dyn OutSelector> {
-        #[cfg(feature = "route")]
-        {
-            if self.rule_sets.is_some() {
-                debug!("use rule_sets");
-                self.get_rule_sets_out_selector()
-            } else if self.tag_routes.is_some() || self.fallback_routes.is_some() {
-                debug!("use tag_routes");
+        if self.rule_sets.is_some() {
+            debug!("use rule_sets");
+            self.get_rule_sets_out_selector()
+        } else if self.tag_routes.is_some() || self.fallback_routes.is_some() {
+            debug!("use tag_routes");
 
-                self.get_tag_route_out_selector()
-            } else {
-                debug!("use fixed_out_selector");
-                self.get_fixed_out_selector()
-            }
+            self.get_tag_route_out_selector()
+        } else {
+            debug!("use fixed_out_selector");
+            self.get_fixed_out_selector()
         }
-        #[cfg(not(feature = "route"))]
-        {
-            if self.tag_routes.is_some() {
-                self.get_tag_route_out_selector()
-            } else {
-                self.get_fixed_out_selector()
-            }
-        }
+        // {
+        //     if self.tag_routes.is_some() {
+        //         self.get_tag_route_out_selector()
+        //     } else {
+        //         self.get_fixed_out_selector()
+        //     }
+        // }
     }
 
-    #[cfg(feature = "route")]
     fn get_rule_sets_out_selector(&self) -> Arc<dyn OutSelector> {
         let s = RuleSetOutSelector {
             outbounds_rules_vec: self.rule_sets.clone().expect("has rule_sets"),

@@ -51,7 +51,6 @@ use crate::map::steganography::spe1;
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 use crate::map::tproxy::{self, TcpResolver};
 
-#[cfg(feature = "route")]
 use crate::route::ruleset::{config::RuleSetConfig, RuleSet};
 
 /// 静态配置中有初始化后即确定的 Map 数量
@@ -63,8 +62,8 @@ pub struct StaticConfig {
     pub tag_route: Option<Vec<(String, String)>>,
     pub fallback_route: Option<Vec<(String, String)>>,
 
-    #[cfg(feature = "route")]
     pub rule_route: Option<Vec<RuleSetConfig>>,
+    pub clash_route: Option<String>,
 }
 
 impl StaticConfig {
@@ -192,7 +191,6 @@ impl StaticConfig {
         })
     }
 
-    #[cfg(feature = "route")]
     pub fn get_rule_route(
         &self,
         file_source: Arc<crate::utils::FileSource>,

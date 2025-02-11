@@ -127,7 +127,7 @@ pub async fn wait_close_sig_with_closer(
     Ok(())
 }
 
-#[cfg(all(any(feature = "lua", feature = "lua54"), feature = "repl"))]
+#[cfg(any(feature = "lua", feature = "lua54"))]
 pub fn lua_repl() {
     info!("Running lua repl. Press Ctrl+D to exit");
     //https://github.com/mlua-rs/mlua/blob/main/examples/repl.rs

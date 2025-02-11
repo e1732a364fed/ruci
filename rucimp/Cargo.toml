@@ -38,10 +38,11 @@ itertools = "0.12"
 thiserror = "1.0"
 
 
-ipnet = { version = "2.9", optional = true }
-iprange = { version = "0.6", optional = true }
-regex = { version = "1.10", optional = true }
+ipnet = { version = "2" }
+iprange = { version = "0.6" }
+regex = { version = "1" }
 maxminddb = { version = "0.24", optional = true }
+clash_rules = "0.1"
 
 mlua = { version = "0.10", features = [
   "serialize",
@@ -129,7 +130,7 @@ wiremock = "0.6"
 
 
 [features]
-default = ["route", "geoip", "sockopt"]
+default = ["geoip", "sockopt"]
 steganography = []
 rustls21 = ["dep:rustls", "rustls-pemfile", "webpki-roots"]
 
@@ -139,13 +140,12 @@ quinn = ["rustls21", "dep:quinn"]
 tun = ["ruci/tun"]
 trace = ["ruci/trace"]
 
-lua = ["mlua/luau", "serde-lua-table"]
-lua54 = ["mlua/lua54", "mlua/vendored", "serde-lua-table"]
-repl = ["rustyline"]
+lua = ["mlua/luau", "serde-lua-table", "rustyline"]
+lua54 = ["mlua/lua54", "mlua/vendored", "serde-lua-table", "rustyline"]
 
-route = ["ipnet", "iprange", "regex"]
+# route = ["ipnet", "iprange", "regex"]
 
-geoip = ["maxminddb", "route"]
+geoip = ["maxminddb"]
 
 sockopt = ["libc", "socket2", "rlimit"]
 
@@ -159,15 +159,15 @@ lwip = ["netstack-lwip"]
 
 [[example]]
 name = "lua"
-required-features = ["lua", "route"]
+required-features = ["lua"]
 
 [[example]]
 name = "lua_infinite"
-required-features = ["lua", "route"]
+required-features = ["lua"]
 
 [[example]]
 name = "lua_trace"
-required-features = ["lua", "route"]
+required-features = ["lua"]
 
 [[example]]
 name = "shared"
