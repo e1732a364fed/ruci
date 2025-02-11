@@ -199,25 +199,22 @@ impl StaticConfig {
             let v: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
             v
         });
-        #[cfg(feature = "geoip")]
-        {
-            if let Some(mut rs_v) = result {
-                use crate::route::maxmind;
+        if let Some(mut rs_v) = result {
+            use crate::route::maxmind;
 
-                let r = maxmind::open_mmdb("Country.mmdb", file_source.as_ref());
-                match r {
-                    Ok(m) => {
-                        let am = Some(Arc::new(m));
+            let r = maxmind::open_mmdb("Country.mmdb", file_source.as_ref());
+            match r {
+                Ok(m) => {
+                    let am = Some(Arc::new(m));
 
-                        rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
-                    }
-                    Err(e) => {
-                        warn!("no Country.mmdb: {e}");
-                    }
+                    rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
                 }
-
-                result = Some(rs_v);
+                Err(e) => {
+                    warn!("no Country.mmdb: {e}");
+                }
             }
+
+            result = Some(rs_v);
         }
         result
     }

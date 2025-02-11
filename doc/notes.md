@@ -267,7 +267,7 @@ ruci中有三种 route 实现: fixed, tag, info;
 
 rucimp 中有很多feature :
 
-lua, lua54, route,geoip, tun, sockopt, use-native-tls, native-tls-vendored, quinn, quic,smoltcp, lwip
+lua, lua54, tun, sockopt, use-native-tls, native-tls-vendored, quinn, quic,smoltcp, lwip
 
 
 

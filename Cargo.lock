@@ -616,12 +616,13 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "clash_rules"
-version = "0.1.1"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0ba9037c44b39bc5c5766cc7253eb792f2f69483a3b79d6b4b239df6c01385d"
+checksum = "a53788bd91374e8cada9081fce9eda176b5cfa53501c478b9a897aceb1afd577"
 dependencies = [
  "aho-corasick",
  "ipnet",
+ "maxminddb",
  "prefix-trie",
  "radix_trie",
  "serde",
@@ -3203,7 +3204,6 @@ dependencies = [
  "lazy_static",
  "libc",
  "macro_map",
- "maxminddb",
  "md5",
  "mlua",
  "native-tls",

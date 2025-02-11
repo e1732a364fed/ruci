@@ -5,6 +5,7 @@ use ruci::map::Data;
 use ruci::net;
 use ruci::relay::route;
 
+use async_trait::async_trait;
 use clash_rules::*;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -18,14 +19,17 @@ pub struct ClashRuleOutSelector {
 impl route::OutSelector for ClashRuleOutSelector {
     async fn select(
         &self,
-        is_fallback: bool,
+        _is_fallback: bool,
         addr: &net::Addr,
-        in_chain_tag: &str,
-        params: &[Option<Box<dyn Data>>],
+        _in_chain_tag: &str,
+        _params: &[Option<Box<dyn Data>>],
     ) -> Option<DMIterBox> {
         let mut out_tag: Option<&String> = None;
         if let Some(ip) = addr.get_ip() {
             out_tag = self.matcher.check_ip(ip);
+            if out_tag.is_none() {
+                out_tag = self.matcher.check_ip_country(ip);
+            }
         }
         if out_tag.is_none() {
             if let Some(d) = addr.get_name() {
@@ -35,7 +39,7 @@ impl route::OutSelector for ClashRuleOutSelector {
         let r = match out_tag {
             None => self.default.clone(),
             Some(out_k) => {
-                let y = self.outbounds_map.get(&out_k);
+                let y = self.outbounds_map.get(out_k);
                 match y {
                     Some(out) => out.clone(),
                     None => self.default.clone(),

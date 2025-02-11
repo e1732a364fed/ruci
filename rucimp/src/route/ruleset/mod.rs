@@ -22,7 +22,6 @@ use ruci::{
 };
 use user_trait::UserVec;
 
-#[cfg(feature = "geoip")]
 use crate::route::maxmind;
 
 /// This is a [`ruci::relay::route::OutSelector`] implementation which is more useful than the weaker one [`ruci::relay::route::InboundInfoOutSelector`].
@@ -108,8 +107,7 @@ pub struct RuleSet {
 
     pub ta_domain_matcher: Option<DomainMatcher>,
     /// for geoip, checking ip_countries
-    #[cfg(feature = "geoip")]
-    pub mmdb_reader: Option<Arc<maxminddb::Reader<Vec<u8>>>>,
+    pub mmdb_reader: Option<Arc<clash_rules::maxminddb::Reader<Vec<u8>>>>,
 }
 //todo: add peer_addr related filter
 
@@ -173,12 +171,9 @@ impl RuleSet {
             return false;
         }
 
-        #[cfg(feature = "geoip")]
-        {
-            let is_in_ta_ip_countries = self.is_in_ta_ip_countries(true, &r.target_addr);
-            if !is_in_ta_ip_countries {
-                return false;
-            }
+        let is_in_ta_ip_countries = self.is_in_ta_ip_countries(true, &r.target_addr);
+        if !is_in_ta_ip_countries {
+            return false;
         }
 
         true
@@ -213,12 +208,9 @@ impl RuleSet {
             return true;
         }
 
-        #[cfg(feature = "geoip")]
-        {
-            let is_in_ta_ip_countries = self.is_in_ta_ip_countries(true, &r.target_addr);
-            if is_in_ta_ip_countries {
-                return true;
-            }
+        let is_in_ta_ip_countries = self.is_in_ta_ip_countries(true, &r.target_addr);
+        if is_in_ta_ip_countries {
+            return true;
         }
         false
     }
@@ -283,7 +275,6 @@ impl RuleSet {
         }
     }
 
-    #[cfg(feature = "geoip")]
     pub fn is_in_ta_ip_countries(&self, true_if_empty: bool, addr: &net::Addr) -> bool {
         match &self.mmdb_reader {
             None => true_if_empty,
@@ -294,7 +285,7 @@ impl RuleSet {
                 Some(cs) => match addr.addr {
                     NetAddr::Socket(so) | NetAddr::NameAndSocket(_, so, _) => {
                         let ip = so.ip();
-                        let str = &maxmind::get_ip_iso_by_reader(ip, mr);
+                        let str = &clash_rules::get_ip_iso_by_reader(ip, mr);
                         let country = maxmind::filter_iso_string_to_iso3166(str);
                         cs.contains(country)
                     }
@@ -362,7 +353,6 @@ mod test {
 
     //#[test]
     #[allow(unused)]
-    #[cfg(feature = "geoip")]
     fn rs_country() -> anyhow::Result<()> {
         let mut rs = RuleSet::default();
         let mr = maxmind::open_mmdb("Country.mmdb", &crate::utils::FileSource::StdReadFile)?;

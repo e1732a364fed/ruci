@@ -41,8 +41,7 @@ thiserror = "1.0"
 ipnet = { version = "2" }
 iprange = { version = "0.6" }
 regex = { version = "1" }
-maxminddb = { version = "0.24", optional = true }
-clash_rules = "0.1"
+clash_rules = "0.1.5"
 
 mlua = { version = "0.10", features = [
   "serialize",
@@ -130,7 +129,7 @@ wiremock = "0.6"
 
 
 [features]
-default = ["geoip", "sockopt"]
+default = ["sockopt"]
 steganography = []
 rustls21 = ["dep:rustls", "rustls-pemfile", "webpki-roots"]
 
@@ -144,8 +143,6 @@ lua = ["mlua/luau", "serde-lua-table", "rustyline"]
 lua54 = ["mlua/lua54", "mlua/vendored", "serde-lua-table", "rustyline"]
 
 # route = ["ipnet", "iprange", "regex"]
-
-geoip = ["maxminddb"]
 
 sockopt = ["libc", "socket2", "rlimit"]
 
