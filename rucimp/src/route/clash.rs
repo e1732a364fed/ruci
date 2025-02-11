@@ -1,14 +1,13 @@
 /*! implement clash rules using crate clash_rule
 */
 use ruci::map::fold::DMIterBox;
+use ruci::map::Data;
 use ruci::net;
 use ruci::relay::route;
 
 use clash_rules::*;
-use ipnet::{Ipv4Net, Ipv6Net};
 use std::collections::HashMap;
-use std::net::{Ipv4Addr, Ipv6Addr};
-use std::path::Path;
+use std::sync::Arc;
 
 pub struct ClashRuleOutSelector {
     pub matcher: ClashRuleMatcher,
