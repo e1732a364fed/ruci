@@ -64,6 +64,8 @@ pub struct StaticConfig {
     pub fallback_route: Option<Vec<(String, String)>>,
 
     pub rule_route: Option<Vec<RuleSetConfig>>,
+
+    /// clash 规则文件名
     pub clash_route: Option<String>,
 }
 
@@ -215,6 +217,18 @@ impl StaticConfig {
             result = Some(rs_v);
         }
         result
+    }
+    pub fn get_clash_route(
+        &self,
+        file_source: Arc<FileSource>,
+    ) -> Option<Arc<clash_rules::ClashRuleMatcher>> {
+        self.clash_route.clone().and_then(|file_name| {
+            let (d, _) = file_source.get_file_content(file_name).unwrap();
+            let cs = String::from_utf8_lossy(&d);
+            let r = clash_rules::ClashRuleMatcher::from_clash_config_str(cs.as_ref());
+
+            r.ok().map(|c| Arc::new(c))
+        })
     }
 }
 

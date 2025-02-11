@@ -31,7 +31,7 @@ use crate::route::maxmind;
 pub struct RuleSetOutSelector {
     pub outbounds_rules_vec: Vec<RuleSet>, // rule -> out_tag
     pub outbounds_map: Arc<HashMap<String, DMIterBox>>, //out_tag -> outbound
-    pub default: DMIterBox,
+    pub default: Option<DMIterBox>,
 }
 
 #[async_trait]
@@ -63,10 +63,10 @@ impl route::OutSelector for RuleSetOutSelector {
                 let y = self.outbounds_map.get(&out_k);
                 match y {
                     Some(out) => out.clone(),
-                    None => self.default.clone(),
+                    None => return self.default.clone(),
                 }
             }
-            None => self.default.clone(),
+            None => return self.default.clone(),
         };
 
         Some(r)
@@ -430,7 +430,7 @@ mod test {
         let selector = RuleSetOutSelector {
             outbounds_rules_vec: rsv,
             outbounds_map,
-            default: m2,
+            default: Some(m2),
         };
         let a = Addr::default();
         let opts = Vec::new();

@@ -11,9 +11,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct ClashRuleOutSelector {
-    pub matcher: ClashRuleMatcher,
+    pub matcher: Arc<ClashRuleMatcher>,
     pub outbounds_map: Arc<HashMap<String, DMIterBox>>, //out_tag -> outbound
-    pub default: DMIterBox,
 }
 #[async_trait]
 impl route::OutSelector for ClashRuleOutSelector {
@@ -36,17 +35,6 @@ impl route::OutSelector for ClashRuleOutSelector {
                 out_tag = self.matcher.check_domain(&d);
             }
         }
-        let r = match out_tag {
-            None => self.default.clone(),
-            Some(out_k) => {
-                let y = self.outbounds_map.get(out_k);
-                match y {
-                    Some(out) => out.clone(),
-                    None => self.default.clone(),
-                }
-            }
-        };
-
-        Some(r)
+        out_tag.and_then(|out_k| self.outbounds_map.get(out_k).cloned())
     }
 }

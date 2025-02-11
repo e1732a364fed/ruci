@@ -2,7 +2,10 @@
 Defines the engine to run the chain config.
  */
 
-use crate::route::ruleset::{RuleSet, RuleSetOutSelector};
+use crate::route::{
+    clash::ClashRuleOutSelector,
+    ruleset::{RuleSet, RuleSetOutSelector},
+};
 use file_source::FileSource;
 
 use super::config::StaticConfig;
@@ -56,6 +59,7 @@ pub struct Engine {
     fallback_routes: Option<HashMap<String, String>>,
 
     rule_sets: Option<Vec<RuleSet>>,
+    clash_rules: Option<Arc<clash_rules::ClashRuleMatcher>>,
 }
 
 impl Engine {
@@ -110,6 +114,7 @@ impl Engine {
         self.fallback_routes = sc.get_fallback_route();
 
         self.rule_sets = sc.get_rule_route(self.file_source.clone());
+        self.clash_rules = sc.get_clash_route(self.file_source.clone())
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) -> anyhow::Result<()> {
@@ -343,31 +348,32 @@ impl Engine {
     }
 
     fn get_out_selector(&self) -> Arc<dyn OutSelector> {
+        let mut ms = MultipleOutSelector::default();
+        if self.tag_routes.is_some() || self.fallback_routes.is_some() {
+            debug!("use tag_routes");
+            ms.selectors.push(self.get_tag_route_out_selector())
+        }
+
         if self.rule_sets.is_some() {
             debug!("use rule_sets");
-            self.get_rule_sets_out_selector()
-        } else if self.tag_routes.is_some() || self.fallback_routes.is_some() {
-            debug!("use tag_routes");
-
-            self.get_tag_route_out_selector()
-        } else {
-            debug!("use fixed_out_selector");
-            self.get_fixed_out_selector()
+            ms.selectors.push(self.get_rule_sets_out_selector());
         }
-        // {
-        //     if self.tag_routes.is_some() {
-        //         self.get_tag_route_out_selector()
-        //     } else {
-        //         self.get_fixed_out_selector()
-        //     }
-        // }
+        if let Some(c) = self.clash_rules.clone() {
+            ms.selectors.push(Arc::new(ClashRuleOutSelector {
+                matcher: c,
+                outbounds_map: self.outbounds.clone(),
+            }))
+        }
+        ms.selectors.push(self.get_fixed_out_selector());
+        Arc::new(ms)
     }
 
     fn get_rule_sets_out_selector(&self) -> Arc<dyn OutSelector> {
         let s = RuleSetOutSelector {
             outbounds_rules_vec: self.rule_sets.clone().expect("has rule_sets"),
             outbounds_map: self.outbounds.clone(),
-            default: self.default_outbound.clone().expect("has default_outbound"),
+            // default: self.default_outbound.clone().expect("has default_outbound"),
+            default: None,
         };
 
         Arc::new(s)
@@ -378,13 +384,14 @@ impl Engine {
             outbounds_tag_route_map: self.tag_routes.clone(),
             fallback_tag_route_map: self.fallback_routes.clone(),
             outbounds_map: self.outbounds.clone(),
-            ok_default: Some(self.default_outbound.clone().expect("has default_outbound")),
+            // ok_default: Some(self.default_outbound.clone().expect("has default_outbound")),
             ..Default::default()
         };
 
         Arc::new(s)
     }
 
+    /// fix to default_outbound
     fn get_fixed_out_selector(&self) -> Arc<dyn OutSelector> {
         let ib = self.default_outbound.clone().expect("has default_outbound");
         let s = FixedOutSelector { default: ib };
