@@ -77,7 +77,7 @@ rucimp 的核心部分是 modes 模块. 读完 modes 内容后，其它代码都
 
 rucimp 有很多可选feature, 生成文档时要注意, 如
 
-    cargo doc --no-deps --open --features "rustls21 quinn tun trace lua use-native-tls"
+    cargo doc --no-deps --open --features "ruci-rustls21 quinn tun trace lua use-native-tls"
 
 ## ruci-cmd (可选)
 
