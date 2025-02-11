@@ -43,8 +43,8 @@ use tokio::io::ReadBuf;
 /// # Arguments
 /// * `lua` - The Lua instance to add the function to
 /// * `file_source` - The FileSource to load files from
-pub fn create_load_file_func(lua: &Lua, file_source: &crate::utils::FileSource) {
-    let raw_ptr = file_source as *const crate::utils::FileSource as *const std::os::raw::c_void;
+pub fn create_load_file_func(lua: &Lua, file_source: &file_source::FileSource) {
+    let raw_ptr = file_source as *const file_source::FileSource as *const std::os::raw::c_void;
 
     let pointer_n = raw_ptr as usize;
 
@@ -53,7 +53,7 @@ pub fn create_load_file_func(lua: &Lua, file_source: &crate::utils::FileSource) 
             let file_name = std::str::from_utf8(s.as_slice()).unwrap();
 
             let file_source = unsafe {
-                &*((pointer_n as *const std::os::raw::c_void) as *const crate::utils::FileSource)
+                &*((pointer_n as *const std::os::raw::c_void) as *const file_source::FileSource)
             };
 
             let r = file_source
@@ -462,7 +462,7 @@ pub struct LuaMap {
     pub lua_text: String,        //整个 lua文件的内容
     pub handshake_f_key: String, //lua文件中 对应的 map 函数的 函数名
 
-    pub file_source: Arc<crate::utils::FileSource>,
+    pub file_source: Arc<file_source::FileSource>,
 }
 
 impl Display for LuaMap {

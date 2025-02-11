@@ -39,8 +39,9 @@ use tracing::warn;
 
 use crate::{
     map::{recorder, ws},
-    utils::{init_tls_server_pem_option, FileSource},
+    utils::init_tls_server_pem_option,
 };
+use file_source::FileSource;
 
 #[cfg(all(feature = "lwip", unix))]
 use crate::map::tcp_ip_stack_lwip;
@@ -191,10 +192,7 @@ impl StaticConfig {
         })
     }
 
-    pub fn get_rule_route(
-        &self,
-        file_source: Arc<crate::utils::FileSource>,
-    ) -> Option<Vec<RuleSet>> {
+    pub fn get_rule_route(&self, file_source: Arc<FileSource>) -> Option<Vec<RuleSet>> {
         let mut result = self.rule_route.clone().map(|rr| {
             let v: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
             v

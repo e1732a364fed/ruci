@@ -1,0 +1,8 @@
+[package]
+name = "file-source"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tar = { workspace = true }
+tracing = { workspace = true }

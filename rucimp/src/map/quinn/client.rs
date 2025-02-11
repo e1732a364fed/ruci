@@ -1,4 +1,4 @@
-use crate::utils::FileSource;
+use file_source::FileSource;
 use anyhow::Context;
 use quinn::Endpoint;
 
@@ -16,7 +16,8 @@ use macro_map::*;
 use tokio::sync::Mutex;
 use tracing::debug;
 
-use crate::map::{quic_common, rustls21};
+use crate::map::quic_common;
+use ruci_rustls21 as rustls21;
 
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]

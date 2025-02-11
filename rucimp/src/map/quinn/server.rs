@@ -1,5 +1,5 @@
-use crate::utils::FileSource;
 use anyhow::Context;
+use file_source::FileSource;
 use quinn::{Endpoint, ServerConfig};
 
 use std::fmt::Display;
@@ -15,7 +15,8 @@ use macro_map::*;
 use tokio::sync::mpsc;
 use tracing::{debug, warn};
 
-use crate::map::{quic_common, rustls21};
+use crate::map::quic_common;
+use ruci_rustls21 as rustls21;
 
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]
@@ -27,7 +28,7 @@ pub struct Server {
 
     next_cid: Arc<AtomicU32>,
 
-    cached_server_config: rustls::ServerConfig,
+    cached_server_config: rustls21::ServerConfig,
 }
 
 impl Display for Server {

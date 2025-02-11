@@ -7,6 +7,8 @@ edition = "2021"
 ruci = { path = ".." }
 macro_map = { path = "../crates/macro_map" }
 ruci-rustls22 = { path = "../crates/ruci-rustls22" }
+ruci-rustls21 = { path = "../crates/ruci-rustls21", optional = true }
+file-source = { path = "../crates/file-source" }
 user_trait = { workspace = true }
 tracing = { workspace = true }
 bytes = { workspace = true }
@@ -15,6 +17,7 @@ serde = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 futures = { workspace = true }
+tar = { workspace = true }
 async-trait = { workspace = true }
 tokio-util = { workspace = true }
 parking_lot = { workspace = true }
@@ -66,12 +69,6 @@ tokio-tungstenite = "0.21"
 h2 = { version = "0.4" }
 hpack = "0.3"
 
-rustls = { version = "0.21", optional = true, features = [
-  "dangerous_configuration",
-  "quic",
-] }
-rustls-pemfile = { version = "1.0", optional = true }
-webpki-roots = { version = "0.22", optional = true }
 
 quinn = { version = "0.10", optional = true }
 
@@ -99,7 +96,6 @@ array-init = "2.1"
 
 rustyline = { version = "15.0", optional = true }
 
-tar = "0.4"
 md5 = "0.7"
 zip = "2.2"
 
@@ -131,10 +127,9 @@ wiremock = "0.6"
 [features]
 default = ["sockopt"]
 steganography = []
-rustls21 = ["dep:rustls", "rustls-pemfile", "webpki-roots"]
 
-# quic = ["s2n-quic", "s2n-quic-rustls", "rustls21"]
-quinn = ["rustls21", "dep:quinn"]
+# quic = ["s2n-quic", "s2n-quic-rustls", "ruci-rustls21"]
+quinn = ["ruci-rustls21", "dep:quinn"]
 
 tun = ["ruci/tun"]
 trace = ["ruci/trace"]

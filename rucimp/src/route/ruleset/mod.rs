@@ -355,7 +355,7 @@ mod test {
     #[allow(unused)]
     fn rs_country() -> anyhow::Result<()> {
         let mut rs = RuleSet::default();
-        let mr = maxmind::open_mmdb("Country.mmdb", &crate::utils::FileSource::StdReadFile)?;
+        let mr = maxmind::open_mmdb("Country.mmdb", &file_source::FileSource::StdReadFile)?;
         rs.mmdb_reader = Some(Arc::new(mr));
 
         let mut ip_countries = HashSet::new();

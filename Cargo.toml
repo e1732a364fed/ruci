@@ -24,6 +24,8 @@ members = [
   "crates/macro_map",
   "crates/ruci-cmd",
   "crates/ruci-rustls22",
+  "crates/ruci-rustls21",
+  "crates/file-source",
 ]
 
 [workspace.dependencies]
@@ -45,6 +47,7 @@ scopeguard = "1.2"
 parking_lot = "0.12"
 smallvec = { version = "1.13", features = ["serde"] }
 dyn-clone = "1"
+tar = "0.4"
 
 [dependencies]
 macro_map = { path = "crates/macro_map" }

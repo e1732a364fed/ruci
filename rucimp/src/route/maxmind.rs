@@ -17,7 +17,7 @@ use clash_rules::maxminddb;
 use std::net::IpAddr;
 
 /// try read file  in possible_addrs
-pub fn get_ip_iso(ip: IpAddr, filename: &str, source: &crate::utils::FileSource) -> String {
+pub fn get_ip_iso(ip: IpAddr, filename: &str, source: &file_source::FileSource) -> String {
     let reader = open_mmdb(filename, source).unwrap_or_else(|_| panic!("has {}", filename));
 
     clash_rules::get_ip_iso_by_reader(ip, &reader).to_string()
@@ -25,7 +25,7 @@ pub fn get_ip_iso(ip: IpAddr, filename: &str, source: &crate::utils::FileSource)
 
 pub fn open_mmdb(
     file_name: &str,
-    source: &crate::utils::FileSource,
+    source: &file_source::FileSource,
 ) -> anyhow::Result<maxminddb::Reader<Vec<u8>>> {
     let (v, _) = source.get_file_content(file_name)?;
 
@@ -72,7 +72,7 @@ mod test {
             .with(fmt::layer().with_writer(std::io::stderr))
             .try_init();
 
-        let fs = crate::utils::FileSource::StdReadFile;
+        let fs = file_source::FileSource::StdReadFile;
 
         let s = get_ip_iso("127.0.0.1".parse().unwrap(), "Country.mmdb", &fs);
         println!("{s}");

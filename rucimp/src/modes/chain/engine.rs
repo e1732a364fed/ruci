@@ -3,7 +3,7 @@ Defines the engine to run the chain config.
  */
 
 use crate::route::ruleset::{RuleSet, RuleSetOutSelector};
-use crate::utils::FileSource;
+use file_source::FileSource;
 
 use super::config::StaticConfig;
 use anyhow;

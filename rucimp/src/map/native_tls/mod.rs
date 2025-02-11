@@ -20,7 +20,7 @@ use macro_map::*;
 use tokio_native_tls::{native_tls::Identity, TlsAcceptor, TlsConnector};
 use tracing::debug;
 
-use crate::utils::FileSource;
+use file_source::FileSource;
 
 pub fn load(cert_path: PathBuf, key_path: PathBuf, fs: &FileSource) -> anyhow::Result<Identity> {
     let cert_file = fs.read_to_string(cert_path)?;

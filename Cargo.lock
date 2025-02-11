@@ -1110,6 +1110,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "file-source"
+version = "0.1.0"
+dependencies = [
+ "tar",
+ "tracing",
+]
+
+[[package]]
 name = "filetime"
 version = "0.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3038,6 +3046,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruci-rustls21"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "file-source",
+ "ruci",
+ "rustls 0.21.12",
+ "rustls-pemfile 1.0.4",
+ "tracing",
+ "webpki-roots",
+]
+
+[[package]]
 name = "ruci-rustls22"
 version = "0.0.1"
 dependencies = [
@@ -3077,6 +3098,7 @@ dependencies = [
  "criterion",
  "dashmap",
  "dyn-clone",
+ "file-source",
  "futures",
  "futures-lite",
  "h2",
@@ -3101,9 +3123,8 @@ dependencies = [
  "reqwest",
  "rlimit",
  "ruci",
+ "ruci-rustls21",
  "ruci-rustls22",
- "rustls 0.21.12",
- "rustls-pemfile 1.0.4",
  "rustyline",
  "serde",
  "serde-lua-table",
@@ -3123,7 +3144,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "user_trait",
- "webpki-roots",
  "windows-sys 0.59.0",
  "wiremock",
  "zip",
