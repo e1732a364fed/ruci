@@ -346,7 +346,7 @@ pub fn convert_static_config(
     input_file_content: &str,
     input_format: &str,
     output_format: &str,
-    file_source: rucimp::utils::FileSource,
+    file_source: file_source::FileSource,
 ) -> anyhow::Result<String> {
     use rucimp::modes::chain::config::StaticConfig;
 

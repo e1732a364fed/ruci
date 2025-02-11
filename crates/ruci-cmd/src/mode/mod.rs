@@ -2,7 +2,7 @@
 */
 
 use anyhow::bail;
-use rucimp::utils::FileSource;
+use file_source::FileSource;
 use rucimp::DEFAULT_LUA_CONFIG_FILE_NAME;
 use tracing::debug;
 
@@ -94,16 +94,18 @@ pub async fn get_config_file(
             debug!("md5 match")
         }
 
+        use file_source::get_file_from_tar;
+
         //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua, local.toml 或 local.json
         let mut real_file_bytes_r =
-            rucimp::utils::get_file_from_tar(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
+            get_file_from_tar(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
 
         if real_file_bytes_r.is_err() {
-            real_file_bytes_r = rucimp::utils::get_file_from_tar("local.toml", &tar_file_bytes_v);
+            real_file_bytes_r = get_file_from_tar("local.toml", &tar_file_bytes_v);
         }
 
         if real_file_bytes_r.is_err() {
-            real_file_bytes_r = rucimp::utils::get_file_from_tar("local.json", &tar_file_bytes_v);
+            real_file_bytes_r = get_file_from_tar("local.json", &tar_file_bytes_v);
         }
 
         let real_file_bytes = real_file_bytes_r.context("get_file_from_tar failed")?;

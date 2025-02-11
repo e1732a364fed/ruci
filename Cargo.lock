@@ -3025,6 +3025,7 @@ dependencies = [
  "bytesize",
  "chrono",
  "clap",
+ "file-source",
  "futures",
  "parking_lot",
  "qrcode",
