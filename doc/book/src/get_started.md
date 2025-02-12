@@ -79,18 +79,13 @@ windows下，打开 cmd 或 powershell, 运行：
 如果要指定配置文件运行，可以加 -c 参数：
 
     ./ruci-cmd -c remote.lua
-    ./ruci-cmd -c local.toml
+    ./ruci-cmd -c local.json
 
 如果要了解编译等方面的细节，可参考 [这里](https://github.com/e1732a364fed/ruci/blob/tokio/crates/ruci-cmd/README.md)
 
 为了不让 resource 文件夹中的示例文件影响您的自定义配置，您可以把 resource 文件夹重命名为其它名称，
 然后建立一个 ruci_config 文件夹，将您的配置文件放在 ruci_config 文件夹中。
 
-```sh
-    mv resource resource_default
-    mkdir ruci_config
-    cp  resource_default/local.toml ruci_config/local.toml
-```
 
 resource 文件夹中的内容有助于参考使用，建议保留。
 
@@ -103,6 +98,5 @@ resource 文件夹中的内容有助于参考使用，建议保留。
 
 - [ruci-cmd程序](app/cmd.md)
 - [订阅](app/subscrible.md)
-- [toml配置](toml/index.md)
 - [lua配置](lua/lua.md)
 - [路由配置](lua/route_config.md)

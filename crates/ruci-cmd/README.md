@@ -97,11 +97,11 @@ quic feature 使用的是 s2n-quic, 其不能在windows编译, 且与其它代�
 
 ruci-cmd utils convert-format <INPUT_FILE> <OUTPUT_FORMAT>
 如
-ruci-cmd utils convert-format local.lua toml
+ruci-cmd utils convert-format local.lua json
 
-三种格式在静态链下是可以互相转换的
+lua/json格式在静态链下是可以互相转换的
 
-转后就会生成 local.toml. 如果同名文件存在，就会自动用一个新的名称，不会覆盖。
+转后就会生成 local.json. 如果同名文件存在，就会自动用一个新的名称，不会覆盖。
 
 而且也可以  转换为同格式 ，相当于把 注释删掉然后 标准化一下
 

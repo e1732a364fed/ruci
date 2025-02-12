@@ -14,6 +14,7 @@ pub struct ClashRuleOutSelector {
     pub matcher: Arc<ClashRuleMatcher>,
     pub outbounds_map: Arc<HashMap<String, DMIterBox>>, //out_tag -> outbound
 }
+
 #[async_trait]
 impl route::OutSelector for ClashRuleOutSelector {
     async fn select(

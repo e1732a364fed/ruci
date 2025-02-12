@@ -7,4 +7,4 @@ inspect.lua 是一个lua模块, 来自
 
 在ruci-cmd中, 下载的 Country.mmdb 和 wintun.dll 也会放在这里
 
-lua, toml, yaml 文件夹中 包含若干 示例配置文件
+lua, json文件夹中 包含若干 示例配置文件

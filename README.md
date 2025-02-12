@@ -19,7 +19,7 @@ ruci pronounced lucy.
 
 ## Intro
 
-A flexible network proxy framework and toolbox written in Rust (Rust 2021 edition 1.81+) using Lua/toml as the configuration format.
+A flexible network proxy framework and toolbox written in Rust (Rust 2021 edition 1.81+) using Lua/json as the configuration format.
 
 用户 入门 ruci 可阅读 [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
 
@@ -62,7 +62,7 @@ The project is work in progress, 功能会陆续添加与调整.
 - [x] ruci 配置模式 (动态链须为lua格式)
 - [ ] clash 配置模式
 - [ ] verysimple 配置模式
-- [x] static chain (静态链, 可为 lua/toml 格式)
+- [x] static chain (静态链, 可为 lua/json 格式)
 - [x] dynamic chain (finite, infinite) (动态链)(有限动态链, 完全动态链)
 - [x] rucimp/examples
 - [x] rule_route 规则路由

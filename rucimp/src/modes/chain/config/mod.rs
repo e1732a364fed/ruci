@@ -2,7 +2,7 @@
 Defines the config format for chain, including static and dymatic ones.
 
 
-主模块定义了静态链式配置 [`StaticConfig`] which can use lua or toml as config file format.
+主模块定义了静态链式配置 [`StaticConfig`] which can use lua or json as config file format.
 
 静态链是Map组成是运行前即知晓且依次按排列顺序执行的链,
 因此可以用 Vec 表示

@@ -42,13 +42,13 @@ pub(crate) async fn run(
                 e.init_lua(contents)?;
             }
         }
-    } else if file_name.ends_with(".toml") {
-        let dr = toml::Deserializer::new(&contents);
-
-        let c: StaticConfig =
-            serde_path_to_error::deserialize(dr).context("toml to StaticConfig failed")?;
-
-        e.init_static(c);
+    // } else if file_name.ends_with(".toml") {
+    //     let dr = toml::Deserializer::new(&contents);
+    //
+    //     let c: StaticConfig =
+    //         serde_path_to_error::deserialize(dr).context("toml to StaticConfig failed")?;
+    //
+    //     e.init_static(c);
     // } else if file_name.ends_with(".yml") || file_name.ends_with(".yaml") {
     //     let dr = serde_yaml::Deserializer::from_str(&contents);
     //

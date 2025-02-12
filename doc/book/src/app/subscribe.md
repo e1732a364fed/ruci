@@ -53,7 +53,7 @@ ruci 不提供https、用户鉴权的机制，您可以通过一些反向代理�
 ./ruci-cmd -c http://0.0.0.0:18143/download/83c649c74b8a4c6ebc07a9a99ee350a0.tar.zip
 ```
 
-该命令会下载该压缩包、保存到当前目录并使用。它会自动阅读包中的 local.lua 或 local.toml 文件。
+该命令会下载该压缩包、保存到当前目录并使用。它会自动阅读包中的 local.lua 或 local.json 文件。
 
 如果不想把下载的包保存，则可以加 ` --in-memory` 选项。
 
@@ -74,6 +74,5 @@ ruci 不提供https、用户鉴权的机制，您可以通过一些反向代理�
 
 # 接下来
 
-- [toml配置](../toml/index.md)
 - [lua配置](../lua/lua.md)
 - [路由配置](lua/route_config.md)

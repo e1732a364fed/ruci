@@ -96,13 +96,13 @@ pub async fn get_config_file(
 
         use file_source::get_file_from_tar;
 
-        //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua, local.toml 或 local.json
+        //在 tar 的情况下，约定所使用的 配置文件 名称只能为 local.lua或 local.json
         let mut real_file_bytes_r =
             get_file_from_tar(DEFAULT_LUA_CONFIG_FILE_NAME, &tar_file_bytes_v);
 
-        if real_file_bytes_r.is_err() {
-            real_file_bytes_r = get_file_from_tar("local.toml", &tar_file_bytes_v);
-        }
+        // if real_file_bytes_r.is_err() {
+        //     real_file_bytes_r = get_file_from_tar("local.toml", &tar_file_bytes_v);
+        // }
 
         if real_file_bytes_r.is_err() {
             real_file_bytes_r = get_file_from_tar("local.json", &tar_file_bytes_v);
@@ -128,9 +128,10 @@ mod test {
     use rucimp::modes::chain::config::{
         DirectConfig, InMapConfig, InMapConfigChain, OutMapConfig, OutMapConfigChain, StaticConfig,
     };
+    use rucimp::serde_json;
 
     #[test]
-    fn serialize_toml() {
+    fn serialize() {
         let sa = std::net::SocketAddr::V4("114.114.114.114:53".parse().unwrap());
         let sc = StaticConfig {
             inbounds: vec![InMapConfigChain {
@@ -160,10 +161,10 @@ mod test {
             }],
             ..Default::default()
         };
-        let toml = toml::to_string(&sc).expect("valid toml");
-        println!("{:#}", toml);
+        let json = serde_json::to_string(&sc).expect("valid json");
+        println!("{:#}", json);
 
-        let toml: StaticConfig = toml::from_str(&toml).expect("valid toml");
-        println!("{:#?}", toml);
+        let sc: StaticConfig = serde_json::from_str(&json).expect("valid json");
+        println!("{:#?}", sc);
     }
 }
