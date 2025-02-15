@@ -4,6 +4,7 @@ Defines the engine to run the chain config.
 
 use crate::route::{
     clash::ClashRuleOutSelector,
+    geosite_gfw::{GeositeGfwConfig, GeositeGfwOutSelector},
     ruleset::{RuleSet, RuleSetOutSelector},
 };
 use file_source::FileSource;
@@ -60,6 +61,7 @@ pub struct Engine {
 
     rule_sets: Option<Vec<RuleSet>>,
     clash_rules: Option<Arc<clash_rules::ClashRuleMatcher>>,
+    geosite_gfw: Option<GeositeGfwConfig>,
 }
 
 impl Engine {
@@ -114,7 +116,8 @@ impl Engine {
         self.fallback_routes = sc.get_fallback_route();
 
         self.rule_sets = sc.get_rule_route(self.file_source.clone());
-        self.clash_rules = sc.get_clash_route(self.file_source.clone())
+        self.clash_rules = sc.get_clash_route(self.file_source.clone());
+        self.geosite_gfw = sc.geosite_gfw;
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) -> anyhow::Result<()> {
@@ -361,6 +364,12 @@ impl Engine {
         if let Some(c) = self.clash_rules.clone() {
             ms.selectors.push(Arc::new(ClashRuleOutSelector {
                 matcher: c,
+                outbounds_map: self.outbounds.clone(),
+            }))
+        }
+        if let Some(config) = self.geosite_gfw.clone() {
+            ms.selectors.push(Arc::new(GeositeGfwOutSelector {
+                config,
                 outbounds_map: self.outbounds.clone(),
             }))
         }

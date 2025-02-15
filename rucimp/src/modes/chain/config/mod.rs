@@ -67,6 +67,8 @@ pub struct StaticConfig {
 
     /// clash 规则文件名
     pub clash_route: Option<String>,
+
+    pub geosite_gfw: Option<crate::route::geosite_gfw::GeositeGfwConfig>,
 }
 
 impl StaticConfig {
