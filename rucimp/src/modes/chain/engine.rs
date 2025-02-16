@@ -117,7 +117,7 @@ impl Engine {
 
         self.rule_sets = sc.get_rule_route(self.file_source.clone());
         self.clash_rules = sc.get_clash_route(self.file_source.clone());
-        self.geosite_gfw = sc.geosite_gfw;
+        self.geosite_gfw = sc.smart;
     }
 
     pub fn init_static(&mut self, sc: StaticConfig) -> anyhow::Result<()> {

@@ -65,10 +65,14 @@ pub struct StaticConfig {
 
     pub rule_route: Option<Vec<RuleSetConfig>>,
 
-    /// clash 规则文件名
+    /// clash 规则文件名, yaml 格式
     pub clash_route: Option<String>,
 
-    pub geosite_gfw: Option<crate::route::geosite_gfw::GeositeGfwConfig>,
+    /// geosite 的 dat 文件名
+    pub geosite: Option<String>,
+
+    /// using geosite-gfw
+    pub smart: Option<crate::route::geosite_gfw::GeositeGfwConfig>,
 }
 
 impl StaticConfig {
@@ -220,17 +224,40 @@ impl StaticConfig {
         }
         result
     }
+
+    /// clash route 会把 geosite 的数据也加进去
     pub fn get_clash_route(
         &self,
         file_source: Arc<FileSource>,
     ) -> Option<Arc<clash_rules::ClashRuleMatcher>> {
-        self.clash_route.clone().and_then(|file_name| {
-            let (d, _) = file_source.get_file_content(file_name).unwrap();
-            let cs = String::from_utf8_lossy(&d);
-            let r = clash_rules::ClashRuleMatcher::from_clash_config_str(cs.as_ref());
+        self.clash_route
+            .clone()
+            .and_then(|file_name| {
+                let (d, _) = file_source.get_file_content(file_name).ok()?;
+                let cs = String::from_utf8_lossy(&d);
+                let mut method_rules_map =
+                    clash_rules::parse_rules(&clash_rules::load_rules_from_str(cs.as_ref()).ok()?);
 
-            r.ok().map(|c| Arc::new(c))
-        })
+                if let Some(f) = &self.geosite {
+                    let (d, _) = file_source.get_file_content(f).ok()?;
+                    let l = geosite_rs::read(&d).ok()?;
+                    let m = geosite_rs::to_hashmap(&l);
+                    method_rules_map = clash_rules::merge_method_rules_map(method_rules_map, m);
+                }
+                let r = clash_rules::ClashRuleMatcher::from_hashmap(method_rules_map);
+
+                r.ok().map(|c| Arc::new(c))
+            })
+            .or_else(|| {
+                self.geosite.as_ref().and_then(|f| {
+                    let (d, _) = file_source.get_file_content(f).ok()?;
+                    let l = geosite_rs::read(&d).ok()?;
+                    let m = geosite_rs::to_hashmap(&l);
+                    let r = clash_rules::ClashRuleMatcher::from_hashmap(m);
+
+                    r.ok().map(|c| Arc::new(c))
+                })
+            })
     }
 }
 
