@@ -5,7 +5,6 @@ Defines the engine to run the chain config.
 use crate::route::{
     clash::ClashRuleOutSelector,
     geosite_gfw::{GeositeGfwConfig, GeositeGfwOutSelector},
-    ruleset::{RuleSet, RuleSetOutSelector},
 };
 use file_source::FileSource;
 
@@ -59,7 +58,6 @@ pub struct Engine {
     tag_routes: Option<HashMap<String, String>>,
     fallback_routes: Option<HashMap<String, String>>,
 
-    rule_sets: Option<Vec<RuleSet>>,
     clash_rules: Option<Arc<clash_rules::ClashRuleMatcher>>,
     geosite_gfw: Option<GeositeGfwConfig>,
 }
@@ -115,7 +113,6 @@ impl Engine {
         self.tag_routes = sc.get_tag_route();
         self.fallback_routes = sc.get_fallback_route();
 
-        self.rule_sets = sc.get_rule_route(self.file_source.clone());
         self.clash_rules = sc.get_clash_route(self.file_source.clone());
         self.geosite_gfw = sc.smart;
     }
@@ -357,10 +354,6 @@ impl Engine {
             ms.selectors.push(self.get_tag_route_out_selector())
         }
 
-        if self.rule_sets.is_some() {
-            debug!("use rule_sets");
-            ms.selectors.push(self.get_rule_sets_out_selector());
-        }
         if let Some(c) = self.clash_rules.clone() {
             ms.selectors.push(Arc::new(ClashRuleOutSelector {
                 matcher: c,
@@ -375,17 +368,6 @@ impl Engine {
         }
         ms.selectors.push(self.get_fixed_out_selector());
         Arc::new(ms)
-    }
-
-    fn get_rule_sets_out_selector(&self) -> Arc<dyn OutSelector> {
-        let s = RuleSetOutSelector {
-            outbounds_rules_vec: self.rule_sets.clone().expect("has rule_sets"),
-            outbounds_map: self.outbounds.clone(),
-            // default: self.default_outbound.clone().expect("has default_outbound"),
-            default: None,
-        };
-
-        Arc::new(s)
     }
 
     fn get_tag_route_out_selector(&self) -> Arc<dyn OutSelector> {

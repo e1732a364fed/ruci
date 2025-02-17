@@ -52,8 +52,6 @@ use crate::map::steganography::spe1;
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 use crate::map::tproxy::{self, TcpResolver};
 
-use crate::route::ruleset::{config::RuleSetConfig, RuleSet};
-
 /// 静态配置中有初始化后即确定的 Map 数量
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
@@ -63,10 +61,8 @@ pub struct StaticConfig {
     pub tag_route: Option<Vec<(String, String)>>,
     pub fallback_route: Option<Vec<(String, String)>>,
 
-    pub rule_route: Option<Vec<RuleSetConfig>>,
-
     /// clash 规则文件名, yaml 格式
-    pub clash_route: Option<String>,
+    pub clash_rules: Option<String>,
 
     /// geosite 的 dat 文件名
     pub geosite: Option<String>,
@@ -200,37 +196,12 @@ impl StaticConfig {
         })
     }
 
-    pub fn get_rule_route(&self, file_source: Arc<FileSource>) -> Option<Vec<RuleSet>> {
-        let mut result = self.rule_route.clone().map(|rr| {
-            let v: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
-            v
-        });
-        if let Some(mut rs_v) = result {
-            use crate::route::maxmind;
-
-            let r = maxmind::open_mmdb("Country.mmdb", file_source.as_ref());
-            match r {
-                Ok(m) => {
-                    let am = Some(Arc::new(m));
-
-                    rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
-                }
-                Err(e) => {
-                    warn!("no Country.mmdb: {e}");
-                }
-            }
-
-            result = Some(rs_v);
-        }
-        result
-    }
-
     /// clash route 会把 geosite 的数据也加进去
     pub fn get_clash_route(
         &self,
         file_source: Arc<FileSource>,
     ) -> Option<Arc<clash_rules::ClashRuleMatcher>> {
-        self.clash_route
+        self.clash_rules
             .clone()
             .and_then(|file_name| {
                 let (d, _) = file_source.get_file_content(file_name).ok()?;
@@ -240,7 +211,7 @@ impl StaticConfig {
 
                 if let Some(f) = &self.geosite {
                     let (d, _) = file_source.get_file_content(f).ok()?;
-                    let l = geosite_rs::read(&d).ok()?;
+                    let l = geosite_rs::decode_geosite(&d).ok()?;
                     let m = geosite_rs::to_hashmap(&l);
                     method_rules_map = clash_rules::merge_method_rules_map(method_rules_map, m);
                 }
@@ -251,7 +222,7 @@ impl StaticConfig {
             .or_else(|| {
                 self.geosite.as_ref().and_then(|f| {
                     let (d, _) = file_source.get_file_content(f).ok()?;
-                    let l = geosite_rs::read(&d).ok()?;
+                    let l = geosite_rs::decode_geosite(&d).ok()?;
                     let m = geosite_rs::to_hashmap(&l);
                     let r = clash_rules::ClashRuleMatcher::from_hashmap(m);
 
