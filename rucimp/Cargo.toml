@@ -44,8 +44,8 @@ thiserror = "2"
 ipnet = { version = "2" }
 iprange = { version = "0.6" }
 regex = { version = "1" }
-clash_rules = "0.1.13"
-geosite-rs = "0.1.4"
+clash_rules = "0.1.18"
+geosite-rs = "0.1.6"
 
 mlua = { version = "0.10", features = [
   "serialize",

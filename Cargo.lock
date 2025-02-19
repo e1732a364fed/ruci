@@ -610,9 +610,9 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "clash_rules"
-version = "0.1.13"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a2ba99b0a30c23bc38f236baad24ea93267550f878e452ba8051c5258e860ee"
+checksum = "f76f040927acff791f4fbf1a929ec2e8bea3abc7f5cabf2a06245dda2c5fa811"
 dependencies = [
  "aho-corasick",
  "ipnet",
@@ -1316,9 +1316,9 @@ dependencies = [
 
 [[package]]
 name = "geosite-rs"
-version = "0.1.4"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd7ecf7ed7bd9634f250368bc379fd55ceac6eb665ceb9bee6c265a5125cbffb"
+checksum = "edeab0dffc0ba459e54710cebd48533be38b23fce23cb636ae9f9a2c71acc795"
 dependencies = [
  "prost",
 ]

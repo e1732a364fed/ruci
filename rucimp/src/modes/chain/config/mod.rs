@@ -212,8 +212,13 @@ impl StaticConfig {
                 if let Some(f) = &self.geosite {
                     let (d, _) = file_source.get_file_content(f).ok()?;
                     let l = geosite_rs::decode_geosite(&d).ok()?;
-                    let m = geosite_rs::to_hashmap(&l);
-                    method_rules_map = clash_rules::merge_method_rules_map(method_rules_map, m);
+                    let gtm =
+                        clash_rules::extract_geosite_country_code_target_map(&mut method_rules_map);
+
+                    if let Some(gtm) = gtm {
+                        let m = geosite_rs::geosite_to_hashmap(&l, gtm);
+                        method_rules_map = clash_rules::merge_method_rules_map(method_rules_map, m);
+                    }
                 }
                 let r = clash_rules::ClashRuleMatcher::from_hashmap(method_rules_map);
 
@@ -223,7 +228,7 @@ impl StaticConfig {
                 self.geosite.as_ref().and_then(|f| {
                     let (d, _) = file_source.get_file_content(f).ok()?;
                     let l = geosite_rs::decode_geosite(&d).ok()?;
-                    let m = geosite_rs::to_hashmap(&l);
+                    let m = geosite_rs::geosite_to_hashmap(&l, HashMap::new());
                     let r = clash_rules::ClashRuleMatcher::from_hashmap(m);
 
                     r.ok().map(|c| Arc::new(c))
