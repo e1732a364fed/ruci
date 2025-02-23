@@ -17,7 +17,7 @@ pub fn ip_addr_to_u8_vec(ip_addr: IpAddr) -> Vec<u8> {
 }
 
 pub fn gen_random_ipv6() -> IpAddr {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut octets = [0; 16];
     rng.fill(&mut octets);
     IpAddr::V6(Ipv6Addr::from(octets))
@@ -25,14 +25,14 @@ pub fn gen_random_ipv6() -> IpAddr {
 
 /// 1024..=65535
 pub fn gen_random_port() -> u16 {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(1024..=65535)
+    let mut rng = rand::rng();
+    rng.random_range(1024..=65535)
 }
 
 ///10240..=65535
 pub fn gen_random_higher_port() -> u16 {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(10240..=65535)
+    let mut rng = rand::rng();
+    rng.random_range(10240..=65535)
 }
 
 /// This function might work better than using a.eq(b).

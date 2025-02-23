@@ -6,7 +6,6 @@
 
 - [ruci-cmd程序](app/cmd.md)
 - [订阅](app/subscrible.md)
-- [toml配置](toml/index.md)
 - [lua配置](lua/lua.md)
   - [Config入门](lua/config_intro.md)
   - [MapConfig](lua/map_config.md)

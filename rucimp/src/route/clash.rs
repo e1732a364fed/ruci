@@ -1,0 +1,41 @@
+/*! implement clash rules using crate clash_rule
+*/
+use ruci::map::fold::DMIterBox;
+use ruci::map::Data;
+use ruci::net;
+use ruci::relay::route;
+
+use async_trait::async_trait;
+use clash_rules::*;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+pub struct ClashRuleOutSelector {
+    pub matcher: Arc<ClashRuleMatcher>,
+    pub outbounds_map: Arc<HashMap<String, DMIterBox>>, //out_tag -> outbound
+}
+
+#[async_trait]
+impl route::OutSelector for ClashRuleOutSelector {
+    async fn select(
+        &self,
+        _is_fallback: bool,
+        addr: &net::Addr,
+        _in_chain_tag: &str,
+        _params: &[Option<Box<dyn Data>>],
+    ) -> Option<DMIterBox> {
+        let mut out_tag: Option<&String> = None;
+        if let Some(ip) = addr.get_ip() {
+            out_tag = self.matcher.check_ip(ip);
+            if out_tag.is_none() {
+                out_tag = self.matcher.check_ip_country(ip);
+            }
+        }
+        if out_tag.is_none() {
+            if let Some(d) = addr.get_name() {
+                out_tag = self.matcher.check_domain(&d);
+            }
+        }
+        out_tag.and_then(|out_k| self.outbounds_map.get(out_k).cloned())
+    }
+}

@@ -78,8 +78,9 @@ impl Map for Embedder {
             ..Default::default()
         };
 
+        // manage first payload
         match behavior {
-            ProxyBehavior::UNSPECIFIED => panic!("can't happen "),
+            ProxyBehavior::UNSPECIFIED => unreachable!("can't happen "),
             ProxyBehavior::ENCODE => {
                 if self.is_tail_of_chain() && !b.is_empty() {
                     let r = write_tx.send(b).await;
@@ -138,14 +139,14 @@ impl Map for Embedder {
     }
 }
 
-/// 对于 本Conn， Read 是从 已有的文件中获取Info（主要是包长），
-/// 然后根据 包长从 base 中读取 指定长度的信息（然后在 poll_read 中复制到buf 中），
+/// EmbedConn 中， Read 是从 已有的文件中获取Info（主要是包长），
+/// 然后根据 包长从 read_rx 中读取 指定长度的信息（然后在 poll_read 中复制到buf 中），
 ///
-/// 而 Write 是 从 base 给出的 buf 中，截取 Info 中指定的长度，写入 base.
+/// 而 Write 是 从 给出的 buf 中，截取 Info 中指定的长度，写入 write_tx.
 ///
-/// 如果Info 中指定的长度是大于给出的 buf 的，则只能添加 padding
+/// 如果Info 中指定的长度是大于给出的 buf 的，则只能添加 padding.
 ///
-/// 这里还要看时序，如果没到该 read/write 的时机，就要等待。
+/// 而 read_rx 和 write_tx 对接的是 Player, 由于其控制真实包与隐写包的读写
 pub struct EmbedConn {
     write_state: WriteState,
     read_state: ReadState,
@@ -155,6 +156,7 @@ pub struct EmbedConn {
     write_tx: Sender<BytesMut>,
     read_rx: Receiver<BytesMut>,
 
+    // 用于向Player发送信号，准备请求下一次写入的最大长度
     ready_tx: tokio::sync::watch::Sender<bool>,
 
     shutdown_atom: Arc<AtomicBool>,
@@ -271,7 +273,7 @@ impl AsyncRead for EmbedConn {
                             return Poll::Ready(Ok(()));
                         }
                     }
-                    _ => panic!("should not happen"),
+                    _ => unreachable!("should not happen"),
                 },
             } //match
         } //loop
@@ -301,11 +303,13 @@ impl AsyncWrite for EmbedConn {
                 }
             }
         }
+        // 向Player发送信号，请求下一次写入的最大长度
         let r = self.ready_tx.send(true);
         if let Err(e) = r {
             return Poll::Ready(Err(io::Error::other(format!("self.ready_tx.send {e}"))));
         }
 
+        // Player 收到信号时，会发回允许写入的最大包长。如果Player正忙，则会反回Pending
         let r = self.write_info_rx.poll_recv(cx);
 
         match ready!(r) {
@@ -409,12 +413,13 @@ where
     R: AsyncRead + Unpin + ?Sized,
     W: AsyncWrite + Unpin + ?Sized,
 {
-    /// blocking. 内部 不断地调用 read_once 和 write_once，将 读到的包去掉1字节包头后用 read_tx 发送出去。
-    /// 用 write_rx 接收 要写入的真实信息
+    /// blocking.
     pub async fn play_file(&mut self) {
+        // 不断地调用 read_once 和 write_once，将 读到的包去掉1字节包头后用 read_tx 发送出去。
+        // 用 write_rx 接收 要写入的真实信息
         let mut index = 0;
 
-        let mut lst_rbuf = BytesMut::new();
+        let mut last_rbuf = BytesMut::new();
         loop {
             if self
                 .shutdown_atom
@@ -434,6 +439,7 @@ where
             };
             match direction {
                 WRITE_DIRECTION => {
+                    // 查询实际 write 端是否准备发送新数据
                     let ready = self.write_info_ready_rx.has_changed();
 
                     self.write_info_ready_rx.mark_unchanged();
@@ -452,6 +458,7 @@ where
 
                         match permit {
                             Ok(permit) => {
+                                // 允许实际 write 端发送最长为 length 的真实数据
                                 permit.send(length);
 
                                 let r = write_once(self.writer, length, self.write_rx).await;
@@ -475,6 +482,8 @@ where
                     } else {
                         debug!("write_once, send write_info_tx, not ready");
 
+                        // 此时实际 write 端还没准备好，只能发隐写包
+
                         let r = write_once(self.writer, length, self.write_rx).await;
 
                         match r {
@@ -484,7 +493,7 @@ where
                     }
                 }
                 READ_DIRECTION => {
-                    let r = read_once(self.reader, length, lst_rbuf).await;
+                    let r = read_once(self.reader, length, last_rbuf).await;
 
                     match r {
                         Err(_) => break,
@@ -497,10 +506,10 @@ where
                             let mut cur_read_packet = if rlen > length {
                                 let real = result_buf.split_to(length);
 
-                                lst_rbuf = result_buf;
+                                last_rbuf = result_buf;
                                 real
                             } else {
-                                lst_rbuf = BytesMut::new();
+                                last_rbuf = BytesMut::new();
                                 result_buf
                             };
 
@@ -536,8 +545,8 @@ where
     }
 }
 
-/// blocking. read_once 的作用是， 保证读到一个完整的符合长度的包. 若返回的 包长于 length, 则说明粘包了，下一次调用
-/// read_once 时，要传入 减去 length 的 剩余部分
+/// blocking. read_once 的作用是， 保证读到一个完整的符合长度为 length 的包. 若返回的 包长于 length, 则说明粘包了，下一次调用
+/// read_once 时，传入的 lash_buf 要为剩余的多余的部分
 async fn read_once<R>(r: &mut R, length: usize, mut last_buf: BytesMut) -> io::Result<BytesMut>
 where
     R: AsyncRead + Unpin + ?Sized,
@@ -560,7 +569,7 @@ where
             Ok(n) => {
                 if n == 0 {
                     info!("read_once got EOF");
-                    return Err(std::io::Error::other("EOF"));
+                    return Err(std::io::Error::from(io::ErrorKind::UnexpectedEof));
                 }
                 buf.resize(n, 0);
                 let whole_read_len = read_start_index + n;
@@ -576,10 +585,12 @@ where
         }
     }
 }
+const WRITE_SLEEP_TIME: std::time::Duration = std::time::Duration::from_millis(10);
 
-///blocking. write_once 检查包长 而是 直接发送。 使包满足 packet长度 以及包头等情况 都是 调用者的责任
+///blocking. write_once 对 write_rx 收到的数据不检查包长 而是 直接发送。
+///使包满足 packet长度 以及包头等情况 都是 调用者的责任
 ///
-/// 如果10ms后收不到write_rx 中的数据，则会自动发送一个隐写包
+/// 如果 WRITE_SLEEP_TIME  后收不到write_rx 中的数据，则会自动发送一个长为lenth的隐写包
 async fn write_once<W>(
     writer: &mut W,
     length: usize,
@@ -588,7 +599,7 @@ async fn write_once<W>(
 where
     W: AsyncWrite + Unpin + ?Sized,
 {
-    let timer = tokio::time::sleep(std::time::Duration::from_millis(10));
+    let timer = tokio::time::sleep(WRITE_SLEEP_TIME);
     use tokio::io::AsyncWriteExt;
 
     tokio::select! {

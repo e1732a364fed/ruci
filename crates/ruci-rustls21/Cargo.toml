@@ -1,0 +1,13 @@
+[package]
+name = "ruci-rustls21"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ruci = { path = "../.." }
+file-source = { path = "../file-source" }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+rustls-pemfile = { version = "1.0" }
+webpki-roots = { version = "0.22" }
+rustls = { version = "0.21", features = ["dangerous_configuration", "quic"] }

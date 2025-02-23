@@ -2,7 +2,7 @@
 Defines the config format for chain, including static and dymatic ones.
 
 
-主模块定义了静态链式配置 [`StaticConfig`] which can use lua or toml as config file format.
+主模块定义了静态链式配置 [`StaticConfig`] which can use lua or json as config file format.
 
 静态链是Map组成是运行前即知晓且依次按排列顺序执行的链,
 因此可以用 Vec 表示
@@ -39,8 +39,9 @@ use tracing::warn;
 
 use crate::{
     map::{recorder, ws},
-    utils::{init_tls_server_pem_option, FileSource},
+    utils::init_tls_server_pem_option,
 };
+use file_source::FileSource;
 
 #[cfg(all(feature = "lwip", unix))]
 use crate::map::tcp_ip_stack_lwip;
@@ -51,9 +52,6 @@ use crate::map::steganography::spe1;
 #[cfg(all(feature = "sockopt", target_os = "linux"))]
 use crate::map::tproxy::{self, TcpResolver};
 
-#[cfg(feature = "route")]
-use crate::route::{config::RuleSetConfig, RuleSet};
-
 /// 静态配置中有初始化后即确定的 Map 数量
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct StaticConfig {
@@ -63,8 +61,14 @@ pub struct StaticConfig {
     pub tag_route: Option<Vec<(String, String)>>,
     pub fallback_route: Option<Vec<(String, String)>>,
 
-    #[cfg(feature = "route")]
-    pub rule_route: Option<Vec<RuleSetConfig>>,
+    /// clash 规则文件名, yaml 格式
+    pub clash_rules: Option<String>,
+
+    /// geosite 的 dat 文件名
+    pub geosite: Option<String>,
+
+    /// using geosite-gfw
+    pub smart: Option<crate::route::geosite_gfw::GeositeGfwConfig>,
 }
 
 impl StaticConfig {
@@ -192,36 +196,44 @@ impl StaticConfig {
         })
     }
 
-    #[cfg(feature = "route")]
-    pub fn get_rule_route(
+    /// clash route 会把 geosite 的数据也加进去
+    pub fn get_clash_route(
         &self,
-        file_source: Arc<crate::utils::FileSource>,
-    ) -> Option<Vec<RuleSet>> {
-        let mut result = self.rule_route.clone().map(|rr| {
-            let v: Vec<RuleSet> = rr.into_iter().map(|r| r.to_rule_set()).collect();
-            v
-        });
-        #[cfg(feature = "geoip")]
-        {
-            if let Some(mut rs_v) = result {
-                use crate::route::maxmind;
+        file_source: Arc<FileSource>,
+    ) -> Option<Arc<clash_rules::ClashRuleMatcher>> {
+        self.clash_rules
+            .clone()
+            .and_then(|file_name| {
+                let (d, _) = file_source.get_file_content(file_name).ok()?;
+                let cs = String::from_utf8_lossy(&d);
+                let mut method_rules_map =
+                    clash_rules::parse_rules(&clash_rules::load_rules_from_str(cs.as_ref()).ok()?);
 
-                let r = maxmind::open_mmdb("Country.mmdb", file_source.as_ref());
-                match r {
-                    Ok(m) => {
-                        let am = Some(Arc::new(m));
+                if let Some(f) = &self.geosite {
+                    let (d, _) = file_source.get_file_content(f).ok()?;
+                    let l = geosite_rs::decode_geosite(&d).ok()?;
+                    let gtm =
+                        clash_rules::extract_geosite_country_code_target_map(&mut method_rules_map);
 
-                        rs_v.iter_mut().for_each(|rs| rs.mmdb_reader = am.clone());
-                    }
-                    Err(e) => {
-                        warn!("no Country.mmdb: {e}");
+                    if let Some(gtm) = gtm {
+                        let m = geosite_rs::geosite_to_hashmap(&l, gtm);
+                        method_rules_map = clash_rules::merge_method_rules_map(method_rules_map, m);
                     }
                 }
+                let r = clash_rules::ClashRuleMatcher::from_hashmap(method_rules_map);
 
-                result = Some(rs_v);
-            }
-        }
-        result
+                r.ok().map(|c| Arc::new(c))
+            })
+            .or_else(|| {
+                self.geosite.as_ref().and_then(|f| {
+                    let (d, _) = file_source.get_file_content(f).ok()?;
+                    let l = geosite_rs::decode_geosite(&d).ok()?;
+                    let m = geosite_rs::geosite_to_hashmap(&l, HashMap::new());
+                    let r = clash_rules::ClashRuleMatcher::from_hashmap(m);
+
+                    r.ok().map(|c| Arc::new(c))
+                })
+            })
     }
 }
 
@@ -360,10 +372,10 @@ pub enum InMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(ruci_tls::server::TlsServerOptions),
+    TLS(ruci_rustls22::server::TlsServerOptions),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(ruci_tls::server::TlsServerOptions),
+    NativeTLS(ruci_rustls22::server::TlsServerOptions),
     H2 {
         is_grpc: Option<bool>,
         http_config: Option<CommonConfig>,
@@ -400,7 +412,7 @@ pub enum InMapConfig {
         handshake_function: String, // 用于 handshake 的 函数名
     },
 
-    MITM(ruci_tls::server::TlsServerOptions),
+    MITM(ruci_rustls22::server::TlsServerOptions),
 
     #[cfg(feature = "steganography")]
     Embedder {
@@ -418,7 +430,7 @@ pub enum OutMapConfig {
     Adder(i8),
     Counter,
     Recorder(recorder::Config),
-    TLS(ruci_tls::client::TlsClientOptions),
+    TLS(ruci_rustls22::client::TlsClientOptions),
 
     #[cfg(feature = "sockopt")]
     OptDirect {
@@ -433,7 +445,7 @@ pub enum OutMapConfig {
     OptDialer(crate::map::opt_net::OptDialerOption),
 
     #[cfg(any(feature = "use-native-tls", feature = "native-tls-vendored"))]
-    NativeTLS(ruci_tls::client::TlsClientOptions),
+    NativeTLS(ruci_rustls22::client::TlsClientOptions),
 
     Http,
     Socks5(Socks5Out),
@@ -717,7 +729,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
             InMapConfig::MITM(c) => {
                 let sc = init_tls_server_pem_option(&c, &file_source)?;
 
-                Ok(Box::new(ruci_tls::mitm::MITM {
+                Ok(Box::new(ruci_rustls22::mitm::MITM {
                     sc,
                     ext_fields: None,
                 }))

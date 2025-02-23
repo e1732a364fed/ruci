@@ -43,7 +43,7 @@ jobs:
         run: cargo test --verbose --all-features
 
       - name: Run Rucimp tests
-        run: cd rucimp && cargo test --verbose --features "tun quinn lua route geoip sockopt use-native-tls rustls21 trace steganography"
+        run: cd rucimp && cargo test --verbose --features "tun quinn lua sockopt use-native-tls ruci-rustls21 trace steganography"
 
       - name: Run Ruci-cmd tests
         run: cd crates/ruci-cmd && cargo test --verbose --features "steganography lua file_server api_server api_client utils quinn use-native-tls tun smoltcp"

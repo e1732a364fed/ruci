@@ -19,7 +19,7 @@ ruci pronounced lucy.
 
 ## Intro
 
-A flexible network proxy framework and toolbox written in Rust (Rust 2021 edition 1.81+) using Lua/toml as the configuration format.
+A flexible network proxy framework and toolbox written in Rust (Rust 2021 edition 1.81+) using Lua/json as the configuration format.
 
 用户 入门 ruci 可阅读 [ruci 用户手册](https://e1732a364fed.github.io/ruci/index.html)
 
@@ -39,6 +39,59 @@ Developer chat:     https://t.me/+6yL4ggeyKY0yNjIx
 User channel:       https://t.me/+r5hKQKYyeuowMTcx
 
 The project is work in progress, 功能会陆续添加与调整.
+
+## Roadmap
+
+### ruci
+
+- [x] basic structure (based on "Map"s)
+- [x] tcp, udp, unix domain socket, ip (tun, with auto_route)([tun example](rucimp/examples/readme.md#tun))
+- [x] 流量记录 (两种实现, 分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
+- [x] Direct, Blackhole, Listener, BindDialer, Stdio, Fileio
+- [x] fixed_target_addr
+- [x] TLS, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
+- [x] MathAdder (按字节加法器), Counter, Echo
+- [x] 路由 (tag_route)
+- [x] fallback (回落)
+- [x] DNS: client
+- [x] http1.1 识别
+- [x] MITM ( man in the middle)
+
+### rucimp
+
+- [x] ruci 配置模式 (动态链须为lua格式)
+- [ ] clash 配置模式
+- [ ] verysimple 配置模式
+- [x] static chain (静态链, 可为 lua/json 格式)
+- [x] dynamic chain (finite, infinite) (动态链)(有限动态链, 完全动态链)
+- [x] rucimp/examples
+- [x] rule_route 规则路由
+- [x] clash 规则路由
+- [x] tproxy (with auto_route)
+- [x] native-tls
+- [x] http_filter, websocket(including early data)
+- [x] h2, grpc
+- [x] quic (quinn/s2n-quic)
+- [ ] vpn_test1 （目前只有 单ip转发）
+- [x] tcp/ip stack (smoltcp/lwip)
+- [ ] ss, ~~vmess~~
+- [x] Steganography Protocol Example1
+- [x] User-defined Lua protocol
+- [x] Embedder (Steganography Protocol)
+
+### ruci-cmd
+
+- [x] basic feature
+- [x] api_server
+- [x] api_client
+- [x] static file server 
+- [x] utils
+- [ ] system tray
+- [ ] ~~tui: using ratatui~~
+
+### 其它生态
+
+[节点编辑器 webui ](https://github.com/e1732a364fed/ruci-webui)
 
 
 ## Structure
@@ -179,55 +232,6 @@ o2node-.->collector
 
 ```
 
-
-## Roadmap
-
-### ruci
-
-- [x] basic structure (based on "Map"s)
-- [x] tcp, udp, unix domain socket, ip (tun, with auto_route)([tun example](rucimp/examples/readme.md#tun))
-- [x] 流量记录 (两种实现, 分别用于记录原始流量(GlobalTrafficRecorder)与实际流量(Counter)) 与实时单连接流量监控 (trace feature)
-- [x] Direct, Blackhole, Listener, BindDialer, Stdio, Fileio
-- [x] fixed_target_addr
-- [x] TLS, Socks5(+ UDP ASSOCIATE,USERPASS), Http proxy, Socks5http, Trojan
-- [x] MathAdder (按字节加法器), Counter, Echo
-- [x] 路由 (tag_route)
-- [x] fallback (回落)
-- [x] DNS: client
-- [x] http1.1 识别
-- [x] MITM ( man in the middle)
-
-### rucimp
-
-- [x] chain配置格式 (动态链须为lua格式)
-- [x] static chain (静态链, 可为 lua/toml 格式)
-- [x] dynamic chain (finite, infinite) (动态链)(有限动态链, 完全动态链)
-- [x] rucimp/examples
-- [x] rule_route 规则路由
-- [x] tproxy (with auto_route)
-- [x] native-tls
-- [x] http_filter, websocket(including early data)
-- [x] h2, grpc
-- [x] quic (quinn/s2n-quic)
-- [ ] vpn_test1 （目前只有 单ip转发）
-- [x] tcp/ip stack (smoltcp/lwip)
-- [ ] ~~ss, vmess~~
-- [x] Steganography Protocol Example1
-- [x] User-defined Lua protocol
-- [x] Embedder (Steganography Protocol)
-
-### ruci-cmd
-
-- [x] basic feature
-- [x] api_server
-- [x] api_client
-- [x] static file server 
-- [x] utils
-- [ ] tui: using ratatui
-
-### 其它生态
-
-[节点编辑器 webui ](https://github.com/e1732a364fed/ruci-webui)
 
 #### Goal of The Project
 

@@ -1,6 +1,6 @@
 /*!
 ruci is a proxy abstraction framework that abstracts the progress of network proxy
-by mod [`user`], [`net`] , [`map`] and [`relay`].
+by mod  [`net`] , [`map`] and [`relay`].
 
 It uses tokio.
 

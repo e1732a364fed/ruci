@@ -37,14 +37,14 @@ pub fn load_ser_config_from_pem(
             let ca_params = rcgen::CertificateParams::from_ca_cert_pem(&cacert_pem)?;
             let ca = ca_params.self_signed(&ca_key_pair)?;
 
-            use rand::thread_rng;
+            use rand::rng;
             use rand::Rng;
 
             const NOT_BEFORE_OFFSET: i64 = 60;
             const TTL_SECS: i64 = 31536000;
 
             let mut params = rcgen::CertificateParams::default();
-            params.serial_number = Some(thread_rng().gen::<u64>().into());
+            params.serial_number = Some(rng().random::<u64>().into());
 
             let not_before =
                 time::OffsetDateTime::now_utc() - time::Duration::seconds(NOT_BEFORE_OFFSET);
@@ -154,7 +154,7 @@ mod test {
     #[test]
     fn test_load_key() {
         let d = concat!(env!("CARGO_MANIFEST_DIR"), "/../../dev_res");
-        std::env::set_current_dir(d).expect(format!("go to {}", d).as_str());
+        std::env::set_current_dir(d).unwrap_or_else(|_| panic!("go to {}", d));
 
         println!("cwd: {:?}", std::env::current_dir().unwrap());
 
@@ -173,7 +173,7 @@ mod test {
     #[test]
     fn test_load_cert() {
         let d = concat!(env!("CARGO_MANIFEST_DIR"), "/../../dev_res");
-        std::env::set_current_dir(d).expect(format!("go to {}", d).as_str());
+        std::env::set_current_dir(d).unwrap_or_else(|_| panic!("go to {}", d));
 
         println!("cwd: {:?}", std::env::current_dir().unwrap());
 

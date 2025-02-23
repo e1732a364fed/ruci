@@ -13,7 +13,7 @@ use s2n_quic::client::Connect;
 use tokio::sync::Mutex;
 use tracing::debug;
 
-use crate::map::rustls21;
+use ruci_rustls21 as rustls21;
 
 #[map_ext_fields]
 #[derive(Debug, Clone, MapExt)]

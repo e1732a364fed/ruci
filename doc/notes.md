@@ -267,7 +267,7 @@ ruci中有三种 route 实现: fixed, tag, info;
 
 rucimp 中有很多feature :
 
-lua, lua54, route,geoip, tun, sockopt, use-native-tls, native-tls-vendored, quinn, quic,smoltcp, lwip
+lua, lua54, tun, sockopt, use-native-tls, native-tls-vendored, quinn, quic,smoltcp, lwip
 
 
 
@@ -522,7 +522,7 @@ https://docs.rs/futures/latest/futures/index.html
 
 从0.0.6起，ruci 不再继续开发 suit 模式。
 从0.0.7起，ruci 移除了 suit 模式。同时对 chain 模式 启用 toml配置格式
-从0.0.8起，ruci 移除了 有限动态链 模式。同时对 chain 模式 启用 yaml配置格式
+从0.0.8起，ruci 移除了 有限动态链 模式。同时移除了toml 格式，启用了json 格式。
 0.0.8 暂时移除了 quic feature (即 s2n-quic 的实现。不影响 quinn)
 
 ### 名词

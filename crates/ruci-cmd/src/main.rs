@@ -23,7 +23,7 @@ use tracing::{debug, info};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
-    /// Chain mode, which uses lua/toml file
+    /// Chain mode, which uses lua/json file
     #[default]
     C,
 }
@@ -37,7 +37,7 @@ struct Args {
     #[arg(short, long, value_enum, default_value_t = Mode::C )]
     mode: Mode,
 
-    /// Basic config file. Can be of lua or toml format.
+    /// Basic config file. Can be of lua or json format.
     ///
     /// If the given string is a url, then the app will try to download the file first.
     #[arg(short, long, value_name = "FILE", default_value = DEFAULT_LUA_CONFIG_FILE_NAME)]

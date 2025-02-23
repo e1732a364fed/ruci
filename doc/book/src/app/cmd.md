@@ -4,10 +4,10 @@
 
 我们 ruci 的可执行文件是 ruci-cmd.
 
-所使用的配置文件的格式 可以是 lua ([lua配置](./lua/lua.md)), 也可以是 toml ([toml配置](./toml/index.md)
+所使用的配置文件的格式 可以是 lua ([lua配置](./lua/lua.md)), 也可以是 json 
 ).
 
-lua配置更难写一些，但是更灵活一些。 toml 配置更简单一些，但其功能则更少一些。
+lua配置更难写一些，但是更灵活一些。 json 配置更简单一些，但其功能则更少一些。
 
 ## 静态链、动态链
 
@@ -15,7 +15,7 @@ ruci 中引入了 “静态链、动态链” 的概念。这两个概念在ruci
 
 静态链就是传统的代理的配置方式，而 动态链 则是一种更高级的概念。
 
-toml 配置和基本的 lua配置都是 静态链配置.
+json 配置和基本的 lua配置都是 静态链配置.
 
 而lua配置中还可以通过一些方式开启 动态链的配置。对于新手来说，先把静态链的写法学会就行了。
 
@@ -28,7 +28,7 @@ toml 配置和基本的 lua配置都是 静态链配置.
 
 或
 
-    ./ruci-cmd -c local.toml
+    ./ruci-cmd -c local.json
 
 
 服务器运行:
@@ -38,7 +38,7 @@ toml 配置和基本的 lua配置都是 静态链配置.
 
 或
 
-    ./ruci-cmd -c remote.toml
+    ./ruci-cmd -c remote.json
 
 macOS 版本要在 系统App：Settings - Privacy & Security 里 allow 一下。
 
@@ -113,11 +113,11 @@ ruci-cmd 提供了一些很方便的命令，可以执行一些辅助功能。
 
 ruci-cmd utils convert-format <INPUT_FILE> <OUTPUT_FORMAT>
 如
-ruci-cmd utils convert-format local.lua toml
+ruci-cmd utils convert-format local.lua json
 
-(json, yaml, lua, toml) 几种格式在静态链下是可以互相转换的
+(lua, json) 几种格式在静态链下是可以互相转换的
 
-转后就会生成 local.toml. 如果同名文件存在，就会自动用一个新的名称，不会覆盖。
+转后就会生成 local.json. 如果同名文件存在，就会自动用一个新的名称，不会覆盖。
 
 而且也可以  转换为同格式 ，相当于把 注释删掉然后 标准化一下
 

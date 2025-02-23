@@ -13,6 +13,7 @@ Defines a basic trait [`OutSelector`] and some structs that implements it
 
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Debug,
     hash::Hash,
     sync::Arc,
 };
@@ -58,6 +59,34 @@ pub async fn get_user_from_opt_data(adv: &[Option<Box<dyn Data>>]) -> Option<Use
         None
     } else {
         Some(v)
+    }
+}
+
+#[derive(Default)]
+pub struct MultipleOutSelector {
+    pub selectors: Vec<Arc<dyn OutSelector>>,
+}
+impl Debug for MultipleOutSelector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MultipleOutSelector").finish()
+    }
+}
+#[async_trait]
+impl OutSelector for MultipleOutSelector {
+    async fn select(
+        &self,
+        is_fallback: bool,
+        addr: &net::Addr,
+        in_chain_tag: &str,
+        params: &[Option<Box<dyn Data>>],
+    ) -> Option<DMIterBox> {
+        for s in &self.selectors {
+            let b = s.select(is_fallback, addr, in_chain_tag, params).await;
+            if b.is_some() {
+                return b;
+            }
+        }
+        None
     }
 }
 

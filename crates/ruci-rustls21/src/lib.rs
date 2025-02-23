@@ -14,11 +14,10 @@ use std::{
     time::SystemTime,
 };
 
-use crate::utils::FileSource;
 use anyhow::{bail, Result};
-use rustls::{
-    client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerConfig, ServerName,
-};
+use file_source::FileSource;
+pub use rustls::ServerConfig;
+use rustls::{client::ServerCertVerified, Certificate, ClientConfig, PrivateKey, ServerName};
 use rustls_pemfile::{read_one, Item};
 use tracing::debug;
 
@@ -29,7 +28,7 @@ pub struct ClientOptions {
     pub cert_path: Option<String>,
 }
 
-pub(crate) fn cc(opt: ClientOptions, file_source: &FileSource) -> Result<ClientConfig> {
+pub fn cc(opt: ClientOptions, file_source: &FileSource) -> Result<ClientConfig> {
     let mut root_store = rustls::RootCertStore::empty();
 
     root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {

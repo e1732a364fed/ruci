@@ -7,18 +7,19 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 ruci = { path = "../.." }
-rucimp = { path = "../../rucimp", features = ["repl"] }
+rucimp = { path = "../../rucimp" }
+file-source = { path = "../file-source" }
 
-tokio = { version = "1", features = ["full"] }
-tokio-util = { version = "0.7", features = ["io"] }
-futures = "0.3"
-tracing = "0.1"
+tracing = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+tokio-util = { workspace = true }
+parking_lot = { workspace = true }
 
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tracing-appender = "0.2"
-parking_lot = "0.12"
 
-anyhow = "1"
 clap = { version = "4.5", features = ["derive"] }
 bytesize = "1.3"
 
@@ -27,24 +28,23 @@ chrono = { version = "0.4", optional = true }
 axum = { version = "0.7", optional = true }
 tower = { version = "0.4", features = ["util"], optional = true }
 tower-http = { version = "0.5", features = [
-    "fs",
-    "trace",
-    "cors",
+  "fs",
+  "trace",
+  "cors",
 ], optional = true }
 
 TinyUFO = { version = "0.1", optional = true }
 reqwest = { version = "0.12", default-features = false, features = [
-    "json",
-    "stream",
-    "native-tls-vendored",
+  "json",
+  "stream",
+  "native-tls-vendored",
 ], optional = true }
 
 rcgen = { version = "0.13", optional = true }
 
 qrcode = { version = "0.14", optional = true, default-features = false }
 
-toml = "0.8"
-serde_yaml = "0.9"
+# toml = "0.8"
 serde_path_to_error = "0.1"
 serde-transcode = "1.1"
 serde-value = "0.7"

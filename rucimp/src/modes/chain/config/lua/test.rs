@@ -1,4 +1,4 @@
-use crate::utils::FileSource;
+use file_source::FileSource;
 
 use super::*;
 use anyhow::Context;
@@ -430,12 +430,9 @@ fn test_rule_route() -> anyhow::Result<()> {
 
     println!("{:#?}", c);
 
-    #[cfg(feature = "route")]
-    {
-        let tr = c.get_rule_route(Arc::new(FileSource::StdReadFile));
-        assert!(tr.is_some());
-        println!("{:#?}", tr);
-    }
+    let tr = c.get_rule_route(Arc::new(FileSource::StdReadFile));
+    assert!(tr.is_some());
+    println!("{:#?}", tr);
 
     //println!("{:#?}", c.get_default_and_outbounds_map());
 
