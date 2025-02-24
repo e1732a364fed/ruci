@@ -22,6 +22,7 @@ pub const READ_DIRECTION: i8 = 1;
 pub const WRITE_DIRECTION: i8 = -1;
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum OutputFileExtension {
     #[default]
     Json,
@@ -29,6 +30,7 @@ pub enum OutputFileExtension {
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum OutputFormat {
     #[default]
     Ruci,
@@ -36,6 +38,7 @@ pub enum OutputFormat {
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum RecordMode {
     #[default]
     Full,
@@ -44,26 +47,32 @@ pub enum RecordMode {
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum PieceTruncateOption {
+    /// no-truncate
     #[default]
     NoTruncate,
+    /// piece-truncate
     PieceTruncate(usize),
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum SessionTruncateOption {
+    /// no-truncate
     #[default]
     NoTruncate,
+    /// session-truncate
     SessionTruncate(usize),
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     pub label: Option<String>,
-    pub output_dir: String,
-    pub output_file_extension: OutputFileExtension,
-    pub output_format: OutputFormat,
-    pub record_mode: RecordMode,
+    pub output_dir: Option<String>,
+    pub output_file_extension: Option<OutputFileExtension>,
+    pub output_format: Option<OutputFormat>,
+    pub record_mode: Option<RecordMode>,
 
     pub prettify: Option<bool>,
 
@@ -388,16 +397,18 @@ async fn async_save_to_file<T: serde::Serialize + Data + Send + 'static + Clone>
     cid: &str,
     config: &Config,
 ) -> std::io::Result<()> {
+    let tmps = String::from("out");
     // Create output directory if not exists
-    tokio::fs::create_dir_all(&config.output_dir).await?;
+    let od = config.output_dir.as_ref().unwrap_or(&tmps);
+    tokio::fs::create_dir_all(od).await?;
 
-    let mut file_path = PathBuf::from(&config.output_dir);
+    let mut file_path = PathBuf::from(od);
 
     let format = format!("{:?}", data.format()).to_lowercase();
 
-    let mode = format!("{:?}", config.record_mode).to_lowercase();
+    let mode = format!("{:?}", config.record_mode.unwrap_or_default()).to_lowercase();
 
-    file_path.push(match config.output_file_extension {
+    file_path.push(match config.output_file_extension.unwrap_or_default() {
         OutputFileExtension::Json => {
             format!("{}_{}_{}_{}.json", cid, data.get_label(), format, mode)
         }
@@ -407,7 +418,7 @@ async fn async_save_to_file<T: serde::Serialize + Data + Send + 'static + Clone>
     });
 
     // Clone the data for the blocking task
-    let ext = config.output_file_extension;
+    let ext = config.output_file_extension.unwrap_or_default();
     let pretty = config.prettify.unwrap_or(false);
 
     // Spawn blocking task for serialization since serde operations are CPU-bound (especially for large data)
@@ -463,7 +474,7 @@ impl RecorderTrait for InfoRecorder {
 
     async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
         let cid = self.common().cid.to_string();
-        match config.output_format {
+        match config.output_format.unwrap_or_default() {
             OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
             OutputFormat::Har => {
                 let har: har::Har = self.data.into();
@@ -488,7 +499,7 @@ impl RecorderTrait for SimplifiedRecorder {
 
     async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
         let cid = self.common().cid.to_string();
-        match config.output_format {
+        match config.output_format.unwrap_or_default() {
             OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
             OutputFormat::Har => {
                 let har: har::Har = self.data.into();
@@ -513,7 +524,7 @@ impl RecorderTrait for FullRecorder {
 
     async fn async_save_to_file(self, config: &Config) -> std::io::Result<()> {
         let cid = self.common().cid.to_string();
-        match config.output_format {
+        match config.output_format.unwrap_or_default() {
             OutputFormat::Ruci => async_save_to_file(self.data, &cid, config).await,
             OutputFormat::Har => panic!("har is not implemented for full data"),
         }
@@ -566,7 +577,7 @@ impl Map for RecorderMap {
 
         let config = self.config.clone();
 
-        let mut r = match self.config.record_mode {
+        let mut r = match self.config.record_mode.unwrap_or_default() {
             RecordMode::Full => {
                 let mut r = FullRecorder {
                     config,

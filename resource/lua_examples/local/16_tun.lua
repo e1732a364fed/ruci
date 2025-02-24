@@ -3,6 +3,7 @@ local sockopt_config = {
 }
 
 local ws_config = {
+  type = "WebSocket",
   path = "/path1",
   use_early_data = true,
   authority = "myhost"
@@ -11,23 +12,21 @@ local ws_config = {
 local outbound_ws_tls = {
   chain = {
     {
-      OptDialer = {
-        sockopt = sockopt_config,
-        dial_addr = "tcp://192.168.0.204:10801"
-      }
+      type = "OptDialer",
+      sockopt = sockopt_config,
+      dial_addr = "tcp://192.168.0.204:10801"
+
     },
     {
-      TLS = {
-        host = "www.1234.com",
-        insecure = true
-      }
+      type = "TLS", host = "www.1234.com", insecure = true
     },
-    { WebSocket = ws_config }
+    ws_config
   },
   tag = "dial1"
 }
 
 local tun_config = {
+  type = "BindDialer",
   in_auto_route = {
     tun_dev_name = "utun321",
     dns_list = { "114.114.114.114" },
@@ -39,9 +38,7 @@ local tun_config = {
 }
 
 local inbound_tun = {
-  chain = { {
-    BindDialer = tun_config
-  } },
+  chain = { tun_config },
   tag = "listen1"
 }
 

@@ -1,16 +1,16 @@
 local outbound_blackhole = {
-  chain = { "Blackhole" },
+  chain = { { type = "Blackhole" } },
   tag = "dial1"
 }
 
 local inbound_stdio_adder = {
   chain = {
     {
-      Stdio = {
-        ext = { pre_defined_early_data = "abc" }
-      }
+      type = "Stdio",
+      ext = { pre_defined_early_data = "abc" }
+
     },
-    { Adder = 1 }
+    { type = "Adder", value = 1 }
   },
   tag = "listen1"
 }

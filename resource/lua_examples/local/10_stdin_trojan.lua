@@ -1,13 +1,10 @@
 local outbound_trojan = {
   chain = {
-    { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
+    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
     {
-      TLS = {
-        host = "www.1234.com",
-        insecure = true
-      }
+      type = "TLS", host = "www.1234.com", insecure = true
     },
-    { Trojan = { password = "mypassword" } }
+    { type = "Trojan",     password = "mypassword" }
   },
   tag = "dial1"
 }
@@ -15,11 +12,11 @@ local outbound_trojan = {
 local inbound_stdio_adder = {
   chain = {
     {
-      Stdio = {
-        ext = { pre_defined_early_data = "abc" }
-      }
+      type = "Stdio",
+      ext = { pre_defined_early_data = "abc" }
+
     },
-    { Adder = 1 }
+    { type = "Adder", value = 1 }
   },
   tag = "listen1"
 }

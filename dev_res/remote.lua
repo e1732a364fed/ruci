@@ -3,80 +3,80 @@ print("this is a lua remote config file")
 -- lua 的好处有很多, 你可以定义很多变量
 
 local tcp = {
-    Listener = {
-        listen_addr = "0.0.0.0:10801"
-    }
+    type = "Listener",
+    listen_addr = "0.0.0.0:10801"
+
 }
 local unix = {
-    Listener = {
-        listen_addr = "unix://file1"
-    }
+    type = "Listener",
+    listen_addr = "unix://file1"
+
 }
 
 local opt_direct_chain = { {
-    OptDirect = {
-        sockopt = {
-            so_mark = 255,
-            bind_to_device = "wlp3s0" --"enp0s1"
-        },
-        more_num_of_files = true,     -- auto run system call to increase NOFILE to prevent Too many of files, root required
-    }
+    type = "OptDirect",
+    sockopt = {
+        so_mark = 255,
+        bind_to_device = "wlp3s0" --"enp0s1"
+    },
+    more_num_of_files = true,     -- auto run system call to increase NOFILE to prevent Too many of files, root required
+
 } }
 
 local socks5 = {
-    Socks5 = {}
+    type = "Socks5"
 }
 local socks5_chain = { tcp, socks5 }
 local http_chain = { tcp, {
-    Http = {}
+    type = "Http"
 } }
 local socks5http_chain = { tcp, {
-    Socks5Http = {}
+    type = "Socks5Http"
 } }
 
 local tls = {
     -- NativeTLS = { --NativeTLS 要用 test2.crt 而不是 test.crt
-    TLS = {
-        cert = "test2.crt",
-        key = "test2.key",
-        alpn = { "h2", "http/1.1" },
-        insecure = true
-    }
+    type = "TLS",
+    cert = "test2.crt",
+    key = "test2.key",
+    alpn = { "h2", "http/1.1" },
+    insecure = true
+
 }
 
 local trojan_in = {
-    Trojan = {
-        password = "mypassword"
-    }
+    type = "Trojan",
+    password = "mypassword"
+
 }
 
 local trojan_chain = { tcp, trojan_in }
 local trojans_chain = { tcp, tls, trojan_in }
 
 local embedder_in = {
-    Embedder = {
-        file_name = "test_mitm_ruci_info.json"
-    }
+    type = "Embedder",
+    file_name = "test_mitm_ruci_info.json"
+
 }
 
 local http_filter = {
-    HttpFilter = {
-        authority = "myhost",
-        path = "/path1"
-    }
+    type = "HttpFilter",
+    authority = "myhost",
+    path = "/path1"
+
 }
 
 local basic_ws = {
-    WebSocket = {}
+    type = "WebSocket"
 }
 
 local ws = {
-    WebSocket = {
-        http_config = {
-            authority = "myhost",
-            path = "/path1"
-        }
+    type = "WebSocket",
+    http_config = {
+        authority = "myhost",
+        path = "/path1"
     }
+
 }
 
 -- use http_filter to support fallback.
@@ -89,13 +89,13 @@ local ws_trojans_chain = { tcp, tls, http_filter, basic_ws, trojan_in }
 -- ws_trojans_chain = {tcp, tls, ws, trojan_in}
 
 local h2 = {
-    H2 = {
-        is_grpc = true,
-        http_config = {
-            authority = "myhost",
-            path = "/service1/Tun"
-        }
+    type = "H2",
+    is_grpc = true,
+    http_config = {
+        authority = "myhost",
+        path = "/service1/Tun"
     }
+
 }
 
 local in_h2_trojans_chain = { tcp, tls, h2, trojan_in }
@@ -103,44 +103,44 @@ local in_h2_trojans_chain = { tcp, tls, h2, trojan_in }
 local in_h2_socks5s_chain = { tcp, tls, h2, socks5 }
 
 local in_h2_https_chain = { tcp, tls, h2, {
-    Http = {}
+    type = "Http"
 } }
 
 
 local quic_in = {
-    Quic = {
-        key_path = "test2.key",
-        cert_path = "test2.crt",
-        listen_addr = "0.0.0.0:10801",
-        alpn = { "h3" }
-    }
+    type = "Quic",
+    key_path = "test2.key",
+    cert_path = "test2.crt",
+    listen_addr = "0.0.0.0:10801",
+    alpn = { "h3" }
+
 }
 
 local in_quic_chain = { quic_in, trojan_in }
 
 local dial = {
-    BindDialer = {
-        dial_addr = "tcp://0.0.0.0:10801"
-    }
+    type = "BindDialer",
+    dial_addr = "tcp://0.0.0.0:10801"
+
 }
 
 local dial_trojan = { dial, trojan_in }
 
 local out_stdio_chain = { {
-    Stdio = {}
+    type = "Stdio"
 } }
 
 local out_stdio_show_bytes_chain = { {
-    Stdio = {
-        write_mode = "Bytes" -- 默认的 write_mode 为 UTF8, 可以用 Bytes 模式来观察16进制数据
-    }
+    type = "Stdio",
+    write_mode = "Bytes" -- 默认的 write_mode 为 UTF8, 可以用 Bytes 模式来观察16进制数据
+
 } }
 
-local spe1_in = { SPE1 = { qa = { { "q1", "a1" }, { "q2", "a2" } } } }
+local spe1_in = { type = "SPE1", qa = { { "q1", "a1" }, { "q2", "a2" } } }
 -- local spe1_in = { SPE1 = {} }
 
-local lua_example1 = { tcp, tls, trojan_in, { Lua = { file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" } } }
-local lua_example2 = { tcp, tls, trojan_in, { Lua = { file_name = "lua_protocol_e2_mathadd.lua", handshake_function = "Handshake" } } }
+local lua_example1 = { tcp, tls, trojan_in, { type = "Lua", file_name = "lua_protocol_e1.lua", handshake_function = "Handshake2" } }
+local lua_example2 = { tcp, tls, trojan_in, { type = "Lua", file_name = "lua_protocol_e2_mathadd.lua", handshake_function = "Handshake" } }
 
 Config = {
     inbounds = { --  { chain = trojan_chain,  tag = "listen1"}
@@ -157,10 +157,10 @@ Config = {
         --[[
         {
             chain = {{
-                BindDialer = {
+                type = "BindDialer",
                     bind_addr = "udp://127.0.0.1:20800"
-                }
-            }, "Echo"},
+
+            },{ type = "Echo"}},
             tag = "udp_echo"
 
         }
@@ -174,16 +174,16 @@ Config = {
 
     outbounds = { {
         tag = "dial1",
-        chain = { { Direct = {} } }
+        chain = { { type = "Direct" } }
     },
 
         ---[=[
         {
             tag = "fallback_d",
             chain = { {
-                BindDialer = {
-                    dial_addr = "tcp://0.0.0.0:80"
-                }
+                type = "BindDialer",
+                dial_addr = "tcp://0.0.0.0:80"
+
             } }
         }
         --]=]
@@ -198,23 +198,23 @@ Config = {
     outbounds = { {
         tag = "dial1",
         chain = { {
-            Direct = {
+            type = "Direct",
                 leak_target_addr = true -- 注意这里要设为 true, 这样才能把 目标地址进一步 传递到 TLS 层 (用于设置 SNI)
-            }
+
         },
             {
-                TLS = {
+                type = "TLS",
                     alpn = { "h2", "http/1.1" },
                     insecure = false
-                }
+
             }
         }
     }, {
         tag = "fallback_d",
         chain = { {
-            BindDialer = {
+            type = "BindDialer",
                 dial_addr = "tcp://0.0.0.0:4433" --mitm 的话，回落就是要到 https
-            }
+
         },
         }
     },
@@ -243,7 +243,7 @@ Config = {
         tag = "dial1",
         chain = {
             {
-                BindDialer = {
+                type = "BindDialer",
                     bind_addr = "ip://10.0.0.2:24#utun321",
 
                     -- out_auto_route 会自动配置路由表使得 utun321 中的流量走 enp0s1.
@@ -256,7 +256,7 @@ Config = {
                         original_dev_name = "enp0s1", --wlp3s0
                         router_ip = "192.168.0.1",
                     }
-                }
+
             }
         }
     } },

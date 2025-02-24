@@ -3,38 +3,36 @@
 local max_num = 12
 
 local dial_config = {
-    BindDialer = {
-        dial_addr = "tcp://0.0.0.0:10801"
-    }
+    type = "BindDialer",
+    dial_addr = "tcp://0.0.0.0:10801"
+
 }
 
 local tlsout_config = {
-    TLS = {
-        host = "www.1234.com",
-        insecure = true,
-        alpn = { "h2" }
+    type = "TLS",
+    host = "www.1234.com",
+    insecure = true,
+    alpn = { "h2" }
 
+}
+local trojan_out_config = { type = "Trojan", password = "mypassword" }
+
+local function h2_common_part(t)
+    return {
+        type = t,
+        is_grpc = true,
+        http_config = {
+            authority = "myhost",
+            path = "/service1/Tun"
+        }
     }
-}
-local trojan_out_config = { Trojan = { password = "mypassword" } }
+end
 
-local h2_common_part = {
-    is_grpc = true,
-    http_config = {
-        authority = "myhost",
-        path = "/service1/Tun"
-    }
-}
-
-local h2_out_config = {
-    H2Mux = h2_common_part
-}
+local h2_out_config = h2_common_part("H2Mux")
 
 -- h2 single out 的特性是, 连接内容结束后就会马上断开连接(即没有mux特性). 这里用于
 -- pool 已达上限但又多创建了 tcp-tls 连接的情况
-local h2_single_out_config = {
-    H2Single = h2_common_part
-}
+local h2_single_out_config = h2_common_part("H2Single")
 
 local h2_out_pool = {}
 
@@ -48,12 +46,12 @@ Infinite = {
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = { listen_addr = "0.0.0.0:10800" }
+                        type = "Listener", listen_addr = "0.0.0.0:10800"
                     },
                     new_thread_fn = function(cid2, state_index2, data2)
                         if Socks5_in == nil then
                             Socks5_in = Create_in_map {
-                                Socks5 = {}
+                                type = "Socks5"
                             }
                         end
 

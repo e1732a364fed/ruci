@@ -1,16 +1,17 @@
 local outbound_direct = {
-  chain = { { Direct = {} } },
+  chain = { { type = "Direct" } },
   tag = "dial1"
 }
 
 local outbound_fallback = {
   chain = { {
-    BindDialer = { dial_addr = "tcp://0.0.0.0:80" }
-  } },
+    type = "BindDialer", dial_addr = "tcp://0.0.0.0:80" }
+  },
   tag = "fallback_d"
 }
 
 local spe1_config = {
+  type = "SPE1",
   qa = {
     { "q1", "a1" },
     { "q2", "a2" }
@@ -19,9 +20,9 @@ local spe1_config = {
 
 local inbound_spe1_trojan = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10801" } },
-    { SPE1 = spe1_config },
-    { Trojan = { password = "mypassword" } }
+    { type = "Listener", listen_addr = "0.0.0.0:10801" },
+    spe1_config,
+    { type = "Trojan",   password = "mypassword" }
   },
   tag = "listen1"
 }

@@ -9,39 +9,39 @@ local dial_list = {
 local function gen_rand_server_dial()
     local num = math.random(1, #dial_list)
     return num, {
-        BindDialer = {
-            dial_addr = dial_list[num]
-        }
+        type = "BindDialer",
+        dial_addr = dial_list[num]
+
     }
 end
 
 local tls_list = {
     {
-        TLS = {
-            host = "www.server1.com",
-            insecure = true,
+        type = "TLS",
+        host = "www.server1.com",
+        insecure = true,
 
-        }
+
     },
     {
-        TLS = {
-            host = "www.server2.com",
-            insecure = true,
+        type = "TLS",
+        host = "www.server2.com",
+        insecure = true,
 
-        }
+
     },
     {
-        TLS = {
-            host = "www.server3.com",
-            insecure = true,
-        }
+        type = "TLS",
+        host = "www.server3.com",
+        insecure = true,
+
     }
 }
 
 local trojan_list = {
-    { Trojan = { password = "mypassword" } },
-    { Trojan = { password = "mypassword2" } },
-    { Trojan = { password = "mypassword3" } }
+    { type = "Trojan", password = "mypassword" },
+    { type = "Trojan", password = "mypassword2" },
+    { type = "Trojan", password = "mypassword3" }
 }
 
 
@@ -55,12 +55,12 @@ Infinite = {
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = { listen_addr = "0.0.0.0:10800" }
+                        type = "Listener", listen_addr = "0.0.0.0:10800"
                     },
                     new_thread_fn = function(cid, state_index, data)
                         if Socks5_in == nil then
                             Socks5_in = Create_in_map {
-                                Socks5 = {}
+                                type = "Socks5"
                             }
                         end
 

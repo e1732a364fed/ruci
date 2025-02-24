@@ -340,6 +340,7 @@ impl TryFrom<StdioConfig> for MapBox {
 use strum_macros::EnumIter;
 
 #[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
+#[serde(tag = "type")]
 pub enum InMapConfig {
     Echo,                              //单流消耗器
     Stdio(StdioConfig),                //单流发生器
@@ -369,7 +370,9 @@ pub enum InMapConfig {
     #[cfg(all(feature = "sockopt", target_os = "linux"))]
     TproxyTcpResolver(tproxy::Options),
 
-    Adder(i8),
+    Adder {
+        value: i8,
+    },
     Counter,
     Recorder(recorder::Config),
     TLS(ruci_rustls22::server::TlsServerOptions),
@@ -421,13 +424,16 @@ pub enum InMapConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, EnumIter)]
+#[serde(tag = "type")]
 pub enum OutMapConfig {
     Blackhole,                         //单流消耗器
     Direct(DirectConfig),              //单流发生器
     Stdio(StdioConfig),                //单流发生器
     Fileio(FileConfig),                //单流发生器
     BindDialer(Box<BindDialerConfig>), //单流发生器
-    Adder(i8),
+    Adder {
+        value: i8,
+    },
     Counter,
     Recorder(recorder::Config),
     TLS(ruci::map::tls_config::ClientOptions),
@@ -593,7 +599,7 @@ impl TryFrom<InMapConfigWithFileSource> for MapBox {
 
                 Ok(Box::new(g))
             }
-            InMapConfig::Adder(i) => Ok(i.into()),
+            InMapConfig::Adder { value: i } => Ok(i.into()),
             InMapConfig::Counter => Ok(Counter::boxed()),
             InMapConfig::Recorder(c) => Ok(c.into()),
 
@@ -795,7 +801,7 @@ impl TryFrom<OutMapConfigWithFileSource> for MapBox {
                 Ok(m)
             }
             OutMapConfig::BindDialer(dc) => dc.try_into(),
-            OutMapConfig::Adder(i) => Ok(i.into()),
+            OutMapConfig::Adder { value: i } => Ok(i.into()),
             OutMapConfig::Counter => Ok(Box::<counter::Counter>::default()),
             OutMapConfig::Recorder(c) => Ok(c.into()),
 

@@ -1,11 +1,12 @@
 local outbound_stdio = {
   chain = { {
-    Stdio = { write_mode = "Bytes" }
+    type = "Stdio", write_mode = "Bytes"
   } },
   tag = "dial1"
 }
 
 local tun_config = {
+  type = "BindDialer",
   in_auto_route = {
     tun_dev_name = "utun321",
     dns_list = { "1.1.1.1" },
@@ -17,9 +18,7 @@ local tun_config = {
 }
 
 local inbound_tun = {
-  chain = { {
-    BindDialer = tun_config
-  } },
+  chain = { tun_config },
   tag = "listen1"
 }
 

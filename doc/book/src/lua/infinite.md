@@ -39,7 +39,7 @@ chain 的内容是可以不同的，也就是说，infinite 实现了 动态链 
 下面这个演示 与[Config 入门](./config_intro.md)  中的示例 是等价的：
 
 ```lua
-local direct = { Direct = {} }
+local direct = { type = "Direct" }
 
 Infinite = {
     inbounds = { {
@@ -48,11 +48,11 @@ Infinite = {
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = { listen_addr = "0.0.0.0:10800" }
+                        type = "Listener", listen_addr = "0.0.0.0:10800"
                     },
                     new_thread_fn = function(cid, state_index, _data)
                         local new_cid, newi, new_data = coroutine.yield(1, {
-                            Socks5 = {}
+                            type = "Socks5"
                         })
                         return -1, {}
                     end

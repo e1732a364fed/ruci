@@ -10,27 +10,27 @@ local dns_config = {
 
 local outbound_direct_dns = {
   chain = { {
-    Direct = {
-      dns_client = dns_config
-    }
+    type = "Direct",
+    dns_client = dns_config
+
   } },
   tag = "dial1"
 }
 
 local inbound_socks_http = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10800" } },
-    { Socks5Http = {} }
+    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+    { type = "Socks5Http" }
   },
   tag = "listen1"
 }
 
 local inbound_dns_proxy = {
   chain = { {
-    Listener = {
-      listen_addr = "udp://0.0.0.0:20800",
-      ext = { fixed_target_addr = "udp://8.8.8.8:53" }
-    }
+    type = "Listener",
+    listen_addr = "udp://0.0.0.0:20800",
+    ext = { fixed_target_addr = "udp://8.8.8.8:53" }
+
   } },
   tag = "listen2"
 }

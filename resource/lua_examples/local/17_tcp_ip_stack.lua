@@ -5,12 +5,13 @@ local sockopt_config = {
 
 local outbound_opt_direct = {
   chain = { {
-    OptDirect = { sockopt = sockopt_config }
+    type = "OptDirect", sockopt = sockopt_config
   } },
   tag = "dial1"
 }
 
 local tun_config = {
+  type = "BindDialer",
   in_auto_route = {
     tun_dev_name = "utun321",
     dns_list = { "114.114.114.114" },
@@ -23,8 +24,8 @@ local tun_config = {
 
 local inbound_tun_stack = {
   chain = {
-    { BindDialer = tun_config },
-    "Stack"
+    tun_config,
+    { type = "Stack" }
   },
   tag = "listen1"
 }

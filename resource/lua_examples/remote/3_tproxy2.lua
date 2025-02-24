@@ -5,25 +5,24 @@ local sockopt_config = {
 
 local outbound_opt_direct = {
   chain = { {
-    OptDirect = {
-      sockopt = sockopt_config,
-      more_num_of_files = true
-    }
+    type = "OptDirect",
+    sockopt = sockopt_config,
+    more_num_of_files = true
+
   } },
   tag = "dial1"
 }
 
 local inbound_tls_trojan = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10801" } },
+    { type = "Listener", listen_addr = "0.0.0.0:10801" },
     {
-      TLS = {
-        key = "test2.key",
-        cert = "test2.crt",
-        alpn = { "h2", "http/1.1" }
-      }
+      type = "TLS",
+      key = "test2.key",
+      cert = "test2.crt",
+      alpn = { "h2", "http/1.1" }
     },
-    { Trojan = { password = "mypassword" } }
+    { type = "Trojan",   password = "mypassword" }
   },
   tag = "listen1"
 }

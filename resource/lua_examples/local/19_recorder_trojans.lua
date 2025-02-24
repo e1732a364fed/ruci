@@ -1,71 +1,71 @@
 local recorder_config = {
   direct = {
-    serialize_format = "cbor",
+    type = "Recorder",
+    output_file_extension = "cbor",
     label = "direct",
-    no_truncate = true
   },
   trojan = {
-    serialize_format = "cbor",
+    type = "Recorder",
+    output_file_extension = "cbor",
     label = "trojan",
-    no_truncate = true
   },
   socks5 = {
-    serialize_format = "cbor",
+    type = "Recorder",
+    output_file_extension = "cbor",
     label = "socks5",
-    no_truncate = true
   },
   trojans = {
-    serialize_format = "cbor",
+    type = "Recorder",
+    output_file_extension = "cbor",
     label = "trojans",
-    no_truncate = true
   }
 }
 
 local outbound_direct = {
   chain = {
-    { Direct = {} },
-    { Recorder = recorder_config.direct }
+    { type = "Direct" },
+    recorder_config.direct
   },
   tag = "dial_direct"
 }
 
 local outbound_trojan = {
   chain = {
-    { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
+    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
     {
-      NativeTLS = {
-        host = "www.bilibili.com",
-        insecure = true,
-        alpn = { "http/1.1" }
-      }
+      type = "NativeTLS",
+      host = "www.bilibili.com",
+      insecure = true,
+      alpn = { "http/1.1" }
+
     },
-    { Recorder = recorder_config.trojan },
-    { Trojan = { password = "mypassword" } }
+    recorder_config.trojan,
+    { type = "Trojan",     password = "mypassword" }
   },
   tag = "dial_trojans"
 }
 
 local inbound_socks5 = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10800" } },
-    { Recorder = recorder_config.socks5 },
-    { Socks5Http = {} }
+    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+    recorder_config.socks5,
+    { type = "Socks5Http" }
   },
   tag = "listen_socks5"
 }
 
 local inbound_trojan = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10801" } },
-    { Recorder = recorder_config.trojans },
+    { type = "Listener", listen_addr = "0.0.0.0:10801" },
+    recorder_config.trojans,
     {
-      TLS = {
-        key = "test.key",
-        cert = "test.crt",
-        alpn = { "h2", "http/1.1" }
-      }
+      type = "TLS",
+      key = "test.key",
+      cert = "test.crt",
+      alpn = { "h2", "http/1.1" }
+
     },
-    { Trojan = { password = "mypassword" } }
+    { type = "Trojan",   password = "mypassword" }
   },
   tag = "listen_trojans"
 }

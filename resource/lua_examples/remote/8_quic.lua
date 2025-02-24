@@ -1,9 +1,10 @@
 local outbound_direct = {
-  chain = { { Direct = {} } },
+  chain = { { type = "Direct" } },
   tag = "dial1"
 }
 
 local quic_config = {
+  type = "Quic",
   key_path = "test2.key",
   cert_path = "test2.crt",
   listen_addr = "0.0.0.0:10801",
@@ -12,8 +13,8 @@ local quic_config = {
 
 local inbound_quic_trojan = {
   chain = {
-    { Quic = quic_config },
-    { Trojan = { password = "mypassword" } }
+    quic_config,
+    { type = "Trojan", password = "mypassword" }
   },
   tag = "listen1"
 }

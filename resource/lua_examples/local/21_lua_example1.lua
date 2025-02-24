@@ -1,27 +1,25 @@
 local lua_config = {
+  type = "Lua",
   handshake_function = "Handshake2",
   file_name = "lua_protocol_e1.lua"
 }
 
 local outbound_lua_trojan = {
   chain = {
-    { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
+    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
     {
-      TLS = {
-        host = "www.1234.com",
-        insecure = true
-      }
+      type = "TLS", host = "www.1234.com", insecure = true
     },
-    { Trojan = { password = "mypassword" } },
-    { Lua = lua_config }
+    { type = "Trojan",     password = "mypassword" },
+    lua_config
   },
   tag = "dial1"
 }
 
 local inbound_socks_http = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10800" } },
-    { Socks5Http = {} }
+    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+    { type = "Socks5Http" }
   },
   tag = "listen1"
 }

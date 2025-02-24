@@ -9,7 +9,7 @@
 
 没有任何示例的Map 意为着其写法为 `"Name"`, 不 外加大括号，如 `"Echo"` , `"Blackhole"`
 
-其它的配置均要外加 大括号，如 `Direct = {}` 意味着要 写为 `{Direct = {}}`  才算一个完整的 table 
+其它的配置均要外加 大括号，如 `type = "Direct"` 意味着要 写为 `{type = "Direct"}`  才算一个完整的 table 
 
 标有 ` --optional` 的项为可选项。
 
@@ -40,7 +40,7 @@ out
 out
 
 ```lua
-Direct = {}
+type = "Direct"
 ```
 
 可选项为 dns_client 
@@ -338,8 +338,8 @@ in/out
 ## 简单代理协议 Socks5,Http,Socks5Http
 
 ```lua
-Socks5Http = {}
-Socks5 = {}
+type = "Socks5Http"
+type = "Socks5"
 Http = {}
 ```
 
@@ -370,7 +370,7 @@ Trojan = {
 out:
 
 ```lua
- { Trojan = { password = "mypassword" } }
+ { type = "Trojan", password = "mypassword" }
 ```
 
 

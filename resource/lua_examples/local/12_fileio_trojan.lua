@@ -1,18 +1,16 @@
 local outbound_trojan = {
   chain = {
-    { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
+    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
     {
-      TLS = {
-        host = "www.1234.com",
-        insecure = true
-      }
+      type = "TLS", host = "www.1234.com", insecure = true
     },
-    { Trojan = { password = "mypassword" } }
+    { type = "Trojan",     password = "mypassword" }
   },
   tag = "dial1"
 }
 
 local fileio_config = {
+  type = "Fileio",
   i = "test.crt",
   o = "testfile.txt",
   sleep_interval = 500,
@@ -22,7 +20,7 @@ local fileio_config = {
 
 local inbound_fileio = {
   chain = {
-    { Fileio = fileio_config }
+    fileio_config
   },
   tag = "listen1"
 }

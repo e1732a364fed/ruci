@@ -1,9 +1,9 @@
 -- 演示了 用完全动态链实现 h2 mux outbound 的配置
 -- 关注 outbounds 的 generator 部分, 它实现了单h2连接的多路复用
 local dial_config = {
-    BindDialer = {
-        dial_addr = "tcp://0.0.0.0:10801"
-    }
+    type = "BindDialer",
+    dial_addr = "tcp://0.0.0.0:10801"
+
 }
 
 local function random_host()
@@ -17,26 +17,26 @@ end
 
 local function gen_new_tlsout_config()
     return {
-        NativeTLS = {
-            --TLS = {
-            host = random_host(), --"www.1234.com",
-            insecure = true,
-            alpn = { "h2" }
+        type = "NativeTLS",
+        --"TLS" = {
+        host = random_host(), --"www.1234.com",
+        insecure = true,
+        alpn = { "h2" }
 
-        }
+
     }
 end
 
-local trojan_out_config = { Trojan = { password = "mypassword" } }
+local trojan_out_config = { type = "Trojan", password = "mypassword" }
 
 local h2_out_config = {
-    H2Mux = {
-        is_grpc = true,
-        http_config = {
-            authority = "myhost",
-            path = "/service1/Tun"
-        }
+    type = "H2Mux",
+    is_grpc = true,
+    http_config = {
+        authority = "myhost",
+        path = "/service1/Tun"
     }
+
 }
 
 Infinite = {
@@ -48,12 +48,12 @@ Infinite = {
             if state_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener = { listen_addr = "0.0.0.0:10800" }
+                        type = "Listener", listen_addr = "0.0.0.0:10800"
                     },
                     new_thread_fn = function(cid, state_index, data)
                         if Socks5_in == nil then
                             Socks5_in = Create_in_map {
-                                Socks5 = {}
+                                type = "Socks5"
                             }
                         end
 
@@ -80,13 +80,13 @@ Infinite = {
             elseif state_index == 0 then
                 if Recorder == nil then
                     Recorder = Create_out_map({
-                        Recorder = {
-                            -- label = "h2_trojans",
-                            -- label = "h2_socks5s",
-                            label = "h2_https",
-                            serialize_format = "cbor",
-                            session_truncate = 2000,
-                        }
+                        type = "Recorder",
+                        -- label = "h2_trojans",
+                        -- label = "h2_socks5s",
+                        label = "h2_https",
+                        serialize_format = "cbor",
+                        session_truncate = 2000,
+
                     })
                 end
 

@@ -1,4 +1,5 @@
 local h2_config = {
+  type = "H2Single",
   is_grpc = true,
   http_config = {
     path = "/service1/Tun",
@@ -8,23 +9,20 @@ local h2_config = {
 
 local outbound_h2_trojan = {
   chain = {
-    { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
+    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
     {
-      TLS = {
-        host = "www.1234.com",
-        insecure = true
-      }
+      type = "TLS", host = "www.1234.com", insecure = true
     },
-    { H2Single = h2_config },
-    { Trojan = { password = "mypassword" } }
+    h2_config,
+    { type = "Trojan",     password = "mypassword" }
   },
   tag = "dial1"
 }
 
 local inbound_socks_http = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10800" } },
-    { Socks5Http = {} }
+    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+    { type = "Socks5Http" }
   },
   tag = "listen1"
 }

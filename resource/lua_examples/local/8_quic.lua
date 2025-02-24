@@ -1,4 +1,5 @@
 local quic_config = {
+  type = "Quic",
   server_addr = "127.0.0.1:10801",
   alpn = { "h3" },
   cert_path = "test2.crt",
@@ -7,16 +8,16 @@ local quic_config = {
 
 local outbound_quic_trojan = {
   chain = {
-    { Quic = quic_config },
-    { Trojan = { password = "mypassword" } }
+    quic_config,
+    { type = "Trojan", password = "mypassword" }
   },
   tag = "dial1"
 }
 
 local inbound_socks_http = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10800" } },
-    { Socks5Http = {} }
+    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+    { type = "Socks5Http" }
   },
   tag = "listen1"
 }

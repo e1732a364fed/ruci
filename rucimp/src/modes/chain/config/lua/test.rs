@@ -14,16 +14,16 @@ pub const INSPECT: &str = include_str!("../../../../../../dev_res/inspect.lua");
 fn test_in() -> anyhow::Result<()> {
     let text = r#"
     
-        tls = { TLS = {  cert = "test.cert", key = "test.key" } }
-        listen = { Listener =  { listen_addr = "0.0.0.0:1080"}  }
-        c = "Counter"
+        tls = { type = "TLS", cert = "test.cert", key = "test.key"}
+        listen = { type = "Listener" , listen_addr = "0.0.0.0:1080"}
+        c = { type = "Counter"}
         chain1 = {
             listen,
-            { Adder = 3 },
+            { type = "Adder", value = 3 },
             c,
             tls,
             c,
-            { Socks5 = {  userpass = "u0 p0", more = {"u1 p1"} } },
+            { type = "Socks5", userpass = "u0 p0", more = {"u1 p1"} },
             c,
 
         }
@@ -103,16 +103,16 @@ fn test_in() -> anyhow::Result<()> {
 fn test_out() -> anyhow::Result<()> {
     let text = r#"
     
-            tls = { TLS = {  host = "my.com", insecure = true } }
-            dialer = { BindDialer =  {dial_addr = "0.0.0.0:1081" }   }
-            c = "Counter"
+            tls = {  type = "TLS",host = "my.com", insecure = true }
+            dialer = {  type = "BindDialer", dial_addr = "0.0.0.0:1081"  }
+            c = { type = "Counter"}
             chain1 = {
                 dialer,
-                { Adder = 3 },
+                { type = "Adder", value = 3 },
                 c,
                 tls,
                 c,
-                { Socks5 = {  userpass = "u0 p0" , early_data = true } },
+                { type = "Socks5",  userpass = "u0 p0" , early_data = true},
                 c,
     
             }
@@ -165,10 +165,10 @@ fn test_out() -> anyhow::Result<()> {
 #[test]
 fn test_out2() -> anyhow::Result<()> {
     let text = r#"
-        listen = { Listener =   { listen_addr = "0.0.0.0:1080"}   }
+        listen = { type = "Listener", listen_addr = "0.0.0.0:1080" }
         chain1 = {
             listen,
-            { Socks5 = {   } },
+            { type = "Socks5" },
         }
         
         Config = {
@@ -178,7 +178,7 @@ fn test_out2() -> anyhow::Result<()> {
             outbounds = {
                 { 
                     tag="dial1", chain = {
-                        { BindDialer =  { dial_addr = "0.0.0.0:1080"}  }
+                        { type = "BindDialer" , dial_addr = "0.0.0.0:1080" }
                     } 
                 }
             }
@@ -222,9 +222,9 @@ fn test_out2() -> anyhow::Result<()> {
 fn test_out3() -> anyhow::Result<()> {
     let text = r#"
 
-        ic = { { Stdio={ fixed_target_addr= "udp://127.0.0.1:20800", pre_defined_early_data = "abc" } } , { Adder = 1 } } 
+        ic = { { type = "Stdio", fixed_target_addr= "udp://127.0.0.1:20800", pre_defined_early_data = "abc"} , { type = "Adder", value = 1 } } 
 
-        out_socks5_c = {{ Socks5 = {} }}
+        out_socks5_c = {{ type = "Socks5" }}
 
         Config = {
             inbounds = { 
@@ -262,34 +262,34 @@ fn test_out3() -> anyhow::Result<()> {
 #[test]
 fn test_tag_route() -> anyhow::Result<()> {
     let text = r#"
-        listen = { Listener =    { listen_addr = "0.0.0.0:1080"}  }
+        listen = { type = "Listener", listen_addr = "0.0.0.0:1080" }
         chain1 = {
             listen,
-            { Socks5 = {   } },
+            { type = "Socks5" },
         }
         
         Config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"},
-                {chain = { Stdio={
+                {chain = { type = "Stdio", 
                      ext = {
                             fixed_target_addr = "myfake.com",
                             pre_defined_early_data = "abc"
                         }
-                }
+                
                 
                  }, tag = "listen2"},
             },
             outbounds = {
                 { 
                     tag="dial1", chain = {
-                        { BindDialer =  { dial_addr = "0.0.0.0:1080"}   }
+                        { type = "BindDialer" , dial_addr = "0.0.0.0:1080" }
                     }
                 },
 
                 { 
                     tag="dial2", chain = {
-                        {Direct = {}}
+                        {type = "Direct"}
                     }
                 }
             },
@@ -325,6 +325,7 @@ fn test_config1() -> anyhow::Result<()> {
                     ext: None,
                 },
                 InMapConfig::Counter,
+                InMapConfig::Adder { value: 3 },
                 InMapConfig::Socks5(PlainTextPassSet::default()),
             ],
         }],
@@ -360,34 +361,34 @@ fn test_config1() -> anyhow::Result<()> {
 #[test]
 fn test_rule_route() -> anyhow::Result<()> {
     let text = r#"
-        listen = { Listener =    { listen_addr = "0.0.0.0:1080"}   }
+         listen = { type = "Listener", listen_addr = "0.0.0.0:1080" }
         chain1 = {
             listen,
-            { Socks5 = {   } },
+            { type = "Socks5" },
         }
         
         Config = {
             inbounds = {
                 {chain = chain1, tag = "listen1"},
-                {chain = { Stdio="my_fake.com" }, tag = "listen2"},
+                {chain = { type = "Stdio" }, tag = "listen2"},
             },
             outbounds = {
                 { 
                     tag="dial1", chain = {
-                        { BindDialer =  { dial_addr = "0.0.0.0:1080" }   }
+                        { type = "BindDialer",dial_addr = "0.0.0.0:1080" }
                     }
                 },
                 { 
                     tag="dial2", chain = {
                         {
-                            Direct = {}
+                            type = "Direct"
                         }
                     }
                 },
                 { 
                     tag="dial3", chain = {
                          {
-                            Direct = {
+                            type = "Direct",
                                 dns_client = {
                                     dns_server_list = {
                                         {
@@ -399,7 +400,7 @@ fn test_rule_route() -> anyhow::Result<()> {
                                         ['www.baidu.com'] = "103.235.47.188"
                                     }
                                 }
-                            }
+                            
                          }
                     }
                 }
@@ -551,11 +552,11 @@ Infinite = {
             if this_index == -1 then
                 return 0, {
                     stream_generator = {
-                        Listener =  { listen_addr = "0.0.0.0:10800"}
+                        type = "Listener",listen_addr = "0.0.0.0:10800"
                     },
                     new_thread_fn = function(this_index, data)
                         local new_i, new_data = coroutine.yield(1, {
-                            Socks5 = {}
+                            type = "Socks5"
                         })
                         return -1, {}
                     end
@@ -573,7 +574,7 @@ Infinite = {
         tag = "dial1",
         generator = function(this_index, cache_len, data)
             if this_index == -1 then
-                return "Direct"
+                return  {type = "Direct"}
             end
         end
     }, {

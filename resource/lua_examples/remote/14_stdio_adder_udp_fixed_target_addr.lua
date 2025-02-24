@@ -1,12 +1,12 @@
 local outbound_direct = {
-  chain = { { Direct = {} } },
+  chain = { { type = "Direct" } },
   tag = "dial1"
 }
 
 local inbound_socks_http = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10801" } },
-    { Socks5Http = {} }
+    { type = "Listener",  listen_addr = "0.0.0.0:10801" },
+    { type = "Socks5Http" }
   },
   tag = "listen1"
 }

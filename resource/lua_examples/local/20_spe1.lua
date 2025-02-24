@@ -1,4 +1,5 @@
 local spe1_config = {
+  type = "SPE1",
   qa = {
     { "q1", "a1" },
     { "q2", "a2" }
@@ -7,17 +8,17 @@ local spe1_config = {
 
 local outbound_spe1_trojan = {
   chain = {
-    { BindDialer = { dial_addr = "tcp://127.0.0.1:10801" } },
-    { SPE1 = spe1_config },
-    { Trojan = { password = "mypassword" } }
+    { type = "BindDialer", dial_addr = "tcp://127.0.0.1:10801" },
+    spe1_config,
+    { type = "Trojan",     password = "mypassword" }
   },
   tag = "dial1"
 }
 
 local inbound_socks_http = {
   chain = {
-    { Listener = { listen_addr = "0.0.0.0:10800" } },
-    { Socks5Http = {} }
+    { type = "Listener",  listen_addr = "0.0.0.0:10800" },
+    { type = "Socks5Http" }
   },
   tag = "listen1"
 }

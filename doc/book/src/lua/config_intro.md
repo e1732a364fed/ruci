@@ -73,7 +73,7 @@ inbounds/outbounds 是 [inbound/outbound](#inboundoutbound) 的列表:
 下面配置 监听 本地 tcp 端口 10800:
 
     {
-        Listener = { listen_addr = "0.0.0.0:10800" }
+        type = "Listener", listen_addr = "0.0.0.0:10800"
     }
 
 ### Sock5Http
@@ -81,7 +81,7 @@ inbounds/outbounds 是 [inbound/outbound](#inboundoutbound) 的列表:
 Sock5Http 可读取 socks5 协议 和 http代理 协议
 
     {
-        Socks5Http = {}
+        type = "Socks5Http"
     }
 
 ### 合体
@@ -92,10 +92,10 @@ Sock5Http 可读取 socks5 协议 和 http代理 协议
 ```lua
 chain = {
     {
-        Listener = { listen_addr = "0.0.0.0:10800" }
+        type = "Listener", listen_addr = "0.0.0.0:10800"
     },
     {
-        Socks5Http = {}
+        type = "Socks5Http"
     }
 }
 ```
@@ -106,10 +106,10 @@ chain = {
     tag = "listen1",
     chain = {
         {
-            Listener = { listen_addr = "0.0.0.0:10800" }
+            type = "Listener", listen_addr = "0.0.0.0:10800"
         },
         {
-            Socks5Http = {}
+            type = "Socks5Http"
         }
     }
 }
@@ -125,10 +125,10 @@ Config = {
             tag = "listen1",
             chain = {
                 {
-                    Listener = { listen_addr = "0.0.0.0:10800" }
+                    type = "Listener", listen_addr = "0.0.0.0:10800"
                 },
                 {
-                    Socks5Http = {}
+                    type = "Socks5Http"
                 }
             }
         }
@@ -148,7 +148,7 @@ Config = {
 
 Direct 是最简单的 OutMap! 它就是直连：
 
-    { Direct = {} }
+    { type = "Direct" }
 
 ### 合体
 
@@ -156,7 +156,7 @@ Direct 是最简单的 OutMap! 它就是直连：
 
 ```lua
 chain = {
-    { Direct = {} },
+    { type = "Direct" },
 }
 ```
 
@@ -168,7 +168,7 @@ Config = {
         {
             tag = "direct",
             chain =  {
-                { Direct = {} },
+                { type = "Direct" },
             }
         }
     },
@@ -185,10 +185,10 @@ Config = {
             tag = "listen1",
             chain = {
                 {
-                    Listener = { listen_addr = "0.0.0.0:10800" }
+                    type = "Listener", listen_addr = "0.0.0.0:10800"
                 },
                 {
-                    Socks5Http = {}
+                    type = "Socks5Http"
                 }
             }
         }
@@ -197,7 +197,7 @@ Config = {
         {
             tag = "direct",
             chain =  {
-                { Direct = {} },
+                { type = "Direct" },
             }
         }
     },
@@ -211,9 +211,9 @@ Config = {
 我们把每个有意义的子块都给个 `变量名`：
 
 ```lua
-local direct = { Direct = {} }
-local listener = {  Listener = { listen_addr = "0.0.0.0:10800" }  }
-local sock5http = { Socks5Http = {} }
+local direct = { type = "Direct" }
+local listener = {  type = "Listener", listen_addr = "0.0.0.0:10800"  }
+local sock5http = { type = "Socks5Http" }
 
 ```
 
@@ -223,9 +223,9 @@ local sock5http = { Socks5Http = {} }
 
 ```lua
 
-local direct = { Direct = {} }
-local listener = {  Listener = { listen_addr = "0.0.0.0:10800" }  }
-local sock5http = { Socks5Http = {} }
+local direct = { type = "Direct" }
+local listener = {  type = "Listener", listen_addr = "0.0.0.0:10800"  }
+local sock5http = { type = "Socks5Http" }
 
 Config = {
     inbounds = {
@@ -248,9 +248,9 @@ Config = {
 再替换一次：
 
 ```lua
-local direct = { Direct = {} }
-local listener = {  Listener = { listen_addr = "0.0.0.0:10800" }  }
-local sock5http = { Socks5Http = {} }
+local direct = { type = "Direct" }
+local listener = {  type = "Listener", listen_addr = "0.0.0.0:10800"  }
+local sock5http = { type = "Socks5Http" }
 
 local listen_inbound = { tag = "listen1", chain = { listener, sock5http } }
 local direct_outbound = { tag = "direct", chain =  { direct, } }
